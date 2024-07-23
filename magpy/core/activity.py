@@ -412,7 +412,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
         header['unit-col-x'] = 'nT'
         header['unit-col-y'] = 'nT'
 
-    return DataStream([], header, np.asarray(array, dtype=object))
+    return DataStream(header=header, ndarray=np.asarray(array, dtype=object))
 
 
 try:

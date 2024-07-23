@@ -268,6 +268,7 @@ def readIAF(filename, headonly=False, **kwargs):
 
     data = []
     key = None
+    keystr = ''
 
     x,y,z,f,xho,yho,zho,fho,xd,yd,zd,fd,k,ir = [],[],[],[],[],[],[],[],[],[],[],[],[],[]
     datelist = []
@@ -368,7 +369,7 @@ def readIAF(filename, headonly=False, **kwargs):
                         pubdate = datetime.strptime(str(head[13]),"%y%m")
                     except:
                         # Publications date not provided within the header - use current
-                        pubdate = datetime.strptime(datetime.strftime(datetime.utcnow(),"%y%m"),"%y%m")
+                        pubdate = datetime.strptime(datetime.strftime(datetime.utcnow(), "%y%m"), "%y%m")
 
                     headers['DataPublicationDate'] = pubdate
                     gethead = False
@@ -637,11 +638,11 @@ def writeIAF(datastr, filename, **kwargs):
         for elem in requiredinfo:
             try:
                 if elem == 'StationIAGAcode':
-                    value = " "+datastream.header.get('StationIAGAcode','')
+                    value = " "+datastream.header.get('StationIAGAcode', '')
                     if value == '':
                         misslist.append(elem)
                 elif elem == 'StartDate':
-                    value = int(datetime.strftime(dayar[0][0],'%Y%j'))
+                    value = int(datetime.strftime(dayar[0][0], '%Y%j'))
                 elif elem == 'DataAcquisitionLatitude':
                     if not float(datastream.header.get('DataAcquisitionLatitude',0)) < 90 and float(datastream.header.get('DataAcquisitionLatitude','')) > -90:
                         logger.info("Latitude and Longitude apparently not correctly provided - setting to zero")
@@ -930,25 +931,12 @@ def writeIAFDKA(datastream,kstr,path, debug=False):
             head.append("{0:<50}".format(head5))
             head.append("{0:<50}".format(emptyline))
 
-            if sys.version_info >= (3,0,0):
-                with open(kfile, "w", newline='') as myfile:
-                    for elem in head:
-                        myfile.write(elem+'\r\n')
-            else:
-                with open(kfile, "wb") as myfile:
-                    for elem in head:
-                        myfile.write(elem+'\r\n')
-                #print elem
-        # write data
-        if sys.version_info >= (3,0,0):
-            with open(kfile, "a", newline='') as myfile:
-                for elem in kstr:
+            with open(kfile, "w", newline='') as myfile:
+                for elem in head:
                     myfile.write(elem+'\r\n')
-        else:
-            with open(kfile, "a") as myfile:
-                for elem in kstr:
-                    myfile.write(elem+'\r\n')
-                    #print elem
+        with open(kfile, "a", newline='') as myfile:
+            for elem in kstr:
+                myfile.write(elem+'\r\n')
         return True
 
 def writeIAFREADME(datastream,path,debug=False):
@@ -1033,14 +1021,9 @@ def writeIAFREADME(datastream,path,debug=False):
             head.append("CONTACT      : ")
             for elem in contact:
                 head.append(elem)
-            if sys.version_info >= (3,0,0):
-                with open(rfile, "w", newline='') as myfile:
-                    for elem in head:
-                        myfile.write(elem+'\r\n')
-            else:
-                with open(rfile, "wb") as myfile:
-                    for elem in head:
-                        myfile.write(elem+'\r\n'.encode('utf-8'))
+            with open(rfile, "w", newline='') as myfile:
+                for elem in head:
+                    myfile.write(elem+'\r\n')
             myfile.close()
         return True
 
@@ -1117,11 +1100,8 @@ def readIMF(filename, headonly=False, **kwargs):
     fh = open(filename, 'rt')
     # read file and split text into channels
     stream = DataStream()
-    # Check whether header infromation is already present
-    #if stream.header is None:
-    #    headers = {}
-    #else:
-    #    headers = stream.header
+    datehh = ''
+    minute = 0
     headers = {}
     data = []
     key = None
@@ -1218,6 +1198,7 @@ def writeIMF(datastream, filename, **kwargs):
     gin = kwargs.get('gin')
     datatype = kwargs.get('datatype')
 
+    minute = 0
     success = False
     # 1. check whether datastream corresponds to minute file
     if not 60*0.9 < datastream.samplingrate() < 60*1.1:
@@ -1630,6 +1611,8 @@ def writeBLV(datastream, filename, **kwargs):
     keys = kwargs.get('keys')   # replaced by absinfo
     deltaF = kwargs.get('deltaF')
     diff = kwargs.get('diff')
+
+    parameterlist = False
 
     def getAbsInfo(absinfostring):
         """
@@ -2802,8 +2785,8 @@ if __name__ == '__main__':
     t_start_test = datetime.utcnow()
     # Testing the following methods
     #writeIAF()
-    #writeBLV()
     #writeIMF()
+    #writeBLV()
     #writeDKA()
     #writeIYFV()
 
@@ -2814,7 +2797,6 @@ if __name__ == '__main__':
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
             ts = datetime.utcnow()
             # IAF write
-            print ("Original", teststream.ndarray)
             succ1 = writeIAF(teststream, filename)
             # IAF test
             succ2 = isIAF(filename)
@@ -2822,17 +2804,14 @@ if __name__ == '__main__':
             dat = readIAF(filename)
             te = datetime.utcnow()
             # validity tests
-            print ("Before", dat.ndarray)
             dat = dat.calc_f()
-            print ("After", dat.ndarray)
             diff = subtractStreams(teststream,dat)
             xm = diff.mean('x')
             ym = diff.mean('y')
             zm = diff.mean('z')
             fm = diff.mean('f')
-            print (fm)
-            if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001:
-                 print ("ERROR witin IAF validity test")
+            if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
+                 raise Exception("ERROR witin IAF validity test")
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
@@ -2855,7 +2834,7 @@ if __name__ == '__main__':
             zm = diff.mean('z')
             fm = diff.mean('f')
             if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
-                 print ("ERROR within {} validity test".format(testset))
+                 raise Exception("ERROR within {} validity test".format(testset))
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:

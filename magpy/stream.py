@@ -352,7 +352,7 @@ class DataStream(object):
     - stream.cut(self,length,kind=0,order=0):
     - stream.dailymeans(self):
     - stream.date_offset(self, offset):
-    - stream.delta_f(self, **kwargs):
+    delta_f(self, **kwargs):
     - stream.dict2stream(self,dictkey='DataBaseValues')
     differentiate(self, **kwargs)   -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
     dwt_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None, window=5)  -- helper method for storm detection
