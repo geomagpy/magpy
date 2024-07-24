@@ -10,50 +10,52 @@ from magpy.stream import *
 
 def int_to_roman(input):
    """
-   Convert an integer to Roman numerals.
+   DESCRIPTION
+      Convert an integer to Roman numerals.
+      taken from:
+      http://code.activestate.com/recipes/81611-roman-numerals/
 
-   taken from:
-   http://code.activestate.com/recipes/81611-roman-numerals/
-
-   Examples:
-   >>> int_to_roman(0)
+   EXAMPLES:
+      int_to_roman(0)
    Traceback (most recent call last):
    ValueError: Argument must be between 1 and 3999
 
-   >>> int_to_roman(-1)
+       int_to_roman(-1)
    Traceback (most recent call last):
    ValueError: Argument must be between 1 and 3999
 
-   >>> int_to_roman(1.5)
+       int_to_roman(1.5)
    Traceback (most recent call last):
    TypeError: expected integer, got <type 'float'>
 
-   >>> for i in range(1, 21): print int_to_roman(i)
-   ...
-   I
-   II
-   III
-   IV
-   V
-   VI
-   VII
-   VIII
-   IX
-   X
-   XI
-   XII
-   XIII
-   XIV
-   XV
-   XVI
-   XVII
-   XVIII
-   XIX
-   XX
-   >>> print int_to_roman(2000)
-   MM
-   >>> print int_to_roman(1999)
-   MCMXCIX
+       for i in range(1, 21): print int_to_roman(i)
+       ...
+       I
+       II
+       III
+       IV
+       V
+       VI
+       VII
+       VIII
+       IX
+       X
+       XI
+       XII
+       XIII
+       XIV
+       XV
+       XVI
+       XVII
+       XVIII
+       XIX
+       XX
+
+       print int_to_roman(2000)
+       MM
+
+       print int_to_roman(1999)
+       MCMXCIX
    """
    if type(input) != type(1):
       raise TypeError("expected integer, got %s" % type(input))
@@ -71,15 +73,15 @@ def int_to_roman(input):
 
 def roman_to_int(input):
    """
-   Convert a roman numeral to an integer.
+   DESCRIPTION
+      Convert a roman numeral to an integer.
+      http://code.activestate.com/recipes/81611-roman-numerals/
 
-   http://code.activestate.com/recipes/81611-roman-numerals/
-
-   >>> r = range(1, 4000)
-   >>> nums = [int_to_roman(i) for i in r]
-   >>> ints = [roman_to_int(n) for n in nums]
-   >>> print r == ints
-   1
+       r = range(1, 4000)
+       nums = [int_to_roman(i) for i in r]
+       ints = [roman_to_int(n) for n in nums]
+       print r == ints
+       1
 
    >>> roman_to_int('VVVIV')
    Traceback (most recent call last):
@@ -226,6 +228,9 @@ def readGSM19(filename, headonly=False, **kwargs):
     # Check whether header information is already present
     headers = {}
     array = [[] for key in KEYLIST]
+    typus = []
+    day = ''
+    dist = 0
 
     indf = KEYLIST.index('f')
     inddf = KEYLIST.index('df')
@@ -331,7 +336,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                         if not toffset == 0:
                             strtime = strtime - timedelta(hours=toffset)
                         #strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S")
-                        array[0].append(date2num(strtime))
+                        array[0].append(strtime)
                         array[indf].append(float(elem[1]))
                         array[indvar5].append(float(elem[2]))
                 except:
@@ -362,7 +367,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                     second = elem[5][4:]
                     # add day
                     strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
-                    array[0].append(date2num(strtime))
+                    array[0].append(strtime)
                     array[indf].append(float(elem[2]))
                     array[indvar5].append(float(elem[3]))
                     array[indvar1].append(float(elem[0]))
@@ -395,7 +400,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                        valdf = float(elem[3])
                        if dist:
                            array[indz].append(valf-(valdf*dist))
-                       array[0].append(date2num(strtime))
+                       array[0].append(strtime)
                        array[indf].append(float(elem[2]))
                        array[inddf].append(float(elem[3]))
                        array[indvar5].append(float(elem[4]))
@@ -440,4 +445,4 @@ def readGSM19(filename, headonly=False, **kwargs):
 
     array = [np.asarray(el) for el in array]
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
