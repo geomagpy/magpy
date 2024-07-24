@@ -502,7 +502,7 @@ The stream can be trimmed to a specific time interval after reading by applying 
  format_json.py      |                            |               |            |                |
  format_latex.py     |                            |               |            |                |
  format_lemi.py      |                            |               |            |                |
- format_magpy.py     | PYASCII, PYSTR, PYBIN      |          | rw,rw,r    |                |
+ format_magpy.py     | PYASCII, PYSTR, PYBIN      | 2.0.0         | rw,rw,r    | yes            | csv
  format_magpycdf.py  | PYCDF                      |               | rw         |                | cdflib
  format_nc.py        |                            |               |            |                |
  format_neic.py      |                            |               |            |                |

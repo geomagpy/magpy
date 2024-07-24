@@ -8,22 +8,25 @@ Rewritten by Roman Leonhardt October 2019
 - supports python >= 3.5
 
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-from io import open
-
 # Specify what methods are really needed
-from magpy.stream import *
-
+#from magpy.stream import *
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
+from magpy.stream import DataStream, read, join_streams, subtract_streams,magpyversion
+from magpy.core.methods import testtime, extract_date_from_string
+from datetime import datetime, timedelta
+import numpy as np
+import os
+import cdflib
+import pickle
+# for export of objects:
+import codecs
 import logging
 logger = logging.getLogger(__name__)
 
-import gc
-import cdflib
-# for export of objects:
-import codecs
+KEYLIST = DataStream().KEYLIST
+NUMKEYLIST = DataStream().NUMKEYLIST
+
 
 def isPYCDF(filename):
     """
@@ -35,6 +38,7 @@ def isPYCDF(filename):
         return False
     try:
         cdfformat = temp.globalattsget().get('DataFormat')
+        print (cdfformat)
         if not cdfformat.startswith('MagPyCDF'):
             return False
     except:
@@ -77,13 +81,13 @@ def readPYCDF(filename, headonly=False, **kwargs):
     else:
         headskip = True
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -216,7 +220,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
     if debug:
         print(" - read pycdf: returning")
 
-    return DataStream([LineStruct()], stream.header,np.asarray(array,dtype=object))
+    return DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
 
 
 def writePYCDF(datastream, filename, **kwargs):
@@ -231,12 +235,8 @@ def writePYCDF(datastream, filename, **kwargs):
 
     """
 
-    if pyvers and pyvers == 2:
-                ch1 = '-'.encode('utf-8') # not working with py3
-                ch2 = ''.encode('utf-8')
-    else:
-                ch1 = '-'
-                ch2 = ''
+    ch1 = '-'
+    ch2 = ''
 
     if not len(datastream.ndarray[0]) > 0 and not len(datastream) > 0:
         return False
@@ -251,7 +251,7 @@ def writePYCDF(datastream, filename, **kwargs):
     mode = kwargs.get('mode')
     skipcompression = kwargs.get('skipcompression')
     compression = kwargs.get('compression')
-    version = '1.2'
+    version = magpyversion
     cdfvers = 0.9
     debug = False
 
@@ -281,7 +281,7 @@ def writePYCDF(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = joinStreams(exst,datastream,extend=True)
+            datastream = join_streams(exst,datastream,extend=True)
             os.remove(filename)
             try:
                 mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
@@ -296,7 +296,7 @@ def writePYCDF(datastream, filename, **kwargs):
             #### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             try:
                 exst = read(path_or_url=filename)
-                datastream = joinStreams(datastream,exst,extend=True)
+                datastream = join_streams(datastream,exst,extend=True)
             except:
                 logger.error("writePYCDF: Could not interprete existing data set - aborting")
                 sys.exit()
@@ -308,7 +308,7 @@ def writePYCDF(datastream, filename, **kwargs):
         elif mode == 'append':
             #print filename
             exst = read(path_or_url=filename)
-            datastream = joinStreams(exst,datastream,extend=True)
+            datastream = join_streams(exst,datastream,extend=True)
             os.remove(filename)
             try:
                 mycdf = cdflib.CDF(filename,cdf_spec=main_cdf_spec)
@@ -377,7 +377,7 @@ def writePYCDF(datastream, filename, **kwargs):
 
         # Sort out columns only containing nan's
         try:
-            test = [elem for elem in col if not isnan(elem)]
+            test = [elem for elem in col if not np.isnan(elem)]
             if not len(test) > 0:
                 col = np.asarray([])
         except:
@@ -393,7 +393,7 @@ def writePYCDF(datastream, filename, **kwargs):
                 if cdfkey == 'time':
                     cdfkey = 'Epoch'
                 try: # Might fail for sectime
-                    cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(num2date(elem).replace(tzinfo=None)) for elem in col.astype(np.float64)] )
+                    cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in col] )
                 except:
                     cdfdata = np.asarray([])
                 var_spec['Data_Type'] = 33
@@ -437,3 +437,111 @@ def writePYCDF(datastream, filename, **kwargs):
 
     mycdf.close()
     return testname
+
+if __name__ == '__main__':
+
+    import scipy
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: MAGPYs CDF FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE MAGPY CDF LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+    l = 88400
+    array = [[] for el in DataStream().KEYLIST]
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(20950, 21000, size=int(l/2))
+    b = np.random.uniform(20950, 21050, size=int(l/2))
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x[1000:-1000]
+    a = np.random.uniform(1950, 2000, size=int(l/2))
+    b = np.random.uniform(1900, 2050, size=int(l/2))
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1000:-1000]
+    a = np.random.uniform(44300, 44400, size=l)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1000:-1000]
+    a = np.random.uniform(49000, 49200, size=l)
+    f = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[4] = f[1000:-1000]
+    array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    # 2. Creating artificial header information
+    header = {}
+    header['DataSamplingRate'] = 1
+    header['SensorID'] = 'Test_0001_0002'
+    header['StationIAGAcode'] = 'XXX'
+    header['DataAcquisitionLatitude'] = 48.123
+    header['DataAcquisitionLongitude'] = 15.999
+    header['DataElevation'] = 1090
+    header['DataComponents'] = 'XYZS'
+    header['StationInstitution'] = 'TheWatsonObservatory'
+    header['DataDigitalSampling'] = '1 Hz'
+    header['DataSensorOrientation'] = 'HEZ'
+    header['StationName'] = 'Holmes'
+
+    teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+
+
+    errors = {}
+    successes = {}
+    testrun = 'STREAMTESTFILE'
+    t_start_test = datetime.utcnow()
+
+    while True:
+        testset = 'PYCDF'
+        try:
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.utcnow()
+            succ1 = writePYCDF(teststream, filename)
+            succ2 = isPYCDF(filename)
+            dat = readPYCDF(filename)
+            te = datetime.utcnow()
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
+                 raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.utcnow()
+    time_taken = t_end_test - t_start_test
+    print(datetime.utcnow(), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    #subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")
