@@ -279,7 +279,7 @@ if __name__ == '__main__':
     print()
     print("----------------------------------------------------------")
     print("TESTING: CSV FORMAT LIBRARY")
-    print("THIS IS A TEST RUN OF THE IMF LIBRARY.")
+    print("THIS IS A TEST RUN OF THE BASICCSV LIBRARY.")
     print("All main methods will be tested. This may take a while.")
     print("A summary will be presented at the end. Any protocols")
     print("or functions with errors will be listed.")
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     print()
     print("----------------------------------------------------------")
     del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
-    #subprocess.call(del_test_files,shell=True)
+    subprocess.call(del_test_files,shell=True)
     for item in successes:
         print ("{} :     {}".format(item, successes.get(item)))
     if errors == {}:

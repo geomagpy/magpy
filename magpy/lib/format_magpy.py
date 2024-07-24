@@ -4,19 +4,24 @@ MagPy input/output filters
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
 from io import open
 
 # Specify what methods are really needed
-from magpy.stream import *
-
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
+from magpy.stream import DataStream, read, join_streams, subtract_streams, magpyversion
+from magpy.core.methods import testtime, extract_date_from_string
+from datetime import datetime, timedelta
+import numpy as np
+import os
+import struct
+import csv
 import logging
 logger = logging.getLogger(__name__)
 
-import gc
+KEYLIST = DataStream().KEYLIST
+NUMKEYLIST = DataStream().NUMKEYLIST
+#import gc
 
 
 # K0 (Browsing - not for Serious Science) ACE-EPAM data from the OMNI database:
@@ -157,11 +162,11 @@ def readPYASCII(filename, headonly=False, **kwargs):
                     elif elem[i] == 'Time' and not timecol > 0:
                         timecol = i
                         timeconv = True
-                    elif elem[i] == 'Time-days':
-                        timecol = i
-                        timeconv = False
+                    #elif elem[i] == 'Time-days':  # ignore this column from 2.0 onwards
+                    #    timecol = i
+                    #    timeconv = False
                 if len(keylst) > len(NUMKEYLIST):
-                    keylst = keylist[:len(NUMKEYLIST)]
+                    keylst = keylst[:len(NUMKEYLIST)]
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -170,7 +175,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
             else:
                 try:
                     if timeconv:
-                        ti = date2num(stream._testtime(elem[timecol]))
+                        ti = testtime(elem[timecol])
                     else:
                         ti = elem[timecol]
                     array[0].append(ti)
@@ -315,10 +320,14 @@ def readPYBIN(filename, headonly=False, **kwargs):
     keylist = kwargs.get('keylist') # required for very old format, does not affect other formats
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
-    oldtype = kwargs.get('oldtype')
     debug = kwargs.get('debug')
 
     getfile = True
+    elemlist = []
+    unitlist = []
+    multilist = []
+    array = [[] for key in KEYLIST]
+
 
     stream = DataStream([],{},[[] for key in KEYLIST])
 
@@ -331,13 +340,13 @@ def readPYBIN(filename, headonly=False, **kwargs):
     if debug:
         print ("PYBIN: reading data ...")
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -477,37 +486,30 @@ def readPYBIN(filename, headonly=False, **kwargs):
                         print ("readPYBIN: struct error {} {}".format(filename, len(line)))
                 try:
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-                    if not oldtype:
-                        array[0].append(stream._testtime(time))
-                        # check elemlist and keylist
-                        for idx, elem in enumerate(keylist):
-                            try:
-                                index = KEYLIST.index(elem)
-                                if not elem.endswith('time'):
-                                    if elem in NUMKEYLIST:
-                                        array[index].append(data[idx+7]/float(multilist[idx]))
-                                    else:
-                                        array[index].append(data[idx+7])
+                    array[0].append(testtime(time))
+                    # check elemlist and keylist
+                    for idx, elem in enumerate(keylist):
+                        try:
+                            index = KEYLIST.index(elem)
+                            if not elem.endswith('time'):
+                                if elem in NUMKEYLIST:
+                                    array[index].append(data[idx+7]/float(multilist[idx]))
                                 else:
-                                    try:
-                                        sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
-                                        array[index].append(stream._testtime(sectime))
-                                    except:
-                                        pass
-                            except:
-                                if elem.endswith('time'):
-                                    try:
-                                        sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
-                                        index = KEYLIST.index('sectime')
-                                        array[index].append(stream._testtime(sectime))
-                                    except:
-                                        pass
-                    else:
-                        row = LineStruct()
-                        row.time = date2num(stream._testtime(time))
-                        for idx, elem in enumerate(keylist):
-                            exec('row.'+keylist[idx]+' = data[idx+7]/float(multilist[idx])')
-                        stream.add(row)
+                                    array[index].append(data[idx+7])
+                            else:
+                                try:
+                                    sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
+                                    array[index].append(testtime(sectime))
+                                except:
+                                    pass
+                        except:
+                            if elem.endswith('time'):
+                                try:
+                                    sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
+                                    index = KEYLIST.index('sectime')
+                                    array[index].append(testtime(sectime))
+                                except:
+                                    pass
                     if logbaddata == True:
                         logger.error("readPYBIN: Good data resumes with: %s" % str(data))
                         logbaddata = False
@@ -525,13 +527,6 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
         array = [np.asarray(el,dtype=object) for el in array]
 
-        if len(stream.ndarray[0]) > 0:
-            logger.debug("readPYBIN: Imported bin as ndarray")
-            stream.container = [LineStruct()]
-            # if unequal lengths are found, then usually txt and bin files are loaded together
-
-    #t2 = datetime.utcnow()
-    #print ("Duration:", (t2-t1).total_seconds())
     stream.header["DataFormat"] = "PYBIN"
 
     return DataStream(header=stream.header, ndarray=np.asarray(array,dtype=object))
@@ -550,7 +545,7 @@ def writePYSTR(datastream, filename, **kwargs):
         if mode == 'skip': # skip existing inputs
             try:
                 exst = read(path_or_url=filename)
-                datastream = joinStreams(exst,datastream)
+                datastream = join_streams(exst,datastream)
             except:
                 logger.info("writePYSTR: Could not interprete existing file - replacing %s" % filename)
             if sys.version_info >= (3,0,0):
@@ -560,7 +555,7 @@ def writePYSTR(datastream, filename, **kwargs):
         elif mode == 'replace': # replace existing inputs
             try:
                 exst = read(path_or_url=filename)
-                datastream = joinStreams(datastream,exst)
+                datastream = join_streams(datastream,exst)
             except:
                 logger.info("writePYSTR: Could not interprete existing file - replacing %s" % filename)
             if sys.version_info >= (3,0,0):
@@ -609,7 +604,7 @@ def writePYSTR(datastream, filename, **kwargs):
                         if isinstance(el[0],datetime):
                             row.append(
                                 datetime.strftime(el[i].replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f"))
-                        elif isinstance(el[0],datetime64):
+                        elif isinstance(el[0],np.datetime64):
                             row.append(np.datetime_as_string(el[i], unit='us'))
                         else:
                             row.append = np.nan
@@ -627,19 +622,6 @@ def writePYSTR(datastream, filename, **kwargs):
                     else:
                         row.append('-')
             wtr.writerow(row)
-    else:
-        for elem in datastream:
-            row = []
-            for key in KEYLIST:
-                if key.find('time') >= 0:
-                    try:
-                        row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
-                    except:
-                        row.append( float('nan') )
-                        pass
-                else:
-                    row.append(eval('elem.'+key))
-            wtr.writerow( row )
     myFile.close()
     return filename
 
@@ -656,43 +638,23 @@ def writePYASCII(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = joinStreams(exst,datastream,extend=True)
-            if sys.version_info >= (3,0,0):
-                myFile = open(filename, 'w', newline='')
-            else:
-                myFile = open(filename, 'wb')
+            datastream = join_streams(exst,datastream,extend=True)
+            myFile = open(filename, 'w', newline='')
         elif mode == 'replace': # replace existing inputs
             logger.debug("write ascii filename", filename)
             exst = read(path_or_url=filename)
-            datastream = joinStreams(datastream,exst,extend=True)
-            if sys.version_info >= (3,0,0):
-                myFile = open(filename, 'w', newline='')
-            else:
-                myFile = open(filename, 'wb')
-        elif mode == 'append':
-            if sys.version_info >= (3,0,0):
-                myFile = open(filename, 'a', newline='')
-            else:
-                myFile = open(filename, 'ab')
-        else:
-            if sys.version_info >= (3,0,0):
-                myFile = open(filename, 'w', newline='')
-            else:
-                myFile = open(filename, 'wb')
-    elif filename.find('StringIO') > -1 and not os.path.isfile(filename):
-        if sys.version_info >= (3,0,0):
-            import io
-            myFile = io.StringIO()
-            returnstring = True
-        else:
-            import StringIO
-            myFile = StringIO.StringIO()
-            returnstring = True
-    else:
-        if sys.version_info >= (3,0,0):
+            datastream = join_streams(datastream,exst,extend=True)
             myFile = open(filename, 'w', newline='')
+        elif mode == 'append':
+            myFile = open(filename, 'a', newline='')
         else:
-            myFile = open(filename, 'wb')
+            myFile = open(filename, 'w', newline='')
+    elif filename.find('StringIO') > -1 and not os.path.isfile(filename):
+        import io
+        myFile = io.StringIO()
+        returnstring = True
+    else:
+        myFile = open(filename, 'w', newline='')
 
     wtr= csv.writer( myFile )
     headdict = datastream.header
@@ -718,7 +680,7 @@ def writePYASCII(datastream, filename, **kwargs):
                 if len(datastream.ndarray[idx]) > 0:
                     if KEYLIST[idx].find('time') >= 0:
                         #print el[i]
-                        row.append(date2num(el[i]))
+                        row.append(np.datetime64(el[i]).astype(np.float64))
                         row.append(datetime.strftime(el[i].replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
                     else:
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
@@ -735,3 +697,134 @@ def writePYASCII(datastream, filename, **kwargs):
 
     myFile.close()
     return filename
+
+if __name__ == '__main__':
+
+    import scipy
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: MAGPY SPECIFIC FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE MAGPY LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+    l = 88400
+    array = [[] for el in DataStream().KEYLIST]
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(20950, 21000, size=int(l/2))
+    b = np.random.uniform(20950, 21050, size=int(l/2))
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x[1000:-1000]
+    a = np.random.uniform(1950, 2000, size=int(l/2))
+    b = np.random.uniform(1900, 2050, size=int(l/2))
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1000:-1000]
+    a = np.random.uniform(44300, 44400, size=l)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1000:-1000]
+    a = np.random.uniform(49000, 49200, size=l)
+    f = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[4] = f[1000:-1000]
+    array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    # 2. Creating artificial header information
+    header = {}
+    header['DataSamplingRate'] = 1
+    header['SensorID'] = 'Test_0001_0002'
+    header['StationIAGAcode'] = 'XXX'
+    header['DataAcquisitionLatitude'] = 48.123
+    header['DataAcquisitionLongitude'] = 15.999
+    header['DataElevation'] = 1090
+    header['DataComponents'] = 'XYZS'
+    header['StationInstitution'] = 'TheWatsonObservatory'
+    header['DataDigitalSampling'] = '1 Hz'
+    header['DataSensorOrientation'] = 'HEZ'
+    header['StationName'] = 'Holmes'
+
+    teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+
+
+    errors = {}
+    successes = {}
+    testrun = 'STREAMTESTFILE'
+    t_start_test = datetime.utcnow()
+
+    while True:
+        testset = 'PYSTR'
+        try:
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.utcnow()
+            succ1 = writePYSTR(teststream, filename)
+            succ2 = isPYSTR(filename)
+            dat = readPYSTR(filename)
+            te = datetime.utcnow()
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
+                 raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+
+        testset = 'PYASCII'
+        try:
+            filename = os.path.join('/tmp', '{}_{}_{}'.format(testrun, testset,
+                                                              datetime.strftime(t_start_test, '%Y%m%d-%H%M')))
+            ts = datetime.utcnow()
+            succ1 = writePYASCII(teststream, filename)
+            succ2 = isPYASCII(filename)
+            dat = readPYASCII(filename)
+            te = datetime.utcnow()
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
+                raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.utcnow()
+    time_taken = t_end_test - t_start_test
+    print(datetime.utcnow(), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    #subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")
