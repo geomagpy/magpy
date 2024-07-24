@@ -4,13 +4,10 @@ NEIC input filter
 Written by Roman Leonhardt February 2015
 - contains read function to import neic data (usgs wget seismic data)
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-from io import open
+#from io import open
 
 from magpy.stream import *
+from magpy.core.methods import testtime
 import csv
 
 def isNEIC(filename):
@@ -50,10 +47,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     datalist = []
     pos = KEYLIST.index('str1')
     if getfile:
-        if sys.version_info[0] < 3: 
-            infile = open(filename, 'rb')
-        else:
-            infile = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
+        infile = open(filename, 'rb')
         with infile as csvfile:
             neicreader = csv.reader(csvfile, delimiter=str(','), quotechar=str('"'))
             #print (neicreader)
@@ -84,10 +78,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
 
     neicarray = np.asarray(datalist)
     neicar = neicarray.transpose()
-    if sys.version_info >= (3,0,0):
-        timecol = np.asarray([date2num(stream._testtime(elem.replace('Z',''))) for elem in neicar[0]])
-    else:
-        timecol = np.asarray([date2num(stream._testtime(elem.replace('Z','').encode('ascii','ignore'))) for elem in neicar[0]])
+    timecol = np.asarray([testtime(elem) for elem in neicar[0]])
     array[0] = timecol
     for i in range(1,5):
         array[i] = neicar[i].astype(float)
@@ -99,10 +90,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
         array[i] = neicar[i-dxp+15]
     array[pos] = neicar[11]
     # sec time
-    if sys.version_info >= (3,0,0):
-        array[secp] = np.asarray([date2num(stream._testtime(elem.replace('Z',''))) for elem in neicar[12]])
-    else:
-        array[secp] = np.asarray([date2num(stream._testtime(elem.replace('Z','').encode('ascii','ignore'))) for elem in neicar[12]])
+    array[secp] = np.asarray([testtime(elem) for elem in neicar[12]])
     # status
     array[pos+1] = neicar[i-dxp+17]
 
@@ -112,5 +100,5 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     #headers['DataTerms'] = ''
     headers['DataReferences'] = 'http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv'
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
