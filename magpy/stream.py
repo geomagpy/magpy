@@ -339,12 +339,11 @@ class DataStream(object):
     - stream._tau(self, period):
     - stream._convertstream(self, coordinate, **kwargs):
     - stream._det_trange(self, period):
-    - stream._is_number(self, s):
     - stream._normalize(self, column):
-    - stream._drop_nans(self, key):
+    _drop_nans(self, key):
     _select_timerange(self, start, end)
     aic_calc(self, key, **kwargs)   -- returns stream (with !var2! filled with aic values), helper for storm detection
-    - stream.baseline(self, absolutestream, **kwargs):
+    baseline(self, absolutestream, **kwargs):
     bc(self, ??, **kwargs)   -- applies baseline correction based on header information
     - stream.bindetector(self,key,text=None,**kwargs):
     calc_f(self, **kwargs):
@@ -392,16 +391,21 @@ class DataStream(object):
     - stream.variometercorrection(self, variopath, thedate, **kwargs):
     - stream.write(self, filepath, **kwargs):
 
+    deprecated
+    ----------------------------
+    - stream._is_number(self, value):
+
+
     Available methods for a list of two DataStreams:
     * stream need to cover the same time range
     ----------------------------
-    diff()*:    -- (old subtract) difference of two streams, create flagdict showing ranges only existing in a or b
+    subtract_streams()*:    -- (old subtract) difference of two streams, create flagdict showing ranges only existing in a or b
 
 
     Available methods for a list of multiple DataStreams:
     ----------------------------
-    merge()*:    -- merge contents from different streams, eventually fill gaps with data of subsequent streams
-    join():   -- join all contents from provided streams including length extension
+    merge_streams()*:    -- merge contents from different streams, eventually fill gaps with data of subsequent streams
+    join_streams():   -- join all contents from provided streams including length extension
 
 
     Methods to be moved and modified:
@@ -490,7 +494,6 @@ class DataStream(object):
     - self._print_key_headers(self) -- Prints keys in datastream with variable and unit.
     - self._get_key_headers(self) -- Returns keys in datastream.
     - self._drop_nans(self, key) -- Helper to drop lines with NaNs in any of the selected keys.
-    - self._is_number(self, s) -- ?
 
     Supporting EXTERNAL methods:
     ----------------------------
@@ -733,11 +736,11 @@ CALLED BY:
         return DataStream(header=self.header, ndarray=np.asarray(array,dtype=object))
 
 
-    def start(self, dateformt=None):
+    def start(self):
         st,et = self._find_t_limits()
         return st
 
-    def end(self, dateformt=None):
+    def end(self):
         st,et = self._find_t_limits()
         return et
 
@@ -859,7 +862,7 @@ CALLED BY:
         - keylist:      (list) a list like ['x','y','z']
 
     EXAMPLE:
-        >>> data_stream._get_key_headers(limit=1)
+        data_stream._get_key_headers(limit=1)
         """
 
         limit = kwargs.get('limit')
@@ -987,39 +990,6 @@ CALLED BY:
 
         return lines[0]
 
-    def _take_columns(self, keys):
-        """
-        DEFINITION:
-            extract selected columns of the given keys (Old LineStruct format - decrapted)
-        """
-
-        resultstream = DataStream()
-
-        for elem in self:
-            line = LineStruct()
-            line.time = elem.time
-            resultstream.add(line)
-        resultstream.header = {}
-
-        for key in keys:
-            if not key in KEYLIST:
-                pass
-            elif not key == 'time':
-                col = self._get_column(key)
-                #print key, len(col)
-                try:
-                    resultstream.header['col-'+key] = self.header['col-'+key]
-                except:
-                    pass
-                try:
-                    resultstream.header['unit-col-'+key] = self.header['unit-col-'+key]
-                except:
-                    pass
-                resultstream = resultstream._put_column(col,key)
-
-        return resultstream
-
-
 
     def _remove_lines(self, key, value):
         """
@@ -1062,7 +1032,7 @@ CALLED BY:
             return np.asarray([])
 
 
-    def _put_column(self, column, key, **kwargs):
+    def _put_column(self, column, key, columnname=None, columnunit=None):
         """
     DEFINITION:
         adds a column to a Stream
@@ -1076,14 +1046,8 @@ CALLED BY:
         - DataStream object
 
     EXAMPLE:
-        >>>  stream = stream._put_column(res, 't2', columnname='Rain',columnunit='mm in 1h')
+        stream = stream._put_column(res, 't2', columnname='Rain',columnunit='mm in 1h')
         """
-        #init = kwargs.get('init')
-        #if init>0:
-        #    for i in range init:
-        #    self.add(float('NaN'))
-        columnname = kwargs.get('columnname')
-        columnunit = kwargs.get('columnunit')
 
         if not key in KEYLIST:
             raise ValueError("Column key not valid")
@@ -1091,30 +1055,54 @@ CALLED BY:
             ind = KEYLIST.index(key)
             self.ndarray[ind] = np.asarray(column)
         else:
-            if not len(column) == len(self):
-                raise ValueError("Column length does not fit Datastream")
-            for idx, elem in enumerate(self):
-                setattr(elem, key, column[idx])
+            return self
 
         if not columnname:
-            try: # TODO correct that
-                if eval('self.header["col-%s"]' % key) == '':
-                    exec('self.header["col-%s"] = "%s"' % (key, key))
-            except:
-                pass
+            columnname = self.header.get('col_{}'.format(key),'')
+            if not columnname:
+                self.header['col_{}'.format(key)] = key
         else:
-            exec('self.header["col-%s"] = "%s"' % (key, columnname))
+            self.header['col_{}'.format(key)] = columnname
 
         if not columnunit:
-            try: # TODO correct that
-                if eval('self.header["unit-col-%s"]' % key) == '':
-                    exec('self.header["unit-col-%s"] = "arb"' % (key))
-            except:
-                pass
-        else:
-            exec('self.header["unit-col-%s"] = "%s"' % (key, columnunit))
+            columnunit =  self.header.get('unit_col_{}'.format(key),'')
+            if not columnunit:
+                self.header['unit_col_{}'.format(key)] = ''
+            else:
+                self.header['unit_col_{}'.format(key)] = columnunit
 
         return self
+
+
+    def _copy_column(self, key, put2key):
+        '''
+    DEFINITION:
+        Move column of key "key" to key "put2key".
+        Simples.
+
+    PARAMETERS:
+    Variables:
+        - key:          (str) Key to be moved.
+        - put2key:      (str) Key for 'key' to be moved to.
+
+    RETURNS:
+        - stream:       (DataStream) DataStream object.
+
+    EXAMPLE:
+        data_stream._move_column('f', 'var1')
+        '''
+
+        if not key in KEYLIST:
+            logger.error("_move_column: Column key %s not valid!" % key)
+        if key == 'time':
+            logger.error("_move_column: Cannot move time column!")
+        if not put2key in KEYLIST:
+            logger.error("_move_column: Column key %s (to move %s to) is not valid!" % (put2key,key))
+        if len(self.ndarray[0]) > 0:
+            col = self._get_column(key)
+            self =self._put_column(col,put2key)
+        return self
+
 
     def _move_column(self, key, put2key):
         '''
@@ -1131,7 +1119,7 @@ CALLED BY:
         - stream:       (DataStream) DataStream object.
 
     EXAMPLE:
-        >>> data_stream._move_column('f', 'var1')
+        data_stream._move_column('f', 'var1')
         '''
 
         if not key in KEYLIST:
@@ -1142,31 +1130,9 @@ CALLED BY:
             logger.error("_move_column: Column key %s (to move %s to) is not valid!" % (put2key,key))
         if len(self.ndarray[0]) > 0:
             col = self._get_column(key)
-            self =self._put_column(col,put2key)
-            return self
-
-        try:
-            for i, elem in enumerate(self):
-                exec('elem.'+put2key+' = '+'elem.'+key)
-                if key in self.NUMKEYLIST:
-                    setattr(elem, key, float("NaN"))
-                    #exec('elem.'+key+' = float("NaN")')
-                else:
-                    setattr(elem, key, "-")
-                    #exec('elem.'+key+' = "-"')
-            try:
-                exec('self.header["col-%s"] = self.header["col-%s"]' % (put2key, key))
-                exec('self.header["unit-col-%s"] = self.header["unit-col-%s"]' % (put2key, key))
-                exec('self.header["col-%s"] = None' % (key))
-                exec('self.header["unit-col-%s"] = None' % (key))
-            except:
-                logger.error("_move_column: Error updating headers.")
-            logger.info("_move_column: Column %s moved to column %s." % (key, put2key))
-        except:
-            logger.error("_move_column: It's an error.")
-
+            self = self._put_column(col,put2key)
+            self = self._drop_column(key)
         return self
-
 
     def _drop_column(self,key):
         """
@@ -1175,14 +1141,12 @@ CALLED BY:
         ind = KEYLIST.index(key)
 
         if len(self.ndarray[0]) > 0:
-
             try:
                 self.ndarray[ind] = np.asarray([])
             except:
                 # Some array don't allow that, shape error e.g. PYSTRING -> then use this
                 array = [np.asarray(el) if idx is not ind else np.asarray([]) for idx,el in enumerate(self.ndarray)]
                 self.ndarray = np.asarray(array,dtype=object)
-
 
             colkey = "col-%s" % key
             colunitkey = "unit-col-%s" % key
@@ -1196,26 +1160,6 @@ CALLED BY:
 
         return self
 
-    def _clear_column(self, key):
-        """
-        remove a column to a Stream
-        """
-        #init = kwargs.get('init')
-        #if init>0:
-        #    for i in range init:
-        #    self.add(float('NaN'))
-
-        if not key in self.KEYLIST:
-            raise ValueError("Column key not valid")
-        for idx, elem in enumerate(self):
-            if key in self.NUMKEYLIST:
-                setattr(elem, key, float("NaN"))
-                #exec('elem.'+key+' = float("NaN")')
-            else:
-                setattr(elem, key, "-")
-                #exec('elem.'+key+' = "-"')
-
-        return self
 
     def _reduce_stream(self, pointlimit=100000):
         """
@@ -1567,7 +1511,7 @@ CALLED BY:
         """
         return np.sqrt(-np.log(0.01)*2)*self._tau(period)
 
-
+    @deprecated("replaced by is_number in core.methods")
     def _is_number(self, s):
         """
         Test whether s is a number
@@ -3370,7 +3314,7 @@ CALLED BY:
 
         stream = self.copy()
 
-        if not self._is_number(value):
+        if not is_number(value):
             if value.startswith('(') and value.endswith(')') and compare == '==':
                 logger.info("extract: Selected special functional type -equality defined by difference less then 10 exp-6")
                 if ndtype:
@@ -6436,9 +6380,9 @@ CALLED BY:
         - variable:     (type) Description.
 
     EXAMPLE:
-        >>> data.offset({'x':7.5})
+        data.offset({'x':7.5})
         or
-        >>> data.offset({'x':7.5},starttime='2015-11-21 13:33:00',starttime='2015-11-23 12:22:00')
+        data.offset({'x':7.5},starttime='2015-11-21 13:33:00',endtime='2015-11-23 12:22:00')
 
     APPLICATION:
 
@@ -7573,7 +7517,7 @@ CALLED BY:
         stream = self.copy()
         pos = KEYLIST.index('sectime')
         tcol = stream.ndarray[0]
-        stream = stream._move_column('sectime','time')
+        stream = stream._copy_column('sectime','time')
         if swap:
             stream = stream._put_column(tcol,'sectime')
         else:
@@ -9804,7 +9748,7 @@ def merge_streams(stream_a, stream_b, **kwargs):
                     #keyval = getattr(stream_a[pos], key)# should be much better
                     exec('keyval = stream_a[pos].'+key)
                     fkey = 'f'+key
-                    if fkey in function[0] and (isnan(keyval) or not stream_a._is_number(keyval)):
+                    if fkey in function[0] and (isnan(keyval) or not is_number(keyval)):
                         newval = function[0][fkey](functime)
                         exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
                         exec('stream_a['+str(pos)+'].comment = comment')
@@ -10341,7 +10285,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
                     #keyval = getattr(stream_a[pos], key)# should be much better
                     exec('keyval = stream_a[pos].'+key)
                     fkey = 'f'+key
-                    if fkey in function[0] and (isnan(keyval) or not stream_a._is_number(keyval)):
+                    if fkey in function[0] and (isnan(keyval) or not is_number(keyval)):
                         newval = function[0][fkey](functime)
                         exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
                         exec('stream_a['+str(pos)+'].comment = comment')

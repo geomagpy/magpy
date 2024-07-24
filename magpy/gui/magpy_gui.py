@@ -4269,9 +4269,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     ampz = amplitude.amplitude('dz')
                     maxamp = np.max([ampx,ampy,ampz])  # TODO declination!!!
                     reportmsg += "Step 5: maximum amplitude of baseline is {:.1f}{} \n".format(maxamp, unitx)
-                    amplitude = amplitude._move_column('dx','x')
-                    amplitude = amplitude._move_column('dy','y')
-                    amplitude = amplitude._move_column('dz','z')
+                    amplitude = amplitude._copy_column('dx','x')
+                    amplitude = amplitude._copy_column('dy','y')
+                    amplitude = amplitude._copy_column('dz','z')
                     # PLEASE note: amplitude test is currently, effectively only testing x and z component
                     #              this is still useful as maximum amplitudes are expected in these components
                     if maxamp > 5:

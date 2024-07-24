@@ -12,6 +12,7 @@ from __future__ import division
 from magpy.stream import *
 from magpy.absolutes import *
 from magpy.transfer import *
+from magpy.core.methods import is_number
 
 import logging
 logger = logging.getLogger(__name__)
@@ -2652,7 +2653,7 @@ def stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs
         else:
             ct = datetime.strftime(normaltime.replace(microsecond=0).replace(tzinfo=None)+timedelta(seconds=1),'%Y-%m-%d %H:%M:%S.%f')
         # Take the insertstring creation out of loop
-        if not isnan(elem.sectime) and tmpstream._is_number(elem.sectime) and sectimevalidity:
+        if not isnan(elem.sectime) and is_number(elem.sectime) and sectimevalidity:
             furthertime = num2date(elem.sectime)
             fms = int(round(furthertime.microsecond/1000.)*1000.)
             if fms < 1000000:
@@ -3389,7 +3390,7 @@ def dbaddBLV2DATAINFO(db,blvname, stationid):
          ds = DataStream()
          updatelst=[]
          for idx,key in enumerate(keylist):
-             if ds._is_number(valuelist[idx]):
+             if is_number(valuelist[idx]):
                  updatelst.append(key+"="+str(valuelist[idx]))
              else:
                  updatelst.append(key+"='"+valuelist[idx]+"'")

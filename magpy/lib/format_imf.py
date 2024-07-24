@@ -835,7 +835,8 @@ def writeIAF(datastr, filename, **kwargs):
         if kvals:
             dayk = kvals._select_timerange(starttime=t0+i,endtime=t0+i+1)
             kdat = dayk[KEYLIST.index('var1')]
-            kdat = [int(el*10.) if not np.isnan(el) else 999 for el in kdat]
+            # replace nans and or negative (-1) by 999
+            kdat = [int(el*10.) if not np.isnan(el) and el >= 0 else 999 for el in kdat]
             packcode += '8l'
             if not len(kdat) == 8:
                 ks = [999]*8
@@ -1917,7 +1918,7 @@ def writeBLV(datastream, filename, **kwargs):
                     z = 99999.00
                 if np.isnan(df) or ftype.startswith('Fext'):
                     df = 99999.00
-                elif deltaF and dummystream._is_number(deltaF):
+                elif deltaF and is_number(deltaF):
                     # TODO check the sign
                     df = df + deltaF
                 line = '%s %9.2f %9.2f %9.2f %9.2f\r\n' % (day,x,y,z,df)
@@ -1947,7 +1948,7 @@ def writeBLV(datastream, filename, **kwargs):
                 z = elem.z
             if np.isnan(elem.df):
                 f = 99999.00
-            elif deltaF and dummystream._is_number(deltaF):
+            elif deltaF and is_number(deltaF):
                 f = elem.df + deltaF
             else:
                 f = elem.df
@@ -1992,7 +1993,7 @@ def writeBLV(datastream, filename, **kwargs):
             z = 99999.00
         else:
             z = yearstream.ndarray[indz][idx]
-        if deltaF and dummystream._is_number(deltaF):
+        if deltaF and is_number(deltaF):
             f = deltaF
         elif deltaF: # and dummystream._is_number(deltaF):
             f = yearstream.ndarray[indf][idx]
