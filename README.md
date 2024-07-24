@@ -514,7 +514,7 @@ The stream can be trimmed to a specific time interval after reading by applying 
  format_rcs.py       |                              |               | r          | defunc         |
  format_sfs.py       |                              |               |            |                |
  format_simpletable.py |                              | 1.x           |            |                |
- format_tsf.py       |                              |               | r          |                |
+ format_tsf.py       |                              | 2.0.0         | r          | untested       |
  format_wdc.py       |                              |               | rw         |                |
  format_wic.py       |                              |               |            |                |
  format_wik.py       |                              | 1.x           |            |                |

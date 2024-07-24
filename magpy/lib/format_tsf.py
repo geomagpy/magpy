@@ -4,21 +4,16 @@ Auxiliary input filter - TSF format - iGRAV, SG
 Written by Roman Leonhardt June 2012/updated March 2024
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import division
 
-from io import open
+#from io import open
 
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
 
+KEYLIST = DataStream().KEYLIST
 
 def OpenFile(filename, mode='w'):
-    if sys.version_info >= (3,0,0):
-        f = open(filename, mode, newline='')
-    else:
-        f = open(filename, mode+'b')
+    f = open(filename, mode, newline='')
     return f
 
 def isTSF(filename):
@@ -80,14 +75,14 @@ def readTSF(filename, headonly=False, **kwargs):
 
     channellist = get_channels(channels, debug=debug)
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
 
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -253,7 +248,7 @@ def readTSF(filename, headonly=False, **kwargs):
                     colsstr = line.split()
                     row = LineStruct()
                     datatime = colsstr[0]+'-'+colsstr[1]+'-'+colsstr[2]+'T'+colsstr[3]+':'+colsstr[4]+':'+colsstr[5]
-                    array[0].append(date2num(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S")))
+                    array[0].append(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S"))
                     for n in channellist:
                         dind += 1
                         array[dind].append(float(colsstr[n+5]))
@@ -264,7 +259,7 @@ def readTSF(filename, headonly=False, **kwargs):
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
-    stream = DataStream([LineStruct()],stream.header,np.asarray(array,dtype=object))
+    stream = DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
 
     fh.close()
     return stream
