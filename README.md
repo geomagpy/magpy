@@ -250,8 +250,9 @@ MagPy's functionality can be accessed basically in three different ways:
     3) Use predefined applications "Scripts"
 
 The following section will primarily deal with way 1.
-For 2 - xmagpy - we refer to the video tutorials whcih can be found here:
-Section 3 contains examples for predefined applications/scripts
+For 2 - xmagpy - we refer to the specfic xmagpy manual can be found in the download section of 
+the [Conrad Observatory Webpage](https://cobs.geosphere.at).
+Predefined applications/scripts are summarized in the appendix.
 
 ### 2.1 Getting started with the python package
 
@@ -315,19 +316,22 @@ The logger can also be configured to print to shell (stdout, without formatting)
 
 ## 3. Reading and writing data
 
-MagPy supports the following data formats and thus conversions between them:
+MagPy supports many different data formats and thus conversions between them. For geomagnetic purposes
+the most important are listed below.
+
    - WDC: 	World Data Centre format
    - JSON: 	JavaScript Object Notation
    - IMF: 	Intermagnet Format
    - IAF: 	Intermagnet Archive Format
-   - NEIC: 	WGET data from USGS - NEIC
    - IAGA: 	IAGA 2002 text format
    - IMAGCDF: 	Intermagnet CDF Format
    - GFZKP: 	GeoForschungsZentrum KP-Index format
    - GSM19/GSM90: 	Output formats from GSM magnetometers
    - POS1: 	POS-1 binary output
+   - LEMI: 	LEMIXXX binary output
    - BLV: 	Baseline format Intermagnet
    - IYFV: 	Yearly mean format Intermagnet
+   - DKA: 	K Value file
 
 ... and many others. To get a full list, use:
 
@@ -369,30 +373,11 @@ For a file in the same directory:
 
         data = read(r'c:\path\to\file\myfile.min')
 
-Pathnames are related to your operating system. In this guide we will assume a Linux system. Files that are read in are uploaded to the memory and each data column (or piece of header information) is assigned to an internal variable (key). To get a quick overview of the assigned keys in any given stream (`data`) you can use the following method:
+Pathnames are related to your operating system. Hereinafter we will assume a Linux system in this guide. Files that are read in are uploaded to the memory and each data column (or piece of header information) is assigned to an internal variable (key). To get a quick overview of the assigned keys in any given stream (`data`) you can use the following method:
 
         print(data._get_key_headers() )
 
-
-### 3.2 Writing
-
-After loading data from a file, we can save the data in the standard IAGA02 and IMAGCDF formats with the following commands.
-
-To create an IAGA-02 format file, use:
-
-        data.write(r'/path/to/diretory/',format_type='IAGA')
-
-To create an [INTERMAGNET] CDF (ImagCDF) file:
-
-        data.write(r'/path/to/diretory/',format_type='IMAGCDF')
-
-The filename will be created automatically according to the defined format. By default, daily files are created and the date is added to the filename in-between the optional parameters `filenamebegins` and `filenameends`. If `filenameends` is missing, `.txt` is used as default.
-
-To get an overview about possible write options use:
-
-        help(DataStream().write)
-
-### 3.3 Other possibilities for reading files
+### 3.2 Other possibilities for reading files
 
 To read all local files ending with .min within a directory (creates a single stream of all data):
 
@@ -421,6 +406,25 @@ Getting data for a specific time window for local files:
 Reading data from the INTERMAGNET Webservice:
 
         data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?request=GetData&observatoryIagaCode=WIC&dataStartDate=2021-03-10T00:00:00Z&dataEndDate=2021-03-11T23:59:59Z&Format=iaga2002&elements=&publicationState=adj-or-rep&samplesPerDay=minute')
+
+
+### 3.3 Writing
+
+After loading data from a file, we can save the data in the standard IAGA02 and IMAGCDF formats with the following commands.
+
+To create an IAGA-02 format file, use:
+
+        data.write(r'/path/to/diretory/',format_type='IAGA')
+
+To create an [INTERMAGNET] CDF (ImagCDF) file:
+
+        data.write(r'/path/to/diretory/',format_type='IMAGCDF')
+
+The filename will be created automatically according to the defined format. By default, daily files are created and the date is added to the filename in-between the optional parameters `filenamebegins` and `filenameends`. If `filenameends` is missing, `.txt` is used as default.
+
+To get an overview about possible write options use:
+
+        help(DataStream().write)
 
 
 ### 3.4 Format-specific options

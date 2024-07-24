@@ -316,31 +316,40 @@ class DataStream(object):
     - stream.extend(self,datlst,header):
     - stream.union(self,column):
     - stream.findtime(self,time):
-    - stream._find_t_limits(self):
-    - stream._print_key_headers(self):
-    _get_key_headers(self,**kwargs):
+    start(self):   -- return starttime
+    end(self):   -- return endtime
+    _find_t_limits(self):   -- return times of first and last stream data points
+    - stream._print_key_headers(self):   -- Prints keys in datastream with variable and unit.
+
+    _get_key_headers(self,**kwargs):  -- Returns keys in datastream.
     sorting(self):
+
     - stream._get_line(self, key, value):
     - stream._remove_lines(self, key, value):
     - stream._remove_columns(self, keys):
-    _get_column(self, key):
-    - stream._put_column(self, column, key, **kwargs):
-    - stream._move_column(self, key, put2key):
-    - stream._clear_column(self, key):
+
+    _get_column(self, key):  -- returns a numpy array of selected columns from Stream
+    _put_column(self, column, key, columnname, columnunit):  -- adds a column to a Stream
+    _copy_column(self, key, put2key):  -- copy one column to another key
+    _move_column(self, key, put2key):  -- moves one column to another key
+    _drop_column(self, key):   -- drop contents of a column from a stream
+
     - stream._reduce_stream(self, pointlimit=100000):
+
     _aic(self, signal, k, debugmode=None):
+    - stream.nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
     - stream._get_k(self, **kwargs):
     - stream._get_k_float(self, value, **kwargs):
-    _get_max(self, key, returntime=False):
-    _get_min(self, key, returntime=False):
+    _get_max(self, key, returntime=False):  -- returns float
+    _get_min(self, key, returntime=False):  -- returns float
     - stream._gf(self, t, tau):
     - stream._hf(self, p, x):
     - stream._residual_func(self, func, y):
     - stream._tau(self, period):
-    - stream._convertstream(self, coordinate, **kwargs):
-    - stream._det_trange(self, period):
-    - stream._normalize(self, column):
-    _drop_nans(self, key):
+    - stream._convertstream(self, coordinate, **kwargs):   -- Convert coordinates of x,y,z columns in stream
+    - stream._det_trange(self, period):   -- starting with coefficients above 1%
+    - stream._normalize(self, column):   -- returns list,float,float -- normalizes selected column to range 0,1
+    _drop_nans(self, key):   -- Helper to drop lines with NaNs in any of the selected keys.
     _select_timerange(self, start, end)
     aic_calc(self, key, **kwargs)   -- returns stream (with !var2! filled with aic values), helper for storm detection
     baseline(self, absolutestream, **kwargs):
@@ -465,10 +474,6 @@ class DataStream(object):
     - self.sorting(self) -- Sorts object
 
     B. Internal Methods I: Line & column functions
-    - self._get_column(key) -- returns a numpy array of selected columns from Stream
-    - self._put_column(key) -- adds a column to a Stream
-    - self._move_column(key, put2key) -- moves one column to another key
-    - self._clear_column(key) -- clears a column to a Stream
     - self._get_line(self, key, value) -- returns a LineStruct element corresponding to the first occurence of value within the selected key
     - self._reduce_stream(self) -- Reduces stream below a certain limit.
     - self._remove_lines(self, key, value) -- removes lines with value within the selected key
@@ -484,16 +489,6 @@ class DataStream(object):
     - self._tau(self, period) -- low pass filter with -3db point at period in sec (e.g. 120 sec)
 
     B. Internal Methods III: General utility & NaN handlers
-    - self._convertstream(self, coordinate, **kwargs) -- Convert coordinates of x,y,z columns in stream
-    - self._det_trange(self, period) -- starting with coefficients above 1%
-    - self._find_t_limits(self) -- return times of first and last stream data points
-    - self._get_min(key) -- returns float
-    - self._get_max(key) -- returns float
-    - self._normalize(column) -- returns list,float,float -- normalizes selected column to range 0,1
-    - nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
-    - self._print_key_headers(self) -- Prints keys in datastream with variable and unit.
-    - self._get_key_headers(self) -- Returns keys in datastream.
-    - self._drop_nans(self, key) -- Helper to drop lines with NaNs in any of the selected keys.
 
     Supporting EXTERNAL methods:
     ----------------------------
@@ -1130,7 +1125,7 @@ CALLED BY:
             logger.error("_move_column: Column key %s (to move %s to) is not valid!" % (put2key,key))
         if len(self.ndarray[0]) > 0:
             col = self._get_column(key)
-            self = self._put_column(col,put2key)
+            self = self._put_column(col, put2key, columnname=self.header.get('col_{}'.format(key)), columnunit=self.header.get('unit_col_{}'.format(key)))
             self = self._drop_column(key)
         return self
 
@@ -1148,8 +1143,8 @@ CALLED BY:
                 array = [np.asarray(el) if idx is not ind else np.asarray([]) for idx,el in enumerate(self.ndarray)]
                 self.ndarray = np.asarray(array,dtype=object)
 
-            colkey = "col-%s" % key
-            colunitkey = "unit-col-%s" % key
+            colkey = "col_{}".format(key)
+            colunitkey = "unit_col_{}".format(key)
             try:
                 self.header.pop(colkey, None)
                 self.header.pop(colunitkey, None)
@@ -7290,11 +7285,11 @@ CALLED BY:
         - self:         (DataStream) The smoothed signal - destructive
 
     EXAMPLE:
-        >>> nice_data = bad_data.smooth(['x','y','z'])
+        nice_data = bad_data.smooth(['x','y','z'])
         or
-        >>> t=linspace(-2,2,0.1)
-        >>> x=sin(t)+randn(len(t))*0.1
-        >>> y=smooth(x)
+        t=linspace(-2,2,0.1)
+        x=sin(t)+randn(len(t))*0.1
+        y=smooth(x)
 
     APPLICATION:
 
