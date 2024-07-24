@@ -193,7 +193,7 @@ def readCSV(filename, headonly=False, starttime=None, endtime=None, debug=False)
 
         return DataStream(header=comments,ndarray=array)
 
-def writeCSV(datastream, filename, kind='simple',returnstring=False,mode=None):
+def writeCSV(datastream, filename, kind='simple',returnstring=False,mode=None, **kwargs):
     """
     Function to write basic CSV data
     """
