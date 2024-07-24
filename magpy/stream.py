@@ -8013,11 +8013,12 @@ CALLED BY:
         ndtype = False
         if len(self.ndarray[0]) > 0:
             # remove all data from array where time is not valid
-            #1. get indicies of nonnumerics in ndarray[0]
-            nonnumlist = np.nonzero(np.isnat(self.ndarray[0].astype(datetime64)))
-            #1. get indicies of nonnumerics in ndarray[0]
+            #1. get nonnumerics in ndarray[0]
+            nonnumbool = np.isnat(self.ndarray[0].astype(np.datetime64))
+            #2. get indices
+            nonnumlist = np.nonzero(nonnumbool)[0]
             #nonnumlist = np.asarray([idx for idx,elem in enumerate(self.ndarray[0]) if np.isnan(elem)])
-            #2. delete them
+            #3. delete them
             if len(nonnumlist) > 0:
                 print("write: Found NaNs in time column - deleting them", nonnumlist)
                 for idx, elem in enumerate(self.ndarray):

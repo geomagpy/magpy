@@ -475,7 +475,6 @@ The stream can be trimmed to a specific time interval after reading by applying 
         data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
 
 
-
 ### 3.6 An overview of all format libraries
 
 | library                 | formats                      | since version | read/write | internal tests | requirements   |

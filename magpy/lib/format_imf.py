@@ -719,7 +719,7 @@ def writeIAF(datastr, filename, **kwargs):
                 else:
                     value = datastream.header.get(elem,'')
 
-                if not datastream._is_number(value):
+                if not is_number(value):
                     if len(value) < 4:
                         value = value.ljust(4)
                     elif len(value) > 4:
@@ -882,22 +882,6 @@ def writeIAF(datastr, filename, **kwargs):
         myfile.write(output)
         myfile.close()
 
-    if tdiff >= 365:
-        writedka = True
-        if debug:
-            print (" writeIAF: One of data available: writing DKA file")
-    else:
-        writedka = False
-        if debug:
-            print (" writeIAF: Timeseries covers only {} days: DKA files will be written if at least one year of data is provided")
-    if len(kstr) > 0 and writedka:
-        try:
-            success = writeIAFDKA(datastream,kstr,path[0],debug=debug)
-        except:
-            success = False
-        if success:
-            print (" DKA file successfully written ")
-
     readme = True
     if readme:
         try:
@@ -945,7 +929,7 @@ def writeIAFDKA(datastream,kstr,path, debug=False):
                 myfile.write(elem+'\r\n')
         return True
 
-def writeIAFREADME(datastream,path,debug=False):
+def writeIAFREADME(datastream,path,debug=False,**kwargs):
         if debug:
             print(" debugREADME: Creating README from header info in {}".format(path))
         requiredhead = ['StationName','StationInstitution', 'StationStreet','StationCity','StationPostalCode','StationCountry','StationWebInfo', 'StationEmail','StationK9']
@@ -1805,11 +1789,11 @@ def writeBLV(datastream, filename, **kwargs):
                 if fbase:
                     fbasefunc = True
 
-    if keys == ['dx','dy','dz','df'] and datastream._is_number(deltaF):
+    if keys == ['dx','dy','dz','df'] and is_number(deltaF):
         logger.info("writeBLV: found deltaF values, but using provided deltaF {} for adopted scalar baseline ".format(deltaF))
 
     fbasefunc = False
-    if keys == ['dx','dy','dz','df'] and not datastream._is_number(deltaF) and not deltaF == None:
+    if keys == ['dx','dy','dz','df'] and not is_number(deltaF) and not deltaF == None:
         if deltaF in ['mean','MEAN','Mean']:
             logger.info("writeBLV: MEAN deltaF: {}".format(datastream.mean('df',percentage=1)))
             deltaF = datastream.mean('df',percentage=1)
@@ -1995,7 +1979,7 @@ def writeBLV(datastream, filename, **kwargs):
             z = yearstream.ndarray[indz][idx]
         if deltaF and is_number(deltaF):
             f = deltaF
-        elif deltaF: # and dummystream._is_number(deltaF):
+        elif deltaF: # and is_number(deltaF):
             f = yearstream.ndarray[indf][idx]
         elif not len(yearstream.ndarray[indf])>0:
             f = 99999.00
@@ -2569,12 +2553,6 @@ def readDKA(filename, headonly=False, **kwargs):
     kcol = KEYLIST.index('var1')
 
     if ok:
-        #import locale  # to get english month descriptions
-        #old_loc = locale.getlocale(locale.LC_TIME)
-        #try:
-        #    locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
-        #except:
-        #    pass
         for line in fh:
             cnt = cnt+1
             block = line.split()
@@ -2623,8 +2601,20 @@ def readDKA(filename, headonly=False, **kwargs):
     return stream
 
 
-def writeDKA(datastream, filename, mode='overwrite'):
+def writeDKA(datastream, filename, mode='overwrite',**kwargs):
+    """
+    DESCRIPTION
+       DKA files are created by INTERMAGNET
+       The here presented version is not yet fully tested against the IM version
+    :param datastream:
+    :param filename:
+    :param mode:
+    :param kwargs:
+    :return:
+    """
 
+    # filling gaps with mens for daily sums or do not calculate sums - no description found
+    fillmeans = True
     # extract k string from datastream
     # check kvals
     kstr = []
@@ -2634,10 +2624,21 @@ def writeDKA(datastream, filename, mode='overwrite'):
     for d in times:
         klist = [kval for idx,kval in enumerate(datastream.ndarray[KEYLIST.index('var1')]) if datastream.ndarray[0][idx].date() == d]
         if len(klist) == 8:
-            sumk = "{:.1f}".format(np.sum(klist))
+            validk = [el for el in klist if not np.isnan(el) and el >= 0]
+            if len(validk) == 8:
+                sumk = "{:.1f}".format(np.sum(validk))
+            else:
+                if fillmeans:
+                    # fill list with means for sum
+                    mk = np.mean(validk)
+                    validk = validk + [mk] * (8 - len(validk))
+                    sumk = "{:.1f}".format(np.sum(validk))
+                else:
+                    sumk = ''
+
         else:
             sumk=''
-        kstring = "  {0:12}{1:8}{2:41}{3:>4}".format(d.strftime("%d-%b-%y"), d.strftime("%j"), "    ".join([str(int(k)) for k in klist]), sumk)
+        kstring = "  {0:12}{1:7}{2:42}{3:>4}".format(d.strftime("%d-%b-%y"), d.strftime("%j"), "   ".join(["{:>2}".format(str(int(k))) for k in klist]), sumk)
         if len(kstring) > 39:
             kstring = kstring[:39] + '  ' + kstring[39:]
 
