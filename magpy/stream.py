@@ -1068,8 +1068,8 @@ CALLED BY:
             columnunit =  self.header.get('unit_col_{}'.format(key),'')
             if not columnunit:
                 self.header['unit_col_{}'.format(key)] = ''
-            else:
-                self.header['unit_col_{}'.format(key)] = columnunit
+        else:
+            self.header['unit_col_{}'.format(key)] = columnunit
 
         return self
 
