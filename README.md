@@ -478,50 +478,48 @@ The stream can be trimmed to a specific time interval after reading by applying 
 
 ### 3.6 An overview of all format libraries
 
- library            | formats                      | since version | read/write | internal tests | requirements
- -----------------  |------------------------------|---------------|------------|----------------| ------------
- format_abs_magpy.py |                              |               |            |                |
- format_acecdf.py    |                              | 1.x           |            |                |
- format_autodif.py   |                              |               |            |                |
- format_autodif_fread.py |                              |               |            |                |
- format_basiccsv.py  | CSV                          | 2.0.0         | rw         | yes            |  csv 
- format_bdv.py       |                              | 1.x           |            |                |
- format_covjson.py   |                              |               |            |                |
- format_cr800.py     |                              | 1.x           |            |                |
- format_didd.py      |                              |               |            |                |
- format_dtu.py       |                              | 1.x           |            |                |
- format_gdas.py      |                              | 1.x           |            |                |
- format_gfz.py       |                              |               |            |                |
- format_gfztmp.py    |                              | 1.x           |            |                |
- format_gsm19.py     |                              |               |            |                |
- format_hapijson.py  |                              |               |            |                |
- format_iaga02.py    | IAGA                         | 2.0.0         | rw         | yes            | pyproj
- format_imagcdf.py   | IMAGCDF                      | 2.0.0         | rw         | yes            | pyproj, cdflib
- format_imf.py       | IAF, IMF, DKA, *BLV*, *IYFV* | 2.0.0         | rw         | yes            | pyproj
- format_iono.py      |                              |               |            |                |
- format_json.py      |                              |               |            |                |
- format_latex.py     |                              |               |            |                |
- format_lemi.py      |                              |               |            |                |
- format_magpy.py     | PYASCII, PYSTR, PYBIN        | 2.0.0         | rw,rw,r    | yes            | csv
- format_magpycdf.py  | PYCDF                        | 2.0.0         | rw         | yes            | cdflib
- format_nc.py        |                              | 1.x           | r          | defunc         | netcdf
- format_neic.py      | NEIC                         | 2.0.0         | r          | untested       |
- format_noaa.py      | NOAAACE                      | 2.0.0         | r          | no             |
- format_pha.py       |                              |               |            |                |
- format_pos1.py      |                              |               |            |                |
- format_predstorm.py |                              |               |            |                |
- format_qspin.py     |                              | 1.x           |            |                |
- format_rcs.py       |                              |               | r          | defunc         |
- format_sfs.py       |                              |               |            |                |
- format_simpletable.py |                              | 1.x           |            |                |
- format_tsf.py       |                              | 2.0.0         | r          | untested       |
- format_wdc.py       |                              |               | rw         |                |
- format_wic.py       |                              |               |            |                |
- format_wik.py       |                              | 1.x           |            |                |
- magpy_absformats.py |                              |               |            |                |
- magpy_formats.py    |                              |               |            |                |
-
-
+| library                 | formats                      | since version | read/write | internal tests | requirements   |
+|-------------------------|------------------------------|---------------|------------|----------------|----------------|
+| format_abs_magpy.py     |                              |               |            |                |                |
+| format_acecdf.py        |                              | 1.x           |            |                |                |
+| format_autodif.py       |                              |               |            |                |                |
+| format_autodif_fread.py |                              |               |            |                |                |
+| format_basiccsv.py      | CSV                          | 2.0.0         | rw         | yes            | csv            |
+| format_bdv.py           |                              | 1.x           |            |                |                |
+| format_covjson.py       |                              |               |            |                |                |
+| format_cr800.py         |                              | 1.x           |            |                |                |
+| format_didd.py          |                              |               |            |                |                |
+| format_dtu.py           |                              | 1.x           |            |                |                |
+| format_gdas.py          |                              | 1.x           |            |                |                |
+| format_gfz.py           |                              |               |            |                |                |
+| format_gfztmp.py        |                              | 1.x           |            |                |                |
+| format_gsm19.py         | GSM19                        | 2.0.0         | r          | untested       |                |
+| format_hapijson.py      |                              |               |            |                |                |
+| format_iaga02.py        | IAGA                         | 2.0.0         | rw         | yes            | pyproj         |
+| format_imagcdf.py       | IMAGCDF                      | 2.0.0         | rw         | yes            | pyproj, cdflib |
+| format_imf.py           | IAF, IMF, DKA, *BLV*, *IYFV* | 2.0.0         | rw         | yes            | pyproj         |
+| format_iono.py          |                              |               |            |                |                |
+| format_json.py          |                              |               |            |                |                |
+| format_latex.py         |                              |               |            |                |                |
+| format_lemi.py          |                              |               |            |                |                |
+| format_magpy.py         | PYASCII, PYSTR, PYBIN        | 2.0.0         | rw,rw,r    | yes            | csv            |
+| format_magpycdf.py      | PYCDF                        | 2.0.0         | rw         | yes            | cdflib         |
+| format_nc.py            |                              | 1.x           | r          | defunc         | netcdf         |
+| format_neic.py          | NEIC                         | 2.0.0         | r          | untested       |                |
+| format_noaa.py          | NOAAACE                      | 2.0.0         | r          | no             |                |
+| format_pha.py           |                              |               |            |                |                |
+| format_pos1.py          |                              |               |            |                |                |
+| format_predstorm.py     |                              |               |            |                |                |
+| format_qspin.py         |                              | 1.x           |            |                |                |
+| format_rcs.py           |                              |               | r          | defunc         |                |
+| format_sfs.py           |                              |               |            |                |                |
+| format_simpletable.py   |                              | 1.x           |            |                |                |
+| format_tsf.py           | TSF                          | 2.0.0         | r          | untested       |                |
+| format_wdc.py           |                              |               | rw         |                |                |
+| format_wic.py           |                              |               |            |                |                |
+| format_wik.py           |                              | 1.x           |            |                |                |
+| magpy_absformats.py     |                              |               |            |                |                |
+| magpy_formats.py        |                              |               |            |                |                |
 
 ## 4. Figures
 
