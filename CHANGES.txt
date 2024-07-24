@@ -14,8 +14,7 @@ Installation instructions can be found on the main download page.
     - jupyter-notebook examples for backend functionality
 
     Please note: despite the removal of py2.x support, MagPy2.x is fully
-    compatible with all datastructures and DB contents created with MagPy1.x
-    and MagPy0.x.
+    compatible with all datas tructures and DB contents created with MagPy1.x
 
 2.0.0 important removals/modifications affecting definitive data production:
     - internal K_fmi code was replaced by the generally used routine as provided
@@ -45,6 +44,8 @@ Installation instructions can be found on the main download page.
 
 2.0.0 fixes:
      - fixed sign error in calculation of F from vector data including provided deltaF values
+     - fixed nan error in integration
+     - DKA export with missing data
 
 2.0.0 removed items:
      - opt.emd replaced by official python emd package
@@ -63,7 +64,7 @@ Installation instructions can be found on the main download page.
     - pythonic recoding
 
 That was a hugh amount of work. If you like the changes and eventually even profit from
-it for your work, we are happy. In any case we are much interested in your opinion and
+MagPy for your work, we are happy. In any case we are much interested in your opinion and
 comments. Donations in form of free drinks to any of the developers, either because of gratitude or
 compassion, are highly welcome. Best wishes, Roman
 

@@ -324,24 +324,22 @@ class DataStream(object):
     _get_key_headers(self,**kwargs):  -- Returns keys in datastream.
     sorting(self):
 
-    - stream._get_line(self, key, value):
-    - stream._remove_lines(self, key, value):
-    - stream._remove_columns(self, keys):
+    - stream._remove_nancolumns(self, keys):
 
     _get_column(self, key):  -- returns a numpy array of selected columns from Stream
     _put_column(self, column, key, columnname, columnunit):  -- adds a column to a Stream
     _copy_column(self, key, put2key):  -- copy one column to another key
     _move_column(self, key, put2key):  -- moves one column to another key
     _drop_column(self, key):   -- drop contents of a column from a stream
-
-    - stream._reduce_stream(self, pointlimit=100000):
-
     _aic(self, signal, k, debugmode=None):
+
     - stream.nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
     - stream._get_k(self, **kwargs):
     - stream._get_k_float(self, value, **kwargs):
+
     _get_max(self, key, returntime=False):  -- returns float
     _get_min(self, key, returntime=False):  -- returns float
+
     - stream._gf(self, t, tau):
     - stream._hf(self, p, x):
     - stream._residual_func(self, func, y):
@@ -349,6 +347,7 @@ class DataStream(object):
     - stream._convertstream(self, coordinate, **kwargs):   -- Convert coordinates of x,y,z columns in stream
     - stream._det_trange(self, period):   -- starting with coefficients above 1%
     - stream._normalize(self, column):   -- returns list,float,float -- normalizes selected column to range 0,1
+
     _drop_nans(self, key):   -- Helper to drop lines with NaNs in any of the selected keys.
     _select_timerange(self, start, end)
     aic_calc(self, key, **kwargs)   -- returns stream (with !var2! filled with aic values), helper for storm detection
@@ -357,11 +356,15 @@ class DataStream(object):
     - stream.bindetector(self,key,text=None,**kwargs):
     calc_f(self, **kwargs):
     compensation(self,**kwargs)    -- applies compensation field values from header to x,y,z
+
     - stream.cut(self,length,kind=0,order=0):
     - stream.dailymeans(self):
     - stream.date_offset(self, offset):
+
     delta_f(self, **kwargs):
+
     - stream.dict2stream(self,dictkey='DataBaseValues')
+
     differentiate(self, **kwargs)   -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
     dwt_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None, window=5)  -- helper method for storm detection
     - stream.eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
@@ -379,16 +382,16 @@ class DataStream(object):
     get_gaps(self, **kwargs)   -- determines gaps in time axis and fills them with NaN
     get_sampling_period(self)   -- sampling perid in seconds (full resolution)
     hdz2xyz(self):
-    - stream.integrate(self, **kwargs):
-    - stream.interpol(self, keys, **kwargs):
+    integrate(self, **kwargs):   -- returns stream (integrated vals at !dx!,!dy!,!dz!,!df!)
+    interpol(self, keys, **kwargs):    -- returns function
     mean(self, key, **kwargs):
     modwt_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,window=5):  -- helper method for storm detection
-    - stream.multiply(self, factors):
+    multiply(self, factors):  -- multiply components as defined in dictionary factors
     offset(self, offsets):
-    - stream.randomdrop(self, percentage=None, fixed_indicies=None):
+    randomdrop(self, percentage=None, fixed_indicies=None):
     remove(self, starttime=starttime, endtime=endtime):
     - stream.remove_flagged(self, **kwargs):
-    - stream.resample(self, keys, **kwargs):
+    resample(self, keys, **kwargs):
     rotation(self,**kwargs):
     samplingrate(self, **kwargs)   -- sampling period in seconds (rounded)
     - stream.scale_correction(self, keys, scales, **kwargs):
@@ -398,7 +401,7 @@ class DataStream(object):
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
     trim(self, starttime=None, endtime=None, newway=False):
     - stream.variometercorrection(self, variopath, thedate, **kwargs):
-    - stream.write(self, filepath, **kwargs):
+    write(self, filepath, **kwargs):
 
     deprecated
     ----------------------------
@@ -409,12 +412,12 @@ class DataStream(object):
     * stream need to cover the same time range
     ----------------------------
     subtract_streams()*:    -- (old subtract) difference of two streams, create flagdict showing ranges only existing in a or b
+    join_streams():         -- join all contents from provided streams including length extension
 
 
     Available methods for a list of multiple DataStreams:
     ----------------------------
     merge_streams()*:    -- merge contents from different streams, eventually fill gaps with data of subsequent streams
-    join_streams():   -- join all contents from provided streams including length extension
 
 
     Methods to be moved and modified:
@@ -972,34 +975,6 @@ CALLED BY:
     # B. Internal Methods: Line & column functions
     # ------------------------------------------------------------------------
 
-    def _get_line(self, key, value):
-        """
-        returns a LineStruct elemt corresponding to the first occurence of value within the selected key
-        e.g.
-        st = st._get_line('time',734555.3442) will return the line with time 7...
-        """
-        if not key in KEYLIST:
-            raise ValueError("Column key not valid")
-
-        lines = [elem for elem in self if eval('elem.'+key) == value]
-
-        return lines[0]
-
-
-    def _remove_lines(self, key, value):
-        """
-        removes lines with value within the selected key
-        e.g.
-        st = st._remove_lines('time',734555.3442) will return the line with time 7...
-        """
-        if not key in KEYLIST:
-            raise ValueError("Column key not valid")
-
-        lst = [elem for elem in self if not eval('elem.'+key) == value]
-
-        return DataStream(lst, self.header)
-
-
     def _get_column(self, key):
         """
         Returns a numpy array of selected column from Stream
@@ -1154,48 +1129,6 @@ CALLED BY:
            print("No data available  or LineStruct type (not supported)")
 
         return self
-
-
-    def _reduce_stream(self, pointlimit=100000):
-        """
-    DEFINITION:
-        Reduces size of stream by picking for plotting methods to save memory
-        when plotting large data sets.
-        Does NOT filter or smooth!
-        This function purely removes data points (rows) in a
-        periodic fashion until size is <100000 data points.
-        (Point limit can also be defined.)
-
-    PARAMETERS:
-    Kwargs:
-        - pointlimit:   (int) Max number of points to include in stream. Default is 100000.
-
-    RETURNS:
-        - DataStream:   (DataStream) New stream reduced to below pointlimit.
-
-    EXAMPLE:
-        >>> lessdata = ten_Hz_data._reduce_stream(pointlimit=500000)
-
-        """
-
-        size = len(self)
-        div = size/pointlimit
-        divisor = math.ceil(div)
-        count = 0.
-        lst = []
-
-        if divisor > 1.:
-            for elem in self:
-                if count%divisor == 0.:
-                    lst.append(elem)
-                count += 1.
-        else:
-            logger.warning("_reduce_stream: Stream size (%s) is already below pointlimit (%s)." % (size,pointlimit))
-            return self
-
-        logger.info("_reduce_stream: Stream size reduced from %s to %s points." % (size,len(lst)))
-
-        return DataStream(lst, self.header)
 
 
     def _remove_nancolumns(self):
@@ -5839,27 +5772,28 @@ CALLED BY:
         array = [[] for key in KEYLIST]
         ndtype = False
         if len(self.ndarray[0])>0:
-            ndtype = True
-            t = self.ndarray[0]
-            array[0] = t
+            t = linspace(0,1,len(self.ndarray[0]))
+            #t = self.ndarray[0].astype('datetime64[us]').astype(float64)/1000000.
+            array[0] = self.ndarray[0]
         else:
-            t = self._get_column('time')
+            return self
         for key in keys:
-            if ndtype:
-                ind = KEYLIST.index(key)
-                val = self.ndarray[ind]
-                array[ind] = np.asarray(val)
-            else:
-                val = self._get_column(key)
-            dval = sp.integrate.cumtrapz(np.asarray(val),t)
+            ind = KEYLIST.index(key)
+            val = np.asarray(self.ndarray[ind])
+            ninds = np.isnan(val)
+            nind = np.array(range(0,len(val)))[ninds]
+            msk = np.logical_not(ninds)
+            mval = val[msk]
+            mt = t[msk]
+            array[ind] = val
+            dval = sp.integrate.cumtrapz(mval,mt)
             dval = np.insert(dval, 0, 0) # Prepend 0 to maintain original length
-            if ndtype:
-                ind = KEYLIST.index('d'+key)
-                array[ind] = np.asarray(dval)
-            else:
-                self._put_column(dval, 'd'+key)
+            for n in nind:
+                dval = np.insert(dval, n, np.nan) # Insert nans at original position
+            ind = KEYLIST.index('d'+key)
+            array[ind] = np.asarray(dval)
 
-        self.ndarray = np.asarray(array)
+        self.ndarray = np.asarray(array, dtype=object)
         logger.info('--- integration finished at %s ' % str(datetime.now()))
         return self
 
@@ -6319,7 +6253,7 @@ CALLED BY:
         - self:         (DataStream) Multiplied datastream.
 
     EXAMPLE:
-        >>> data.multiply({'x':-1})
+        data.multiply({'x':-1})
 
     APPLICATION:
 
