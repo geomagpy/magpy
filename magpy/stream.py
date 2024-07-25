@@ -319,8 +319,7 @@ class DataStream(object):
     start(self):   -- return starttime
     end(self):   -- return endtime
     _find_t_limits(self):   -- return times of first and last stream data points
-    - stream._print_key_headers(self):   -- Prints keys in datastream with variable and unit.
-
+    _print_key_headers(self):   -- Prints keys in datastream with variable and unit.
     _get_key_headers(self,**kwargs):  -- Returns keys in datastream.
     sorting(self):
 
@@ -354,22 +353,20 @@ class DataStream(object):
     baseline(self, absolutestream, **kwargs):
     bc(self, ??, **kwargs)   -- applies baseline correction based on header information
     - stream.bindetector(self,key,text=None,**kwargs):
+    - stream.baselineAdvanced(self, absdata, baselist, **kwargs):
     calc_f(self, **kwargs):
     compensation(self,**kwargs)    -- applies compensation field values from header to x,y,z
-
-    - stream.cut(self,length,kind=0,order=0):
-    - stream.dailymeans(self):
-    - stream.date_offset(self, offset):
-
+    cut(self,length,kind=0,order=0):
+    dailymeans(self):
     delta_f(self, **kwargs):
 
+    - stream.stream2dict(self)
     - stream.dict2stream(self,dictkey='DataBaseValues')
 
     differentiate(self, **kwargs)   -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
     dwt_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None, window=5)  -- helper method for storm detection
-    - stream.eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
     - stream.extract(self, key, value, compare=None, debugmode=None):
-    extract_headerlist(self, element, parameter=1, year=None)   -- extracts value from headerlist
+    extract_headerlist(self, element, parameter=1, year=None)   -- extracts value from lists in header
     - stream.extrapolate(self, start, end):
     filter(self, **kwargs)    -- returns filtered stream (changes sampling_period)
     - stream.fit(self, keys, **kwargs):
@@ -2660,7 +2657,7 @@ CALLED BY:
         return stream
 
 
-    def dailymeans(self, keys=['x','y','z','f'], offset = 0.5, keepposition=False, **kwargs):
+    def dailymeans(self, keys=['x','y','z','f'], offset = timedelta(hours=12), keepposition=False, **kwargs):
         """
     DEFINITION:
         Calculates daily means of xyz components and their standard deviations. By default
@@ -2682,7 +2679,7 @@ CALLED BY:
     PARAMETERS:
     Variables
     	- keys: 	(list) provide up to four keys which are used in columns x,y,z
-        - offset:       (float) offset in timeunit days (0 to 0.999) default is 0.5, some test might use 0
+        - offset:       (float) offset as timedelta(seconds=xx)
     Kwargs:
         - none
 
@@ -2690,11 +2687,11 @@ CALLED BY:
         - stream:       (DataStream object) with daily means and standard deviation
 
     EXAMPLE:
-        >>> means = didata.dailymeans(keys=['dx','dy','dz'])
+        means = didata.dailymeans(keys=['dx','dy','dz'])
 
     APPLICATION:
-        >>> means = didata.dailymeans(keys=['dx','dy','dz'])
-        >>> mp.plot(means,['x','y','z'],errorbars=True, symbollist=['o','o','o'])
+        means = didata.dailymeans(keys=['dx','dy','dz'])
+        mp.plot(means,['x','y','z'],errorbars=True, symbollist=['o','o','o'])
 
         """
 
@@ -2714,29 +2711,17 @@ CALLED BY:
         array = [[] for el in KEYLIST]
         data = self.copy()
         data = data.removeduplicates()
-        timecol = np.floor(data.ndarray[0])
+        timecol = np.floor(date2num(data.ndarray[0]))
         tmpdatelst = np.asarray(list(set(list(timecol))))
         for day in tmpdatelst:
             sel = data._select_timerange(starttime=day,endtime=day+1)
-            """
-        #for idx,day in enumerate(daylst):
-            #sel = final._select_timerange(starttime=np.round(day), endtime=np.round(day)+1)
-            """
-            #print (len(sel))
-            sttmp = DataStream([LineStruct()],{},sel)
-            array[0].append(day+offset)
+            sttmp = DataStream(header={},ndarray=sel)
+            array[0].append(num2date(day)+offset)
             for idx, pos in enumerate(poslst):
-                #if len(sttmp.ndarray[idx+1]) > 0:
                 if not keepposition:
                     array[idx+1].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
                 else:
                     array[pos].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
-                #print ("Check", KEYLIST[pos], idx+1, len(sttmp._get_column(KEYLIST[pos])),sttmp._get_column(KEYLIST[pos]),sttmp.mean(KEYLIST[pos],percentage=percentage))
-                """
-            #array[0].append(day+0.5)
-            #for idx,pos in enumerate(poslst):
-                array[idx+1].append(np.mean(sel[pos],percentage=percentage))
-                """
                 data.header['col-'+KEYLIST[idx+1]] = '{}'.format(self.header.get('col-'+KEYLIST[pos]))
                 data.header['unit-col-'+KEYLIST[idx+1]] = '{}'.format(self.header.get('unit-col-'+KEYLIST[pos]))
                 diff = pos-idx
@@ -2745,61 +2730,14 @@ CALLED BY:
                 #if len(sttmp.ndarray[idx]) > 0:
                 me,std = sttmp.mean(KEYLIST[idx+diff],percentage=percentage, std=True)
                 array[dpos].append(std)
-                #array[dpos].append(np.std(sel[idx+diff]))
                 data.header['col-'+KEYLIST[dpos]] = 'sigma {}'.format(self.header.get('col-'+KEYLIST[idx+diff]))
                 data.header['unit-col-'+KEYLIST[dpos]] = '{}'.format(self.header.get('unit-col-'+KEYLIST[idx+diff]))
         data.header['DataFormat'] = 'MagPyDailyMean'
 
         array = [np.asarray(el) for el in array]
-        retstream = DataStream([LineStruct()],data.header,np.asarray(array,dtype=object))
+        retstream = DataStream(header=data.header,ndarray=np.asarray(array,dtype=object))
         retstream = retstream.sorting()
         return retstream
-
-
-    def date_offset(self, offset):
-        """
-    IMPORTANT:
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        THIS METHOD IS NOT SUPPORTED ANY MORE. PLEASE USE
-        self.offset({'time':timedelta(seconds=1000)}) INSTEAD
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    DEFINITION:
-        Corrects the time column of the selected stream by the offst
-        offset is a timedelta object (e.g. timedelta(hours=1))
-
-    PARAMETERS:
-    Variables:
-        - offset:       (timedelta object) Offset to apply to stream.
-    Kwargs:
-        - None
-
-    RETURNS:
-        - stream:       (DataStream object) Stream with offset applied.
-
-    EXAMPLE:
-        >>> data = data.offset(timedelta(minutes=3))
-
-    APPLICATION:
-        """
-
-        header = self.header
-        newstream = DataStream()
-        array = self.ndarray
-
-        if len(ndarray[0]) > 0:
-            ndtype = True
-            secsperday = 3600*24
-            ndarray[0] = ndarray[0] + offset.total_seconds/secsperday
-
-        for elem in self:
-            newtime = num2date(elem.time).replace(tzinfo=None) + offset
-            elem.sectime = elem.time
-            elem.time = date2num(newtime)
-            newstream.add(elem)
-
-        logger.info('date_offset: Corrected time column by %s sec' % str(offset.total_seconds))
-
-        return DataStream(newstream,header,array)
 
 
     def delta_f(self, **kwargs):
@@ -2858,64 +2796,6 @@ CALLED BY:
         self.header['unit-col-df'] = 'nT'
 
         logger.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
-
-        return self
-
-
-    def f_from_df(self, **kwargs):
-        """
-        DESCRIPTION:
-            Calculates the f from the difference of x+y+z and df
-
-        PARAMETER:
-            keywords:
-            :type offset: float
-            :param offset: constant offset to f values
-            :type digits: int
-            :param digits: number of digits to be rounded (should equal the input precision)
-        """
-
-        # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
-
-        offset = kwargs.get('offset')
-        digits = kwargs.get('digits')
-        if not offset:
-            offset = 0.
-        if not digits:
-            digits = 8
-
-        logger.info('--- Calculating f started at %s ' % str(datetime.now()))
-
-        try:
-            syst = self.header['DataComponents']
-        except:
-            syst = None
-
-
-        ind = KEYLIST.index("df")
-        indx = KEYLIST.index("x")
-        indy = KEYLIST.index("y")
-        indz = KEYLIST.index("z")
-        indf = KEYLIST.index("f")
-        if len(self.ndarray[0])>0 and len(self.ndarray[indx])>0 and len(self.ndarray[indy])>0 and len(self.ndarray[indz])>0 and len(self.ndarray[ind])>0:
-            # requires x,y,z and f
-            arx = self.ndarray[indx]**2
-            ary = self.ndarray[indy]**2
-            arz = self.ndarray[indz]**2
-            if syst in ['HDZ','hdz','HDZF','hdzf','HDZS','hdzs','HDZG','hdzg']:
-                print("deltaF: found HDZ orientation")
-                ary = np.asarray([0]*len(self.ndarray[indy]))
-            sumar = list(arx+ary+arz)
-            sqr = np.sqrt(np.asarray(sumar))
-            self.ndarray[indf] = sqr - (self.ndarray[ind] + offset)
-        else:
-            for elem in self:
-                elem.f = round(np.sqrt(elem.x**2+elem.y**2+elem.z**2),digits) - (elem.df + offset)
-
-        self.header['col-f'] = 'f'
-        self.header['unit-col-f'] = 'nT'
-
-        logger.info('--- Calculating f finished at %s ' % str(datetime.now()))
 
         return self
 
@@ -3130,75 +3010,6 @@ CALLED BY:
 
         #return DWT_stream
         return DataStream(header=headers, ndarray=np.asarray([np.asarray(a) for a in array],dtype=object))
-
-
-    def eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
-        """
-        read stream and log data of which key meets the criteria
-        maybe combine with extract
-
-        Required:
-        :type key: string
-        :param key: provide the key to be examined
-        :type values: list
-        :param values: provide a list of three values
-        :type values: list
-        :param values: provide a list of three values
-        Optional:
-        :type compare: string
-        :param compare: ">, <, ==, !="
-        :type stringvalues: list
-        :param stringvalues: provide a list of exactly the same length as values with the respective comments
-        :type addcomment: bool
-        :param addcomment: if true add the stringvalues to the comment line of the datastream
-
-        :type debugmode: bool
-        :param debugmode: provide more information
-
-        example:
-        compare is string like ">, <, ==, !="
-        st.eventlogger(['var3'],[15,20,30],'>')
-        """
-        assert type(values) == list
-
-        if not compare:
-            compare = '=='
-        if not compare in ['<','>','<=','>=','==','!=']:
-            logger.warning('Eventlogger: wrong value for compare: needs to be among <,>,<=,>=,==,!=')
-            return self
-        if not stringvalues:
-            stringvalues = ['Minor storm onset','Moderate storm onset','Major storm onset']
-        else:
-            assert type(stringvalues) == list
-        if not len(stringvalues) == len(values):
-            logger.warning('Eventlogger: Provided comments do not match amount of values')
-            return self
-
-        for elem in self:
-            #evaluationstring = 'elem.' + key + ' ' + compare + ' ' + str(values[0])
-            if eval('elem.'+key+' '+compare+' '+str(values[2])):
-                stormlogger.warning('%s at %s' % (stringvalues[2],num2date(elem.time).replace(tzinfo=None)))
-                if addcomment:
-                    if elem.comment == '-':
-                        elem.comment = stringvalues[2]
-                    else:
-                        elem.comment += ', ' + stringvalues[2]
-            elif eval('elem.'+key+' '+compare+' '+str(values[1])):
-                stormlogger.warning('%s at %s' % (stringvalues[1],num2date(elem.time).replace(tzinfo=None)))
-                if addcomment:
-                    if elem.comment == '-':
-                        elem.comment = stringvalues[1]
-                    else:
-                        elem.comment += ', ' + stringvalues[1]
-            elif eval('elem.'+key+' '+compare+' '+str(values[0])):
-                stormlogger.warning('%s at %s' % (stringvalues[0],num2date(elem.time).replace(tzinfo=None)))
-                if addcomment:
-                    if elem.comment == '-':
-                        elem.comment = stringvalues[0]
-                    else:
-                        elem.comment += ', ' + stringvalues[0]
-
-        return self
 
 
     def extract(self, key, value, compare=None, debugmode=None):
