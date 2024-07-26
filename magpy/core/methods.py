@@ -293,6 +293,71 @@ def extract_date_from_string(datestring):
         return [date]
 
 
+def evaluate_function(component, function, samplingrate, starttime=None, endtime=None, debug=False):
+    """
+    DESCRIPTION
+        Evaluates a function obtained i.e. by the fit method and returns the times and function values
+        within the selected time range.
+        Please note: function values outside the originally fitted datapoints will be no.nan. If you
+        want to get fits for ranges outside the data range use stream.extrapolate first
+    PARAMETERS:
+        starttime and endtime defines the range in which function is evaluated
+        functiontimes func[1] and func[2] defines range in which func was determined
+    APPLICATION:
+        used by core.plot
+
+    :param component:  key of the function value (i.e. x for fx)
+    :param function:   function as obtained by the stream.fit() method
+    :param samplingrate:   samplingrate es obtained by stream.samplingrate()
+    :param starttime:  optional - evaluation begin
+    :param endtime:   optional - evaluation end
+    :param debug:
+    :return: (list) containing [array(times), array(values)]
+
+    """
+    if debug:
+        print("Function looks like:", function)
+    if starttime:
+        sttime = np.datetime64(testtime(starttime))
+    else:
+        sttime = np.datetime64(testtime(function[-3]))
+    if endtime:
+        entime = np.datetime64(testtime(endtime))
+    else:
+        entime = np.datetime64(testtime(function[-2]))
+    tfunc1 = np.datetime64(testtime(function[1]))
+    tfunc2 = np.datetime64(testtime(function[2]))
+    samprate = samplingrate * 1000000.
+    # do the following with projected date ranges
+    ftime = np.arange(sttime, entime + np.timedelta64(int(samprate), "us"), np.timedelta64(int(samprate), "us"))
+    func = function[0].get("f{}".format(component))
+    if not func:
+        print ("did not find a function reference to this component")
+        return None
+    # function was determined between 0=function[1] and 1=function[2]
+    # obtain a normalized new range:
+    if debug:
+        print(tfunc1, tfunc2, 0, 1, sttime)
+
+    def _get_y(x1, x2, y1, y2, x3):
+        x1 = x1.astype(np.float64)
+        x2 = x2.astype(np.float64)
+        x3 = x3.astype(np.float64)
+        return (y2 - y1) / (x2 - x1) * (x3 - x2) + y2
+
+    low = _get_y(tfunc1, tfunc2, 0, 1, sttime)
+    high = _get_y(tfunc1, tfunc2, 0, 1, entime)
+    if debug:
+        print(low, high)
+    newt = np.linspace(low, high, len(ftime))
+    if debug:
+        print(len(ftime), len(newt))
+    fvals = func(newt)
+    if debug:
+        print(ftime, fvals)
+    return [ftime, fvals]
+
+
 def find_nearest(array, value):
     """
     Find the nearest element within an array

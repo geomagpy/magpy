@@ -346,7 +346,6 @@ class DataStream(object):
     - stream._tau(self, period):
     - stream._convertstream(self, coordinate, **kwargs):   -- Convert coordinates of x,y,z columns in stream
     - stream._det_trange(self, period):   -- starting with coefficients above 1%
-    - stream._normalize(self, column):   -- returns list,float,float -- normalizes selected column to range 0,1
 
     _drop_nans(self, key):   -- Helper to drop lines with NaNs in any of the selected keys.
     _select_timerange(self, start, end)
@@ -404,6 +403,7 @@ class DataStream(object):
     deprecated
     ----------------------------
     - stream._is_number(self, value):
+    - stream._normalize(self, column):   -- returns list,float,float -- normalizes selected column to range 0,1
 
 
     Available methods for a list of two DataStreams:
@@ -3509,7 +3509,7 @@ CALLED BY:
                 elif filter_type == 'butterworth':
                     dt = 800./float(len(v))
                     nyf = 0.5/dt
-                    b, a = signal.windows.butter(4, 1.5/nyf)
+                    b, a = signal.butter(4, 1.5/nyf)
                     res = signal.filtfilt(b, a, v)
                 elif filter_type == 'flat':
                     w=np.ones(int(window_len),'d')
@@ -3554,7 +3554,7 @@ CALLED BY:
     Variables:
         - keys:         (list) Provide a list of keys to be fitted (e.g. ['x','y','z'].
     Kwargs:
-        - fitfunc:      (str) Options: 'poly', 'harmonic', 'least-squares', 'spline', 'none', default='spline'
+        - fitfunc:      (str) Options: 'poly', 'harmonic', 'least-squares', 'mean', 'spline', 'none', default='spline'
         - timerange:    (timedelta object) Default = timedelta(hours=1)
         - fitdegree:    (float) Default=5
         - knotstep:     (float < 0.5) determines the amount of knots: amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
@@ -3569,7 +3569,6 @@ CALLED BY:
     APPLICATION:
 
         """
-        print ("Runnung fiT")
         # Defaults:
         fitfunc = kwargs.get('fitfunc')
         fitdegree = kwargs.get('fitdegree')
@@ -3602,7 +3601,6 @@ CALLED BY:
         if not len(self.ndarray[0]) > 0:
             return self
 
-        print ("GERE")
         #tok = True
         fitstream = self.copy()
         if not defaulttime == 2: # TODO if applied to full stream, one point at the end is missing
@@ -3611,7 +3609,6 @@ CALLED BY:
         sv = 0
         ev = 0
         for key in keys:
-            print("FIT1", key)
             tmpst = fitstream._drop_nans(key)
             t = tmpst.ndarray[0]
             nt,sv,ev = normalize(t)
@@ -3627,8 +3624,7 @@ CALLED BY:
             # normalized sampling rate
             sp = sp/(ev-sv) # should be the best?
             #sp = (ev-sv)/len(val) # does not work
-            x = arange(np.min(nt),np.max(nt),sp)
-            print("FIT2", x)
+            x = np.linspace(np.min(nt),np.max(nt),len(fitstream))
 
             if len(val)<=1:
                 logger.warning('Fit: No valid data for key {}'.format(key))
@@ -3679,7 +3675,6 @@ CALLED BY:
 
         #if tok:
         func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime, keys]
-        print ("FIT4", func)
         #func = [functionkeylist, sv, ev]
         #else:
         funcnew = {"keys":keys, "fitfunc":fitfunc,"fitdegree":fitdegree, "knotstep":knotstep, "starttime":starttime,"endtime":endtime, "functionlist":functionkeylist, "sv":sv, "ev":ev}
@@ -5665,7 +5660,7 @@ CALLED BY:
             ndtype = True
         else:
             t = self._get_column('time')
-        nt,sv,ev = self._normalize(t)
+        nt,sv,ev = normalize(t)
         sp = self.get_sampling_period()
         functionkeylist = {}
 
