@@ -41,6 +41,8 @@ Installation instructions can be found on the main download page.
         - stormdetector based on ACE-L1 and geomagnetic data outputs a flagging structure
         - new Sq variation and baseline determination methods
         - AI supported Sq and activity prediction (included shortly before publication)
+    general methods:
+        - new extrapolation method for signals with various methods (linear, spline, fourier)
 
 2.0.0 fixes:
      - fixed sign error in calculation of F from vector data including provided deltaF values

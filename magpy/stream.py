@@ -125,6 +125,7 @@ from scipy import interpolate
 from scipy import stats
 from scipy import signal
 from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import CubicSpline
 from scipy.ndimage import filters
 import scipy.optimize as op
 import math
@@ -1025,18 +1026,18 @@ CALLED BY:
             return self
 
         if not columnname:
-            columnname = self.header.get('col_{}'.format(key),'')
+            columnname = self.header.get('col-{}'.format(key),'')
             if not columnname:
-                self.header['col_{}'.format(key)] = key
+                self.header['col-{}'.format(key)] = key
         else:
-            self.header['col_{}'.format(key)] = columnname
+            self.header['col-{}'.format(key)] = columnname
 
         if not columnunit:
-            columnunit =  self.header.get('unit_col_{}'.format(key),'')
+            columnunit =  self.header.get('unit-col-{}'.format(key),'')
             if not columnunit:
-                self.header['unit_col_{}'.format(key)] = ''
+                self.header['unit-col-{}'.format(key)] = ''
         else:
-            self.header['unit_col_{}'.format(key)] = columnunit
+            self.header['unit-col-{}'.format(key)] = columnunit
 
         return self
 
@@ -1097,7 +1098,7 @@ CALLED BY:
             logger.error("_move_column: Column key %s (to move %s to) is not valid!" % (put2key,key))
         if len(self.ndarray[0]) > 0:
             col = self._get_column(key)
-            self = self._put_column(col, put2key, columnname=self.header.get('col_{}'.format(key)), columnunit=self.header.get('unit_col_{}'.format(key)))
+            self = self._put_column(col, put2key, columnname=self.header.get('col-{}'.format(key)), columnunit=self.header.get('unit-col-{}'.format(key)))
             self = self._drop_column(key)
         return self
 
@@ -1115,8 +1116,8 @@ CALLED BY:
                 array = [np.asarray(el) if idx is not ind else np.asarray([]) for idx,el in enumerate(self.ndarray)]
                 self.ndarray = np.asarray(array,dtype=object)
 
-            colkey = "col_{}".format(key)
-            colunitkey = "unit_col_{}".format(key)
+            colkey = "col-{}".format(key)
+            colunitkey = "unit-col-{}".format(key)
             try:
                 self.header.pop(colkey, None)
                 self.header.pop(colunitkey, None)
@@ -1163,11 +1164,11 @@ CALLED BY:
     # B. Internal Methods: Data manipulation functions
     # ------------------------------------------------------------------------
 
-    def _aic(self, signal, k, debugmode=None):
+    def _aic(self, signal, k, debug=None):
         try:
             aicval = (k-1)* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
         except:
-            if debugmode:
+            if debug:
                 logger.debug('_AIC: could not evaluate AIC at index position %i' % (k))
             pass
         return aicval
@@ -1451,7 +1452,7 @@ CALLED BY:
         except:
             return False
 
-
+    @deprecated("Use normalize from core.methods")
     def _normalize(self, column):
         """
         normalizes the given column to range [0:1]
@@ -1561,6 +1562,8 @@ CALLED BY:
         endindices = []
         if starttime:
             starttime = testtime(starttime)
+            if isinstance(self.ndarray[0][0], np.datetime64):
+                starttime = np.datetime64(starttime)
             if isinstance(self.ndarray[0][0],(float,float64)):  # in case array comes from an baseline structure
                 starttime = date2num(starttime)
             if self.ndarray[0].size > 0:   # time column present
@@ -1574,6 +1577,8 @@ CALLED BY:
                 startindices = list(range(0,idx))
         if endtime:
             endtime = testtime(endtime)
+            if isinstance(self.ndarray[0][0], np.datetime64):
+                endtime = np.datetime64(endtime)
             if isinstance(self.ndarray[0][0],(float,float64)):
                 endtime = date2num(endtime)
             if self.ndarray[0].size > 0:   # time column present
@@ -1812,19 +1817,20 @@ CALLED BY:
 
         if len(self.ndarray[0]) > 0:
             ndtype = True
-            starttime = date2num(np.min(self.ndarray[0]))
-            endtime = date2num(np.max(self.ndarray[0]))
+            starttime = np.min(self.ndarray[0])
+            endtime = np.max(self.ndarray[0])
         else:
+            print ("decrepated")
             starttime = self[0].time
             endtime = self[-1].time
 
         fixstart,fixend = False,False
         if startabs:
-            startabs = date2num(testtime(startabs))
+            startabs = testtime(startabs)
             orgstartabs = startabs
             fixstart = True
         if endabs:
-            endabs = date2num(testtime(endabs))
+            endabs = testtime(endabs)
             orgendabs = endabs
             fixend = True
 
@@ -1833,27 +1839,19 @@ CALLED BY:
         pierel = absolutedata.header.get('DataElevation','')
         pierlocref = absolutedata.header.get('DataAcquisitionReference','')
         pierelref = absolutedata.header.get('DataElevationRef','')
-        #self.header['DataAbsFunc'] = fitfunc
-        #self.header['DataAbsDegree'] = fitdegree
-        #self.header['DataAbsKnots'] = knotstep
-        #self.header['DataAbsDate'] = datetime.strftime(datetime.utcnow(),'%Y-%m-%d %H:%M:%S')
 
         usestepinbetween = False # for better extrapolation
 
         logger.info(' --- Start baseline-correction at %s' % str(datetime.now()))
 
         absolutestream  = absolutedata.copy()
-
         absolutestream = absolutestream.remove_flagged()
-        #print("Baseline", absolutestream.length())
-        #print("Baseline", absolutestream.ndarray[0])
 
         absndtype = False
         if len(absolutestream.ndarray[0]) > 0:
             #print ("HERE1: adopting time range absolutes - before {} {}".format(startabs, endabs))
-            absolutestream.ndarray[0] = absolutestream.ndarray[0].astype(float)
             absndtype = True
-            if not np.min(absolutestream.ndarray[0]) < endtime:
+            if not absolutestream.ndarray[0][0] < endtime:
                 logger.warning("Baseline: Last measurement prior to beginning of absolute measurements ")
             abst = absolutestream.ndarray[0]
             if not startabs or startabs < np.min(absolutestream.ndarray[0]):
@@ -1861,6 +1859,7 @@ CALLED BY:
             if not endabs or endabs > np.max(absolutestream.ndarray[0]):
                 endabs = np.max(absolutestream.ndarray[0])
         else:
+            print ("decrepated")
             # 1) test whether absolutes are in the selected absolute data stream
             if absolutestream[0].time == 0 or absolutestream[0].time == float('nan'):
                 raise ValueError ("Baseline: Input stream needs to contain absolute data ")
@@ -1893,13 +1892,13 @@ CALLED BY:
             logger.info('Baseline: %d days without absolutes at the beginning of the stream' % int(np.floor(np.min(abst)-starttime)))
         if endabs < endtime:
             logger.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
-            if num2date(endabs).replace(tzinfo=None) + timedelta(days=extradays) < num2date(endtime).replace(tzinfo=None):
+            if (endabs + timedelta(days=extradays)) < endtime:
                 usestepinbetween = True
                 if not fixend:
                     logger.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
 
-        starttime = num2date(starttime).replace(tzinfo=None)
-        endtime = num2date(endtime).replace(tzinfo=None)
+        #starttime = num2date(starttime).replace(tzinfo=None)
+        #endtime = num2date(endtime).replace(tzinfo=None)
 
 
         # 4) get standard time rang of one year and extradays at start and end
@@ -1915,12 +1914,12 @@ CALLED BY:
 
             #absolutestream = absolutestream.trim(endtime=endabs)  # should I trim here already - leon ??
             # time range long enough
-            baseendtime = endabs+extradays
+            baseendtime = endabs+timedelta(days=extradays)
             if baseendtime < orgendabs:
                 baseendtime = orgendabs
             extrapolate = True
         else:
-            baseendtime = date2num(endtime+timedelta(days=1))
+            baseendtime = endtime+timedelta(days=1)
             extrapolate = True
         #if endabs >= date2num(endtime)+extradays:
         #    # time range long enough
@@ -1928,52 +1927,45 @@ CALLED BY:
         # lower
         if fixstart:
             if debug:
-                print (" baseline: fixstart", startabs, extradays)
+                print (" baseline: fixstart at {} with {} extradays".format(startabs, extradays))
 
             #absolutestream = absolutestream.trim(starttime=startabs)  # should I trim here already - leon ??
-            basestarttime = startabs-extradays
+            basestarttime = startabs-timedelta(days=extradays)
             if basestarttime > orgstartabs:
                 basestarttime = orgstartabs
             extrapolate = True
         else:
             # not long enough
             #basestarttime = date2num(starttime)
-            basestarttime = startabs-extradays
+            basestarttime = startabs-timedelta(days=extradays)
             extrapolate = True
-            if baseendtime - (366.+2*extradays) > startabs:
+            if baseendtime - timedelta(days=(366.+2*extradays)) > startabs:
                 # time range long enough
-                basestarttime =  baseendtime-(366.+2*extradays)
+                basestarttime =  baseendtime-timedelta(days=(366.+2*extradays))
 
-        baseendtime = num2date(baseendtime).replace(tzinfo=None)
-        basestarttime = num2date(basestarttime).replace(tzinfo=None)
+        #baseendtime = num2date(baseendtime).replace(tzinfo=None)
+        #basestarttime = num2date(basestarttime).replace(tzinfo=None)
 
         #print ("HERE3a: basestart and end", basestarttime, baseendtime)
 
         # Don't use trim here
         #bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
         basarray = absolutestream._select_timerange(starttime=basestarttime,endtime=baseendtime)
-        bas = DataStream([LineStruct()],absolutestream.header,basarray)
-
-        #print ("HERE3b: length of selected absolutes: ", bas.length()[0])
+        bas = DataStream(header=absolutestream.header,ndarray=basarray)
 
         if extrapolate: # and not extradays == 0:
             if debug:
                 print (" baseline: Extrapolating ", bas.length()[0])
-            bas = bas.extrapolate(basestarttime,baseendtime)
+            bas = bas.extrapolate(starttime=basestarttime,endtime=baseendtime)
             # Now remove duplicates - if start and end are existing they are duplicated be extrapolate
             bas = bas.removeduplicates()
             if debug:
                 print ("    -> done ", bas.length()[0])
 
-        #keys = ['dx','dy','dz']
-
         try:
             if debug:
-                print ("Adopting baseline between: {a} and {b} using {c}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0]))),c=fitfunc))
-            #print (keys, fitfunc, fitdegree, knotstep)
-            logger.info("Fitting Baseline between: {a} and {b}".format(a=str(num2date(np.min(bas.ndarray[0]))),b=str(num2date(np.max(bas.ndarray[0])))))
-            #print ("Baseline", bas.length(), keys)
-            #for elem in bas.ndarray:
+                print ("Adopting baseline between: {a} and {b} using {c}".format(a=np.min(bas.ndarray[0]),b=np.max(bas.ndarray[0]),c=fitfunc))
+            logger.info("Fitting Baseline between: {a} and {b}".format(a=np.min(bas.ndarray[0]),b=np.max(bas.ndarray[0])))
             if debug:
                 print (" - running Fit with Fitfunc {}, fitdegree {} and knotstep {}".format(fitfunc,fitdegree,knotstep))
             func = bas.fit(keys,fitfunc=fitfunc,fitdegree=fitdegree,knotstep=knotstep)
@@ -1981,13 +1973,6 @@ CALLED BY:
             print ("Baseline: Error when determining fit - Enough data point to satisfy fit complexity?")
             logger.error("Baseline: Error when determining fit - Not enough data point to satisfy fit complexity? N = {}".format(bas.length()))
             return None
-
-        #if len(keys) == 3:
-        #    ix = KEYLIST.index(keys[0])
-        #    iy = KEYLIST.index(keys[1])
-        #    iz = KEYLIST.index(keys[2])
-        # get the function in some readable equation
-        #self.header['DataAbsDataT'] = bas.ndarray[0],bas.ndarray[ix],bas.ndarray[iy],bas.ndarray[iz]]
 
         if plotbaseline:
             #check whether plotbaseline is valid path or bool
@@ -2121,7 +2106,7 @@ CALLED BY:
         RETURNS:
             stream		(DataStream) containing values of header info
         APPLICATION:
-            >>> absstream = stream.dict2stream(header['DataBaseValues'])
+            absstream = stream.dict2stream(header['DataBaseValues'])
         """
 
         lst = self.header.get(dictkey)
@@ -2147,7 +2132,13 @@ CALLED BY:
             pos = KEYLIST.index(key)
             array[pos] = collst[idx]
 
-        return DataStream([LineStruct()], {}, np.asarray(array,dtype=object))
+        if isinstance(array[0][0],float):
+            array[0] = num2date(array[0])
+        if isinstance(array[0][0],datetime):
+            # convert to offset naive time array
+            array[0] = [el.replace(tzinfo=None) for el in array[0]]
+
+        return DataStream(header={}, ndarray=np.asarray(array,dtype=object))
 
 
     def baselineAdvanced(self, absdata, baselist, **kwargs):
@@ -3012,7 +3003,7 @@ CALLED BY:
         return DataStream(header=headers, ndarray=np.asarray([np.asarray(a) for a in array],dtype=object))
 
 
-    def extract(self, key, value, compare=None, debugmode=None):
+    def extract(self, key, value, compare=None, debug=None):
         """
         DEFINITION:
             Read stream and extract data of the selected key which meets the choosen criteria
@@ -3022,18 +3013,18 @@ CALLED BY:
             - key:      (str) streams key e.g. 'x'.
             - value:    (str/float/int) any selected input which should be tested for
                         special note: if value is in brackets, then the term is evaluated
-                        e.g. value="('int(elem.time)')" selects all points at 0:00
+                        e.g. value="('int(1.85)')" selects all values with 1
                         Important: this only works for compare = '=='
          Kwargs:
             - compare:  (str) criteria, one out of ">=", "<=",">", "<", "==", "!=", default is '=='
-            - debugmode:(bool) if true several additional outputs will be created
+            - debug:   (bool) if true several additional outputs will be created
 
         RETURNS:
             - DataStream with selected values only
 
         EXAMPLES:
-            >>> extractedstream = stream.extract('x',20000,'>')
-            >>> extractedstream = stream.extract('str1','Berger')
+            extractedstream = stream.extract('x',20000,'>')
+            extractedstream = stream.extract('str1','Berger')
         """
 
         if not compare:
@@ -3045,9 +3036,8 @@ CALLED BY:
         if value in ['',None]:
             return self
 
-        ndtype = False
-        if len(self.ndarray[0]) > 0:
-            ndtype = True
+        if not len(self.ndarray[0]) > 0:
+            return self
 
         ind = KEYLIST.index(key)
 
@@ -3056,100 +3046,27 @@ CALLED BY:
         if not is_number(value):
             if value.startswith('(') and value.endswith(')') and compare == '==':
                 logger.info("extract: Selected special functional type -equality defined by difference less then 10 exp-6")
-                if ndtype:
-                    val = eval(value[1:-1])
-                    indexar = np.where((np.abs(stream.ndarray[ind]-val)) < 0.000001)[0]
-                else:
-                    val = value[1:-1]
-                    liste = []
-                    for elem in self:
-                        if abs(eval('elem.'+key) - eval(val)) < 0.000001:
-                            liste.append(elem)
-                    return DataStream(liste,self.header)
+                val = eval(value[1:-1])
+                indexar = np.where((np.abs(stream.ndarray[ind]-val)) < 0.000001)[0]
             else:
-                #print "Found String", ndtype
                 too = '"' + str(value) + '"'
-                if ndtype:
-                    if compare == 'like':
-                        indexar = np.asarray([i for i, s in enumerate(stream.ndarray[ind]) if str(value) in s])
-                    else:
-                        #print stream.ndarray[ind]
-                        searchclause = 'stream.ndarray[ind] '+ compare + ' ' + too
-                        #print searchclause, ind, key
-                        indexar = eval('np.where('+searchclause+')[0]')
-                    #print indexar, len(indexar)
+                if compare == 'like':
+                    indexar = np.asarray([i for i, s in enumerate(stream.ndarray[ind]) if str(value) in s])
+                else:
+                    searchclause = 'stream.ndarray[ind] '+ compare + ' ' + too
+                    indexar = eval('np.where('+searchclause+')[0]')
         else:
             too = str(value)
-            if ndtype:
-                searchclause = 'stream.ndarray[ind].astype(float) '+ compare + ' ' + too
-                with np.errstate(invalid='ignore'):
-                    indexar = eval('np.where('+searchclause+')[0]')
+            searchclause = 'stream.ndarray[ind].astype(float) '+ compare + ' ' + too
+            with np.errstate(invalid='ignore'):
+                indexar = eval('np.where('+searchclause+')[0]')
 
-        if ndtype:
-            for ind,el in enumerate(stream.ndarray):
-                if len(stream.ndarray[ind]) > 0:
-                    ar = [stream.ndarray[ind][i] for i in indexar]
-                    stream.ndarray[ind] = np.asarray(ar).astype(object)
-            return stream
-        else:
-            liste = [elem for elem in self if eval('elem.'+key+' '+ compare + ' ' + too)]
-            return DataStream(liste,self.header,self.ndarray)
+        for ind,el in enumerate(stream.ndarray):
+            if len(stream.ndarray[ind]) > 0:
+                ar = [stream.ndarray[ind][i] for i in indexar]
+                stream.ndarray[ind] = np.asarray(ar).astype(object)
+        return stream
 
-    def extract2(self, keys, get='>', func=None, debugmode=None):
-        """
-        DEFINITION:
-            Read stream and extract data of the selected keys which meets the choosen criteria
-
-        PARAMETERS:
-        Variables:
-            - keys:     (list) keylist like ['x','f'].
-            - func:     a function object
-         Kwargs:
-            - get:  (str) criteria, one out of ">=", "<=",">", "<", "==", "!=", default is '=='
-            - debugmode:(bool) if true several additional outputs will be created
-
-        RETURNS:
-            - DataStream with selected values only
-
-        EXAMPLES:
-            >>> extractedstream = stream.extract('x',20000,'>')
-            >>> extractedstream = stream.extract('str1','Berger')
-        """
-
-        if not get:
-            get = '=='
-        if not get in [">=", "<=",">", "<", "==", "!=", 'like']:
-            print ('--- Extract: Please provide proper compare parameter ">=", "<=",">", "<", "==", "like" or "!=" ')
-            return self
-
-        stream = self.copy()
-
-        def func(x):
-            y = 1/(0.2*exp(0.06/(x/10000.))) + 2.5
-            return y
-
-        xpos = KEYLIST.index(keys[0])
-        ypos = KEYLIST.index(keys[1])
-        x = stream.ndarray[xpos].astype(float)
-        y = stream.ndarray[ypos].astype(float)
-
-        idxlist = []
-        for idx,val in enumerate(x):
-            ythreshold = func(val)
-            test = eval('y[idx] '+ get + ' ' + str(ythreshold))
-            #print (val, 'y[idx] '+ get + ' ' + str(ythreshold))
-            if test:
-                idxlist.append(idx)
-
-        array = [[] for key in KEYLIST]
-        for i,key in enumerate(KEYLIST):
-            for idx in idxlist:
-                if len(stream.ndarray[i]) > 0:
-                    array[i].append(stream.ndarray[i][idx])
-            array[i] = np.asarray(array[i])
-        print ("Length of list", len(idxlist))
-
-        return DataStream([LineStruct()], stream.header,np.asarray(array))
 
     def extract_headerlist(self, element, parameter=1, year=None):
         """
@@ -3176,91 +3093,189 @@ CALLED BY:
             ind = np.argmax(l)
         return l[parameter][ind]
 
-    def extrapolate(self, start, end):
+    def extrapolate(self, starttime, endtime, method='old', force=False, debug=False):
         """
-      DESCRIPTION:
-        Reads stream output of absolute analysis and extrapolate the data
-        current method (too be improved if necessary):
-        - repeat the last and first input with baseline values at disered start and end time
-        Hereby and functional fit (e.g. spline or polynom is forced towards a quasi-stable baseline evolution).
-        The principle asumption of this technique is that the base values are constant on average.
-      APPLICATION:
-        is used by stream.baseline
+        DESCRIPTION
+            Extrapolate all contents with a data stream towards given starttime and endtime.
+            Several different methods are available for extrapolation
+            Methods:
+               old -- duplicates first and last point at given times
+               spline -- see here https://docs.scipy.org/doc/scipy/tutorial/interpolate/extrapolation_examples.html
+               linear -- uses a simple linear extrapolation method
+               fourier -- uses a technique based on this work: https://gist.github.com/tartakynov/83f3cd8f44208a1856ce
+        PREREQUISITES
+            Will raise an error of time distance between starttime respectively endtime
+            towrads date in the stream is larger than the duration
+            Choose "force =True" to override
+        OPTIONS:
+            starttime
+            endtime
+            method
+            force - inactive
+        APPLICATION
+            - used by baseline method before application of the spline fit
+            expst = extrapolate(trimstream,starttime=datetime(2022,11,22,7), endtime=datetime(2022,11,22,16),method='fourier')
         """
+        skipst = False
+        skipet = False
+        n_harm = 10  # number of harmonics in fourier method
+        starttime = testtime(starttime)
+        endtime = testtime(endtime)
+        stst, etst = self._find_t_limits()
+        duration = (etst - stst).total_seconds()
+        dist1 = (stst - starttime).total_seconds()
+        if dist1 < 0:
+            print("Starttime younger then first date in stream - skipping")
+            skipst = True
+        dist2 = (endtime - etst).total_seconds()
+        if dist2 < 0:
+            print("Endtime older then last date in stream - skipping")
+            skipet = True
+        if dist1 > duration or dist1 > duration:
+            print("raise error")
+        if debug:
+            print(dist1, dist2, duration)
+        st = self.copy()
+        samprate = st.samplingrate() * 1000000
 
-        ltime = date2num(end) # + timedelta(days=1))
-        ftime = date2num(start) # - timedelta(days=1))
-        array = [[] for key in KEYLIST]
+        # get the average sampling rate of st
+        # Initial time range tests done - continue with methods
+        def add_boundary_knots(spline):
+            """
+            Add knots infinitesimally to the left and right.
 
-        ndtype = False
-        if len(self.ndarray[0]) > 0:
-            ndtype = True
-            firsttime = np.min(self.ndarray[0])
-            lasttime = np.max(self.ndarray[0])
-            # Find the last element with baseline values - assuming a sorted array
-            inddx = KEYLIST.index('dx')
-            lastind=len(self.ndarray[0])-1
+            Additional intervals are added to have zero 2nd and 3rd derivatives,
+            and to maintain the first derivative from whatever boundary condition
+            was selected. The spline is modified in place.
+            """
+            # determine the slope at the left edge
+            leftx = spline.x[0]
+            lefty = spline(leftx)
+            leftslope = spline(leftx, nu=1)
 
-            #print("Extrapolate", self.ndarray,len(self.ndarray[inddx]), self.ndarray[inddx], self.ndarray[inddx][lastind])
-            while np.isnan(float(self.ndarray[inddx][lastind])):
-                lastind = lastind-1
-            firstind=0
-            while np.isnan(float(self.ndarray[inddx][firstind])):
-                firstind = firstind+1
+            # add a new breakpoint just to the left and use the
+            # known slope to construct the PPoly coefficients.
+            leftxnext = np.nextafter(leftx, leftx - 1)
+            leftynext = lefty + leftslope * (leftxnext - leftx)
+            leftcoeffs = np.array([0, 0, leftslope, leftynext])
+            spline.extend(leftcoeffs[..., None], np.r_[leftxnext])
 
-            #print "extrapolate", num2date(ftime), num2date(ltime), ftime, ltime
-            for idx,elem in enumerate(self.ndarray):
-                if len(elem) > 0:
-                    array[idx] = self.ndarray[idx]
-                    if idx == 0:
-                        array[idx] = np.append(array[idx],ftime)
-                        array[idx] = np.append(array[idx],ltime)
-                        #array[idx] = np.append(self.ndarray[idx],ftime)
-                        #array[idx] = np.append(self.ndarray[idx],ltime)
-                    else:
-                        array[idx] = np.append(array[idx],array[idx][firstind])
-                        array[idx] = np.append(array[idx],array[idx][lastind])
-                        #array[idx] = np.append(self.ndarray[idx],self.ndarray[idx][firstind])
-                        #array[idx] = np.append(self.ndarray[idx],self.ndarray[idx][lastind])
-            indar = np.argsort(array[0])
-            array = [el[indar].astype(object) if len(el)>0 else np.asarray([]) for el in array]
+            # repeat with additional knots to the right
+            rightx = spline.x[-1]
+            righty = spline(rightx)
+            rightslope = spline(rightx, nu=1)
+            rightxnext = np.nextafter(rightx, rightx + 1)
+            rightynext = righty + rightslope * (rightxnext - rightx)
+            rightcoeffs = np.array([0, 0, rightslope, rightynext])
+            spline.extend(rightcoeffs[..., None], np.r_[rightxnext])
+
+        if method in ['spline', 'linear', 'fourier']:
+            xs = st.ndarray[0].astype(np.datetime64)
+            if not skipst:
+                sttime = np.datetime64(starttime)
+            else:
+                sttime = xs[0]
+            if not skipet:
+                entime = np.datetime64(endtime)
+            else:
+                entime = xs[-1]
+            # create a new time scale with sampling rate increment and give start and endtimes
+            xnew = np.arange(sttime, entime, np.timedelta64(int(samprate), "us"))
+            # now get the indices indbefore and indafter of xnew data just before and the first after xs
+            ab, a, b = np.intersect1d(xnew, xs, return_indices=True)
+            indbefore = a[0]
+            indafter = a[-1]
+            if debug:
+                print(len(xs), len(xnew))
+        if method == 'spline':
+            for i, ar in enumerate(st.ndarray):
+                if i == 0:
+                    if indbefore - 1 > 0:
+                        ar = np.insert(ar, 0, xnew[0:indbefore - 1])
+                    if indafter + 1 >= len(xs):
+                        ar = np.insert(ar, -1, xnew[indafter + 1:len(xnew)])
+                elif i > 0 and len(ar) > 0:
+                    ar = ar.astype(float)
+                    # identify and drop nans
+                    nonnaninds = np.logical_not(np.isnan(ar))
+                    natural = CubicSpline(xs[nonnaninds], ar[nonnaninds], bc_type='natural')
+                    add_boundary_knots(natural)
+                    vals = natural(xnew)
+                    if indbefore - 1 > 0:
+                        ar = np.insert(ar, 0, vals[0:indbefore - 1])
+                    if indafter + 1 >= len(xs):
+                        ar = np.insert(ar, -1, vals[indafter + 1:len(xnew)])
+                st.ndarray[i] = ar[:-1]
+        elif method == 'linear':
+            for i, ar in enumerate(st.ndarray):
+                if i == 0:
+                    if indbefore - 1 > 0:
+                        ar = np.insert(ar, 0, xnew[0:indbefore - 1])
+                    if indafter + 1 >= len(xs):
+                        ar = np.insert(ar, -1, xnew[indafter + 1:len(xnew)])
+                elif i > 0 and len(ar) > 0:
+                    ar = ar.astype(float)
+                    # identify and drop nans
+                    nonnaninds = np.logical_not(np.isnan(ar))
+                    p = np.polyfit(xs[nonnaninds].astype(float64), ar[nonnaninds], 1)  # find linear trend in x
+                    vals = p[0] * xnew.astype(float64) + p[1]
+                    if indbefore - 1 > 0:
+                        ar = np.insert(ar, 0, vals[0:indbefore - 1])
+                    if indafter + 1 >= len(xs):
+                        ar = np.insert(ar, -1, vals[indafter + 1:len(xnew)])
+                st.ndarray[i] = ar[:-1]
+        elif method == 'fourier':
+            for i, ar in enumerate(st.ndarray):
+                if i == 0:
+                    if indbefore - 1 > 0:
+                        ar = np.insert(ar, 0, xnew[0:indbefore - 1])
+                    if indafter + 1 >= len(xs):
+                        ar = np.insert(ar, -1, xnew[indafter + 1:len(xnew)])
+                elif i > 0 and len(ar) > 0:
+                    ar = ar.astype(float)
+                    # identify and drop nans
+                    nonnaninds = np.logical_not(np.isnan(ar))
+                    t = xs[nonnaninds].astype(float64)
+                    y = ar[nonnaninds]
+                    p = np.polyfit(t, y, 1)  # find linear trend in x
+                    y_notrend = y - p[0] * t  # detrended x
+                    y_freqdom = np.fft.fft(y_notrend)  # detrended x in frequency domain
+                    f = np.fft.fftfreq(len(t))  # frequencies
+                    indexes = range(len(t))
+                    # sort indexes by frequency, lower -> higher
+                    sorted(indexes, key=lambda i: np.absolute(f[i]))
+                    # indexes.sort(key = lambda i: np.absolute(f[i]))
+                    tn = xnew.astype(float64)
+                    restored_sig = np.zeros(tn.size)
+                    for j in indexes[:1 + n_harm * 2]:
+                        ampli = np.absolute(y_freqdom[j]) / len(t)  # amplitude
+                        phase = np.angle(y_freqdom[j])  # phase
+                        restored_sig += ampli * np.cos(2 * np.pi * f[j] * tn + phase)
+                    vals = restored_sig + p[0] * tn
+                    if indbefore - 1 > 0:
+                        ar = np.insert(ar, 0, vals[0:indbefore - 1])
+                    if indafter + 1 >= len(xs):
+                        ar = np.insert(ar, -1, vals[indafter + 1:len(xnew)])
+                st.ndarray[i] = ar[:-1]
         else:
-            if self.length()[0] < 2:
-                return self
-            firstelem = self[0]
-            lastelem = self[-1]
-            # Find the last element with baseline values
-            i = 1
-            while isnan(lastelem.dx):
-                lastelem = self[-i]
-                i = i +1
-
-            line = LineStruct()
-            for key in KEYLIST:
-                if key == 'time':
-                    line.time = ftime
-                else:
-                    exec('line.'+key+' = firstelem.'+key)
-            self.add(line)
-            line = LineStruct()
-            for key in KEYLIST:
-                if key == 'time':
-                    line.time = ltime
-                else:
-                    exec('line.'+key+' = lastelem.'+key)
-            self.add(line)
-
-
-        stream = DataStream(self,self.header,np.asarray(array,dtype=object))
-        #print "extra", stream.ndarray
-        #print "extra", stream.length()
-
-        #stream = stream.sorting()
-
-        return stream
-
-        #return DataStream(self,self.header,self.ndarray)
-
+            # method 1 - old (duplicating first and last non-nan value at selected times)
+            for i, ar in enumerate(st.ndarray):
+                if len(ar) > 0:
+                    if i == 0:
+                        if not skipst:
+                            ar = np.insert(ar, 0, starttime)
+                        if not skipet:
+                            ar = np.insert(ar, -1, endtime)
+                    else:
+                        ar = ar.astype(float)
+                        if not skipst:
+                            firstx = ar[np.isfinite(ar)][0]
+                            ar = np.insert(ar, 0, firstx)
+                        if not skipet:
+                            lastx = ar[np.isfinite(ar)][-1]
+                            ar = np.insert(ar, -1, lastx)
+                    st.ndarray[i] = ar
+        return st
 
     def filter(self,**kwargs):
         """
@@ -3302,9 +3317,9 @@ CALLED BY:
             - self:             (DataStream) containing the filtered signal within the selected columns
 
         EXAMPLE:
-            >>> nice_data = bad_data.filter(keys=['x','y','z'])
+            nice_data = bad_data.filter(keys=['x','y','z'])
             or
-            >>> nice_data = bad_data.filter(filter_type='gaussian',filter_width=timedelta(hours=1))
+            nice_data = bad_data.filter(filter_type='gaussian',filter_width=timedelta(hours=1))
 
         APPLICATION:
 
@@ -3486,7 +3501,7 @@ CALLED BY:
                 s=np.r_[v[int(window_len)-1:0:-1],v,v[-1:-int(window_len):-1]]
 
                 if filter_type == 'gaussian':
-                    w = signal.gaussian(window_len, std=std)
+                    w = signal.windows.gaussian(window_len, std=std)
                     y=np.convolve(w/w.sum(),s,mode='valid')
                     res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
                 elif filter_type == 'wiener':
@@ -3494,7 +3509,7 @@ CALLED BY:
                 elif filter_type == 'butterworth':
                     dt = 800./float(len(v))
                     nyf = 0.5/dt
-                    b, a = signal.butter(4, 1.5/nyf)
+                    b, a = signal.windows.butter(4, 1.5/nyf)
                     res = signal.filtfilt(b, a, v)
                 elif filter_type == 'flat':
                     w=np.ones(int(window_len),'d')
@@ -3502,7 +3517,7 @@ CALLED BY:
                     y=np.convolve(w/w.sum(),s,mode='valid') #'valid')
                     res = y[(int(window_len/2)-1):(len(v)+int(window_len/2)-1)]
                 else:
-                    w = eval('signal.'+filter_type+'(window_len)')
+                    w = eval('signal.windows.'+filter_type+'(window_len)')
                     y=np.convolve(w/w.sum(),s,mode='valid')
                     res = y[(int(window_len/2)):(len(v)+int(window_len/2))]
 
@@ -3548,14 +3563,13 @@ CALLED BY:
     RETURNS:
         - function object:      (list) func = [functionkeylist, sv, ev]
 
-
     EXAMPLE:
-        >>> func = stream.fit(['x'])
+        func = stream.fit(['x'])
 
     APPLICATION:
 
         """
-
+        print ("Runnung fiT")
         # Defaults:
         fitfunc = kwargs.get('fitfunc')
         fitdegree = kwargs.get('fitdegree')
@@ -3584,10 +3598,11 @@ CALLED BY:
 
         functionkeylist = {}
 
-        ndtype = False
-        if len(self.ndarray[0]) > 0:
-            ndtype=True
+        ndtype = True
+        if not len(self.ndarray[0]) > 0:
+            return self
 
+        print ("GERE")
         #tok = True
         fitstream = self.copy()
         if not defaulttime == 2: # TODO if applied to full stream, one point at the end is missing
@@ -3596,34 +3611,25 @@ CALLED BY:
         sv = 0
         ev = 0
         for key in keys:
+            print("FIT1", key)
             tmpst = fitstream._drop_nans(key)
-            #print ("Length", tmpst.length())
-            if ndtype:
-                t = tmpst.ndarray[0]
-            else:
-                t = tmpst._get_column('time')
-            if len(t) < 1:
-                #tok = False
-                print ("Column {} does not contain valid values".format(key))
-                continue
-
-            nt,sv,ev = fitstream._normalize(t)
+            t = tmpst.ndarray[0]
+            nt,sv,ev = normalize(t)
             sp = fitstream.get_sampling_period()/3600./24. # use days because of date2num
             if sp == 0:  ## if no dominant sampling period can be identified then use minutes
                 sp = 0.0177083333256
             if not key in KEYLIST[1:16]:
                 raise ValueError("Column key not valid")
-            if ndtype:
-                ind = KEYLIST.index(key)
-                val = tmpst.ndarray[ind]
-            else:
-                val = tmpst._get_column(key)
+            ind = KEYLIST.index(key)
+            val = tmpst.ndarray[ind]
 
             # interplolate NaN values
             # normalized sampling rate
             sp = sp/(ev-sv) # should be the best?
             #sp = (ev-sv)/len(val) # does not work
             x = arange(np.min(nt),np.max(nt),sp)
+            print("FIT2", x)
+
             if len(val)<=1:
                 logger.warning('Fit: No valid data for key {}'.format(key))
                 break
@@ -3673,6 +3679,7 @@ CALLED BY:
 
         #if tok:
         func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime, keys]
+        print ("FIT4", func)
         #func = [functionkeylist, sv, ev]
         #else:
         funcnew = {"keys":keys, "fitfunc":fitfunc,"fitdegree":fitdegree, "knotstep":knotstep, "starttime":starttime,"endtime":endtime, "functionlist":functionkeylist, "sv":sv, "ev":ev}

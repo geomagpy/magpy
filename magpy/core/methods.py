@@ -13,7 +13,7 @@ the following methods are contained:
 """
 import numpy as np
 from datetime import datetime, timedelta
-from matplotlib.dates import num2date
+from matplotlib.dates import num2date, date2num
 import os
 import re
 import dateutil.parser as dparser
@@ -437,6 +437,28 @@ def nearestPow2(x):
         return a
     else:
         return b
+
+
+def normalize(column):
+    """
+    normalizes the given column to range [0:1]
+    """
+    normcol = []
+    timeconv = False
+    # test column contents
+    if isinstance(column[0], (float,int,np.float64)):
+        column = column.astype(float)
+    elif isinstance(column[0], (datetime,np.datetime64)):
+        column = date2num(column)
+        timeconv = True
+    else:
+        print ("stream._normalize: column does not contain numbers")
+    maxval = np.max(column)
+    minval = np.min(column)
+    for elem in column:
+        normcol.append((elem-minval)/(maxval-minval))
+
+    return normcol, minval, maxval
 
 
 def testtime(time):
