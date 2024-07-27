@@ -646,11 +646,11 @@ CALLED BY:
 
 
     def __str__(self):
-        return str(self.container)
+        return str(self.ndarray)
 
 
     def __repr__(self):
-        return str(self.container)
+        return str(self.ndarray)
 
 
     def __getitem__(self, var):
@@ -668,6 +668,7 @@ CALLED BY:
         return len(self.ndarray[0])
 
 
+    @deprecated("Useless method")
     def clear_header(self):
         """
         Remove header information
@@ -698,6 +699,7 @@ CALLED BY:
                         array[idx] = ndarray[idx].astype(object)
             self.ndarray = np.asarray(array, dtype=object)
 
+    @deprecated("Used only fy old flagging routines")
     def union(self,column):
         seen = set()
         seen_add = seen.add
@@ -757,12 +759,7 @@ CALLED BY:
         endidx = kwargs.get('endidx')
         mode = kwargs.get('mode')
 
-        #try:
-        #    from bisect import bisect
-        #except ImportError:
-        #    print("Import error")
-
-        st = date2num(testtime(time))
+        st = testtime(time)
         if len(self.ndarray[0]) > 0:
             if startidx and endidx:
                 ticol = self.ndarray[0][startidx:endidx]
@@ -773,36 +770,20 @@ CALLED BY:
             else:
                 ticol = self.ndarray[0]
             try:
-                if mode =='argmax':
-                    ## much faster since 0.3.99 (used in flag_stream)
-                    indexes = [np.argmax(ticol>=st)]
-                else:
-                    ## the following method is used until 0.3.98
-                    indexes = [i for i,x in enumerate(ticol) if x == st]    ### FASTER
-                # Other methods
-                # #############
-                #indexes = [i for i,x in enumerate(ticol) if np.allclose(x,st,rtol=1e-14,atol=1e-17)]  # if the two time equal within about 0.7 milliseconds
-                #indexes = [bisect(ticol, st)]   ## SELECTS ONLY INDEX WHERE VALUE SHOULD BE inserted
-                #indexes = [ticol.index(st)]
-                #print("findtime", indexes)
+                indexes = [np.argmax(ticol>=st)]
                 if not len(indexes) == 0:
                     if startidx:
                         retindex = indexes[0] + startidx
                     else:
                         retindex = indexes[0]
-                    #print("Findtime index:",retindex)
-                    return retindex, LineStruct()
+                    return retindex
                 else:
-                    return 0, []
-                #return list(self.ndarray[0]).index(st), LineStruct()
+                    return 0
             except:
                 logger.warning("findtime: Didn't find selected time - returning 0")
-                return 0, []
-        for index, line in enumerate(self):
-            if line.time == st:
-                return index, line
+                return 0
         logger.warning("findtime: Didn't find selected time - returning 0")
-        return 0, []
+        return 0
 
     def _find_t_limits(self):
         """
@@ -876,19 +857,6 @@ CALLED BY:
                 if len(elem) > 0 and ind < len(TESTLIST):
                     if not TESTLIST[ind] == 'time':
                         keylist.append(TESTLIST[ind])
-        """
-        if not len(keylist) > 0:  # e.g. header col-? does not contain any info
-            #for key in FLAGKEYLIST[1:]: # use the long way
-            for key in TESTLIST[1:]: # use the long way
-                col = self._get_column(key)
-                if len(col) > 0:
-                    #if not len(col) == 1 and not ( # maybe add something to prevent reading empty LineStructs)
-                    if len(col) == 1:
-                        if not col[0] in ['-',float(nan),'']:
-                            keylist.append(key)
-                    else:
-                        keylist.append(key)
-        """
         if limit and len(keylist) > limit:
             keylist = keylist[:limit]
 
@@ -1137,7 +1105,6 @@ CALLED BY:
     APPLICATION:
         called by plot methods in mpplot
 
-
     RETURNS:
         - DataStream:   (DataStream) New stream reduced to below pointlimit.
 
@@ -1191,7 +1158,7 @@ CALLED BY:
         - newval:       (array) an array with fitted values of length(val).
 
     EXAMPLE:
-        >>> f_fit = self.harmfit(nt,val, 5)
+        f_fit = self.harmfit(nt,val, 5)
 
         """
         N = len(nt)
@@ -1285,12 +1252,15 @@ CALLED BY:
         APPLICATION
              amp = stream.amplitude('x')
         """
+        if not key in KEYLIST[1:16]:
+            raise ValueError("Column key not valid")
         ts = self._get_column(key).astype(float)
         ts = ts[~np.isnan(ts)]
         maxts = np.max(ts)
         mints = np.min(ts)
         return maxts-mints
 
+    @deprecated("Unused - replaced by new K implementation")
     def _gf(self, t, tau):
         """
         Gauss function
@@ -1298,6 +1268,7 @@ CALLED BY:
         return np.exp(-((t/tau)*(t/tau))/2)
 
 
+    @deprecated("Unused - replaced by new K implementation")
     def _hf(self, p, x):
         """
         Harmonic function
@@ -1306,6 +1277,7 @@ CALLED BY:
         return hf
 
 
+    @deprecated("Unused - replaced by new K implementation")
     def _residual_func(self, func, y):
         """
         residual of the harmonic function
@@ -1371,62 +1343,6 @@ CALLED BY:
                 self.header['DataComponents'] = 'IDF'+ext
             else:
                 print("_convertstream: unkown coordinate transform")
-            return self
-
-        keep_header = kwargs.get('keep_header')
-        outstream = DataStream()
-        for elem in self:
-            row=LineStruct()
-            exec('row = elem.'+coordinate+'(unit="deg")')
-            row.typ = ''.join((list(coordinate))[4:])+'f'
-            outstream.add(row)
-
-        if not keep_header:
-            outstream.header['col-x'] = (list(coordinate))[4]
-            outstream.header['col-y'] = (list(coordinate))[5]
-            outstream.header['col-z'] = (list(coordinate))[6]
-            if (list(coordinate))[4] in ['i','d']:
-                outstream.header['unit-col-x'] = 'deg'
-            else:
-                outstream.header['unit-col-x'] = 'nT'
-            if (list(coordinate))[5] in ['i','d']:
-                outstream.header['unit-col-y'] = 'deg'
-            else:
-                outstream.header['unit-col-y'] = 'nT'
-            if (list(coordinate))[6] in ['i','d']:
-                outstream.header['unit-col-z'] = 'deg'
-            else:
-                outstream.header['unit-col-z'] = 'nT'
-
-        return DataStream(outstream,outstream.header)
-
-    def _delete(self,index):
-        """
-      DESCRIPTION:
-        Helper method to delete all values at a specific index or range of indicies
-        from the ndarray
-      APPLICTAION:
-        Used by k_fmi with individual indicies
-        """
-        for i,array in enumerate(self.ndarray):
-            if isinstance( index, (int) ):   # removed long (not necessary for python3, error in win)
-                if len(array) > index:
-                    self.ndarray[i] = np.delete(self.ndarray[i],index)
-            else:
-                self.ndarray[i] = np.delete(self.ndarray[i],index)
-        return self
-
-    def _append(self,stream):
-        """
-      DESCRIPTION:
-        Helper method to append values from another stream to
-        a ndarray. Append only to columns already filled in self.
-      APPLICTAION:
-        Used by k_fmi
-        """
-        for i,array in enumerate(self):
-            if len(array) > 0:
-                self.ndarray[i] = np.append(self.ndarray[i],stream.ndarray[i])
         return self
 
 
@@ -1535,17 +1451,9 @@ CALLED BY:
         except:
             return self
 
-        """
-        print ("sel", keys)
-        if not 'time' in keys:
-            keys.append('time')
-        print ("sel", keys)
-        """
-
-        ndarray = [[] for key in KEYLIST]
         ndarray = np.asarray([np.asarray(elem) if KEYLIST[idx] in keys or KEYLIST[idx] == 'time' else np.asarray([]) for idx,elem in enumerate(result.ndarray)],dtype=object)
 
-        return DataStream([LineStruct()],result.header,ndarray)
+        return DataStream(header=result.header,ndarray=ndarray)
 
 
     def _select_timerange(self, starttime=None, endtime=None, maxidx=-1):
@@ -1658,7 +1566,7 @@ CALLED BY:
         - self:         (DataStream object) Stream with results in default var1 + var2 keys.
 
     EXAMPLE:
-        >>> stream = stream.aic_calc('x',timerange=timedelta(hours=0.5))
+        stream = stream.aic_calc('x',timerange=timedelta(hours=0.5))
 
     APPLICATION:
         from magpy.stream import read
@@ -1759,8 +1667,6 @@ CALLED BY:
           didata          (DataStream) containing DI data- usually obtained by absolutes.absoluteAnalysis()
 
         keywords:
-          plotbaseline    (bool/string) will plot a baselineplot (if a valid path is provided
-                                        to file otherwise to to screen- requires mpplot
           extradays       (int) days to which the absolutedata is exteded prior and after start and endtime
           ##plotfilename    (string) if plotbaseline is selected, the outputplot is send to this file
           fitfunc         (string) see fit
@@ -1769,7 +1675,7 @@ CALLED BY:
           keys            (list) keys which contain the basevalues (default) is ['dx','dy','dz']
 
       APPLICATION:
-          func  = data.baseline(didata,knotstep=0.1,plotbaseline=True)
+          func  = data.baseline(didata,knotstep=0.1)
           # fixed time range
           func  = data.baseline(didata,startabs='2015-02-01',endabs='2015-08-24',extradays=0)
         OR:
@@ -1789,8 +1695,6 @@ CALLED BY:
         fitdegree = kwargs.get('fitdegree')
         knotstep = kwargs.get('knotstep')
         extradays = kwargs.get('extradays',15)
-        plotbaseline = kwargs.get('plotbaseline')
-        plotfilename = kwargs.get('plotfilename')
         startabs =  kwargs.get('startabs')
         endabs =  kwargs.get('endabs')
         debug =  kwargs.get('debug')
@@ -1798,8 +1702,6 @@ CALLED BY:
         orgstartabs = None
         orgendabs = None
 
-        #if not extradays:
-        #    extradays = 15
         if not fitfunc:
             fitfunc = self.header.get('DataAbsFunc')
             if not fitfunc:
@@ -1816,7 +1718,6 @@ CALLED BY:
             keys = ['dx','dy','dz']
 
         if len(self.ndarray[0]) > 0:
-            ndtype = True
             starttime = np.min(self.ndarray[0])
             endtime = np.max(self.ndarray[0])
         else:
@@ -1882,13 +1783,6 @@ CALLED BY:
 
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
-            #print ('HERE2c: First absolute value measured after beginning of stream')
-            #logger.warning('Baseline: First absolute value measured after beginning of stream - duplicating first abs value at beginning of time series')
-            #if fixstart:
-            #
-            #absolutestream.add(absolutestream[0])
-            #absolutestream[-1].time = starttime
-            #absolutestream.sorting()
             logger.info('Baseline: %d days without absolutes at the beginning of the stream' % int(np.floor(np.min(abst)-starttime)))
         if endabs < endtime:
             logger.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
@@ -1896,10 +1790,6 @@ CALLED BY:
                 usestepinbetween = True
                 if not fixend:
                     logger.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
-
-        #starttime = num2date(starttime).replace(tzinfo=None)
-        #endtime = num2date(endtime).replace(tzinfo=None)
-
 
         # 4) get standard time rang of one year and extradays at start and end
         #           test whether absstream covers this time range including extradays
@@ -1912,7 +1802,6 @@ CALLED BY:
             if debug:
                 print (" baseline: fixend", endabs, extradays)
 
-            #absolutestream = absolutestream.trim(endtime=endabs)  # should I trim here already - leon ??
             # time range long enough
             baseendtime = endabs+timedelta(days=extradays)
             if baseendtime < orgendabs:
@@ -1921,35 +1810,21 @@ CALLED BY:
         else:
             baseendtime = endtime+timedelta(days=1)
             extrapolate = True
-        #if endabs >= date2num(endtime)+extradays:
-        #    # time range long enough
-        #    baseendtime = date2num(endtime)+extradays
-        # lower
         if fixstart:
             if debug:
                 print (" baseline: fixstart at {} with {} extradays".format(startabs, extradays))
-
-            #absolutestream = absolutestream.trim(starttime=startabs)  # should I trim here already - leon ??
             basestarttime = startabs-timedelta(days=extradays)
             if basestarttime > orgstartabs:
                 basestarttime = orgstartabs
             extrapolate = True
         else:
             # not long enough
-            #basestarttime = date2num(starttime)
             basestarttime = startabs-timedelta(days=extradays)
             extrapolate = True
             if baseendtime - timedelta(days=(366.+2*extradays)) > startabs:
                 # time range long enough
                 basestarttime =  baseendtime-timedelta(days=(366.+2*extradays))
 
-        #baseendtime = num2date(baseendtime).replace(tzinfo=None)
-        #basestarttime = num2date(basestarttime).replace(tzinfo=None)
-
-        #print ("HERE3a: basestart and end", basestarttime, baseendtime)
-
-        # Don't use trim here
-        #bas = absolutestream.trim(starttime=basestarttime,endtime=baseendtime)
         basarray = absolutestream._select_timerange(starttime=basestarttime,endtime=baseendtime)
         bas = DataStream(header=absolutestream.header,ndarray=basarray)
 
@@ -1974,26 +1849,14 @@ CALLED BY:
             logger.error("Baseline: Error when determining fit - Not enough data point to satisfy fit complexity? N = {}".format(bas.length()))
             return None
 
-        if plotbaseline:
-            #check whether plotbaseline is valid path or bool
-            try:
-                try:
-                    import magpy.mpplot as mp
-                except ImportError:
-                    print ("baseline: Could not load package mpplot")
-                if plotfilename:
-                    mp.plot(bas,variables=['dx','dy','dz'],padding = [5,0.005,5], symbollist = ['o','o','o'],function=func,plottitle='Absolute data',outfile=plotfilename)
-                else:
-                    mp.plot(bas,variables=['dx','dy','dz'],padding = [5,0.005,5], symbollist = ['o','o','o'],function=func,plottitle='Absolute data')
-            except:
-                print("using the internal plotting routine requires mpplot to be imported as mp")
-
         keystr = '_'.join(keys)
         pierlong = absolutedata.header.get('DataAcquisitionLongitude','')
         pierlat = absolutedata.header.get('DataAcquisitionLatitude','')
         pierel = absolutedata.header.get('DataElevation','')
         pierlocref = absolutedata.header.get('DataLocationReference','')
         pierelref = absolutedata.header.get('DataElevationRef','')
+        orgstartabs = date2num(orgstartabs)
+        orgendabs = date2num(orgendabs)
         if not pierlong == '' and not pierlat == '' and not pierel == '':
             absinfostring = '_'.join(map(str,[orgstartabs,orgendabs,extradays,fitfunc,fitdegree,knotstep,keystr,pierlong,pierlat,pierlocref,pierel,pierelref]))
         else:
@@ -2004,7 +1867,7 @@ CALLED BY:
         else:
             existingabsinfo = [absinfostring]
 
-        # Get minimum and maximum times out of existing absinfostream
+        # Get minimum and maximum times out of existing absinfostream in matplotlib.dates format
         minstarttime=100000000.0
         maxendtime=0.0
         for el in existingabsinfo:
@@ -2023,7 +1886,6 @@ CALLED BY:
         # therefore we add a very small timefraction to use the last time
         bas2save = absolutestream.trim(starttime=minstarttime,endtime=maxendtime+0.000000001)
         tmpdict = bas2save.stream2dict()
-        #print ("HERE5b:", bas2save.length()[0])
         self.header['DataBaseValues'] = tmpdict['DataBaseValues']
 
         # Get column heads of dx,dy and dz
@@ -2036,9 +1898,6 @@ CALLED BY:
         if not basecomp == "HDZ":
             print ("     -> basevalues correspond to components {}".format(basecomp))
         self.header['DataBaseComponents'] = basecomp
-        #self.header['DataAbsMinTime'] = func[1] #num2date(func[1]).replace(tzinfo=None)
-        #self.header['DataAbsMaxTime'] = func[2] #num2date(func[2]).replace(tzinfo=None)
-        #self.header['DataAbsFunctionObject'] = func
 
         logger.info(' --- Finished baseline-correction at %s' % str(datetime.now()))
 
@@ -2059,8 +1918,8 @@ CALLED BY:
         RETURNS:
             dict		(dictionary) with name dictkey
         APPLICATION:
-            >>> d = absdata.stream2dict(['dx','dy','dz'],'DataBaseValues')
-            >>> d = neicdata.stream2dict(['f','str3'],'Earthquakes')
+            d = absdata.stream2dict(['dx','dy','dz'],'DataBaseValues')
+            d = neicdata.stream2dict(['f','str3'],'Earthquakes')
         """
 
         if not self.length()[0] > 0:
@@ -3275,7 +3134,7 @@ CALLED BY:
                             lastx = ar[np.isfinite(ar)][-1]
                             ar = np.insert(ar, -1, lastx)
                     st.ndarray[i] = ar
-        return st
+        return st.sorting()
 
     def filter(self,**kwargs):
         """
@@ -3694,7 +3553,7 @@ CALLED BY:
         - flaglist:     (list) a flaglist of type [st,et,key,flagnumber,commentarray[idx],sensorid,now]
 
     EXAMPLE:
-        >>> flaglist = stream.extractflags()
+        flaglist = stream.extractflags()
         """
         sensorid = self.header.get('SensorID','')
         now = datetime.utcnow()
@@ -4510,7 +4369,7 @@ CALLED BY:
             # Get start and end indicies:
             if debug:
                 ti1 = datetime.utcnow()
-            st, ls = self.findtime(startdate,mode='argmax')
+            st = self.findtime(startdate,mode='argmax')
             # st is the starttime, ls ?   -- modification allow to provide key list!!
             if debug:
                 ti2 = datetime.utcnow()
@@ -4532,7 +4391,7 @@ CALLED BY:
             if sti < 0:
                 sti = 0
 
-            ed, le = self.findtime(enddate,startidx=sti,mode='argmax')
+            ed = self.findtime(enddate,startidx=sti,mode='argmax')
             if debug:
                 print (sti, st, start, end, ed)
 
@@ -6694,10 +6553,10 @@ CALLED BY:
                 t_min = t_min -offset
             else:
                 t_min = t_min +offset
-            startperiod, line = self.findtime(t_min)
+            startperiod = self.findtime(t_min)
         else:
             t_min = ceil_dt(t_min,period)
-            startperiod, line = self.findtime(t_min)
+            startperiod = self.findtime(t_min)
 
         # new way: get the indicies of resample timesteps
         stwithnan = self.copy()
@@ -7963,7 +7822,10 @@ CALLED BY:
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'nT'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = self.header['DataComponents'].replace('IDF','XYZ')
+        prevcomps = self.header.get('DataComponents','')
+        if not prevcomps.startswith('IDF'):
+            print ("Did not find IDF in DataComponents but converting as you wish")
+        self.header['DataComponents'] = prevcomps.replace('IDF','XYZ')
 
         return self
 
@@ -8009,7 +7871,10 @@ CALLED BY:
         self.header['unit-col-x'] = 'deg'
         self.header['unit-col-y'] = 'deg'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = self.header['DataComponents'].replace('XYZ','IDF')
+        prevcomps = self.header.get('DataComponents','')
+        if not prevcomps.startswith('XYZ'):
+            print ("Did not find XYZ in DataComponents but converting as you wish")
+        self.header['DataComponents'] = prevcomps.replace('XYZ','IDF')
         return self
 
     def xyz2hdz(self,**kwargs):
@@ -8050,7 +7915,10 @@ CALLED BY:
         self.header['col-y'] = 'D'
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'deg'
-        self.header['DataComponents'] = self.header['DataComponents'].replace('XYZ','HDZ')
+        prevcomps = self.header.get('DataComponents','')
+        if not prevcomps.startswith('XYZ'):
+            print ("Did not find XYZ in DataComponents but converting as you wish")
+        self.header['DataComponents'] = prevcomps.replace('XYZ','HDZ')
         return self
 
     def hdz2xyz(self,**kwargs):
@@ -8098,7 +7966,10 @@ CALLED BY:
         self.header['unit-col-x'] = 'nT'
         self.header['unit-col-y'] = 'nT'
         self.header['unit-col-z'] = 'nT'
-        self.header['DataComponents'] = self.header['DataComponents'].replace('HDZ','XYZ')
+        prevcomps = self.header.get('DataComponents','')
+        if not prevcomps.startswith('HDZ'):
+            print ("Did not find HDZ in DataComponents but converting as you wish")
+        self.header['DataComponents'] = prevcomps.replace('HDZ','XYZ')
 
         return DataStream(self,self.header,self.ndarray)
 
