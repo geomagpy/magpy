@@ -5486,11 +5486,6 @@ CALLED BY:
                         cubic = spline (third order)
                         nearest = ?
                         zero = ?
-        (TODO: add these?)
-        - timerange:    (timedelta object) default=timedelta(hours=1).
-        - fitdegree:    (float) default=4.
-        - knotstep:     (float < 0.5) determines the amount of knots:
-                        amount = 1/knotstep ---> VERY smooth 0.1 | NOT VERY SMOOTH 0.001
 
     RETURNS:
         - func:         (list) Contains the following:
@@ -5499,7 +5494,7 @@ CALLED BY:
                         list[2]:        (float) date2num value of maximum timestamp
 
     EXAMPLE:
-        >>> int_data = pos_data.interpol(['f'])
+        int_data = pos_data.interpol(['f'])
 
     APPLICATION:
         """
@@ -5680,7 +5675,7 @@ CALLED BY:
     RETURNS:
         - mean/median(, std) (float)
     EXAMPLE:
-        >>> meanx = datastream.mean('x',meanfunction='median',percentage=90)
+        meanx = datastream.mean('x',meanfunction='median',percentage=90)
 
     APPLICATION:
         stream = read(datapath)
@@ -5772,7 +5767,7 @@ CALLED BY:
                         wavelet filter) according to Hafez (2013).
         - level:	(int) Decomposition level. Will calculate details down to this level.
                         Default 3, also Hafez (2013).
-        - plot:	        (bool) If True, will display a plot of A3, D1, D2 and D3.
+        - plot (defunc):  (bool) If True, will display a plot of A3, D1, D2 and D3.
         - outfile:      (str) If given, will plot will be saved to 'outfile' path.
         - window:       (int) Length of sample window. Default 5, i.e. 5s with second data.
 
@@ -5786,7 +5781,7 @@ CALLED BY:
                         ...
 
     EXAMPLE:
-        >>> DWT_stream = stream.DWT_calc(plot=True)
+        DWT_stream = stream.modwt_calc()
 
     APPLICATION:
         # Storm detection using detail 3 (D3 = var3):
@@ -5889,18 +5884,6 @@ CALLED BY:
         MODWT_stream.header['unit-col-var5'] = 'nT^2'
         MODWT_stream.header['col-dy'] = 'D6'
         MODWT_stream.header['unit-col-dy'] = 'nT^2'
-
-        # Plot stream:
-        if plot == True:
-            date = datetime.strftime(self.ndarray[0][0],'%Y-%m-%d')
-            logger.info('MODWT_calc: Plotting data...')
-            if outfile:
-                MODWT_stream.plot(['x','var1','var2','var3'],
-                                plottitle="MODWT Decomposition of %s (%s)" % (key,date),
-                                outfile=outfile)
-            else:
-                MODWT_stream.plot(['x','var1','var2','var3'],
-                                plottitle="MODWT Decomposition of %s (%s)" % (key,date))
 
         for key in KEYLIST:
             array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
@@ -6178,7 +6161,7 @@ CALLED BY:
                         starttime and endtime removed.
 
     EXAMPLE:
-        >>> data = data.trim(starttime, endtime)
+        data = data.trim(starttime, endtime)
 
     APPLICATION:
         """
@@ -6524,7 +6507,7 @@ CALLED BY:
         - stream:       (DataStream object) Stream containing resampled data.
 
     EXAMPLE:
-        >>> resampled_stream = pos_data.resample(['f'],period=1)
+        resampled_stream = pos_data.resample(['f'],period=1)
 
     APPLICATION:
         """
@@ -6681,7 +6664,7 @@ CALLED BY:
         - self:         (DataStream) The rotated stream
 
     EXAMPLE:
-        >>> data.rotation(alpha=2.74)
+        data = data.rotation(alpha=2.74)
 
     APPLICATION:
 
@@ -6776,7 +6759,7 @@ CALLED BY:
             - DataStream
 
         EXAMPLES:
-            >>> stream = stream.scale_correction(['x','y','z'],[1,0.988,1])
+            stream = stream.scale_correction(['x','y','z'],[1,0.988,1])
         """
 
         print("Function will be removed - use e.g. self.multiply({'y': 0.988}) instead")
@@ -6835,7 +6818,7 @@ CALLED BY:
         - self:         (DataStream) with ndarray limited to keys
 
     EXAMPLE:
-        >>> keydata = fulldata.selectkeys(['x','y','z'])
+        keydata = fulldata.selectkeys(['x','y','z'])
 
     APPLICATION:
 
@@ -8554,6 +8537,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
 
     return stream
 
+@deprecated("Replaced by core.flagging.save")
 def saveflags(mylist=None,path=None, overwrite=False):
     """
     DEFINITION:
@@ -8614,6 +8598,8 @@ def saveflags(mylist=None,path=None, overwrite=False):
         except:
             return False
 
+
+@deprecated("Replaced by core.flagging.load")
 def loadflags(path=None,sensorid=None,begin=None, end=None):
     """
     DEFINITION:
@@ -8759,6 +8745,7 @@ def join_streams(stream_a,stream_b, **kwargs):
     return stream.sorting()
 
 
+@deprecated("Replaced by join_streams")
 def joinStreams(stream_a,stream_b, **kwargs):
     """
     DEFINITION:
@@ -8903,11 +8890,11 @@ def merge_streams(stream_a, stream_b, **kwargs):
         - Datastream(stream_a): (DataStream) DataStream object.
 
     EXAMPLE:
-        >>> # Joining two datasets together:
-        >>> alldata = mergeStreams(lemidata, gsmdata, keys=['f'])
+        # Joining two datasets together:
+        alldata = mergeStreams(lemidata, gsmdata, keys=['f'])
                # f of gsm will be added to lemi
         # inserting missing values from another stream
-        >>> new_gsm = mergeStreams(gsm1, gsm2, keys=['f'], mode='insert')
+        new_gsm = mergeStreams(gsm1, gsm2, keys=['f'], mode='insert')
                # all missing values (nans) of gsm1 will be filled by gsm2 values (if existing)
 
 
@@ -9394,6 +9381,7 @@ def merge_streams(stream_a, stream_b, **kwargs):
     return DataStream(stream_a, headera)
 
 
+@deprecated("Replaced by merge_streams")
 def mergeStreams(stream_a, stream_b, **kwargs):
     """
     DEFINITION:
@@ -9440,11 +9428,11 @@ def mergeStreams(stream_a, stream_b, **kwargs):
         - Datastream(stream_a): (DataStream) DataStream object.
 
     EXAMPLE:
-        >>> # Joining two datasets together:
-        >>> alldata = mergeStreams(lemidata, gsmdata, keys=['f'])
+        # Joining two datasets together:
+        alldata = mergeStreams(lemidata, gsmdata, keys=['f'])
                # f of gsm will be added to lemi
         # inserting missing values from another stream
-        >>> new_gsm = mergeStreams(gsm1, gsm2, keys=['f'], mode='insert')
+        new_gsm = mergeStreams(gsm1, gsm2, keys=['f'], mode='insert')
                # all missing values (nans) of gsm1 will be filled by gsm2 values (if existing)
 
 
@@ -10369,6 +10357,7 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
             return DataStream(header=sa.header,ndarray=np.asarray(array,dtype=object))
 
 
+@deprecated("Replaced by subtract_streams")
 def subtractStreams(stream_a, stream_b, **kwargs):
     '''
     DEFINITION:
@@ -10802,6 +10791,7 @@ def obspy2magpy(opstream, keydict={}):
     return mpstream
 
 
+@deprecated("Replaced by core.methods.extract_date_from_string")
 def extractDateFromString(datestring):
     """
     DESCRIPTION:
