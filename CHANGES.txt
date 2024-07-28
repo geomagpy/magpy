@@ -48,6 +48,7 @@ Installation instructions can be found on the main download page.
      - fixed sign error in calculation of F from vector data including provided deltaF values
      - fixed nan error in integration
      - DKA export with missing data
+     - interpreting missing data and adopted baseline corrections when reading BLV
 
 2.0.0 removed items:
      - opt.emd replaced by official python emd package

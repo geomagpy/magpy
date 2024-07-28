@@ -1522,13 +1522,6 @@ def readBLV(filename, headonly=False, **kwargs):
                     array[strpos].append(strval)
                 else:
                     try:
-                        farray[0].append(dt)
-                        farray[xpos].append(xval)
-                        farray[ypos].append(yval)
-                        farray[zpos].append(zval)
-                        farray[fpos].append(fval)
-                        farray[dfpos].append(dfval)
-                        farray[strpos].append(strval)
                         if strval in ['d','D']:
                             # use the current time step as last one for fit and then add this step as first
                             # element for the next fit
@@ -1539,19 +1532,20 @@ def readBLV(filename, headonly=False, **kwargs):
                             funclist.append(func1)
                             funclist.append(func2)
                             farray = [[] for key in KEYLIST]
-                            farray[0].append(dt)
-                            farray[xpos].append(xval)
-                            farray[ypos].append(yval)
-                            farray[zpos].append(zval)
-                            farray[fpos].append(fval)
-                            farray[dfpos].append(dfval)
-                            farray[strpos].append(strval)
+                        farray[0].append(dt)
+                        farray[xpos].append(xval)
+                        farray[ypos].append(yval)
+                        farray[zpos].append(zval)
+                        farray[fpos].append(fval)
+                        farray[dfpos].append(dfval)
+                        farray[strpos].append(strval)
                     except:
                         pass
             elif line.startswith('*'):
                 # data info
                 starfound.append('*')
                 if len(starfound) > 1: # Comment section starts here
+                    print("Fitting from {} to {}".format(farray[0][0], farray[0][-1]))
                     tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
                     func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
                     func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')

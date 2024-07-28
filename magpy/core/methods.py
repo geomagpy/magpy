@@ -331,8 +331,9 @@ def evaluate_function(component, function, samplingrate, starttime=None, endtime
     # do the following with projected date ranges
     ftime = np.arange(sttime, entime + np.timedelta64(int(samprate), "us"), np.timedelta64(int(samprate), "us"))
     func = function[0].get("f{}".format(component))
-    if not func and debug:
-        print ("did not find a function reference to this component")
+    if not func:
+        if debug:
+            print ("did not find a function reference to this component")
         return None
     # function was determined between 0=function[1] and 1=function[2]
     # obtain a normalized new range:
