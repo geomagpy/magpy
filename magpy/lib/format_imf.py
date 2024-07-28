@@ -1464,33 +1464,35 @@ def readBLV(filename, headonly=False, **kwargs):
                 # data info
                 if not mode == 'adopted':
                     block = line.split()
-                    block = [el if not float(el) > 99998.00 else np.nan for el in block]
+                    block = [el if not float(el) == 99999.00 and not float(el) == 88888.00 else np.nan for el in block]
                     dttime = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
-                    if date2num(dttime) in array[0]:
+                    if dttime in array[0]:
                         dttime = dttime+timedelta(seconds=1)
-                    array[0].append(date2num(dttime))
+                    array[0].append(dttime)
                     array[xpos].append(float(block[1]))
                     if headers.get('DataComponents','').startswith('HDZ') or headers.get('DataComponents','').startswith('hdz'):
                         array[ypos].append(float(block[2])/60.0)
                     else:
                         array[ypos].append(float(block[2]))
                     array[zpos].append(float(block[3]))
-                    array[fpos].append(float(block[4]))
-                #print block
+                    if not block[4] == 999.0 and not block[4] == 888.0:
+                        array[fpos].append(float(block[4]))
+                    else:
+                        array[fpos].append(np.nan)
             elif len(line) in [54,55] and not len(starfound) > 1:  # block 2 - adopted basevalues
                 # data info
                 block = line.split()
-                if float(block[5])>998.0:
+                if float(block[5])==999.0 or float(block[5])==888.0:
                     block[5] = np.nan
-                if float(block[1])>9998.0:
+                if float(block[1])>88887.0:
                     block[1] = np.nan
-                if float(block[2])>9998.0:
+                if float(block[2])>88887.0:
                     block[2] = np.nan
-                if float(block[3])>9998.0:
+                if float(block[3])>88887.0:
                     block[3] = np.nan
-                if float(block[4])>9998.0:
+                if float(block[4])>88887.0:
                     block[4] = np.nan
-                dt = date2num(datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12))
+                dt = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
                 xval = float(block[1])
                 if headers['DataComponents'][:3] == 'HDZ':
                     yval = float(block[2])/60.0
@@ -1520,13 +1522,6 @@ def readBLV(filename, headonly=False, **kwargs):
                     array[strpos].append(strval)
                 else:
                     try:
-                        if strval in ['d','D']:
-                            tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
-                            func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
-                            func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
-                            funclist.append(func1)
-                            funclist.append(func2)
-                            farray = [[] for key in KEYLIST]
                         farray[0].append(dt)
                         farray[xpos].append(xval)
                         farray[ypos].append(yval)
@@ -1534,6 +1529,23 @@ def readBLV(filename, headonly=False, **kwargs):
                         farray[fpos].append(fval)
                         farray[dfpos].append(dfval)
                         farray[strpos].append(strval)
+                        if strval in ['d','D']:
+                            # use the current time step as last one for fit and then add this step as first
+                            # element for the next fit
+                            print ("Fitting from {} to {}".format(farray[0][0],farray[0][-1]))
+                            tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
+                            func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
+                            func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
+                            funclist.append(func1)
+                            funclist.append(func2)
+                            farray = [[] for key in KEYLIST]
+                            farray[0].append(dt)
+                            farray[xpos].append(xval)
+                            farray[ypos].append(yval)
+                            farray[zpos].append(zval)
+                            farray[fpos].append(fval)
+                            farray[dfpos].append(dfval)
+                            farray[strpos].append(strval)
                     except:
                         pass
             elif line.startswith('*'):
