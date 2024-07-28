@@ -311,18 +311,15 @@ class DataStream(object):
     All available methods of the DataStream class:
     ----------------------------
 
-    - stream.ext(self, columnstructure): # new version of extend function for column operations
-    - stream.add(self, datlst):
-    - stream.clear_header(self):
-    - stream.extend(self,datlst,header):
-    - stream.union(self,column):
-    - stream.findtime(self,time):
+    add(self, datlst):
+    extend(self,datlst,header):   -- Extends stream object
+    findtime(self,time):   -- returns index of given time (or the next times step)
     start(self):   -- return starttime
     end(self):   -- return endtime
     _find_t_limits(self):   -- return times of first and last stream data points
     _print_key_headers(self):   -- Prints keys in datastream with variable and unit.
     _get_key_headers(self,**kwargs):  -- Returns keys in datastream.
-    sorting(self):
+    sorting(self):   -- Sorts object
 
     - stream._remove_nancolumns(self, keys):
 
@@ -331,7 +328,7 @@ class DataStream(object):
     _copy_column(self, key, put2key):  -- copy one column to another key
     _move_column(self, key, put2key):  -- moves one column to another key
     _drop_column(self, key):   -- drop contents of a column from a stream
-    _aic(self, signal, k, debugmode=None):
+    _aic(self, signal, k, debugmode=None):  -- returns float -- determines Akaki Information Criterion for a specific index k
 
     - stream.nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
     - stream._get_k(self, **kwargs):
@@ -340,36 +337,33 @@ class DataStream(object):
     _get_max(self, key, returntime=False):  -- returns float
     _get_min(self, key, returntime=False):  -- returns float
 
-    - stream._gf(self, t, tau):
-    - stream._hf(self, p, x):
-    - stream._residual_func(self, func, y):
-    - stream._tau(self, period):
-    - stream._convertstream(self, coordinate, **kwargs):   -- Convert coordinates of x,y,z columns in stream
-    - stream._det_trange(self, period):   -- starting with coefficients above 1%
+    _tau(self, period):
+    _convertstream(self, coordinate, **kwargs):   -- Convert coordinates of x,y,z columns in stream
+    _det_trange(self, period):   -- starting with coefficients above 1%
 
     _drop_nans(self, key):   -- Helper to drop lines with NaNs in any of the selected keys.
     _select_timerange(self, start, end)
     aic_calc(self, key, **kwargs)   -- returns stream (with !var2! filled with aic values), helper for storm detection
-    baseline(self, absolutestream, **kwargs):
+    baseline(self, absolutestream, **kwargs):  -- calculates baseline correction for input stream (datastream)
     bc(self, ??, **kwargs)   -- applies baseline correction based on header information
     - stream.bindetector(self,key,text=None,**kwargs):
     - stream.baselineAdvanced(self, absdata, baselist, **kwargs):
     calc_f(self, **kwargs):
     compensation(self,**kwargs)    -- applies compensation field values from header to x,y,z
     cut(self,length,kind=0,order=0):
-    dailymeans(self):
-    delta_f(self, **kwargs):
+    dailymeans(self):   -- for DI stream - obtains variometer corrected means fo basevalues
+    delta_f(self, **kwargs):   -- Calculates the difference of x+y+z to f
 
     - stream.stream2dict(self)
     - stream.dict2stream(self,dictkey='DataBaseValues')
 
     differentiate(self, **kwargs)   -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
     dwt_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None, window=5)  -- helper method for storm detection
-    - stream.extract(self, key, value, compare=None, debugmode=None):
+    extract(self, key, value, compare=None, debugmode=None):
     extract_headerlist(self, element, parameter=1, year=None)   -- extracts value from lists in header
-    - stream.extrapolate(self, start, end):
+    extrapolate(self, start, end):  -- read absolute stream and extrapolate the data
     filter(self, **kwargs)    -- returns filtered stream (changes sampling_period)
-    - stream.fit(self, keys, **kwargs):
+    fit(self, keys, **kwargs):   -- returns fitting function
     - stream.flag_outlier(self, **kwargs):
     - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
     - stream.func2stream(self,function,**kwargs):
@@ -380,30 +374,35 @@ class DataStream(object):
     get_sampling_period(self)   -- sampling perid in seconds (full resolution)
     hdz2xyz(self):
     integrate(self, **kwargs):   -- returns stream (integrated vals at !dx!,!dy!,!dz!,!df!)
-    interpol(self, keys, **kwargs):    -- returns function
-    mean(self, key, **kwargs):
+    interpol(self, keys, **kwargs):    -- returns interpolation function
+    mean(self, key, **kwargs):  -- Calculates mean values for the specified key, Nan's are regarded for
     modwt_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,window=5):  -- helper method for storm detection
     multiply(self, factors):  -- multiply components as defined in dictionary factors
-    offset(self, offsets):
+    offset(self, offsets):   -- Apply constant offsets to elements of the datastream
     randomdrop(self, percentage=None, fixed_indicies=None):
     remove(self, starttime=starttime, endtime=endtime):
     - stream.remove_flagged(self, **kwargs):
-    resample(self, keys, **kwargs):
-    rotation(self,**kwargs):
+    resample(self, keys, **kwargs):   -- Resample stream to given sampling period.
+    rotation(self,**kwargs):   -- Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
     samplingrate(self, **kwargs)   -- sampling period in seconds (rounded)
     - stream.scale_correction(self, keys, scales, **kwargs):
-    smooth(self, keys, **kwargs):
+    smooth(self, keys, **kwargs):   -- smooth the data using a window with requested size
     - stream.steadyrise(self, key, timewindow, **kwargs):
-    - stream.stream2dict(self,dictkey='DataBaseValues')
+    stream2dict(self,dictkey='DataBaseValues')
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
-    trim(self, starttime=None, endtime=None, newway=False):
+    trim(self, starttime=None, endtime=None, newway=False):   -- returns stream within new time frame
     - stream.variometercorrection(self, variopath, thedate, **kwargs):
-    write(self, filepath, **kwargs):
+    write(self, filepath, **kwargs):    -- Writing Stream to a file
 
     deprecated
     ----------------------------
     - stream._is_number(self, value):
     - stream._normalize(self, column):   -- returns list,float,float -- normalizes selected column to range 0,1
+    - stream.union(self,column):
+    - stream.clear_header(self):
+    - stream._gf(self, t, tau):
+    - stream._hf(self, p, x):
+    - stream._residual_func(self, func, y):
 
 
     Available methods for a list of two DataStreams:
@@ -430,63 +429,33 @@ class DataStream(object):
     Application methods:
     ----------------------------
 
-    - stream.aic_calc(key) -- returns stream (with !var2! filled with aic values)
-    - stream.baseline() -- calculates baseline correction for input stream (datastream)
-    - stream.dailymeans() -- for DI stream - obtains variometer corrected means fo basevalues
     - stream.date_offset() -- Corrects the time column of the selected stream by the offst
-    - stream.delta_f() -- Calculates the difference of x+y+z to f
-    - stream.differentiate() -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
-    - stream.extrapolate() -- read absolute stream and extrapolate the data
-    - stream.fit(keys) -- returns function
-    - stream.filter() -- returns stream (changes sampling_period; in case of fmi ...)
     - stream.find_offset(stream_a, stream_b) -- Finds offset of two data streams. (Not optimised.)
     - stream.flag_stream() -- Add flags to specific times or time ranges
     - stream.func2stream() -- Combine stream and function (add, subtract, etc)
     - stream.func_add() -- Add a function to the selected values of the data stream
     - stream.func_subtract() -- Subtract a function from the selected values of the data stream
-    - stream.get_gaps() -- Takes the dominant sample frequency and fills non-existing time steps
-    - stream.get_sampling_period() -- returns the dominant sampling frequency in unit ! days !
-    - stream.integrate() -- returns stream (integrated vals at !dx!,!dy!,!dz!,!df!)
-    - stream.interpol(keys) -- returns function
-    - stream.k_fmi() -- Calculating k values following the fmi approach
     - stream.linestruct2ndarray() -- converts linestrcut data to ndarray. should be avoided
-    - stream.mean() -- Calculates mean values for the specified key, Nan's are regarded for
-    - stream.offset() -- Apply constant offsets to elements of the datastream
-    - stream.plot() -- plot keys from stream
-    - stream.powerspectrum() -- Calculating the power spectrum following the numpy fft example
     - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
-    - stream.resample(period) -- Resample stream to given sampling period.
-    - stream.rotation() -- Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
     - stream.selectkeys(keys) -- ndarray: remove all data except for provided keys (and flag/comment)
-    - stream.smooth(key) -- smooth the data using a window with requested size
-    - stream.spectrogram() -- Creates a spectrogram plot of selected keys
     - stream.stream2flaglist() -- make flaglist out of stream
-    - stream.trim() -- returns stream within new time frame
     - stream.use_sectime() -- Swap between primary and secondary time (if sectime is available)
     - stream.variometercorrection() -- Obtain average DI values at certain timestep(s)
-    - stream.write() -- Writing Stream to a file
 
     Supporting INTERNAL methods:
     ----------------------------
 
     A. Standard functions and overrides for list like objects
-    - self.clear_header(self) -- Clears headers
     - self.extend(self,datlst,header) -- Extends stream object
-    - self.sorting(self) -- Sorts object
 
     B. Internal Methods I: Line & column functions
     - self._get_line(self, key, value) -- returns a LineStruct element corresponding to the first occurence of value within the selected key
     - self._reduce_stream(self) -- Reduces stream below a certain limit.
     - self._remove_lines(self, key, value) -- removes lines with value within the selected key
-    - self.findtime(self,time) -- returns index and line for which time equals self.time
 
     B. Internal Methods II: Data manipulation functions
-    - self._aic(self, signal, k, debugmode=None) -- returns float -- determines Akaki Information Criterion for a specific index k
     - self._get_k(self, **kwargs) -- Calculates the k value according to the Bartels scale
     - self._get_k_float(self, value, **kwargs) -- Like _get_k, but for testing single values and not full stream keys (used in filtered function)
-    - self._gf(self, t, tau):  -- Gauss function
-    - self._hf(self, p, x) -- Harmonic function
-    - self._residual_func(self, func, y) -- residual of the harmonic function
     - self._tau(self, period) -- low pass filter with -3db point at period in sec (e.g. 120 sec)
 
     B. Internal Methods III: General utility & NaN handlers
@@ -499,8 +468,6 @@ class DataStream(object):
     - linestruct2ndarray -- returns a data ndarray  -- converts a old linestruct format
     - denormalize -- returns list -- (column,startvalue,endvalue) denormalizes selected column from range 0,1 ro sv,ev
     - find_nearest(array, value) -- find point in array closest to value
-    - maskNAN(column) -- Tests for NAN values in array and usually masks them
-    - nearestPow2(x) -- Find power of two nearest to x
 
 *********************************************************************
     Standard function description format:
@@ -10573,7 +10540,7 @@ def compareStreams(stream_a, stream_b):
         - stream_a:     (DataStream) Description.
 
     EXAMPLE:
-        >>> compareStreams(db_stream, pos_stream)
+        compareStreams(db_stream, pos_stream)
 
     APPLICATION:
 
