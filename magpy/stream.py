@@ -1955,6 +1955,7 @@ CALLED BY:
         return DataStream(header={}, ndarray=np.asarray(array,dtype=object))
 
 
+    @deprecated("Apparently unused method - to be remove in 2.1")
     def baselineAdvanced(self, absdata, baselist, **kwargs):
         """
         DESCRIPTION:
@@ -4434,7 +4435,7 @@ CALLED BY:
     def simplebasevalue2stream(self,basevalue,basecomp="HDZ",**kwargs):
         """
       DESCRIPTION:
-        simple baselvalue correction using a simple basevalue list
+        simple baselvalue correction using a list with three directional basevalues
 
       PARAMETERS:
         basevalue       (list): [baseH,baseD,baseZ]
@@ -4486,7 +4487,7 @@ CALLED BY:
 
         if basecomp in ["HDZ","hdz"]:
             self.header['DataComponents'] = 'HDZ'
-        return DataStream(self,self.header,np.asarray(array, dtype=object))
+        return DataStream(header=self.header,ndarray=np.asarray(array, dtype=object))
 
 
     def func2stream(self,funclist, keys=None, **kwargs):
@@ -4622,6 +4623,7 @@ CALLED BY:
         return DataStream(header=self.header,ndarray=np.asarray(totalarray,dtype=object))
 
 
+    @deprecated("Apparently unsued - remove in 2.1")
     def func_add(self,funclist,**kwargs):
         """
         Add a function to the selected values of the data stream -> e.g. get baseline
@@ -4665,88 +4667,8 @@ CALLED BY:
 
             return DataStream(self,self.header,np.asarray(array,dtype=object))
 
-        for elem in self:
-            # check whether time step is in function range
-            if function[1] <= elem.time <= function[2]:
-                functime = (elem.time-function[1])/(function[2]-function[1])
-                for key in keys:
-                    if not key in KEYLIST[1:16]:
-                        raise ValueError("Column key not valid")
-                    fkey = 'f'+key
-                    exec('keyval = elem.'+key)
-                    if fkey in function[0] and not isnan(keyval):
-                        try:
-                            newval = keyval + function[0][fkey](functime)
-                        except:
-                            newval = float('nan')
-                        exec('elem.'+key+' = newval')
-                    else:
-                        pass
-            else:
-                pass
-
         return self
 
-
-    def func_subtract(self,funclist,**kwargs):
-        """
-        Subtract a function from the selected values of the data stream -> e.g. obtain Residuals
-        Optional:
-        keys (default = 'x','y','z')
-        :type order int
-        :param order : 0 -> stream - function; 1 -> function - stream
-        """
-        keys = kwargs.get('keys')
-        order = kwargs.get('order')
-
-        st = DataStream()
-        st = self.copy()
-
-        if isinstance(funclist[0], dict):
-            funct = [funclist]
-        else:
-            funct = funclist
-        function = funct[0]  # Direct call of old version only accepts single function
-
-        """
-        for el in self:
-            li = LineStruct()
-            li.time = el.time
-            li.x = el.x
-            li.y = el.y
-            li.z = el.z
-            st.add(li)
-        """
-        if not order:
-            order = 0
-
-        if not keys:
-            keys = ['x','y','z']
-
-        for elem in st:
-            # check whether time step is in function range
-            if function[1] <= elem.time <= function[2]:
-                functime = (elem.time-function[1])/(function[2]-function[1])
-                for key in keys:
-                    if not key in KEYLIST[1:16]:
-                        raise ValueError("Column key not valid")
-                    fkey = 'f'+key
-                    exec('keyval = elem.'+key)
-                    if fkey in function[0] and not isnan(keyval):
-                        try:
-                            if order == 0:
-                                newval = keyval - function[0][fkey](functime)
-                            else:
-                                newval = function[0][fkey](functime) - keyval
-                        except:
-                            newval = float('nan')
-                        exec('elem.'+key+' = newval')
-                    else:
-                        pass
-            else:
-                pass
-
-        return st
 
     def func2header(self,funclist,debug=False):
         """
@@ -4956,7 +4878,7 @@ CALLED BY:
         - stream:       (Datastream)
 
     EXAMPLE:
-        >>> stream_with_gaps_filled = stream_with_gaps.get_gaps(key='f')
+        stream_with_gaps_filled = stream_with_gaps.get_gaps(key='f')
 
     APPLICATION:
     CHANGES:
@@ -5063,63 +4985,12 @@ CALLED BY:
         return stream.sorting()
 
 
-    def get_rotationangle(self, xcompensation=0,keys=['x','y','z'],**kwargs):
-        """
-        DESCRIPTION:
-            "Estimating" the rotation angle towards a magnetic coordinate system
-            assuming z to be vertical down. Please note: You need to provide a
-            complete horizontal vector including either the x compensation field
-            or if not available an annual estimate of the vector. This method can be used
-            to determine reorientation characteristics in order to accurately apply
-            HDZ optimzed basevalue calculations.
-        RETURNS:
-            rotangle   (float) The estimated rotation angle in degree
-        """
-        print ("METHOD get_rotationangle is deprecated and will not be availbale in future versions. Please use get_rotation instead.")
-        print ("The first return value of get_rotation is identical as expected here.")
-        annualmeans = kwargs.get('annualmeans')
-
-        #1. get vector from data
-        # x = y*tan(dec)
-        if not keys:
-            keys = ['x','y','z']
-
-        if not len(keys) == 3:
-            logger.error('get_rotation: provided keylist need to have three components.')
-            return stream #self
-
-        logger.info('get_rotation: Determining rotation angle towards a magnetic coordinate system assuming z to be vertical down.')
-
-        ind1 = KEYLIST.index(keys[0])
-        ind2 = KEYLIST.index(keys[1])
-        ind3 = KEYLIST.index(keys[2])
-
-        if len(self.ndarray[0]) > 0:
-            if len(self.ndarray[ind1]) > 0 and len(self.ndarray[ind2]) > 0 and len(self.ndarray[ind3]) > 0:
-                # get mean disregarding nans
-                xl = [el for el in self.ndarray[ind1] if not np.isnan(el)]
-                yl = [el for el in self.ndarray[ind2] if not np.isnan(el)]
-                if annualmeans:
-                    meanx = annualmeans[0]
-                else:
-                    meanx = np.mean(xl)+xcompensation
-                meany = np.mean(yl)
-                # get rotation angle so that meany == 0
-                #print ("Rotation",meanx, meany)
-                #zeroy = meanx*np.sin(ra)+meany*np.cos(ra)
-                #-meany/meanx = np.tan(ra)
-                rotangle = np.arctan2(-meany,meanx) * (180.) / np.pi
-
-        logger.info('getrotation: Rotation angle determined: {} deg'.format(rotangle))
-
-        return rotangle
-
-    def get_rotation(self,referenceD=0.0,referenceI=None,keys = ['x','y','z'],debug=False):
+    def determine_rotationangles(self,referenceD=0.0,referenceI=None,keys = ['x','y','z'],debug=False):
         """
         DESCRIPTION:
             "Estimating" the rotation angle alpha and beta relative to a magnetic
             coordinate system defined by expected Declination, expected Inclination
-            and Intensity F, asuming F is similar. Please note: You need to provide a
+            and Intensity F, assuming F is identical. Please note: You need to provide a
             field vector with similar intensity as the reference field. A reference inclination
             of 0 is not possible. Please provide a very small value if you need to do that.
         VARIABLES:
@@ -5173,6 +5044,11 @@ CALLED BY:
         return alpha, beta
 
 
+    @deprecated("Replaced by determine_rotationangles")
+    def get_rotation(self, referenceD=0.0, referenceI=None, keys = ['x','y','z'], debug=False):
+        return self.get_rotation(referenceD=referenceD, referenceI=referenceI, keys=keys, debug=debug)
+
+
     def get_sampling_period(self):
         """
         returns the dominant sampling period in seconds
@@ -5185,18 +5061,20 @@ CALLED BY:
 
         if len(self.ndarray[0]) > 0:
             if not isinstance(self.ndarray[0][0], (datetime,datetime64)):
-                timecol = np.array(num2date(self.ndarray[0]), dtype='datetime64')
+                timecol = np.array(num2date(self.ndarray[0]))
             else:
-                timecol = np.array(self.ndarray[0], dtype='datetime64')
+                timecol = np.array(self.ndarray[0])
 
         # New way:
         if len(timecol) > 1:
-            diffs = (np.asarray(timecol[1:]-timecol[:-1])/1000000.).astype(float64) # in seconds
-            diffs = diffs[~np.isnan(diffs)]
-            me = np.median(diffs)
-            st = np.std(diffs)
-            diffs = [el for el in diffs if el <= me+2*st and el >= me-2*st]
-            return np.median(diffs)
+            newtd = np.nanmedian(np.diff(timecol))
+            #diffs = (np.asarray(timecol[1:]-timecol[:-1])/1000000.).astype(float64) # in seconds
+            #diffs = diffs[~np.isnan(diffs)]
+            #me = np.median(diffs)
+            #st = np.std(diffs)
+            #diffs = [el for el in diffs if el <= me+2*st and el >= me-2*st]
+            #return np.median(diffs)
+            return newtd.total_seconds()
         else:
             return 0.0
 
@@ -5427,6 +5305,7 @@ CALLED BY:
         return self
 
 
+    @deprecated("Can not be used with new K_fmi technique")
     def k_extend(self, **kwargs):
         """
       DESCRIPTION:
@@ -5466,6 +5345,7 @@ CALLED BY:
         return self
 
 
+    @deprecated("Please remove any usages of this method - linestruct is solely used internally by the absolutes package")
     def linestruct2ndarray(self):
         """
     DEFINITION:
@@ -5474,7 +5354,7 @@ CALLED BY:
     RETURNS:
         - self with ndarray filled
     EXAMPLE:
-        >>> data = data.linestruct2ndarray()
+        data = data.linestruct2ndarray()
 
     APPLICATION:
         """
@@ -6599,67 +6479,6 @@ CALLED BY:
         return self
 
 
-    def scale_correction(self, keys, scales, **kwargs):
-        """
-        DEFINITION:
-            multiplies the selected keys by the given scale values
-        PARAMETERS:
-         Kwargs:
-            - offset:  (array) containing constant offsets for the given keys
-        RETURNS:
-            - DataStream
-
-        EXAMPLES:
-            stream = stream.scale_correction(['x','y','z'],[1,0.988,1])
-        """
-
-        print("Function will be removed - use e.g. self.multiply({'y': 0.988}) instead")
-
-        # Take care: if there is only 0.1 nT accurracy then there will be a similar noise in the deltaF signal
-
-        offset = kwargs.get('offset')
-        if not offset:
-            offset = [0]*len(keys)
-        else:
-            if not len(offset) == len(keys):
-                logger.error('scale_correction: offset with wrong dimension given - needs to have the same length as given keys - returning stream without changes')
-                return self
-
-        try:
-            assert len(self) > 0
-        except:
-            logger.error('scale_correction: empty stream - aborting')
-            return self
-
-        offsetlst = []
-        for key in KEYLIST:
-            if key in keys:
-                pos = keys.index(key)
-                offsetlst.append(offset[pos])
-            else:
-                offsetlst.append(0.0)
-
-        logger.info('scale_correction:  --- Scale correction started at %s ' % str(datetime.now()))
-        for elem in self:
-            for i,key in enumerate(keys):
-                exec('elem.'+key+' = (elem.'+key+'+offset[i]) * scales[i]')
-
-        scalelst = []
-        for key in KEYLIST:
-            if key in keys:
-                pos = keys.index(key)
-                scalelst.append(scales[pos])
-            else:
-                scalelst.append(1.)
-
-        #print '_'.join(map(str,offsetlst)), scalelst
-        self.header['DataScaleValues'] = '_'.join(map(str,scalelst))
-        self.header['DataOffsets'] = '_'.join(map(str,offsetlst))
-
-        logger.info('scale_correction:  --- Scale correction finished at %s ' % str(datetime.now()))
-
-        return self
-
     @deprecated("Replaced by twice as fast _select_keys")
     def selectkeys(self, keys, **kwargs):
         """
@@ -6795,7 +6614,7 @@ CALLED BY:
             Method determines the absolute increase within a data column
             and a selected time window
             neglecting any resets and decreasing trends
-            - used for analyzing some rain senors
+            - used for analyzing bucket type rain sensors
         PARAMETERS:
             key:           (key) column on which the process is performed
             timewindow:    (timedelta) define the window e.g. timedelta(minutes=15)
@@ -6809,7 +6628,7 @@ CALLED BY:
                                    containing timewindow blocks of stacked data.
 
         EXAMPLE:
-            >>>  col = stream.steadyrise('t1', timedelta(minutes=60),sensitivitylevel=0.002)
+            col = stream.steadyrise('t1', timedelta(minutes=60),sensitivitylevel=0.002)
 
 
         """
@@ -6819,18 +6638,15 @@ CALLED BY:
         stacked = 0.0
         count = 0
         rescol = []
-        testcol = []
 
-        ndtype = False
-        if len(self.ndarray[0]) > 0:
-            ndtype = True
-
+        if not len(self.ndarray[0]) > 0:
+            return np.asarray([])
 
         ind = KEYLIST.index(key)
-        if ndtype and len(self.ndarray[ind]) > 0:
-            startt = num2date(np.min(self.ndarray[0]))
+        if len(self.ndarray[ind]) > 0:
+            startt = np.min(self.ndarray[0])
             for idx,val in enumerate(self.ndarray[ind]):
-                if num2date(self.ndarray[0][idx]) < startt+timewindow:
+                if self.ndarray[0][idx] < startt+timewindow:
                     if prevval < val:
                         diff = val-prevval
                         if not sensitivitylevel:
@@ -6846,40 +6662,16 @@ CALLED BY:
                     startt = startt+timewindow
                     stacked = 0.0
                 prevval = val
-
-        elif not ndtype:
-            startt = num2date(self[0].time)
-            for elem in self:
-                testcol.append(elem)
-                if num2date(elem.time) < startt+timewindow:
-                    val = eval('elem.'+key)
-                    if prevval < val:
-                        diff = val-prevval
-                        if not sensitivitylevel:
-                            stacked += val-prevval
-                        elif diff > sensitivitylevel:
-                            stacked += val-prevval
-                    count += 1
-                else:
-                    for i in range(count+1):
-                        rescol.append(stacked)
-                    count = 0
-                    # now put that results back to a column
-                    startt = startt+timewindow
-                    val = eval('elem.'+key)
-                    stacked = 0.0
-                prevval = val
-
         else:
-            print("steadyrise: no data found in selected column %s" % key)
+            print("steadyrise: no data found within the selected column {}}".format(key))
             return np.asarray([])
         # Finally fill the end
         for i in range(count):
             rescol.append(stacked)
 
-        if not len(rescol) == len(self) and not len(rescol) == len(self.ndarray[0]) :
+        if not len(rescol) == len(self.ndarray[0]):
             logger.error('steadrise: An error leading to unequal lengths has been encountered')
-            return []
+            return np.asarray([])
 
         return np.asarray(rescol)
 
@@ -6959,183 +6751,6 @@ CALLED BY:
             stream = stream._drop_column('sectime')
 
         return stream
-
-
-    def variometercorrection(self, variopath, thedate, **kwargs):
-        """
-        DEFINITION:
-            ##### THS METHOD IS USELESS....
-            ##### Either select a certain time in absolute calculation (TODO)
-            ##### or calculate daily means of basevalues which ar already corrected for
-            ##### variotion --- leon 2016-03
-
-            Function to perform a variometercorrection of an absresult stream
-            towards the given datetime using the given variometer stream.
-            Returns a new absresult object with new datetime and corrected values
-        APPLICATION:
-            Useful to compare various absolute measurement e.g. form one day and analyse their
-            differences after correcting them to a single spot in time.
-        PARAMETERS:
-         Variables:
-            - variodata:   (DataStream) data to be used for reduction
-            - endtime:     (datetime/str) End of period to trim to
-         Kwargs:
-            - funckeys:    (list) keys of the variometerfile which are interpolated and used
-            - nomagorient: (bool) indicates that variometerdata is NOT in magnetic
-                                  coordinates (hez) - Method will then use header info
-                                  in DataRotationAlpha and Beta
-
-        RETURNS:
-            - stream:   (DataStream object) absolute stream - corrected
-
-        EXAMPLE:
-            >>> newabsdata = absdata.variometercorrection(starttime, endtime)
-
-        APPLICATION:
-        """
-        funckeys = kwargs.get('funckeys')
-        offset = kwargs.get('offset')
-        nomagorient = kwargs.get('nomagorient')
-        if not offset:
-            offset = 0.0
-
-        dateform = "%Y-%m-%d"
-
-        def getfuncvals(variofunc,day):
-            # Put the following to a function
-            functime = (date2num(day)-variofunc[1])/(variofunc[2]-variofunc[1])
-            #print(functime, day, date2num(day),variofunc[1],variofunc[2])
-            refval = []
-            for key in funckeys:
-                if key in ['x','y','z']:
-                    refval.append(variofunc[0]['f'+key](functime))
-            return refval
-
-        # Return results within a new streamobject containing only
-        # the average values and its uncertainties
-        resultstream = DataStream()
-
-        # Check for ndtype:
-        ndtype = False
-        if len(self.ndarray[0]) > 0:
-            timecol = self.ndarray[0]
-            ndtype = True
-            typus = self.header.get('DataComponents')
-            try:
-                typus = typus.lower()[:3]
-            except:
-                typus = ''
-        else:
-            timecol = self._get_column('time')
-            try:
-                typus = self[0].typ[:3]
-            except:
-                typus = ''
-        # 1 Convert absresult - idff to xyz    ---- NOT NECESSARY
-        # test stream type (xyz, idf or hdz?)
-        # TODO add the end check whether streams are modified!!!!!!!!!!
-        #print("Variometercorrection", typus)
-        absstream = self.copy()
-        absstream = absstream.removeduplicates()
-
-        # 2 Convert datetime to number
-        # check whether thedate is a time (then use this time every day)
-        # or a full date
-        datelist = []
-        try:
-            # Check whether provided thedate is a date with time
-            datelist = [testtime(thedate)]
-            print("Variometercorrection: using correction to single provided datetime", datelist[0])
-        except:
-            try:
-                # Check whether provided thedate is only time
-                tmpdatelst = [datetime.date(num2date(elem)) for elem in timecol]
-                tmpdatelst = list(set(tmpdatelst))
-                dummydatedt = testtime('2016-11-22T'+thedate)
-                datelist = [datetime.combine(elem, datetime.time(dummydatedt)) for elem in tmpdatelst]
-            except:
-                print("Variometercorrection: Could not interpret the provided date/time - aborting - used dateformat should be either 12:00:00 or 2016-11-22 12:00:00 - provided:", thedate)
-                return self
-
-        if len(datelist) == 1:
-            print("Variometercorrection: Transforming all provided absolute data towards", datelist[0])
-        elif len(datelist) > 1:
-            print("Variometercorrection: Correcting all absolute data of individual days towards time", datetime.strftime(datelist[0],"%H:%M:%S"))
-        else:
-            print("Variometercorrection: No correction date found - aborting")
-            return self
-
-        for day in datelist:
-            print("Variocorrection: dealing with {}".format(day))
-            # 1. Select the appropriate values from self
-            if len(datelist) == 1:
-                usedabsdata = absstream
-                st, et = absstream._find_t_limits()
-            else:
-                st = str(datetime.date(day))
-                et = str(datetime.date(day+timedelta(days=1)))
-                usedndarray = absstream._select_timerange(starttime=st, endtime=et)
-                usedabsdata = DataStream([LineStruct()],self.header,usedndarray)
-            #print(date, num2date(usedabsdata.ndarray[0]))
-            # 2. Read variation data for respective date
-            vario = read(variopath, starttime=st, endtime=et)
-            print("Variocorrection: loaded {} data points".format(vario.length()[0]))
-            #print("Variocorrection: Please note - we are assuming that the provided variometerdata records the field in magnetic coordinates in nT (e.g. HEZ). In case of geographic xyz records one can activate a kwarg: takes provided rotation angle or (if not existing) the declination value of abs data")
-            # 3. Check DataComponents: we need pure variation data
-            comps = vario.header.get('DataComponents')
-            try:
-                comps = comps.lower()[:3]
-            except:
-                comps = ''
-            if comps in ['xyz','idf','hdz']:
-                # Data is already in geographic coordinates
-                # Rotate back
-                if not comps == 'xyz':
-                    vario = vario._convertstream(comps+'2xyz')
-                nomagorient = True
-            else:
-                nomagorient = False
-            # 4. TODO TEST! Eventually rotate the data to hez
-            if nomagorient:
-                rotaangle = vario.header.get('DataRotationAlpha')
-                rotbangle = vario.header.get('DataRotationBeta')
-                #print("Angles", rotaangle, rotbangle)
-                try:
-                    rotaangle = float(rotaangle)
-                    rotbangle = float(rotbangle)
-                except:
-                    pass
-                if rotaangle in [None,np.nan,0.0]:
-                    print("Variocorrection: Did not find DataRotationAlpha in header assuming xyz and rotation by minus declination")
-                    rotaangle = -np.mean(usedabsdata.ndarray[2])
-                else:
-                    try:
-                        rotaangle = float(rotaangle)
-                    except:
-                        rotaangle = 0.
-                if not rotbangle in [None,'Null',np.nan,0.0]:
-                    try:
-                        rotbangle = float(rotbangle)
-                    except:
-                        rotbangle = 0.
-                print("Variocorrection: Rotating data by {a} and {b}".format(a=rotaangle,b=rotbangle))
-                vario = vario.rotation(alpha=rotaangle,beta=rotbangle)
-            if vario.length()[0] > 1 and len(usedabsdata.ndarray[0]) > 0:
-                variost, varioet = vario._find_t_limits()
-                # 4. Interpolating variation data
-                if not funckeys:
-                    funckeys = []
-                    keys = vario._get_key_headers(numerical=True)
-                    for key in keys:
-                        if key in ['x','y','z','f']:
-                            funckeys.append(key)
-                variofunc = vario.interpol(funckeys)
-
-                refvals = getfuncvals(variofunc,day)
-
-                for idx,abstime in enumerate(usedabsdata.ndarray[0]):
-                    variovalsatabstime = getfuncvals(variofunc,num2date(abstime))
-                    diffs= np.asarray(refvals)-np.asarray(variovalsatabstime)
 
 
     def _write_format(self, format_type, filenamebegins, filenameends, coverage, dateformat,year):
@@ -8072,8 +7687,8 @@ class LineStruct(object):
         yval = self.y
         zval = self.z
 
-        ra = ni.pi*alpha/(180.*ang_fac)
-        rb = ni.pi*beta/(180.*ang_fac)
+        ra = np.pi*alpha/(180.*ang_fac)
+        rb = np.pi*beta/(180.*ang_fac)
         xs = self.x*np.cos(rb)*np.cos(ra)-self.y*np.sin(ra)+self.z*np.sin(rb)*np.cos(ra)
         ys = self.x*np.cos(rb)*np.sin(ra)+self.y*np.cos(ra)+self.z*np.sin(rb)*np.sin(ra)
         zs = self.x*np.sin(rb)+self.z*np.cos(rb)
@@ -8751,13 +8366,7 @@ def merge_streams(stream_a, stream_b, **kwargs):
 
     APPLICATION:
     """
-    # old (LineStruct) too be removed
-    addall = kwargs.get('addall')
-    replace = kwargs.get('replace')
-    extend = kwargs.get('extend')
 
-
-    # new
     mode = kwargs.get('mode')
     flag = kwargs.get('flag')
     keys = kwargs.get('keys')
@@ -9111,663 +8720,19 @@ def merge_streams(stream_a, stream_b, **kwargs):
                     array[0] = np.asarray(sa.ndarray[0])
                     array = np.asarray(array,dtype=object)
 
-            #try:
-            #    header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
-            #except:
-            #    pass
-
-            return DataStream([LineStruct()],header,array)
-
-
-    sta = list(stream_a)
-    stb = list(stream_b)
-    if addall:
-        logger.info('mergeStreams: Adding streams together not regarding for timeconstraints of data.')
-        if ndtype:
-            for idx,elem in enumerate(stream_a.ndarray):
-                ndarray = stream_a.ndarray
-                if len(elem) == 0 and len(stream_b.ndarray[idx]) > 0:
-                    # print add nan's of len_a to stream a
-                    # then append stream b
-                    pass
-                elif len(elem) > 0 and len(stream_b.ndarray[idx]) == 0:
-                    # print add nan's of len_b to stream a
-                    pass
-                elif len(elem) == 0 and len(stream_b.ndarray[idx]) == 0:
-                    # do nothing
-                    pass
-                else: #len(elem) > 0 and len(stream_b.ndarray[idx]) > 0:
-                    # append b to a
-                    pass
-            newsta = DataStream(sta, headera, ndarray)
-        else:
-            for elem in stream_b:
-                sta.append(elem)
-            newsta = DataStream(sta, headera, stream_a.ndarray)
-        for elem in headerb:
-            try:
-                headera[elem]
-                ha = True
-            except:
-                ha = False
-            if headerb[elem] and not ha:
-                newsta.header[elem] = headerb[elem]
-            elif headerb[elem] and ha:
-                logger.warning("mergeStreams: headers both have keys for %s. Headers may be incorrect." % elem)
-        newsta.sorting()
-        return newsta
-    elif extend:
-        logger.info('mergeStreams: Extending stream a with data from b.')
-        for elem in stream_b:
-            if not elem.time in timea:
-                sta.append(elem)
-        newsta = DataStream(sta, headera)
-        for elem in headerb:
-            try:
-                headera[elem]
-                ha = True
-            except:
-                ha = False
-            if headerb[elem] and not ha:
-                newsta.header[elem] = headerb[elem]
-            elif headerb[elem] and ha:
-                logger.warning("mergeStreams: headers both have keys for %s. Headers may be incorrect." % elem)
-        newsta.sorting()
-        return newsta
-    else:
-        # interpolate stream_b
-        # changed the following trim section to prevent removal of first input in trim method
-        if stream_b[0].time == np.min(timea):
-            sb = stream_b.trim(endtime=np.max(timea))
-        else:
-            sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
-        timeb = sb._get_column('time')
-        timeb = maskNAN(timeb)
-
-        function = sb.interpol(keys)
-
-        taprev = 0
-        for elem in sb:
-            foundina = find_nearest(timea,elem.time)
-            pos = foundina[1]
-            ta = foundina[0]
-            if (ta > taprev) and (np.min(timeb) <= ta <= np.max(timeb)):
-                taprev = ta
-                functime = (ta-function[1])/(function[2]-function[1])
-                for key in keys:
-                    if not key in KEYLIST[1:16]:
-                        logger.error('mergeStreams: Column key (%s) not valid.' % key)
-                    #keyval = getattr(stream_a[pos], key)# should be much better
-                    exec('keyval = stream_a[pos].'+key)
-                    fkey = 'f'+key
-                    if fkey in function[0] and (isnan(keyval) or not is_number(keyval)):
-                        newval = function[0][fkey](functime)
-                        exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
-                        exec('stream_a['+str(pos)+'].comment = comment')
-                        ## Put flag 4 into the merged data if keyposition <= 8
-                        flagposlst = [i for i,el in enumerate(stream_a.FLAGKEYLIST) if el == key]
-                        try:
-                            flagpos = flagposlst[0]
-                            fllist = list(stream_a[pos].flag)
-                            fllist[flagpos] = '4'
-                            stream_a[pos].flag=''.join(fllist)
-                        except:
-                            pass
-                    elif fkey in function[0] and not isnan(keyval) and replace == True:
-                        newval = function[0][fkey](functime)
-                        exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
-                        exec('stream_a['+str(pos)+'].comment = comment')
-                        ## Put flag 4 into the merged data if keyposition <= 8
-                        flagposlst = [i for i,el in enumerate(stream_a.FLAGKEYLIST) if el == key]
-                        try:
-                            flagpos = flagposlst[0]
-                            fllist = list(stream_a[pos].flag)
-                            fllist[flagpos] = '4'
-                            stream_a[pos].flag=''.join(fllist)
-                        except:
-                            pass
-
     logger.info('mergeStreams: Mergings finished at %s ' % str(datetime.now()))
 
-    return DataStream(stream_a, headera)
+    return DataStream(header=header,ndarray=array)
 
 
 @deprecated("Replaced by merge_streams")
 def mergeStreams(stream_a, stream_b, **kwargs):
-    """
-    DEFINITION:
-        Combine the contents of two data streams realtive to stream_a.
-        Basically three modes are possible:
-        1. Insert data from stream_b into stream_a based on timesteps of stream_a
-           - if keys are provided only these specific columns are inserted into a
-           - default: if data is existing in stream_a only nans are replaced
-                 here flags (4) can be set and a comment "inserted from SensorID" is added
-           - eventually use get_gaps to identfy missing timesteps in stream_a before
-        2. Replace
-           - same as insert but here all existing time series data is replaced by
-             corresponding data from stream_b
-        3. Drop
-           - drops the whole column from stream_a and fills it with stream_b data
-
-        The streams need to overlapp, base stream is stream_a of which the time range
-        is not modfified. If you want to extend this stream by new data use the extend
-        method.
-
-        1. replace data from specific columns of stream_a with data from stream_b.
-        - requires keys
-        2. fill gaps in stream_a data with stream_b data without replacing any data.
-        - extend = True
-
-    PARAMETERS:
-    Variables:
-        - stream_a      (DataStream object) main stream
-        - stream_b      (DataStream object) this stream is merged into stream_a
-    Kwargs:
-        - addall:       (bool) Add all elements from stream_b
-        - extend:       (bool) Time range of stream b is eventually added to stream a.
-                        Default False.
-                        If extend = true => any existing date which is not present in stream_a
-                        will be filled by stream_b
-        - mode:         (string) 'insert' or 'replace' or 'drop'. drop removes stream_a column, replace will change values no matter what, insert will only replace nan's (default)
-        - keys:         (list) List of keys to add from stream_b into stream_a.
-        - flag:         (bool) if true, a flag will be added to each merged line (default: flagid = 4, comment = "keys ... added from sensorid b").
-        - comment:      (str) Define comment to stream_b data in stream_a.
-
-        - replace:      (bool) Allows existing stream_a values to be replaced by stream_b ones.
-
-    RETURNS:
-        - Datastream(stream_a): (DataStream) DataStream object.
-
-    EXAMPLE:
-        # Joining two datasets together:
-        alldata = mergeStreams(lemidata, gsmdata, keys=['f'])
-               # f of gsm will be added to lemi
-        # inserting missing values from another stream
-        new_gsm = mergeStreams(gsm1, gsm2, keys=['f'], mode='insert')
-               # all missing values (nans) of gsm1 will be filled by gsm2 values (if existing)
-
-
-    APPLICATION:
-    """
-    # old (LineStruct) too be removed
-    addall = kwargs.get('addall')
-    replace = kwargs.get('replace')
-    extend = kwargs.get('extend')
-
-
-    # new
     mode = kwargs.get('mode')
     flag = kwargs.get('flag')
     keys = kwargs.get('keys')
     comment = kwargs.get('comment')
     flagid = kwargs.get('flagid')
-
-    if not mode:
-        mode = 'insert'  # other possibilities: replace, ...
-    if not keys:
-        keys = stream_b._get_key_headers()
-
-    # Defining default comment
-    # --------------------------------------
-    headera = stream_a.header
-    headerb = stream_b.header
-    try:
-        sensidb = headerb['SensorID']
-    except:
-        sensidb = 'stream_b'
-
-    # Better: create a flaglist and apply stream.flag(flaglist) with flag 4
-    if not comment:
-        comment = 'keys %s added from %s' % (','.join(keys), sensidb)
-    if not flagid:
-        flagid = 4
-
-    fllst = [] # flaglist
-
-    logger.info('mergeStreams: Start mergings at %s.' % str(datetime.now()))
-
-
-    # Check stream type and eventually convert them to ndarrays
-    # --------------------------------------
-    ndtype = False
-    if len(stream_a.ndarray[0]) > 0:
-        # Using ndarray and eventually convert stream_b to ndarray as well
-        ndtype = True
-        if not len(stream_b.ndarray[0]) > 0:
-            stream_b = stream_b.linestruct2ndarray()
-    elif len(stream_b.ndarray[0]) > 0:
-        ndtype = True
-        stream_a = stream_a.linestruct2ndarray()
-    else:
-        ndtype = True
-        stream_a = stream_a.linestruct2ndarray()
-        stream_b = stream_b.linestruct2ndarray()
-        if not len(stream_a.ndarray[0]) > 0 and len(stream_b.ndarray[0]) > 0:
-            logger.error('subtractStreams: stream(s) empty - aborting subtraction.')
-            return stream_a
-
-    # non-destructive
-    # --------------------------------------
-    sa = stream_a.copy()
-    sb = stream_b.copy()
-    sa = sa.removeduplicates()
-    sb = sb.removeduplicates()
-
-    # Sampling rates
-    # --------------------------------------
-    sampratea = sa.samplingrate()
-    samprateb = sb.samplingrate()
-    minsamprate = min(sampratea,samprateb)
-
-    if ndtype:
-        timea = sa.ndarray[0]
-    else:
-        timea = sa._get_column('time')
-
-    # truncate b to time range of a
-    # --------------------------------------
-    try:
-        sb = sb.trim(starttime=num2date(timea[0]).replace(tzinfo=None), endtime=num2date(timea[-1]).replace(tzinfo=None)+timedelta(seconds=samprateb),newway=True)
-    except:
-        print("mergeStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
-        return stream_a
-
-    if ndtype:
-        timeb = sb.ndarray[0]
-    else:
-        timeb = sb._get_column('time')
-
-    # keeping a - changed by leon 10/2015
-    """
-    # truncate a to range of b
-    # --------------------------------------
-    try:
-        sa = sa.trim(starttime=num2date(timeb[0]).replace(tzinfo=None), endtime=num2date(timeb[-1]).replace(tzinfo=None)+timedelta(seconds=sampratea),newway=True)
-    except:
-        print "mergeStreams: stream_a and stream_b are apparently not overlapping - returning stream_a"
-        return stream_a
-
-    # redo timea calc after trimming
-    # --------------------------------------
-    if ndtype:
-        timea = sa.ndarray[0]
-    else:
-        timea = sa._get_column('time')
-    """
-
-    # testing overlapp
-    # --------------------------------------
-    if not len(sb) > 0:
-        print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
-        return stream_a
-
-    timea = maskNAN(timea)
-    timeb = maskNAN(timeb)
-
-    orgkeys = stream_a._get_key_headers()
-
-    # master header
-    # --------------------------------------
-    header = sa.header
-    # just add the merged sensorid
-    header['SecondarySensorID'] = sensidb
-
-    ## Speed up of unequal timesteps - limit search range
-    #   - search range small (fracratio high) if t_limits are similar and data is periodic
-    #   - search range large  (fracratio small) if t_limits are similar and data is periodic
-    #   - fracratio = 1 means that the full stream_b data set is searched
-    #   - fracratio = 20 means that +-5percent of stream_b are searched arround expected index
-    #print("mergeStream", sa.length(), sb.length(), sa._find_t_limits(), sb._find_t_limits())
-
-    fracratio = 2  # modify if start and endtime are different
-    speedup = True
-    if speedup and ndtype:
-        ast, aet = sa._find_t_limits()
-        bst, bet = sb._find_t_limits()
-        uncert = (date2num(aet)-date2num(ast))*0.01
-        #print ("Merge speedup", uncert, ast, aet, bst, bet)
-        if not bst < ast+timedelta(minutes=uncert*24*60):
-            print ("Merge: Starttime of stream_b too large")
-            for indx,key in enumerate(KEYLIST):
-                if key == 'time':
-                   ### Changes from 2019-01-15: modified axis - originally working fine, however except for saggitarius
-                   #sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0],1)
-                   sb.ndarray[0] = np.append(np.asarray([date2num(ast)]), sb.ndarray[0])
-                elif key == 'sectime' or key in stream_a.NUMKEYLIST:
-                    if not len(sb.ndarray[indx]) == 0:
-                        #sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx],1)
-                        sb.ndarray[indx] = np.append(np.asarray([np.nan]),sb.ndarray[indx])
-                else:
-                    if not len(sb.ndarray[indx]) == 0:
-                        #sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx],1)
-                        sb.ndarray[indx] = np.append(np.asarray(['']),sb.ndarray[indx])
-        if not bet > aet-timedelta(minutes=uncert*24*60):
-            print ("Merge: Endtime of stream_b too small") ### Move that to merge??
-            for indx,key in enumerate(KEYLIST):
-                if key == 'time':
-                   #sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]),1)
-                   sb.ndarray[0] = np.append(sb.ndarray[0], np.asarray([date2num(aet)]))
-                elif key == 'sectime' or key in stream_a.NUMKEYLIST:
-                    if not len(sb.ndarray[indx]) == 0:
-                        #sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]),1)
-                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray([np.nan]))
-                else:
-                    if not len(sb.ndarray[indx]) == 0:
-                        #sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']),1)
-                        sb.ndarray[indx] = np.append(sb.ndarray[indx], np.asarray(['']))
-        #st,et = sb._find_t_limits()
-        #print ("Merge", st, et, sb.length())
-        sb = sb.get_gaps()
-        fracratio = 40  # modify if start and endtime are different
-
-        timeb = sb.ndarray[0]
-        timeb = maskNAN(timeb)
-
-    abratio = len(timea)/float(len(timeb))
-    dcnt = int(len(timeb)/fracratio)
-    #print ("Merge:", abratio, dcnt, len(timeb))
-
-    timea = np.round(timea, decimals=9)
-    timeb = np.round(timeb, decimals=9)
-    if ndtype:
-            array = [[] for key in KEYLIST]
-            # Init array with keys from stream_a
-            for key in orgkeys:
-                keyind = KEYLIST.index(key)
-                array[keyind] = sa.ndarray[keyind]
-            indtib = np.nonzero(np.in1d(timeb,timea))[0]
-            # If equal elements occur in time columns
-            if len(indtib) > int(0.5*len(timeb)):
-                print("mergeStreams: Found identical timesteps - using simple merge")
-                # get tb times for all matching indicies
-                #print("merge", indtib, len(indtib), len(timea), len(timeb), np.argsort(timea), np.argsort(timeb))
-                tb = np.asarray([timeb[ind] for ind in indtib])
-                # Get indicies of stream_a of which times are present in matching tbs
-                indtia = np.nonzero(np.in1d(timea,tb))[0]
-                #print("mergeStreams", tb, indtib, indtia, timea,timeb, len(indtib), len(indtia))
-
-                if len(indtia) == len(indtib):
-                    nanind = []
-                    for key in keys:
-                        keyind = KEYLIST.index(key)
-                        #array[keyind] = sa.ndarray[keyind]
-                        vala, valb = [], []
-                        if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
-                            #print("Found sb values", key)
-                            valb = [sb.ndarray[keyind][ind] for ind in indtib]
-                        if len(sa.ndarray[keyind]) > 0: # stream_b values are existing
-                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
-                        ### Change by leon in 10/2015
-                        if len(array[keyind]) > 0 and not mode=='drop': # values are present
-                            pass
-                        else:
-                            if key in stream_a.NUMKEYLIST:
-                                array[keyind] = np.asarray([np.nan] *len(timea))
-                            else:
-                                array[keyind] = np.asarray([''] *len(timea))
-                            try:
-                                header['col-'+key] = sb.header['col-'+key]
-                                header['unit-col-'+key] = sb.header['unit-col-'+key]
-                            except:
-                                print ("mergeStreams: warning when assigning header values to column %s - missing head" % key)
-
-                        if len(sb.ndarray[keyind]) > 0: # stream_b values are existing
-                            for i,ind in enumerate(indtia):
-                                if key in stream_a.NUMKEYLIST:
-                                    tester = np.isnan(array[keyind][ind])
-                                else:
-                                    tester = False
-                                    if array[keyind][ind] == '':
-                                        tester = True
-                                #print ("Merge3", tester)
-                                if mode == 'insert':
-                                    if tester:
-                                        array[keyind][ind] = valb[i]
-                                    else:
-                                        if len(vala) > 0:
-                                            array[keyind][ind] = vala[i]
-                                elif mode == 'replace':
-                                    if not np.isnan(valb[i]):
-                                        array[keyind][ind] = valb[i]
-                                    else:
-                                        if len(vala) > 0:
-                                            array[keyind][ind] = vala[i]
-                                else:
-                                    array[keyind][ind] = valb[i]
-                                if flag:
-                                    ttt = num2date(array[0][ind])
-                                    fllst.append([ttt,ttt,key,flagid,comment])
-
-                    array[0] = np.asarray(sa.ndarray[0])
-                    array = np.asarray(array, dtype=object)
-
-            else:
-                print("mergeStreams: Did not find identical timesteps - linearily interpolating stream b...")
-                print("- Please note: this method needs considerably longer.")
-                print("- Only data within 1/2 the sampling rate distance of stream_a timesteps is used.")
-                print("- Put in the larger (higher resolution) stream as stream_a,")
-                print("- otherwise you might wait an endless amount of time.")
-                # interpolate b
-                # TODO here it is necessary to limit the stream to numerical keys
-                #sb.ndarray = np.asarray([col for idx,col in enumerate(sb.ndarray) if KEYLIST[idx] in stream_a.NUMKEYLIST])
-                print("  a) starting interpolation of stream_b")
-                mst = datetime.utcnow()
-                function = sb.interpol(keys)
-                met = datetime.utcnow()
-                print("     -> needed {}".format(met-mst))
-                # Get a list of indicies for which timeb values are
-                #   in the vicintiy of a (within half of samplingrate)
-                dti = (minsamprate/24./3600.)
-                print("  b) getting indicies of stream_a with stream_b values in the vicinity")
-                mst = datetime.utcnow()
-                #indtia = [idx for idx, el in enumerate(timea) if np.min(np.abs(timeb-el))/dti <= 1.]  # This selcetion requires most of the time
-                indtia = []  ### New and faster way by limiting the search range in stream_b by a factor of 10
-                check = [int(len(timea)*(100-el)/100.) for el in range(99,1,-10)]
-                lentimeb = len(timeb)
-                for idx, el in enumerate(timea):
-                    cst = int(idx/abratio-dcnt)
-                    if cst<=0:
-                        cst = 0
-                    cet = int(idx/abratio+dcnt)
-                    if cet>=lentimeb:
-                        cet=lentimeb
-                    if np.min(np.abs(timeb[cst:cet]-el)/(dti)) <= 0.5:
-                        indtia.append(idx)
-                    if idx in check:
-                        print ("     -> finished {} percent".format(idx/float(len(timea))*100.))
-                indtia = np.asarray(indtia)
-                met = datetime.utcnow()
-                print("     -> needed {}".format(met-mst))
-                # limit time range to valued covered by the interpolation function
-                #print len(indtia), len(timeb), np.asarray(indtia)
-                indtia = [elem for elem in indtia if function[1] < timea[elem] < function[2]]
-                #t2temp = datetime.utcnow()
-                #print "Timediff %s" % str(t2temp-t1temp)
-                #print len(indtia), len(timeb), np.asarray(indtia)
-                #print function[1], sa.ndarray[0][indtia[0]], sa.ndarray[0][indtia[-1]], function[2]
-                print("  c) extracting interpolated values of stream_b")
-                mst = datetime.utcnow()
-                if len(function) > 0:
-                    for key in keys:
-                        keyind = KEYLIST.index(key)
-                        #print key, keyind
-                        #print len(sa.ndarray[keyind]),len(sb.ndarray[keyind]), np.asarray(indtia)
-                        vala, valb = [], []
-                        if len(sb.ndarray[keyind]) > 0: # and key in function:
-
-                            valb = [float(function[0]['f'+key]((sa.ndarray[0][ind]-function[1])/(function[2]-function[1]))) for ind in indtia]
-                        if len(sa.ndarray[keyind]) > 0: # and key in function:
-                            vala = [sa.ndarray[keyind][ind] for ind in indtia]
-
-                        if len(array[keyind]) > 0 and not mode=='drop': # values are present
-                            pass
-                        else:
-                            if key in stream_a.NUMKEYLIST:
-                                array[keyind] = np.asarray([np.nan] *len(timea))
-                            else:
-                                array[keyind] = np.asarray([''] *len(timea))
-                            try:
-                                header['col-'+key] = sb.header['col-'+key]
-                                header['unit-col-'+key] = sb.header['unit-col-'+key]
-                            except:
-                                print ("mergeStreams: warning when assigning header values to column %s- missing head" % key)
-
-                        for i,ind in enumerate(indtia):
-                            if key in stream_a.NUMKEYLIST:
-                                tester = isnan(array[keyind][ind])
-                            else:
-                                tester = False
-                                if array[keyind][ind] == '':
-                                    tester = True
-                            if mode == 'insert':
-                                if tester:
-                                    array[keyind][ind] = valb[i]
-                                else:
-                                    if len(vala) > 0:
-                                        array[keyind][ind] = vala[i]
-                            elif mode == 'replace':
-                                if not np.isnan(valb[i]):
-                                    array[keyind][ind] = valb[i]
-                                else:
-                                    if len(vala) > 0:
-                                        array[keyind][ind] = vala[i]
-                            else:
-                                array[keyind][ind] = valb[i]
-                            """
-                            if mode == 'insert' and tester:
-                                array[keyind][ind] = valb[i]
-                            elif mode == 'replace':
-                                array[keyind][ind] = valb[i]
-                            """
-                            if flag:
-                                ttt = num2date(array[0][ind])
-                                fllst.append([ttt,ttt,key,flagid,comment])
-
-                        met = datetime.utcnow()
-                        print("     -> needed {} for {}".format(met-mst,key))
-
-                    array[0] = np.asarray(sa.ndarray[0])
-                    array = np.asarray(array,dtype=object)
-
-            #try:
-            #    header['SensorID'] = sa.header['SensorID']+'-'+sb.header['SensorID']
-            #except:
-            #    pass
-
-            return DataStream([LineStruct()],header,array)
-
-
-    sta = list(stream_a)
-    stb = list(stream_b)
-    if addall:
-        logger.info('mergeStreams: Adding streams together not regarding for timeconstraints of data.')
-        if ndtype:
-            for idx,elem in enumerate(stream_a.ndarray):
-                ndarray = stream_a.ndarray
-                if len(elem) == 0 and len(stream_b.ndarray[idx]) > 0:
-                    # print add nan's of len_a to stream a
-                    # then append stream b
-                    pass
-                elif len(elem) > 0 and len(stream_b.ndarray[idx]) == 0:
-                    # print add nan's of len_b to stream a
-                    pass
-                elif len(elem) == 0 and len(stream_b.ndarray[idx]) == 0:
-                    # do nothing
-                    pass
-                else: #len(elem) > 0 and len(stream_b.ndarray[idx]) > 0:
-                    # append b to a
-                    pass
-            newsta = DataStream(sta, headera, ndarray)
-        else:
-            for elem in stream_b:
-                sta.append(elem)
-            newsta = DataStream(sta, headera, stream_a.ndarray)
-        for elem in headerb:
-            try:
-                headera[elem]
-                ha = True
-            except:
-                ha = False
-            if headerb[elem] and not ha:
-                newsta.header[elem] = headerb[elem]
-            elif headerb[elem] and ha:
-                logger.warning("mergeStreams: headers both have keys for %s. Headers may be incorrect." % elem)
-        newsta.sorting()
-        return newsta
-    elif extend:
-        logger.info('mergeStreams: Extending stream a with data from b.')
-        for elem in stream_b:
-            if not elem.time in timea:
-                sta.append(elem)
-        newsta = DataStream(sta, headera)
-        for elem in headerb:
-            try:
-                headera[elem]
-                ha = True
-            except:
-                ha = False
-            if headerb[elem] and not ha:
-                newsta.header[elem] = headerb[elem]
-            elif headerb[elem] and ha:
-                logger.warning("mergeStreams: headers both have keys for %s. Headers may be incorrect." % elem)
-        newsta.sorting()
-        return newsta
-    else:
-        # interpolate stream_b
-        # changed the following trim section to prevent removal of first input in trim method
-        if stream_b[0].time == np.min(timea):
-            sb = stream_b.trim(endtime=np.max(timea))
-        else:
-            sb = stream_b.trim(starttime=np.min(timea), endtime=np.max(timea))
-        timeb = sb._get_column('time')
-        timeb = maskNAN(timeb)
-
-        function = sb.interpol(keys)
-
-        taprev = 0
-        for elem in sb:
-            foundina = find_nearest(timea,elem.time)
-            pos = foundina[1]
-            ta = foundina[0]
-            if (ta > taprev) and (np.min(timeb) <= ta <= np.max(timeb)):
-                taprev = ta
-                functime = (ta-function[1])/(function[2]-function[1])
-                for key in keys:
-                    if not key in KEYLIST[1:16]:
-                        logger.error('mergeStreams: Column key (%s) not valid.' % key)
-                    #keyval = getattr(stream_a[pos], key)# should be much better
-                    exec('keyval = stream_a[pos].'+key)
-                    fkey = 'f'+key
-                    if fkey in function[0] and (isnan(keyval) or not is_number(keyval)):
-                        newval = function[0][fkey](functime)
-                        exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
-                        exec('stream_a['+str(pos)+'].comment = comment')
-                        ## Put flag 4 into the merged data if keyposition <= 8
-                        flagposlst = [i for i,el in enumerate(stream_a.FLAGKEYLIST) if el == key]
-                        try:
-                            flagpos = flagposlst[0]
-                            fllist = list(stream_a[pos].flag)
-                            fllist[flagpos] = '4'
-                            stream_a[pos].flag=''.join(fllist)
-                        except:
-                            pass
-                    elif fkey in function[0] and not isnan(keyval) and replace == True:
-                        newval = function[0][fkey](functime)
-                        exec('stream_a['+str(pos)+'].'+key+' = float(newval) + offset')
-                        exec('stream_a['+str(pos)+'].comment = comment')
-                        ## Put flag 4 into the merged data if keyposition <= 8
-                        flagposlst = [i for i,el in enumerate(stream_a.FLAGKEYLIST) if el == key]
-                        try:
-                            flagpos = flagposlst[0]
-                            fllist = list(stream_a[pos].flag)
-                            fllist[flagpos] = '4'
-                            stream_a[pos].flag=''.join(fllist)
-                        except:
-                            pass
-
-    logger.info('mergeStreams: Mergings finished at %s ' % str(datetime.now()))
-
-    return DataStream(stream_a, headera)
+    return merge_streams(stream_a, stream_b, mode=mode, flag=flag, keys=keys, comment=comment, flagid=flagid)
 
 
 def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
@@ -9797,7 +8762,7 @@ def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
                         of stream_b.
 
     EXAMPLE:
-        >>> offset = find_offset(gdas_data, pos_data, guess=-30.,deltat_min = 0.1)
+        offset = find_offset(gdas_data, pos_data, guess=-30.,deltat_min = 0.1)
 
     APPLICATION:
 
@@ -9954,32 +8919,6 @@ def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
 
     # RESULTS
     return t_offset
-
-
-def diffStreams(stream_a, stream_b, **kwargs):
-    """
-    DESCRIPTION:
-      obtain and return the differences of two stream:
-    """
-
-    ndtype_a = False
-    if len(stream_a.ndarray[0]) > 0:
-        ndtype_a = True
-
-    if not ndtype_a or not len(stream_a) > 0:
-        logger.error('diffStreams: stream_a empty - aborting.')
-        return stream_a
-
-    ndtype_b = False
-    if len(stream_b.ndarray[0]) > 0:
-        ndtype_b = True
-
-    # 1. Amount of columns
-    #if ndtype
-
-    # 2. Line contents
-    #  --- amount of lines
-    #  --- differences of lines
 
 
 def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
@@ -10247,9 +9186,9 @@ def stackStreams(streamlist, **kwargs): # TODO
 
     EXAMPLE:
         # e.g. Getting average 3 hour K values of quiet days
-        >>> meanstream = stackStreams([kvals_of_severals_days],skipdate=True,get='mean')
+        meanstream = stackStreams([kvals_of_severals_days],skipdate=True,get='mean')
         # Mean variation curve of two different variometers
-        >>> meanstream = stackStreams([vario1,vario2],get='mean',uncert='True')
+        meanstream = stackStreams([vario1,vario2],get='mean',uncert='True')
 
     APPLICATION:
     """
@@ -10408,167 +9347,6 @@ def stackStreams(streamlist, **kwargs): # TODO
     return DataStream([LineStruct()],result.header,array)
 
 
-def compareStreams(stream_a, stream_b):
-    '''
-    DEFINITION:
-        Default function will compare stream_a to stream_b. If data is missing in
-        a or is different, it will be filled in with that from b.
-        stream_b here is the reference stream.
-
-    PARAMETERS:
-    Variables:
-        - stream_a:     (DataStream) First stream
-        - stream_b:     (DataStream) Second stream, which is compared to stream_a for differences
-
-    RETURNS:
-        - stream_a:     (DataStream) Description.
-
-    EXAMPLE:
-        compareStreams(db_stream, pos_stream)
-
-    APPLICATION:
-
-    TODO:
-        - Add in support for insert and replace to be optional. (Worthwhile?)
-
-    '''
-
-    insert = True
-    replace = True
-
-    # Do the sampling periods match?
-    samplingrate_a = stream_a.get_sampling_period()
-    samplingrate_b = stream_b.get_sampling_period()
-
-    if samplingrate_a != samplingrate_b:
-        logger.error('CompareStreams: Cannot compare streams with different sampling rates!')
-        return stream_a
-
-    # Do the timelines overlap?
-    timea = stream_a._get_column('time')
-    timeb = stream_b._get_column('time')
-
-    if np.min(timeb) < np.min(timea):
-        stime = np.min(timea)
-    else:
-        stime = np.min(timeb)
-    if np.max(timeb) > np.max(timea):
-        etime = np.max(timea)
-    else:
-        etime = np.max(timeb)
-
-    if (etime <= stime):
-        logger.error('compareStreams: Streams do not overlap!')
-        return stream_a
-
-    # Trim to overlapping areas:
-    stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None),
-                                endtime=num2date(etime).replace(tzinfo=None))
-    stream_b = stream_b.trim(starttime=num2date(stime).replace(tzinfo=None),
-                                endtime=num2date(etime).replace(tzinfo=None))
-
-
-    logger.info('compareStreams: Starting comparison...')
-
-    # Compare value for value between the streams:
-
-    flag_len = False
-
-    t_a = stream_a._get_column('time')
-    t_b = stream_b._get_column('time')
-
-    # Check length:
-    if len(t_a) < len(t_b):
-        logger.debug("compareStreams: Missing data in main stream.")
-        flag_len = True
-
-    # If the lengths are the same, compare single values for differences:
-    if not flag_len:
-        for i in range(len(t_a)):
-            for key in stream_a.FLAGKEYLIST:
-                exec('val_a = stream_a[i].'+key)
-                exec('val_b = stream_b[i].'+key)
-                if not isnan(val_a):
-                    if val_a != val_b:
-                        logger.debug("compareStreams: Data points do not match: %s and %s at time %s." % (val_a, val_b, stream_a[i].time))
-                        if replace == True:
-                            exec('stream_a[i].'+key+' = stream_b[i].'+key)
-
-    # If the lengths are different, find where values are missing:
-    else:
-        for i in range(len(t_b)):
-            if stream_a[i].time == stream_b[i].time:
-                for key in stream_a.FLAGKEYLIST:
-                    exec('val_a = stream_a[i].'+key)
-                    exec('val_b = stream_b[i].'+key)
-                    if not isnan(val_a):
-                        if val_a != val_b:
-                            logger.debug("compareStreams: Data points do not match: %s and %s at time %s." % (val_a, val_b, stream_a[i].time))
-                            if replace == True:
-                                exec('stream_a[i].'+key+' = stream_b[i].'+key)
-            else:       # insert row into stream_a
-                logger.debug("compareStreams: Line from secondary stream missing in main stream. Timestamp: %s." % stream_b[i].time)
-                if insert == True:
-                    row = LineStruct()
-                    stream_a.add(row)
-                    for key in KEYLIST:
-                        temp = stream_a._get_column(key)
-                        if len(temp) > 0:
-                            for j in range(i+1,len(stream_a)):
-                                exec('stream_a[j].'+key+' = temp[j-1]')
-                            exec('stream_a[i].'+key+' = stream_b[i].'+key)
-
-    logger.info('compareStreams: Finished comparison!')
-    return stream_a
-
-
-# Some helpful methods
-def array2stream(listofarrays, keystring,starttime=None,sr=None):
-        """
-        DESCRIPTION:
-            Converts an array to a data stream
-        """
-        keys = keystring.split(',')
-        if not len(listofarrays) > 0:
-            print("Specify a list of array - aborting")
-            return
-        if not len(keys) == len(listofarrays):
-            print("Keys do not match provided arrays - aborting")
-            return
-        st = DataStream()
-        if not 'time' in keys:
-            if not starttime:
-                print("No timing information provided - aborting")
-                return
-            else:
-                #fill time column
-                val = testtime(starttime)
-                for ind, elem in enumerate(listofarrays[0]):
-                    #emptyline = [None for elem in KEYLIST[:5]]
-                    #emptyline[0] = date2num(val)
-                    emptyline = LineStruct() ### Upper solution is about 1.5 times faster
-                    emptyline.time = date2num(val)
-                    st.add(emptyline)
-                    val = val+timedelta(seconds=sr)
-            add = 1
-        else:
-            for ind, elem in enumerate(listofarrays[0]):
-                #emptyline = [None for elem in KEYLIST[:5]]
-                emptyline = LineStruct() ### Upper solution is about 1.5 times faster
-                emptyline.time = elem
-                st.add(emptyline)
-            add = 0
-
-        for ind, ar in enumerate(listofarrays):
-            #print "Finished", len(ar)
-            key = keys[ind]
-            index = KEYLIST.index(key)
-            for i,elem in enumerate(ar):
-                st[i][index] = elem
-
-        return st
-
-
 def obspy2magpy(opstream, keydict={}):
     """
     Function for converting obspy streams to magpy streams.
@@ -10583,7 +9361,7 @@ def obspy2magpy(opstream, keydict={}):
         - mpstream          Stream in magpy format
 
     EXAMPLE:
-        >>> mpst = obspy2magpy(opst, keydict={'nn.e6046.11.p0': 'x', 'nn.e6046.11.p1': 'y'})
+        mpst = obspy2magpy(opst, keydict={'nn.e6046.11.p0': 'x', 'nn.e6046.11.p1': 'y'})
     """
     array = [[] for key in KEYLIST]
     mpstream = DataStream()
