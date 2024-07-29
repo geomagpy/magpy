@@ -264,6 +264,19 @@ Please note that this import will shadow any already existing `read` method.
 
 ## To be moved elsewhere
 
+### 2.2 MagPy's internal data structure
+
+Data is stored in form of an numpy array. Meta information will be organized within a dictionary. Both structures together from a data stream object.
+For data treatment each input column is assigned to an internal key. The name of this key has not necessarily anything to do with the type/name of data.
+
+**key** refers to the internally used columnname
+
+**name** refers to the contents asigned to a key
+
+**unit** refers to the units of the contents
+
+print(trimstream.get_key_name('x'))
+
 
 ### 2.3 Getting help on options and usage
 

@@ -4849,7 +4849,8 @@ CALLED BY:
 
         return fulllist, sr, k9_limit
 
-    def GetKeyName(self,key):
+
+    def get_key_name(self,key):
         """
         DESCRIPTION
            get the content name of a specific key
@@ -4892,7 +4893,12 @@ CALLED BY:
 
         return key
 
-    def GetKeyUnit(self,key):
+    @deprecated("Replaced by get_key_name")
+    def GetKeyName(self,key):
+        return self.get_key_name(key)
+
+
+    def get_key_unit(self,key):
         """
         DESCRIPTION
            get the content name of a specific key
@@ -4924,6 +4930,11 @@ CALLED BY:
             pass
 
         return unit
+
+
+    @deprecated("Replaced by get_key_unit")
+    def GetKeyUnit(self,key):
+        return self.get_key_unit(key)
 
 
     def get_gaps(self, **kwargs):
