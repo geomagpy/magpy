@@ -4,11 +4,22 @@
 methods contain all methods which do not fit to a magpy specific class
 
 the following methods are contained:
+- ceil_dt(datetime,seconds)  :  will round datetime towards the next time step defined by seconds
+- convert_geo_coordinate(lon,lat,pro1,pro2)  :  converts geographic coordinates based on EPSG codes
+- deprecated(reason)  :   create decrepated messages
+- evaluate_function(component, function, samplingrate, starttime=None, endtime=None, debug=False)
+- extract_date_from_string(datestring)
+- find_nearby(array, value)
+- func_from_file(functionpath,debug=False)   :    read functional parameters from file
+- func_to_file(funcparameter,functionpath,debug=False)  :    read function parameters (NOT the function) to file
 - is_number(variable)    :    returns True if variable is float or int
-- ceil_dt(datetime,seconds):  will round datetime towards the next time step defined by seconds
-- testtime(variable)     :    returns datetime object if variable can be converted to it
 - mask_nan(array)        :    returns an array without nan or empty elements
 - missingvalue()         :    will replace nan vaules in array with means, interpolation or given fill values
+- nan_helper(y)
+- nearestpow2
+- normalize
+- testtime(variable)     :    returns datetime object if variable can be converted to it
+- test_timestring(variable)     :
 
 """
 import numpy as np
@@ -20,6 +31,7 @@ import dateutil.parser as dparser
 import functools
 import inspect
 import warnings
+import json
 
 # import pyproj  # convertGeoCoor
 
@@ -368,6 +380,101 @@ def find_nearest(array, value):
     return array[idx], idx
 
 
+
+def func_from_file(functionpath,debug=False):
+        """
+        DESCRIPTION
+            Load function parameters from file
+        """
+        fitparameters = {}
+        try:
+            if debug:
+                print ("Reading a json style fit parameter list...")
+            def dateparser(dct):
+                # Convert dates in dictionary to datetime objects
+                for (key,value) in dct.items():
+                    try:
+                        value = float(value)
+                    except:
+                        try:
+                            value = str(value)
+                            if str(value).count('-') + str(value).count(':') == 4:
+                                try:
+                                    try:
+                                        value = datetime.strptime(value,"%Y-%m-%d %H:%M:%S.%f")
+                                    except:
+                                        value = datetime.strptime(value,"%Y-%m-%d %H:%M:%S")
+                                except:
+                                    pass
+                            elif value.startswith("now"):
+                                tst=value.split("+")
+                                if len(tst)>1 and isinstance(tst[1],int):
+                                    value = datetime.utcnow()+timedelta(days=int(tst[1]))
+                                else:
+                                    value = datetime.utcnow()
+                        except:
+                            pass
+                    dct[key] = value
+                return dct
+
+            if os.path.isfile(functionpath):
+                with open(functionpath,'r') as file:
+                    fitparameters = json.load(file)
+                    #fitparameters = json.load(file,object_hook=dateparser)
+                for key in fitparameters:
+                    value = fitparameters[key]
+                    key = int(key)
+                    value = dateparser(value)
+                if debug:
+                    print (" -> success", fitparameters)
+            else:
+                if debug:
+                    print ("Fit parameter file not existing ...")
+        except:
+            if debug:
+                print ("Loading fit parameter - general error")
+
+        return fitparameters
+
+def func_to_file(funcparameter,functionpath,debug=False):
+        """
+        DESCRIPTION
+            Save function to file
+        """
+        def dateconv(d):
+            # Converter to serialize datetime objects in json
+            if isinstance(d,datetime):
+                return d.__str__()
+
+        if debug:
+            print ("func_to_file: writing function data to file")
+        if isinstance(funcparameter, dict):
+            if debug:
+                print ("Found dictionary")
+            funcres = funcparameter
+        else:
+            if isinstance(funcparameter[0], dict):
+                funct = [funcparameter]
+            else:
+                funct = funcparameter
+            if debug:
+                print ("Found list/single function")
+            funcres = {}
+            for idx, func in enumerate(funct):
+                #func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime]
+                if len(func) >= 9:
+                    funcdict = {"keys":func[8], "fitfunc":func[3],"fitdegree":func[4], "knotstep":func[5], "starttime":func[6],"endtime":func[7], "functionlist":"dropped", "sv":func[1], "ev":func[2]}
+                    funcres[idx] = funcdict
+            if debug:
+                print (funcres)
+        #convert date times and remove function object
+        try:
+            with open(functionpath, 'w', encoding='utf-8') as f:
+                json.dump(funcres, f, ensure_ascii=False, indent=4, default=dateconv)
+        except:
+            return False
+        return True
+
 def maskNAN(column):
     """
     Tests for NAN values in column and usually masks them
@@ -666,6 +773,8 @@ if __name__ == '__main__':
     print("Otherwise True will be returned")
     print("----------------------------------------------------------")
     print()
+    # tested elswhere:
+    # - func_to_file and func_from_file in stream together with functiontools
 
     errors = {}
     testdate = "1971-11-22T11:20:00"

@@ -135,7 +135,7 @@ class MARCOSsubscription(object):
 
     def appendData(self,stream,keylist,init=False):
         if keylist:
-            stream = stream.selectkeys(keylist)
+            stream = stream._select_keys(keylist)
         #print ("Appending", localdb)
         if self.localdb:
             ldb = mysql.connect(host=self.lhost,user=self.luser,passwd=self.lpwd,db=self.lname)

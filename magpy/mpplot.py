@@ -1010,7 +1010,7 @@ def addFlag(data, flagger, indeciestobeflagged, variables):
 
         # reduce to original keys
         orgkeys = flagger.orgkeylist
-        data = data.selectkeys(orgkeys)
+        data = data._select_keys(orgkeys)
         flagger = figFlagger(data, variables)
         #flagger.flag(data)
         return flagger.idxarray, flaglst
@@ -1047,7 +1047,7 @@ def plotFlag(data,variables=None,figure=False):
         pass
 
     orgkeys = flagger.orgkeylist
-    flagdata = flagger.data.selectkeys(orgkeys)
+    flagdata = flagger.data._select_keys(orgkeys)
     return flagdata, flaglist
 
 #####################################################################

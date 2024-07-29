@@ -4489,7 +4489,7 @@ CALLED BY:
         return DataStream(self,self.header,np.asarray(array, dtype=object))
 
 
-    def func2stream(self,funclist,**kwargs):
+    def func2stream(self,funclist, keys=None, **kwargs):
         """
       DESCRIPTION:
         combine data stream and functions obtained by fitting and interpolation. Possible combination
@@ -4501,12 +4501,12 @@ CALLED BY:
         #function        (function): required - output of stream.fit or stream.interpol
         keys            (list): default = 'x','y','z'
         mode            (string): one of 'add','sub','div','multiply','values' - default = 'add'
+                                  mode 'addbaseline' used by the baseline method
 
       APPLICTAION:
         used by stream.baseline
 
         """
-        keys = kwargs.get('keys')
         fkeys = kwargs.get('fkeys')
         mode = kwargs.get('mode')
         if not keys:
@@ -4527,37 +4527,28 @@ CALLED BY:
         testx = []
         basex = np.asarray([])
 
-        arrayx = np.asarray(list(self.ndarray[KEYLIST.index(keys[0])])).astype(float)
-        arrayy = np.asarray(list(self.ndarray[KEYLIST.index(keys[1])])).astype(float)
-        arrayz = np.asarray(list(self.ndarray[KEYLIST.index(keys[2])])).astype(float)
+        # required for addbaseline option
+        if mode == 'addbaseline':
+            arrayx = np.asarray(list(self.ndarray[KEYLIST.index(keys[0])])).astype(float)
+            arrayy = np.asarray(list(self.ndarray[KEYLIST.index(keys[1])])).astype(float)
+            arrayz = np.asarray(list(self.ndarray[KEYLIST.index(keys[2])])).astype(float)
 
         for function in funct:
-            #print ("Testing", function)
             if not function:
                 return self
-            # Changed that - 49 sec before, no less then 2 secs
             if not len(self.ndarray[0]) > 0:
-                print("func2stream: requires ndarray - trying old LineStruct functions")
-                if mode == 'add':
-                    return self.func_add(function, keys=keys)
-                elif mode == 'sub':
-                    return self.func_subtract(function, keys=keys)
-                else:
-                    return self
+                return self
 
             #1. calculate function value for each data time step
             array = [[] for key in KEYLIST]
             array[0] = self.ndarray[0]
             dis_done = False
             # get x array for baseline
-            #indx = KEYLIST.index('x')
-            #arrayx = self.ndarray[indx].astype(float)
             functimearray = (date2num(self.ndarray[0]).astype(float)-function[1])/(function[2]-function[1])
             for key in KEYLIST:
                 validkey = False
                 ind = KEYLIST.index(key)
                 if key in keys: # new
-                    #print ("DEALING: ", key)
                     keyind = keys.index(key)
                     if fkeys:
                         fkey = fkeys[keyind]
@@ -4584,28 +4575,12 @@ CALLED BY:
                         else:
                             # will also be used if basevalues are not HDZ
                             array[ind] = ar + function[0]['f'+fkey](functimearray)
-                            #print ("Z", array[ind])
-                            """
-                        #print ("here add base", ar, function[0]['f'+fkey](functimearray))
-                        if key == 'y':
-                            #indx = KEYLIST.index('x')
-                            #Hv + Hb;   Db + atan2(y,H_corr)    Zb + Zv
-                            #print type(self.ndarray[ind]), key, self.ndarray[ind]
-                            array[ind] = np.arctan2(np.asarray(list(ar)),np.asarray(list(arrayx)))*180./np.pi + function[0]['f'+fkey](functimearray)
-                            self.header['col-y'] = 'd'
-                            self.header['unit-col-y'] = 'deg'
-                        else:
-                            #print("func2stream", function, function[0], function[0]['f'+key],functimearray)
-                            # X needs to be converted to arrayh otherwise it only works for y close to zero
-                            array[ind] = ar + function[0]['f'+fkey](functimearray)
-                            """
                             if len(array[posstr]) == 0:
                                 #print ("Assigned values to str1: function {}".format(function[1]))
                                 array[posstr] = np.asarray(['c']*len(ar))
                             if len(basex) > 0 and not dis_done:
                                 # identify change from number to nan
                                 # add discontinuity marker there
-                                #print ("Here", testx)
                                 prevel = np.nan
                                 for idx, el in enumerate(basex):
                                     if not np.isnan(prevel) and np.isnan(el):
@@ -4644,7 +4619,7 @@ CALLED BY:
                 else:
                     totalarray[idx] = array[idx]
 
-        return DataStream(self,self.header,np.asarray(totalarray,dtype=object))
+        return DataStream(header=self.header,ndarray=np.asarray(totalarray,dtype=object))
 
 
     def func_add(self,funclist,**kwargs):
@@ -4788,99 +4763,6 @@ CALLED BY:
 
         return self
 
-    def func_from_file(self,functionpath,debug=False):
-        """
-        DESCRIPTION
-            Load function parameters from file
-        """
-        fitparameters = {}
-        try:
-            if debug:
-                print ("Reading a json style fit parameter list...")
-            def dateparser(dct):
-                # Convert dates in dictionary to datetime objects
-                for (key,value) in dct.items():
-                    try:
-                        value = float(value)
-                    except:
-                        try:
-                            value = str(value)
-                            if str(value).count('-') + str(value).count(':') == 4:
-                                try:
-                                    try:
-                                        value = datetime.strptime(value,"%Y-%m-%d %H:%M:%S.%f")
-                                    except:
-                                        value = datetime.strptime(value,"%Y-%m-%d %H:%M:%S")
-                                except:
-                                    pass
-                            elif value.startswith("now"):
-                                tst=value.split("+")
-                                if len(tst)>1 and isinstance(tst[1],int):
-                                    value = datetime.utcnow()+timedelta(days=int(tst[1]))
-                                else:
-                                    value = datetime.utcnow()
-                        except:
-                            pass
-                    dct[key] = value
-                return dct
-
-            if os.path.isfile(functionpath):
-                with open(functionpath,'r') as file:
-                    fitparameters = json.load(file)
-                    #fitparameters = json.load(file,object_hook=dateparser)
-                for key in fitparameters:
-                    value = fitparameters[key]
-                    key = int(key)
-                    value = dateparser(value)
-                if debug:
-                    print (" -> success", fitparameters)
-            else:
-                if debug:
-                    print ("Fit parameter file not existing ...")
-        except:
-            if debug:
-                print ("Loading fit parameter - general error")
-
-        return fitparameters
-
-    def func_to_file(self,funcparameter,functionpath,debug=False):
-        """
-        DESCRIPTION
-            Save function to file
-        """
-        def dateconv(d):
-            # Converter to serialize datetime objects in json
-            if isinstance(d,datetime):
-                return d.__str__()
-
-        if debug:
-            print ("func_to_file: writing function data to file")
-        if isinstance(funcparameter, dict):
-            if debug:
-                print ("Found dictionary")
-            funcres = funcparameter
-        else:
-            if isinstance(funcparameter[0], dict):
-                funct = [funcparameter]
-            else:
-                funct = funcparameter
-            if debug:
-                print ("Found list/single function")
-            funcres = {}
-            for idx, func in enumerate(funct):
-                #func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime]
-                if len(func) >= 9:
-                    funcdict = {"keys":func[8], "fitfunc":func[3],"fitdegree":func[4], "knotstep":func[5], "starttime":func[6],"endtime":func[7], "functionlist":"dropped", "sv":func[1], "ev":func[2]}
-                    funcres[idx] = funcdict
-            if debug:
-                print (funcres)
-        #convert date times and remove function object
-        try:
-            with open(functionpath, 'w', encoding='utf-8') as f:
-                json.dump(funcres, f, ensure_ascii=False, indent=4, default=dateconv)
-        except:
-            return False
-        return True
 
     def get_fmi_array(self, missing_data=None, debug=False):
         """
@@ -5692,6 +5574,7 @@ CALLED BY:
             else:
                 return res
         else:
+            print ('mean: Too many nans in column {}, exceeding {} percent'.format(key,percentage))
             logger.info('mean: Too many nans in column {}, exceeding {} percent'.format(key,percentage))
             if std:
                 return float("NaN"), float("NaN")
@@ -6766,7 +6649,7 @@ CALLED BY:
 
         return self
 
-
+    @deprecated("Replaced by twice as fast _select_keys")
     def selectkeys(self, keys, **kwargs):
         """
     DEFINITION:

@@ -623,7 +623,7 @@ Amplitude, get_variance, etc
 
 ### 5.6 Some basic methods for timeseries data manipulations 
 
-Asigning data to other keys, removing missing data, etc
+Assigning data to other keys, removing missing data, etc
 
 
 ### 5.7 Derivatives
@@ -672,11 +672,7 @@ Baselines are also treated as functions in MagPy. You can calculate the adopted 
 
 Further details on baseline adoption plus examples are summarized in section 7.5.
 
-#### 5.9.4 Applying functions to timeseries
-
-Functions can be transferred to data values and they can be subtracted for residual analysis. 
-
-#### 5.9.5 Functions within a DataStream object
+#### 5.9.4 Functions within a DataStream object
 
 Functions can be added to the timeseries meta information dictionary and stored along with the data set. Such Object storage is only supported for MagPy's PYCDF format.
 To add functions into the timeseries data header use:
@@ -687,10 +683,36 @@ When reading PYCDF data files and also INTERMAGNET IBLV data files then function
 
         blvdata = read('mmydata.blv')
         func = blvdata.header.get('DataFunctionObject')
-        tsplot(data, func)
+        mp.tsplot([blvdata],[['dx','dy','dz','df']], symbols=[['.','.','.','.']], padding=[[2,0.005,2,0.1]], symbolcolor=[[0.5, 0.5, 0.5]], functions=[[func,func,func,func]], height=2)
 
-#### 5.9.5 Saving and reading functions separaetly 
+#### 5.9.5 Applying functions to timeseries
 
+Functions can be transferred to data values and they can be subtracted for residual analysis. Use method func2stream for this purpose. You need to supply 
+the functions to func2stream, define the keys and a mode on how functions are applied to the new timeseries. Possible modes are 'add', 'sub' for subtracting, 'div' for division, 'multiply' and
+'values' to replace any existing data by function values. In order to analyse residuals for a adopted baseline function you would do the following: 
+
+        residuals = blvdata.copy()
+        residuals = residuals.func2stream(func, keys=['dx','dy','dz','df'],mode='sub')
+        print (" Get the average residual value:", residuals.mean('dy',percentage=90))
+        mp.tsplot([residuals],[['dx','dy','dz','df']], symbols=[['.','.','.','.']], height=2)
+
+Replacing existing data by the interpolated values would work as follows:
+
+        data = data.func2stream(func, keys=['x','y','z'],mode='values')
+
+#### 5.9.6 Saving and reading functions separaetly 
+
+It is possible to save the functional parameters (NOT the functions) to a file and reload them for later usage. Please note that you will need to apply
+the desired fit/interpolation/basseline adoption again based on these parameters to obtain a function object. The parameters will be stored within a json dictionary.
+
+        func_to_file(func, "/tmp/savedparameter.json")
+
+To read parameters in again 
+
+        funcparameter = func_from_file("/tmp/savedparameter.json")
+
+The variable funcparameters will then contain a dictionary with all contents of the original function list, including time ranges and specific parameters for each value.
+Extract these values by standard dict.get() and reapply to the data stream. 
 
 ### 5.10 Multiple timeseries - merge and join
 
