@@ -1525,7 +1525,8 @@ def readBLV(filename, headonly=False, **kwargs):
                         if strval in ['d','D']:
                             # use the current time step as last one for fit and then add this step as first
                             # element for the next fit
-                            print ("Fitting from {} to {}".format(farray[0][0],farray[0][-1]))
+                            if debug:
+                                print ("Fitting from {} to {}".format(farray[0][0],farray[0][-1]))
                             tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
                             func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
                             func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
@@ -1545,7 +1546,8 @@ def readBLV(filename, headonly=False, **kwargs):
                 # data info
                 starfound.append('*')
                 if len(starfound) > 1: # Comment section starts here
-                    print("Fitting from {} to {}".format(farray[0][0], farray[0][-1]))
+                    if debug:
+                        print("Fitting from {} to {}".format(farray[0][0], farray[0][-1]))
                     tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
                     func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
                     func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
@@ -1566,7 +1568,7 @@ def readBLV(filename, headonly=False, **kwargs):
 
     array = [np.asarray(el) for el in array]
     if len(funclist) > 0:
-        headers['DataFunction'] = funclist
+        headers['DataFunctionObject'] = funclist
     headers['DataFormat'] = 'MagPyDI'
     headers['DataType'] = 'MagPyDI0.1'
     headers['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pierid)

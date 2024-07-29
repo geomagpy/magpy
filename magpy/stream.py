@@ -5452,8 +5452,10 @@ CALLED BY:
         int_data = pos_data.interpol(['f'])
 
     APPLICATION:
+        used by resample, subtract and merge_streams, as well as some func2stream methods
         """
 
+        # TODO: remove exec command
         kind = kwargs.get('kind')
 
         if not kind:
@@ -5500,8 +5502,8 @@ CALLED BY:
         logger.info("interpol: Interpolation complete.")
 
         #func = [functionkeylist, sv, ev]
-        func = [functionkeylist, sv, ev, kind, None, None, None, None, keys]
-        funcnew = {"keys":keys, "fitfunc":kind,"fitdegree":None, "knotstep":None, "starttime":None,"endtime":None, "functionlist":functionkeylist, "sv":sv, "ev":ev}
+        func = [functionkeylist, sv, ev, kind, None, None, self.start(), self.end(), keys]
+        funcnew = {"keys":keys, "fitfunc":kind,"fitdegree":None, "knotstep":None, "starttime":self.start(),"endtime":self.end(), "functionlist":functionkeylist, "sv":sv, "ev":ev}
 
 
         return func

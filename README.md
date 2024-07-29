@@ -526,37 +526,47 @@ You will find some example plots at the [Conrad Observatory](http://www.conrad-o
 
 ### 4.1 A quick timersies plot
 
-        import magpy.mpplot as mp
-        mp.plot(data)
+        import magpy.core.plot as mp
+        mp.tsplot(data)
 
-## 4.2 Some options
+### 4.2 Some options
 
 Select specific keys to plot:
 
-        mp.plot(data,variables=['x','y','z'])
+        mp.tsplot(data,['x','y','z'])
 
 Defining a plot title and specific colors:
 
-        mp.plot(data,variables=['x','y'],plottitle="Test plot",
+        mp.tsplot(data,keys=['x','y'],plottitle="Test plot",
                 colorlist=['g', 'c'])
 
-Reefining the y-axis range for the y colum between 0 and automatic maximum value (see `help(mp.plot)` for list and all options):
+Refining the y-axis range for the y colum between 0 and automatic maximum value (see `help(mp.plot)` for list and all options):
 
         mp.plot(data,variables=['x','y'],plottitle="Test plot",
                 colorlist=['g', 'c'], specialdict = {'y':[0,]})
 
-## 4.3 Data from multiple streams
+Changing size and appearance:
+
+
+
+Many more examples are provided in chapter 5: 
+
+### 4.3 Data from multiple streams
 
 Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array of keys:
 
-        mp.plotStreams([data1,data2],[['x','y','z'],['f']])
+        mp.tsplot([data1,data2],[['x','y','z'],['f']])
 
-Please note that the gui is also using the plotstreams method and all options have to be provided as list.
+### 4.4 Getting an options overview
+
+Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array of keys:
+
+        help(mp.tsplot)
 
 
 ## 5. Timeseries methods
 
-### 5.1 Filtering
+### 5.1 Filtering and smoothing data
 
 MagPy's `filter` uses the settings recommended by [IAGA]/[INTERMAGNET]. Ckeck `help(data.filter)` for further options and definitions of filter types and pass bands.
 
@@ -573,20 +583,32 @@ Get sampling rate and filtered data after filtering (please note that all filter
         print("Sampling rate after [sec]:", filtereddata.samplingrate())
         print("Filter and pass band:", filtereddata.header.get('DataSamplingFilter',''))
 
-### 5.2 Coordinate transformation
+### 5.2 Coordinate transformation and rotations
 
 Assuming vector data in columns [x,y,z] you can freely convert between xyz, hdz, and idf coordinates:
 
         cleandata = cleandata.xyz2hdz()
 
-### 5.3 Calculate delta F
+### 5.3 Calculating vectorial F and delta F
 
 If the data file contains xyz (hdz, idf) data and an independently measured f value, you can calculate delta F between the two instruments using the following:
 
         cleandata = cleandata.delta_f()
         mp.plot(cleandata,plottitle='delta F')
 
-### 5.4 Calculate Means
+
+### 5.4 Applying offsets and scaling values
+
+Constant offsets can be added to individual columns using the `offset` method with a dictionary defining the MagPy stream column keys and the offset to be applied (datetime.timedelta object for time column, float for all others):
+
+        offsetdata = cleandata.offset({'time':timedelta(seconds=0.19),'f':1.24})
+
+Individual columns can also be multiplied by values provided in a dictionary:
+
+        multdata = cleandata.multiply({'x':-1})
+
+
+### 5.5 Statistics
 
 Mean values for certain data columns can be obtained using the `mean` method. The mean will only be calculated for data with the percentage of valid data (in contrast to missing data) points not falling below the value given by the percentage option (default 95). If too much data is missing, then no mean is calulated and the function returns NaN.
 
@@ -596,26 +618,15 @@ The median can be calculated by defining the `meanfunction` option:
 
         print(cleandata.mean('df', meanfunction='median'))
 
-### 5.5 Applying offsets
+Amplitude, get_variance, etc
 
-Constant offsets can be added to individual columns using the `offset` method with a dictionary defining the MagPy stream column keys and the offset to be applied (datetime.timedelta object for time column, float for all others):
 
-        offsetdata = cleandata.offset({'time':timedelta(seconds=0.19),'f':1.24})
+### 5.6 Some basic methods for timeseries data manipulations 
 
-### 5.6 Scaling data
+Asigning data to other keys, removing missing data, etc
 
-Individual columns can also be multiplied by values provided in a dictionary:
 
-        multdata = cleandata.multiply({'x':-1})
-
-### 5.7 Fit functions
-
-MagPy offers the possibility to fit functions to data using either polynomial functions or cubic splines (default):
-
-        func = cleandata.fit(keys=['x','y','z'],knotstep=0.1)
-        mp.plot(cleandata,variables=['x','y','z'],function=func)
-
-### 5.8 Derivatives
+### 5.7 Derivatives
 
 Time derivatives, which are useful to identify outliers and sharp changes, are calculated as follows:
 
@@ -623,25 +634,83 @@ Time derivatives, which are useful to identify outliers and sharp changes, are c
         mp.plot(diffdata,variables=['dx','dy','dz'])
 
 
-### 5.9 Merging streams
+### 5.8 Extrapolation
+
+
+### 5.9 Functions
+
+#### 5.9.1 Fitting data
+
+MagPy offers the possibility to fit functions to data using a number of different fitting functions:
+
+        func = cleandata.fit(keys=['x','y','z'], fitfunc='spline', knotstep=0.1)
+        mp.tsplot([cleandata],[['x','y','z']],function=[[func,func,func]])
+
+Supported fitting functions *fitfunc* are polynomial 'poly', 'harmonic', 'least-squares', 'mean', 'spline'. The default fitting method 
+is the cubic spline function 'spline'. You need to specific the option *fitdegree* for polynomial and harmonic fitting functions. *fitdegree*=1 corresponds to a 
+linear fit. Default value is 5. For *fitfunc*='spline' you need to specify an average spacing for knots. The *knotstep* parameter will define at which percental distance a knot should be located. 
+i.e. *knotstep*=0.33 would place altogether 2 knots at 33% within the timeseries. Smaller values will increase the number of knots and thus the complexity of the fit.
+Thus, *knotstep* need to contain a positive number below 0.5.
+
+#### 5.9.2 Interpolation
+
+The interpol method uses Numpy's interpolate.interp1d to interpolate values of a timeseries. The option *kind* defines the type of interpolation. 
+Possible options are 'linear' (default), 'slinear ' which is a first order spline, 'quadratic' = spline (second order), 'cubic' corresponding to
+a third order spline, 'nearest' values and 'zero'. The interpolation method can be used to interpolate missing data.
+
+        func = gapstream.interpol(['x','y'],kind='linear')
+
+Another simple interpolation method allows for a quick linear interpolation of values, directly modifying the supplied timeseries.
+
+        interpolatedts = ts.interpolate_nans(['f'])
+
+#### 5.9.3 Adopted baselines
+
+Baselines are also treated as functions in MagPy. You can calculate the adopted baseline for a given timerange and a provided fitting function using the following command.
+
+        func = variationdata.baseline(absolutedata, xxx)
+
+Further details on baseline adoption plus examples are summarized in section 7.5.
+
+#### 5.9.4 Applying functions to timeseries
+
+Functions can be transferred to data values and they can be subtracted for residual analysis. 
+
+#### 5.9.5 Functions within a DataStream object
+
+Functions can be added to the timeseries meta information dictionary and stored along with the data set. Such Object storage is only supported for MagPy's PYCDF format.
+To add functions into the timeseries data header use:
+
+        datastream = datastream.func2header(func)
+
+When reading PYCDF data files and also INTERMAGNET IBLV data files then functional values (adopted baselines of BLV files) are available in the header. Access it as follows:
+
+        blvdata = read('mmydata.blv')
+        func = blvdata.header.get('DataFunctionObject')
+        tsplot(data, func)
+
+#### 5.9.5 Saving and reading functions separaetly 
+
+
+### 5.10 Multiple timeseries - merge and join
 
 Merging data comprises combining two streams into one new stream. This includes adding a new column from another stream, filling gaps with data from another stream or replacing data from one column with data from another stream. The following example sketches the typical usage:
 
         print("Data columns in data2:", data2._get_key_headers())
-        newstream = mergeStreams(data2,kvals,keys=['var1'])
+        newstream = merge_streams(data2,kvals,keys=['var1'])
         print("Data columns after merging:", data2._get_key_headers())
         mp.plot(newstream, ['x','y','z','var1'],symbollist=['-','-','-','z'])
 
 If column `var1` does not existing in data2 (as above), then this column is added. If column `var1` had already existed, then missing data would be inserted from stream `kvals`. In order to replace any existing data, use option `mode='replace'`.
 
-### 5.10 Differences between streams
+### 5.11 Multiple timeseries - subtract
 
 Sometimes it is necessary to examine the differences between two data streams e.g. differences between the F values of two instruments running in parallel at an observatory. The method `subtractStreams` is provided for this analysis:
 
-        diff = subtractStreams(data1,data2,keys=['f'])
+        diff = subtract_streams(data1,data2,keys=['f'])
 
 
-### 5.11 All methods at a glance
+### 5.12 All methods at a glance
 
 For a summary of all supported methods, see the section **List of all MagPy methods** below.
 
