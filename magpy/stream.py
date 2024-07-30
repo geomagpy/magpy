@@ -7,6 +7,7 @@ Version 0.3 (starting May 2016)
 License:
 https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 """
+# TODO - remove the following two line as soon as new packages are updated (only required for testruns (python stream.py)
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 import logging
@@ -96,14 +97,12 @@ import copyreg as copyreg
 import dateutil.parser as dparser
 
 # not yet verified
-#import csv
 import pickle
 import types
 import struct
 import re
 import time, string, os, shutil
 import fnmatch
-import json
 from tempfile import NamedTemporaryFile
 import warnings
 from glob import glob, iglob, has_magic
