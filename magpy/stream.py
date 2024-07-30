@@ -7,11 +7,8 @@ Version 0.3 (starting May 2016)
 License:
 https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 import logging
 import os
 import sys
@@ -9553,184 +9550,547 @@ if __name__ == '__main__':
 
     import subprocess
 
-    print()
-    print("----------------------------------------------------------")
-    print("TESTING: STREAM PACKAGE")
-    print("THIS IS A TEST RUN OF THE MAGPY STREAM PACKAGE.")
-    print("All main methods will be tested. This may take a while.")
-    print("A summary will be presented at the end. Any protocols")
-    print("or functions with errors will be listed.")
-    print("----------------------------------------------------------")
-    print()
+    # #######################################################
+    #                      Testing
+    # #######################################################
+    # Create a random data signal with some nan values in x and z
+    c = 1000  # 1000 nan values are filled at random places
+    array = [[] for el in KEYLIST]
+    x = np.random.uniform(20950, 21000, size=(72, 1))
+    x = np.tile(x, (1, 60 * 60)).flatten()
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x
+    y = np.random.uniform(1950, 2000, size=(72, 1))
+    array[2] = np.tile(y, (1, 60 * 60)).flatten()
+    z = np.random.uniform(44350, 44400, size=(72, 1))
+    z = np.tile(z, (1, 60 * 60)).flatten()
+    z.ravel()[np.random.choice(z.size, c, replace=False)] = np.nan
+    array[3] = z
+    array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)])
+    array[KEYLIST.index('sectime')] = np.asarray(
+        [datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)]) + timedelta(minutes=15)
+    # array[KEYLIST.index('str1')] = ["xxx"]*len(z)
+    if magpyversion == '1.1.8':
+        array[0] = date2num(array[0])
+        array[KEYLIST.index('sectime')] = date2num(array[KEYLIST.index('sectime')])
 
-    print("Please enter path of a (variometer) data file for testing:")
-    print("(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)")
-    while True:
-        filepath = raw_input("> ")
-        if os.path.exists(filepath):
-            break
-        else:
-            print("Sorry, that file doesn't exist. Try again.")
+    teststream = DataStream([], {'SensorID': 'Test_0001_0001'}, np.asarray(array, dtype=object))
+    teststream.header['col-x'] = 'X'
+    teststream.header['col-y'] = 'Y'
+    teststream.header['col-z'] = 'Z'
+    teststream.header['unit-col-x'] = 'nT'
+    teststream.header['unit-col-y'] = 'nT'
+    teststream.header['unit-col-z'] = 'nT'
 
-    now = datetime.utcnow()
-    testrun = 'streamtest_'+datetime.strftime(now,'%Y%m%d-%H%M')
-    t_start_test = time.time()
+    # Do indents correctly already
+    ok = True
     errors = {}
-    print()
-    print(datetime.utcnow(), "- Starting stream package test. This run: %s." % testrun)
+    successes = {}
+    if ok:
+        testrun = 'streamtestfile'
+        t_start_test = datetime.utcnow()
+        while True:
+            try:
+                ts = datetime.utcnow()
+                sr = teststream.samplingrate()
+                te = datetime.utcnow()
+                successes['samplingrate'] = (
+                    "Version: {}, samplingrate={}: {}".format(magpyversion, sr, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['samplingrate'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR determining sampling rate/get_sample_period.")
+            try:
+                ts = datetime.utcnow()
+                orgstream = teststream.copy()
+                te = datetime.utcnow()
+                successes['copy'] = ("Version: {}, copy: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['copy'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR copy stream.")
+            try:
+                ts = datetime.utcnow()
+                nonanstream = teststream._drop_nans('x', debug=True)
+                te = datetime.utcnow()
+                successes['_drop_nans'] = (
+                    "Version: {}, _drop_nans: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['_drop_nans'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR _drop_nans of stream.")
+            try:
+                ts = datetime.utcnow()
+                nancolstream = teststream._remove_nancolumns()
+                te = datetime.utcnow()
+                successes['_remove_nancolumns'] = (
+                    "Version: {}, _remove_nancolumns: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['_remove_nancolumns'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR _remove_nancolumns stream.")
+            try:
+                ts = datetime.utcnow()
+                trimstream = teststream.trim(starttime=datetime(2022, 11, 22, 6), endtime=datetime(2022, 11, 22, 10))
+                te = datetime.utcnow()
+                successes['trim'] = ("Version: {}, trim: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['trim'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR trim stream.")
+            try:
+                ts = datetime.utcnow()
+                fstream = teststream.calc_f()
+                te = datetime.utcnow()
+                successes['calc_f'] = ("Version: {}, calc_f: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['calc_f'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR calc_f of stream.")
+            try:
+                ts = datetime.utcnow()
+                a = fstream._get_column('f')
+                # insert a array of fitting length into a specified key
+                fstream._put_column(a, 'var1', columnname='Myval', columnunit='roman')
+                # move a specific column into another specified key
+                fstream._copy_column('var1', 'var2')
+                fstream._move_column('var1', 'var4')
+                fstream._drop_column('var2')
+                te = datetime.utcnow()
+                successes['_xxx_column'] = (
+                    "Version: {}, _xxx_column: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['_xxx_column'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR when applying column modifications.")
+            try:
+                ts = datetime.utcnow()
+                filterlist = ['flat', 'barthann', 'bartlett', 'blackman', 'blackmanharris', 'bohman',
+                              'boxcar', 'cosine', 'flattop', 'hamming', 'hann', 'nuttall', 'parzen', 'triang',
+                              'gaussian', 'wiener', 'butterworth']
+                for filter_type in filterlist:
+                    tts = datetime.utcnow()
+                    tmpstream = trimstream.filter(filter_type=filter_type, filter_width=timedelta(hours=3),
+                                                  missingdata='interpolate', debug=False)
+                    tte = datetime.utcnow()
+                    print("Running filter {} needed {}: Length: {}".format(filter_type, (tte - tts).total_seconds(),
+                                                                           len(tmpstream)))
+                te = datetime.utcnow()
+                successes['filter'] = ("Version: {}, filter: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['filter'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR filtering or resampling stream.")
+            try:
+                ts = datetime.utcnow()
+                filtstream = teststream.filter(missingdata='interpolate', debug=False)
+                te = datetime.utcnow()
+                successes['filter2'] = ("Version: {}, filter2: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['filter2'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR filtering 1-sec stream.")
+            try:
+                ts = datetime.utcnow()
+                smoothlist = ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']
+                for smooth_type in smoothlist:
+                    tts = datetime.utcnow()
+                    smstream = trimstream.copy()
+                    tmpstream = smstream.smooth(keys=['x'], window_len=5, window=smooth_type, debug=False)
+                    tte = datetime.utcnow()
+                    print("Running smooth {} needed {}: Length: {}".format(smooth_type, (tte - tts).total_seconds(),
+                                                                           len(tmpstream)))
+                te = datetime.utcnow()
+                successes['smooth'] = ("Version: {}, smooth: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['smooth'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR smoothing stream.")
+            try:
+                ts = datetime.utcnow()
+                rotstream = teststream.rotation(alpha=1.0)
+                te = datetime.utcnow()
+                successes['rotation'] = ("Version: {}, rotation: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['rotation'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR rotating stream.")
+            try:
+                ts = datetime.utcnow()
+                # test with all options
+                test_offset = {'x': 150, 'y': -2000, 'z': 3.2}
+                offstream = teststream.offset(test_offset)
+                te = datetime.utcnow()
+                successes['offset'] = ("Version: {}, offset: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['offset'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR offsetting stream.")
+            try:
+                ts = datetime.utcnow()
+                rotstream = rotstream.get_gaps()
+                te = datetime.utcnow()
+                successes['get_gaps'] = ("Version: {}, get_gaps: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['get_gaps'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR get_gaps of stream.")
+            try:
+                ts = datetime.utcnow()
+                starttime, endtime = teststream._find_t_limits()
+                te = datetime.utcnow()
+                successes['_find_t_limits'] = (
+                    "Version: {}, _find_t_limits: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['_find_t_limits'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _find_t_limits")
+            try:
+                ts = datetime.utcnow()
+                keys = teststream._get_key_headers()
+                print("Printing keys, variables and units:")
+                teststream._print_key_headers()
+                te = datetime.utcnow()
+                successes['_get_key_headers'] = (
+                    "Version: {}, _get_key_headers: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['_get_key_headers'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _get_key_headers")
+            try:
+                ts = datetime.utcnow()
+                keys = teststream.integrate()
+                te = datetime.utcnow()
+                successes['integrate'] = ("Version: {}, integrate: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['integrate'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with integrate")
+            try:
+                intstream = teststream.copy()
+                ts = datetime.utcnow()
+                func = intstream.interpol(['x', 'y'])
+                te = datetime.utcnow()
+                successes['interpol'] = (
+                    "Version: {}, interpolation: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['interpol'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with interpolation")
+            try:
+                ts = datetime.utcnow()
+                trimstream = trimstream.interpolate_nans(keys=['x'])
+                te = datetime.utcnow()
+                successes['interpolate_nans'] = (
+                    "Version: {}, interpolate_nans: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['interpolate_nans'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with interpolate_nans")
+            try:
+                ts = datetime.utcnow()
+                intstream = intstream.func2header(func)
+                intstream = intstream.func2stream(func, ['x', 'y'], mode='values')
+                func_to_file(func, "/tmp/deleteme.json")
+                te = datetime.utcnow()
+                successes['functiontools'] = (
+                    "Version: {}, functiontools: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['functiontools'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with functiontools")
+            try:
+                ts = datetime.utcnow()
+                xxx = teststream.multiply({'x': -1})
+                te = datetime.utcnow()
+                successes['multiply'] = ("Version: {}, multiply: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['multiply'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with multiply")
+            try:
+                ts = datetime.utcnow()
+                xxx = teststream.randomdrop(percentage=50, fixed_indicies=None)
+                te = datetime.utcnow()
+                successes['randomdrop'] = (
+                    "Version: {}, randomdrop: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['randomdrop'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with randomdrop")
+            try:
+                ts = datetime.utcnow()
+                red = teststream.extract('x', 20985, compare='<')
+                te = datetime.utcnow()
+                successes['extract'] = ("Version: {}, extract: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['extract'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with extract")
+            try:
+                ts = datetime.utcnow()
+                xxx = teststream.cut(50, kind=0, order=0)
+                te = datetime.utcnow()
+                successes['cut'] = ("Version: {}, cut: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['cut'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with cut")
+            try:
+                ts = datetime.utcnow()
+                xxx = teststream.dailymeans(keys=['x', 'y', 'z'])
+                print("dailymeans:", len(xxx))
+                te = datetime.utcnow()
+                successes['daileymeans'] = (
+                    "Version: {}, dailymeans: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['dailymeans'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with dailymeans")
+            try:
+                ts = datetime.utcnow()
+                trimstream = teststream.trim(starttime="2022-11-22T09:00:00", endtime="2022-11-22T14:00:00")
+                for method in ['linear', 'spline', 'fourier', 'old']:
+                    print(" Testing extrapolation with {} method".format(method))
+                    expst = trimstream.extrapolate(starttime=datetime(2022, 11, 22, 7),
+                                                   endtime=datetime(2022, 11, 22, 20), method=method)
+                te = datetime.utcnow()
+                successes['extrapolate'] = (
+                    "Version: {}, extrapolate: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['extrapolate'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with extrapolation")
+            try:
+                ts = datetime.utcnow()
+                trimstream = teststream.trim(starttime="2022-11-22T09:00:00", endtime="2022-11-22T14:00:00")
+                for fitoption in ['poly', 'harmonic', 'least-squares', 'mean', 'spline']:
+                    print(" Testing fitting with {} method".format(fitoption))
+                    func = trimstream.fit(['x'], fitfunc=fitoption, fitdegree=5, knotstep=0.2)
+                te = datetime.utcnow()
+                successes['fit'] = ("Version: {}, fit: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['fit'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with fit")
+            try:
+                ts = datetime.utcnow()
+                xstream = trimstream._select_keys(keys=['x'])
+                te = datetime.utcnow()
+                successes['_select_keys'] = (
+                    "Version: {}, _select_keys: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['_select_keys'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _select_keys")
+            try:
+                ts = datetime.utcnow()
+                alpha, beta = trimstream.determine_rotationangles()
+                te = datetime.utcnow()
+                successes['determine_rotationangles'] = (
+                    "Version: {}, determine_rotationangles: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['determine_rotationangles'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with determine_rotationangles")
+            try:
+                sectest = orgstream.copy()
+                s1, e1 = sectest._find_t_limits()
+                ts = datetime.utcnow()
+                sectest = sectest.use_sectime()
+                te = datetime.utcnow()
+                s2, e2 = sectest._find_t_limits()
+                print(s2, e2)
+                print("Switched to second time. Projected difference is 15 min, obtaioned are {} min".format(
+                    (s2 - s1).total_seconds() / 60.))
+                successes['use_sectime'] = (
+                    "Version: {}, use_sectime: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['use_sectime'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with use_sectime")
+            try:
+                ts = datetime.utcnow()
+                print("Key x: {} {}".format(trimstream.get_key_name('x'), trimstream.get_key_unit('x')))
+                te = datetime.utcnow()
+                successes['get_key_'] = ("Version: {}, get_key_: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['get_key_'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with get_key_name or unit")
+            try:
+                ts = datetime.utcnow()
+                amp = trimstream.amplitude('x')
+                var = trimstream._get_variance('x')
+                te = datetime.utcnow()
+                successes['guimethods'] = (
+                    "Version: {}, guimethods: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['guimethods'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with guimethods")
+            try:
+                ts = datetime.utcnow()
+                convertstream = teststream.copy()
+                convlist = ['xyz2hdz', 'hdz2xyz', 'xyz2idf', 'idf2xyz']
+                print(
+                    "Conversion testrun starting with comps {:.2f}, {:.2f}, {:.2f}".format(convertstream.ndarray[1][0],
+                                                                                           convertstream.ndarray[2][0],
+                                                                                           convertstream.ndarray[3][0]))
+                for conv in convlist:
+                    convertstream = convertstream._convertstream(conv)
+                    print("Conversion {} results in comps {:.2f}, {:.2f}, {:.2f}".format(conv,
+                                                                                         convertstream.ndarray[1][0],
+                                                                                         convertstream.ndarray[2][0],
+                                                                                         convertstream.ndarray[3][0]))
+                te = datetime.utcnow()
+                successes['conversion'] = (
+                    "Version: {}, conversion: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['conversion'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with conversion")
 
-    while True:
+            try:
+                ts = datetime.utcnow()
+                wformats = ['CSV', 'IAGA', 'IMAGCDF', 'IMF', 'PYSTR', 'PYASCII', 'PYCDF']
+                # will not work for monthly files, IAF etc
+                for idx, f in enumerate(wformats):
+                    print("testing wformat", f)
+                    filtstream.write('.',
+                                     filenamebegins='{}_{}_'.format(testrun, idx),
+                                     filenameends='.tst',
+                                     dateformat='%Y-%m-%d',
+                                     format_type=f)
+                    print("Writing as {} successful".format(f))
+                te = datetime.utcnow()
+                successes['write'] = ("Version: {}, write: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['write'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR writing data to file.")
 
-        # Step 1 - Read data
-        try:
-            teststream = read(filepath)
-            print(datetime.utcnow(), "- Stream read in.")
-        except Exception as excep:
-            errors['read'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR reading stream. Aborting test.")
+            """
+            Done:
+        - stream._get_max(self, key, returntime=False):        stormdet
+        - stream._get_min(self, key, returntime=False):
+        - stream._get_column(self, key):
+        - stream._put_column(self, column, key, columnname, columnunit):
+        - stream._copy_column(self, key, put2key):
+        - stream._move_column(self, key, put2key):
+        - stream._drop_column(self, key):
+        - stream._print_key_headers(self):
+        - stream._get_key_headers(self):
+        - stream._get_key_names(self):
+        - stream._get_variance(key)    gui.statistics
+        - stream._convertstream(self, coordinate, **kwargs): 
+        - stream.aic_calc(self, key, **kwargs):                stormdet
+        - stream.amplitude(key)        gui.checkdefinitivedata
+        - stream.bc(self):
+        - stream.baseline(self, absolutestream, **kwargs):     stream.DS.bc
+        - stream.compensation(self, **kwargs):
+        - stream.cut(self,length,kind=0,order=0):
+        - stream.dailymeans(self):
+        - stream.delta_f(self, **kwargs):                      format_imf, like calc_f
+        - stream.differentiate(self, **kwargs):                stormdet
+        - stream.extract(self, key, value, compare=None, debug=None):
+        - stream.extrapolate(self, start, end):
+        - stream.fit(self, keys, **kwargs):
+        - stream.integrate(self, **kwargs):
+        - stream.interpol(self, keys, **kwargs):
+        - stream.mean(self, key, **kwargs):
+        - stream.multiply(self, factors):
+        - stream.randomdrop(self, percentage=None, fixed_indicies=None):
+        - stream.remove(self, starttime=starttime, endtime=endtime): stormdet
+        - stream.smooth(self, keys, **kwargs):
+        - stream.func2stream(self,function,**kwargs):                   stream.baseline
+        - stream.func2header(self,function,**kwargs):
+        - stream.interpolate_nans(self, keys)
+        - stream._select_keys(self, keys)
+        - stream.get_key_name(self,key)
+        - stream.get_key_unit(self,key)
+        - stream.determine_rotationangles(self, referenceD=0.0, referenceI=None, keys = ['x','y','z'], debug=False)
+        - stream.use_sectime(self)
+        - stream.steadyrise(self, key, timewindow, **kwargs):   running but should be tested with meteo data
+
+
+            Tested elsewhere:
+                - stream._aic(self, signal, k, debugmode=None):                 stream.aic_calc
+                - stream._det_trange(self, period):                             stream.filter
+                - stream._remove_nancolumns(self):                              subtract_streams
+                - stream._select_timerange(self, start, end):                   stream.DS.write 
+                - stream._tau(self, period):                                    stream.filter gaussianfilter
+                - stream.add(self, datlst):           old container, used by absolutes
+                - stream.dict2stream(self,dictkey='DataBaseValues')             stream.baseline
+                - stream.dropempty(self):                                       stream.sorting
+                - stream.extend(self,datlst,header):                            stream.read
+                - stream.fillempty(self, ndarray, keylist):                     stream.sorting
+                - stream.findtime(self,time):                          core.activity, stream.resample
+                - stream.get_fmi_array(self, missing_data=None, debug=False):   core.activity 
+                - stream.harmfit                                                stream.fit
+                - stream.hdz2xyz(self)                                          stream._convertstream 
+                - stream.idf2xyz(self)                                          stream._convertstream 
+                - stream.sorting(self):                                         stream.read
+                - stream.stream2dict(self,dictkey='DataBaseValues')             stream.baseline
+                - stream.xyz2hdz(self)                                          stream._convertstream 
+                - stream.xyz2idf(self)                                          stream._convertstream 
+                - stream.simplebasevalue2stream()                               stream.baseline - to be tested
+
+
+
+            Unused:
+
+            deprecated in 2.0.0:
+        - stream._is_number(self, s):
+        - stream._normalize(self, column):
+        - stream.union(self,column):
+        - stream.clear_header(self):
+        - stream._gf(self, t, tau):
+        - stream._hf(self, p, x):
+        - stream._residual_func(self, func, y):
+        - stream.selectkeys
+        - stream.GetKeyName(self,key)
+        - stream.GetKeyUnit(self,key)
+        - stream.get_rotation(self) -> replaced by determine_rotationangles
+        - stream.k_extend()
+        - stream.linestruct2ndarray(self)
+        - stream.baselineAdvanced()
+        - stream.func_add(self,function,**kwargs):
+
+            Removed in 2.0.0:
+        - stream.k_fmi(self, **kwargs):
+        - stream._get_line(self, key, value):
+        - stream._remove_lines(self, key, value):
+        - stream.eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
+        - stream.date_offset(self, offset):
+        - stream._append() for k_fmi
+        - stream._delete() for k_fmi
+        - stream.get_rotationangle(self)
+        - stream.scale_correction(self, keys, scales, **kwargs):   - replaced by multiply
+        - stream.variometercorrection(self, variopath, thedate, **kwargs):
+        - stream.func_subtract(self,function,**kwargs):       
+        - compareStreams()
+        - array2stream()
+
+    TODO: check validity of gaussian filter (as period treatment might have changed from day to second treatment) 
+
+
+        Testing multiple stream methods:
+        subtract_streams
+        join_streams
+        merge_streams
+        - appendStreams()
+        - find_offset  -- should be replaced (i.e brute-force, correlation methods etc)
+        - stackStreams
+        - obspy2magpy
+        - denormalize
+
+
+
+        # Flagging related
+        - stream.bindetector(self,key,text=None,**kwargs):
+        - stream.extractflags()
+        - stream.flagfast()
+        - stream.flag_range()
+        - stream.flag()
+        - stream.flag_outlier(self, **kwargs):
+        - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
+        - stream.flaglistadd(self, flaglist, sensorid, keys, flagnumber, comment, startdate, enddate=None):
+        - stream.remove_flagged(self, **kwargs):
+        - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
+
+
+            """
+            # If end of routine is reached... break.
             break
 
-        # Step 2 - Rotate data (why not?)
-        try:
-            teststream.rotation(alpha=1.0)
-            print(datetime.utcnow(), "- Rotated.")
-        except Exception as excep:
-            errors['rotation'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR rotating stream.")
+        t_end_test = datetime.utcnow()
+        time_taken = t_end_test - t_start_test
+        print(datetime.utcnow(),
+              "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
 
-        # Step 3 - Offset data
-        try:
-            test_offset = {'x': 150, 'y': -2000, 'z': 3.2}
-            teststream.offset(test_offset)
-            print(datetime.utcnow(), "- Offset.")
-        except Exception as excep:
-            errors['offset'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR offsetting stream.")
-
-        # Step 4 - Find outliers
-        try:
-            teststream.remove_outlier()
-            print(datetime.utcnow(), "- Flagged outliers.")
-        except Exception as excep:
-            errors['remove_outlier'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR flagging outliers.")
-
-        # Step 5 - Remove flagged
-        try:
-            teststream.remove_flagged()
-            print(datetime.utcnow(), "- Removed flagged outliers.")
-        except Exception as excep:
-            errors['remove_flagged'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR removing flagged outliers.")
-
-        # Step 6 - Filter
-        try:
-            teststream.filter()
-            print(datetime.utcnow(), "- Filtered.")
-        except Exception as excep:
-            errors['filter'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR filtering.")
-
-        # Step 7 - Write
-        try:
-            teststream.write('.',
-                        filenamebegins='%s_' % testrun,
-                        filenameends='.min',
-                        dateformat='%Y-%m-%d',
-                        format_type='IAGA')
-            print(datetime.utcnow(), "- Data written out to file.")
-        except Exception as excep:
-            errors['write'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR writing data to file.")
-
-        # STILL TO ADD:
-        # - smooth?
-        # - plot
-        # - mergeStreams
-        # - subtractStreams
-        # - date_offset
-        # - interpol
-        # - fit
-        # - differentiate
-        # - aic_calc
-        # - k_fmi
-        # - integrate
-        # - baseline
-        # - trim
-        # - resample
-
-        # If end of routine is reached... break.
-        break
-
-    t_end_test = time.time()
-    time_taken = t_end_test - t_start_test
-    print(datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken)
-
-    print()
-    print("----------------------------------------------------------")
-    if errors == {}:
-        print("0 errors! Great! :)")
-    else:
-        print(len(errors), "errors were found in the following functions:")
-        print(str(errors.keys()))
         print()
-        print("Would you like to print the exceptions thrown?")
-        excep_answer = raw_input("(Y/n) > ")
-        if excep_answer.lower() == 'y':
-            i = 0
+        print("----------------------------------------------------------")
+        del_test_files = 'rm {}*'.format(testrun)
+        subprocess.call(del_test_files, shell=True)
+        if errors == {}:
+            print("0 errors! Great! :)")
+        else:
+            print(len(errors), "errors were found in the following functions:")
+            print(" {}".format(errors.keys()))
+            print()
             for item in errors:
-                print(errors.keys()[i] + " error string:")
-                print("    " + errors[errors.keys()[i]])
-                i += 1
-    print()
-    print("Hit enter to delete temporary files. (Or type N to keep.)")
-    tempfile_answer = raw_input("> ")
-    if tempfile_answer.lower() != 'n':
-        del_test_files = 'rm %s*' % testrun
-        subprocess.call(del_test_files,shell=True)
-    print()
-    print("Good-bye!")
-    print("----------------------------------------------------------")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                print(item + " error string:")
+                print("    " + errors.get(item))
+        print()
+        print("Good-bye!")
+        print("----------------------------------------------------------")
 
 # That's all, folks!
