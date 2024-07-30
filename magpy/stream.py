@@ -91,20 +91,20 @@ magpyversion = __version__
 from magpy.core.methods import *
 
 # verified packages of magpy main
-import numpy as np
-import copy # used only in core.activity for deepcopy of header
+import numpy as np   # methods
+import copy # used only in core.activity for deepcopy of header  # methods
 import copyreg as copyreg
-import dateutil.parser as dparser
+import dateutil.parser as dparser   # methods
 
 # not yet verified
 import pickle
 import types
 import struct
-import re
+import re   # methods
 import time, string, os, shutil
 import fnmatch
 from tempfile import NamedTemporaryFile
-import warnings
+import warnings # methods
 from glob import glob, iglob, has_magic
 from itertools import groupby
 from operator import itemgetter
@@ -8016,6 +8016,7 @@ def saveflags(mylist=None,path=None, overwrite=False):
 
     """
     print("Saving flaglist ...")
+    import json
     if not mylist:
         print("error 1")
         return False
@@ -8076,8 +8077,9 @@ def loadflags(path=None,sensorid=None,begin=None, end=None):
     RETURNS:
         - list (e.g. flaglist)
     EXAMPLE:
-        >>> loadflags('/my/path/myfile.pkl')
+        loadflags('/my/path/myfile.pkl')
     """
+    import json
     if not path:
         return []
     if path.endswith('.json'):

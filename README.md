@@ -729,6 +729,18 @@ Extract these values by standard dict.get() and reapply to the data stream.
 
 ### 5.10 Multiple timeseries - merge and join
 
+Let us assume you have two data sets, data1 containing X,Y,Z data and data2 containing X,Y,Z and F data with an overlapping time range. Such example data sets are shown in 
+Figure ![5.10.1](./magpy/doc/ms_data.png "Two example data stream with overlapping timeranges and different content"). Now you have a number of different possibilities to combine these two data sets. First of all you can use the `join_streams` method which always will keep the first provided stream unchanged and add information from the second stream into the data set.
+
+        joined_stream1 = join_streams(data1, data2)
+
+This command will result in a joint data set containing all data from data1 and, outside the time range of data1, the data of data2 as shown in Figure ![5.10.2](./magpy/doc/ms_join1.png "Joined streams in order data1, then data2"). Calling the same function with a different order
+
+        joined_stream1 = join_streams(data2, data1)
+
+will result in a combination as shown in Figure ![5.10.3](./magpy/doc/ms_join2.png "Joined streams in order data2, then data1"). `join_streams` has no further options.
+
+
 Merging data comprises combining two streams into one new stream. This includes adding a new column from another stream, filling gaps with data from another stream or replacing data from one column with data from another stream. The following example sketches the typical usage:
 
         print("Data columns in data2:", data2._get_key_headers())
@@ -740,9 +752,11 @@ If column `var1` does not existing in data2 (as above), then this column is adde
 
 ### 5.11 Multiple timeseries - subtract
 
-Sometimes it is necessary to examine the differences between two data streams e.g. differences between the F values of two instruments running in parallel at an observatory. The method `subtractStreams` is provided for this analysis:
+Sometimes it is necessary to examine the differences between two data streams e.g. differences between the F values of two instruments running in parallel at an observatory. The method `subtract_streams` is provided for this analysis:
 
-        diff = subtract_streams(data1,data2,keys=['f'])
+        diff = subtract_streams(data1,data2)
+
+This command will result in Figure ![5.10.6](./magpy/doc/ms_subtract.png "Subtract data2 from data1"). If you specify keys using option i.e. keys=['x'] only these data specific keys will remain. You might want to use diff.get_gaps() to fill np.nans into missing time steps. 
 
 
 ### 5.12 All methods at a glance
