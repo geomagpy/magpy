@@ -7,7 +7,7 @@ Written by Roman Leonhardt June 2012
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 #from magpy.stream import *
-from magpy.stream import DataStream, read, magpyversion, merge_streams, subtract_streams
+from magpy.stream import DataStream, read, magpyversion, join_streams, subtract_streams
 from magpy.core.methods import testtime, convert_geo_coordinate, extract_date_from_string
 import os
 from datetime import datetime, timedelta
@@ -392,11 +392,11 @@ def writeIAGA(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = merge_streams(exst,datastream,extend=True)
+            datastream = join_streams(exst,datastream,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = merge_streams(datastream,exst,extend=True)
+            datastream = join_streams(datastream,exst,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'append':
             myFile= OpenFile(filename,mode='a')
