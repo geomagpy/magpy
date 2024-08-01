@@ -12,6 +12,7 @@ the following methods are contained:
 - find_nearby(array, value)
 - func_from_file(functionpath,debug=False)   :    read functional parameters from file
 - func_to_file(funcparameter,functionpath,debug=False)  :    read function parameters (NOT the function) to file
+- group_indices(indexlist)   :  identify successiv indices and return a list with start,end pairs
 - is_number(variable)    :    returns True if variable is float or int
 - mask_nan(array)        :    returns an array without nan or empty elements
 - missingvalue()         :    will replace nan vaules in array with means, interpolation or given fill values
@@ -475,6 +476,33 @@ def func_to_file(funcparameter,functionpath,debug=False):
             return False
         return True
 
+
+def group_indices(indexlist):
+    """
+    DESCRIPTION
+        group successiv indices in list with start and endindex
+        This method is useful for creating flagging structures
+    APPLICATION
+        used by merge_stream to identify ranges which are inserted
+    """
+    flip = np.diff((np.diff(indexlist) == 1) + 0, prepend=0, append=0)
+    single = []
+    startcount = True
+    for i,el in enumerate(flip):
+        if el == -1:
+            #start counting zeros
+            startcount = True
+        if el == 0 and startcount:
+            single.append([i,i])
+        if el == 1:
+            startcount = False
+    # Look for where it flips from 1 to 0, or 0 to 1.
+    start_idx = np.where(flip == 1)
+    end_idx = np.where(flip == -1)
+    for i,el in enumerate(start_idx[0]):
+        single.append([el,end_idx[0][i]])
+    return single
+
 def maskNAN(column):
     """
     Tests for NAN values in column and usually masks them
@@ -784,6 +812,7 @@ if __name__ == '__main__':
     testarray2 = np.array([datetime(2024, 11, 22, 5), datetime(2024, 11, 22, 6), "", datetime(2024, 11, 22, 9)])
     testarray3 = np.array([datetime(2024, 11, 22, 5), datetime(2024, 11, 22, 6), datetime(2024, 11, 22, 9), datetime(2024, 11, 22, 11)])
     v = np.array([1, 2, 3, 4, 5, np.nan, 7, 8, 9, 10, 11, 12, 13, 14])
+    indlist = [0,2,3,2000,2005,2006,2007,2008,2034,2037,2040,2041,2042,2050]
     try:
         var1 = is_number(teststring)
         var2 = is_number(testnumber)
@@ -827,6 +856,21 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['find_nearest'] = str(excep)
         print(datetime.utcnow(), "--- ERROR with find_nearest.")
+
+    try:
+        group = group_indices(indlist)
+    except Exception as excep:
+        errors['group_indices'] = str(excep)
+        print(datetime.utcnow(), "--- RUNTIME ERROR group_indices.")
+    try:
+        group = group_indices(indlist)
+        # eventually implement the following with unittest
+        if not group == [[0, 0], [3, 3], [8, 8], [9, 9], [13, 13], [1, 2], [4, 7], [10, 12]]:
+            print (" group_indices: verification failure")
+    except Exception as excep:
+        errors['group_indices'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR group_indices.")
+
     try:
         a = test_timestring(testdate)
     except Exception as excep:
