@@ -8291,8 +8291,7 @@ def joinStreams(stream_a,stream_b, **kwargs):
 
     return stream.sorting()
 
-
-def appendStreams(streamlist):
+def append_streams(streamlist):
     """
     DESCRIPTION:
         Appends contents of streamlist  and returns a single new stream.
@@ -8305,13 +8304,17 @@ def appendStreams(streamlist):
         for stream in streamlist:
             if len(stream.ndarray[idx]) > 0:
                 array[idx].extend(stream.ndarray[idx])
-    stream = DataStream([LineStruct()],streamlist[0].header,np.asarray(array).astype(object))
+    stream = DataStream(header=streamlist[0].header,ndarray=np.asarray(array).astype(object))
     if len(stream.ndarray[0]) > 0:
         stream = stream.removeduplicates()
         stream = stream.sorting()
         return stream
     else:
-        return DataStream([LineStruct()],streamlist[0].header,np.asarray([np.asarray([]) for key in KEYLIST]))
+        return DataStream(header=streamlist[0].header,ndarray=np.asarray([np.asarray([]) for key in KEYLIST]))
+
+@deprecated("Replaced by append_streams")
+def appendStreams(streamlist):
+    return append_streams(streamlist)
 
 def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
     """
@@ -8394,7 +8397,7 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
     fllst = [] # flaglist
 
 
-    logger.info('mergeStreams: Start mergings at %s.' % str(datetime.now()))
+    logger.info('merge_streams: Start mergings at %s.' % str(datetime.now()))
 
     if not len(stream_a.ndarray[0]) > 0 or not len(stream_b.ndarray[0]) > 0:
         print ("merge_streams: one of the stream is empty - aborting")
@@ -8403,7 +8406,6 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
     # Sampling rates
     # --------------------------------------
     s1,e1 = stream_a._find_t_limits()
-    print (s1,e1)
     s2,e2 = stream_b._find_t_limits()
     sr1 = stream_a.samplingrate()
     sr2 = stream_b.samplingrate()
@@ -8426,14 +8428,14 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
     try:
         sb = sb.trim(starttime=sa.start(), endtime=sa.end(), include=True)
     except:
-        print("mergeStreams: stream_a and stream_b are apparently not overlapping - returning stream_a")
+        print("merge_streams: stream_a and stream_b are apparently not overlapping - returning stream_a")
         return stream_a
     timeb = sb.ndarray[0]
 
     # testing overlapp
     # --------------------------------------
     if not len(sb) > 0:
-        print("subtractStreams: stream_a and stream_b are not overlapping - returning stream_a")
+        print("merge_streams: stream_a and stream_b are not overlapping - returning stream_a")
         return stream_a
 
     timea = maskNAN(timea)
@@ -8467,15 +8469,12 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
         print (" Time steps are apparently not fitting")
         return stream_a
 
-    print ("Got here")
-    #mode = 'replace'
     # fill sb to the length of sa with np.nan or ''
     # get the indices of stream_b in stream_a
     indices = np.nonzero(np.in1d(timea, timeb))[0]
-    print (indices)
-    print (timea[0],timea[-1])
+    # get the first index of stream_b in stream_a
 
-    array = [[] for key in KEYLIST]
+    array = [[] for key in DataStream().KEYLIST]
     array[0] = timea
     for i,key in enumerate(DataStream().KEYLIST):
         if not 'time' in key:
@@ -8486,19 +8485,20 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
                 if mode == 'replace':
                     np.put(array[i], indices, colb)
                 else:
-                    print ("mode insert")
+                    # add some flagdict containing inserted ranges
                     # get indices of nan values in stream_a
                     if key in DataStream().NUMKEYLIST:
                         naninds = np.argwhere(np.isnan(array[i]))
-                        print (len(naninds))
-                        print (len(indices))
-                        # get common indices with values in stream_b
+                        naninds = naninds.flatten()
                         insind = np.intersect1d(indices, naninds)
-                        print (len(insind))
-                        # insert them into stream
-                        np.put(array[i], insind, colb)
+                        if not (indices[0] == 0):
+                            # stream b start after beginning of a
+                            # insind are relative to the length of colb
+                            np.put(array[i], insind, colb)
+                        else:
+                            np.put(array[i], insind, colb[insind])
                     else:
-                        # no action if strings - yet
+                        # no action if strings - maybe in a future version
                         pass
             elif len(colb) > 0  and key in keys:
                 array[i] = np.asarray([np.nan]*len(timea))

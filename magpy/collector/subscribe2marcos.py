@@ -148,7 +148,7 @@ class MARCOSsubscription(object):
             # TODO finish this method
             self.counter += 1
             if self.counter < 10:
-                self.writestream = appendStreams([self.writestream, stream])
+                self.writestream = append_streams([self.writestream, stream])
                 if self.counter == 1:
                     self.len1 = self.writestream.length()[0]
                 if self.counter == 9:

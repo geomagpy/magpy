@@ -713,10 +713,10 @@ Replacing existing data by the interpolated values would work as follows:
 
         data = data.func2stream(func, keys=['x','y','z'],mode='values')
 
-#### 5.9.6 Saving and reading functions separaetly 
+#### 5.9.6 Saving and reading functions separately 
 
 It is possible to save the functional parameters (NOT the functions) to a file and reload them for later usage. Please note that you will need to apply
-the desired fit/interpolation/basseline adoption again based on these parameters to obtain a function object. The parameters will be stored within a json dictionary.
+the desired fit/interpolation/baseline adoption again based on these parameters to obtain a function object. The parameters will be stored within a json dictionary.
 
         func_to_file(func, "/tmp/savedparameter.json")
 
@@ -727,7 +727,9 @@ To read parameters in again
 The variable funcparameters will then contain a dictionary with all contents of the original function list, including time ranges and specific parameters for each value.
 Extract these values by standard dict.get() and reapply to the data stream. 
 
-### 5.10 Multiple timeseries - merge and join
+### 5.10 Multiple timeseries
+
+#### 5.10.1 join
 
 Let us assume you have two data sets, data1 containing X,Y,Z data and data2 containing X,Y,Z and F data with an overlapping time range. Such example data sets are shown in 
 Figure ![5.10.1](./magpy/doc/ms_data.png "Two example data stream with overlapping timeranges and different content"). Now you have a number of different possibilities to combine these two data sets. First of all you can use the `join_streams` method which always will keep the first provided stream unchanged and add information from the second stream into the data set.
@@ -740,23 +742,36 @@ This command will result in a joint data set containing all data from data1 and,
 
 will result in a combination as shown in Figure ![5.10.3](./magpy/doc/ms_join2.png "Joined streams in order data2, then data1"). `join_streams` has no further options.
 
+#### 5.10.2 merge
 
-Merging data comprises combining two streams into one new stream. This includes adding a new column from another stream, filling gaps with data from another stream or replacing data from one column with data from another stream. The following example sketches the typical usage:
+Merging data comprises combining two streams into one new stream. The two data sets on which `merge_streams` is applied need to have the same sampling rate and need to overlap in time.
+The method includes adding a new column from a second stream, filling gaps with data from another stream (mode='insert') or replacing data with contents from another stream (mode='replace'). 
+The following examples sketch typical usages. Firstly, we use the default mode='insert': 
 
-        print("Data columns in data2:", data2._get_key_headers())
-        newstream = merge_streams(data2,kvals,keys=['var1'])
-        print("Data columns after merging:", data2._get_key_headers())
-        mp.plot(newstream, ['x','y','z','var1'],symbollist=['-','-','-','z'])
+        merged_stream1 = merge_streams(data1, data2)
 
-If column `var1` does not existing in data2 (as above), then this column is added. If column `var1` had already existed, then missing data would be inserted from stream `kvals`. In order to replace any existing data, use option `mode='replace'`.
+Application results in an addition of the f-column to stream1 and the filling of the data gap in data 1 with values of data2 (see Figure ![5.10.4](./magpy/doc/ms_merge1.png "Merge data2 into data1").)
+The time range of the resulting stream will always cover the range of the data set provided first. Another option is demonstrated in the next example,
+Here data 1 im merged into data2. Here we replace the contents of column y by existing contents of column y from data1. Data not existing in data1 will remain unchanged. 
 
-### 5.11 Multiple timeseries - subtract
+        merged_stream1 = merge_streams(data2, data1, mode='replace', keys=['y'])
+
+#### 5.10.3 subtract
 
 Sometimes it is necessary to examine the differences between two data streams e.g. differences between the F values of two instruments running in parallel at an observatory. The method `subtract_streams` is provided for this analysis:
 
         diff = subtract_streams(data1,data2)
 
 This command will result in Figure ![5.10.6](./magpy/doc/ms_subtract.png "Subtract data2 from data1"). If you specify keys using option i.e. keys=['x'] only these data specific keys will remain. You might want to use diff.get_gaps() to fill np.nans into missing time steps. 
+
+
+#### 5.10.4 stack
+
+#### 5.10.5 append
+
+The append method is similar to join but can be applied to multiple streams
+
+#### 5.10.6 find_offset
 
 
 ### 5.12 All methods at a glance
