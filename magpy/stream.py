@@ -8512,7 +8512,6 @@ def determine_time_shift(array1, array2, col2compare='f', method='correlate', de
     ar2 = ar2 - np.nanmean(ar2)
 
     from scipy import signal, fftpack
-
     if method == 'fft' or method == 'all':
         A = fftpack.fft(ar1)
         B = fftpack.fft(ar2)
@@ -8526,7 +8525,7 @@ def determine_time_shift(array1, array2, col2compare='f', method='correlate', de
             sign = -1
         if debug:
             print("FFT method: shift array2 by timedelta(seconds={}) to fit array1".format(sign * lag / 100. * sr1))
-        shift = sol1 / 100. * sr1
+        shift = sign * sol1 / 100. * sr1
     if method == 'correlate' or method == 'all':
         correlation = signal.correlate(ar1, ar2, mode="full")
         lags = signal.correlation_lags(len(ar1), len(ar2), mode="full")
