@@ -7484,7 +7484,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 subkeylist.append(self.streamkeylist[idx])
         dlg = wx.ProgressDialog("Stacking...", "message", maximum=100, parent=None, style=wx.PD_APP_MODAL|wx.PD_ELAPSED_TIME|wx.PD_AUTO_HIDE)
         dlg.Update(0, "please wait ... and ignore the progress bar")
-        self.result = stackStreams(substreamlist,get='mean',uncert='True')
+        #self.result = stackStreams(substreamlist,get='mean',uncert='True')
         dlg.Update(100, "done")
         dlg.Destroy()
         self.resultkeys = self.result._get_key_headers()

@@ -39,6 +39,29 @@ class flags(object):
         1.0 : extended flagging version
         2.0 : including flagging labels
 
+    STRUCTURE
+        A flagging object consists of a list of dictionaries
+        flagdict = [{
+                    'flagid',            (int) # unique number assigned when using data base tools
+                    'sensorid',          (string) # SensorId of Sensor on which flagging was conducted
+                    'starttime',         (datetime) # first flagged data point
+                    'endtime',           (datetime) # last flagged data point
+                    'components',        (list) # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys for the sensorid
+                    'flagtype',          (int) # 0 (just a comment), 1 (remove for definitiv - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
+                    'labelid',           (string) # string with number i.e. '001', see list below with prefilled options
+                    'label',             (string) # name associated with labelid i.e. lightning
+                    'comment',           (string) # text without special characters (utf-8)
+                    'group',             (list) # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'probabilities',     (list) # measure of probabilities - list
+                    'stationid',         (string) # stationid of flag
+                    'validity',          (char) # character code: d (delete in cleanup), h (invalid/hide), default None
+                    'operator',          (string) # text with name/shortcut of flagging person i.e. RL
+                    'color',             (string) # None or string with color code to override flagid, will override automatic choice by flagtype
+                    'modificationtime',  (datetime) # datetime of last edition
+                    },
+                    'flagversion']       (string) # string like 2.0
+
+
     APPLICTAION:
         Initiate flags with >>> flag = flags().
 
@@ -162,6 +185,19 @@ class flags(object):
                             '090':['spike'],
                           }
 
+        # Flaglabes of 2.0 - extendable
+        # and associated flagids
+        # number ranges:
+        # 000     : (0) basic zero-flag (annotation without group)
+        # 001-009 : (1,3) HF disturbances of natural or artificial source
+        # 010-019 : (2,4) periodic/quasi-periodic natural disturbances with sub-minute to sub-six-hourly periods
+        # 020-029 : (2,4) non-periodic natural disturbances with very infrequent nature and sub-weekly time ranges
+        # 030-039 : () natural disturbances with physically different effects (i.e. earthquake affecting suspended systems)
+        # 040-049 : (2,4) long period natural signals
+        # 050-059 : (1,3) sub-minute to sub-hourly anthropogenic disturbances
+        # 080-089 : (0) data treatment notations
+        # 090-    : (0,1,2,3,4) yet to be classified
+        # Flagids of the labels
         self.FLAGLABEL = { '000':'normal',
                            '001': 'lightning strike',
                            '002': 'spike',
@@ -175,8 +211,9 @@ class flags(object):
                            '022': 'crochete',
                            '030': 'earthquake',
                            '050': 'vehicle passing above',
-                           '051': 'nearby disturbing source',
-                           '052': 'train',
+                           '051': 'nearby moving disturbing source',
+                           '052': 'nearby static disturbing source',
+                           '053': 'train',
                            '090': 'unknown disturbance'
                            }
 
