@@ -8897,35 +8897,92 @@ if __name__ == '__main__':
     # #######################################################
     #                      Testing
     # #######################################################
-    # Create a random data signal with some nan values in x and z
-    c = 1000  # 1000 nan values are filled at random places
-    array = [[] for el in KEYLIST]
-    x = np.random.uniform(20950, 21000, size=(72, 1))
-    x = np.tile(x, (1, 60 * 60)).flatten()
-    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
-    array[1] = x
-    y = np.random.uniform(1950, 2000, size=(72, 1))
-    array[2] = np.tile(y, (1, 60 * 60)).flatten()
-    z = np.random.uniform(44350, 44400, size=(72, 1))
-    z = np.tile(z, (1, 60 * 60)).flatten()
-    z.ravel()[np.random.choice(z.size, c, replace=False)] = np.nan
-    array[3] = z
-    array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)])
-    array[KEYLIST.index('sectime')] = np.asarray(
-        [datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)]) + timedelta(minutes=15)
-    # array[KEYLIST.index('str1')] = ["xxx"]*len(z)
-    if magpyversion == '1.1.8':
-        array[0] = date2num(array[0])
-        array[KEYLIST.index('sectime')] = date2num(array[KEYLIST.index('sectime')])
+    """
+    Currently we are not using the unittest package. Nevertheless, the implementation of tests and their outcome below is similar.
+    The testing environment contains the following parts:
+    Test set creation part, runtime tests, verification tests, and application tests
+    1) creation of articfical data streams for runtime and verification tests
+       - runtime tests: random test set mimicking natural data with gaps and uncertainties
+       - verification tests: simple data stream with clearly deducable expected values for all methods 
+    2) runtime tests are applied to a complex/random test set mimicking natural data with gaps and uncertainties - hereby 
+    we test the general applicability of the methods and their stability in application
+    3) verification tests: are used to test the accuarcy of all calculation rountines against expected values
+    4) application tests are code testings by comparing the output with indepent codes from other developers. Such tests typically 
+    require real data subjected to different software packages. If such application tests have been performed then a reference is given in 
+    the testing table.
+    Results of these test and whether individual methods are successfully subjected to these tests are summarized. Including new methods
+    requires at least the addition of runtime and verification tests.
+    """
 
-    teststream = DataStream([], {'SensorID': 'Test_0001_0001'}, np.asarray(array, dtype=object))
-    teststream.header['col-x'] = 'X'
-    teststream.header['col-y'] = 'Y'
-    teststream.header['col-z'] = 'Z'
-    teststream.header['unit-col-x'] = 'nT'
-    teststream.header['unit-col-y'] = 'nT'
-    teststream.header['unit-col-z'] = 'nT'
 
+    def create_minteststream(startdate=datetime(2022, 11, 1), addnan=True):
+        c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+        l = 32 * 1440
+        import scipy
+        teststream = DataStream()
+        array = [[] for el in DataStream().KEYLIST]
+        win = scipy.signal.windows.hann(60)
+        a = np.random.uniform(20950, 21000, size=int(l / 2))
+        b = np.random.uniform(20950, 21050, size=int(l / 2))
+        x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+        array[1] = x[1440:-1440]
+        a = np.random.uniform(1950, 2000, size=int(l / 2))
+        b = np.random.uniform(1900, 2050, size=int(l / 2))
+        y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+        array[2] = y[1440:-1440]
+        a = np.random.uniform(44300, 44400, size=l)
+        z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+        array[3] = z[1440:-1440]
+        array[4] = np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440]
+        array[0] = np.asarray([startdate + timedelta(minutes=i) for i in range(0, len(array[1]))])
+        array[KEYLIST.index('sectime')] = np.asarray(
+            [startdate + timedelta(minutes=i) for i in range(0, len(array[1]))]) + timedelta(minutes=15)
+        teststream = DataStream(header={'SensorID': 'Test_0001_0001'}, ndarray=np.asarray(array, dtype=object))
+        minstream = teststream.filter()
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['col-f'] = 'F'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        teststream.header['unit-col-f'] = 'nT'
+        return teststream
+
+
+    def create_secteststream(startdate=datetime(2022, 11, 21)):
+        # Create a random data signal with some nan values in x and z
+        c = 1000  # 1000 nan values are filled at random places
+        array = [[] for el in KEYLIST]
+        x = np.random.uniform(20950, 21000, size=(72, 1))
+        x = np.tile(x, (1, 60 * 60)).flatten()
+        x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+        array[1] = x
+        y = np.random.uniform(1950, 2000, size=(72, 1))
+        array[2] = np.tile(y, (1, 60 * 60)).flatten()
+        z = np.random.uniform(44350, 44400, size=(72, 1))
+        z = np.tile(z, (1, 60 * 60)).flatten()
+        z.ravel()[np.random.choice(z.size, c, replace=False)] = np.nan
+        array[3] = z
+        array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)])
+        array[KEYLIST.index('sectime')] = np.asarray(
+            [datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)]) + timedelta(minutes=15)
+        # array[KEYLIST.index('str1')] = ["xxx"]*len(z)
+        teststream = DataStream([], {'SensorID': 'Test_0001_0001'}, np.asarray(array, dtype=object))
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        return teststream
+
+
+    teststream = create_secteststream()
     # Do indents correctly already
     ok = True
     errors = {}
@@ -9262,7 +9319,6 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['conversion'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with conversion")
-
             try:
                 ts = datetime.utcnow()
                 wformats = ['CSV', 'IAGA', 'IMAGCDF', 'IMF', 'PYSTR', 'PYASCII', 'PYCDF']
@@ -9280,122 +9336,68 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['write'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR writing data to file.")
+            print(" TESTING MULTIPLE STREAM METHODS")
+            data2 = create_minteststream(startdate=datetime(2022, 11, 15), addnan=False)
+            data1 = create_minteststream(startdate=datetime(2022, 11, 1), addnan=False)
+            data1.ndarray[1][31000:33000] = np.nan
+            data2.ndarray[1][5000:9000] = np.nan
+            try:
+                ts = datetime.utcnow()
+                jst = join_streams(data1, data2)
+                print("check lenght of joind stream (expected 63360)", len(jst))
+                te = datetime.utcnow()
+                successes['join_streams'] = (
+                    "Version: {}, join_streams: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['join_streams'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with join_streams")
+            try:
+                ts = datetime.utcnow()
+                mst = merge_streams(data1, data2, mode='insert')
+                print("check content in data1 data gap", np.nanmean(mst.ndarray[1][31000:33000]))
+                print("check content in data2 (should be similar as above, not exactly the same)",
+                      np.nanmean(mst.ndarray[1][8000:10000]))
+                te = datetime.utcnow()
+                successes['merge_streams'] = (
+                    "Version: {}, merge_streams: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['merge_streams'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with merge_streams")
+            try:
+                ts = datetime.utcnow()
+                sst = subtract_streams(data1, data2)
+                print("check values before data gap (expected ~ 16)", np.nanmean(sst.ndarray[1][0:4000]))
+                te = datetime.utcnow()
+                successes['subtract_streams'] = (
+                    "Version: {}, subract_streams: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['subtract_streams'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with subtract_streams")
+            try:
+                ts = datetime.utcnow()
+                shifted_data1 = data1.copy()
+                shifted_data1 = shifted_data1.use_sectime()
+                data1 = data1.trim("2022-11-22T00:00:00", "2022-11-23T00:00:00")
+                shifted_data1 = shifted_data1.trim("2022-11-22T00:00:00", "2022-11-23T00:00:00")
+                shift = determine_time_shift(data1, shifted_data1, col2compare='f', debug=True)
+                print("check shift: should be -15 min: ", np.round(shift / 60., 0))
+                te = datetime.utcnow()
+                successes['determine_time_shift'] = (
+                    "Version: {}, determine_time_shift: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['determine_time_shift'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with determine_time_shift")
 
             """
-            Done:
-        - stream._get_max(self, key, returntime=False):        stormdet
-        - stream._get_min(self, key, returntime=False):
-        - stream._get_column(self, key):
-        - stream._put_column(self, column, key, columnname, columnunit):
-        - stream._copy_column(self, key, put2key):
-        - stream._move_column(self, key, put2key):
-        - stream._drop_column(self, key):
-        - stream._print_key_headers(self):
-        - stream._get_key_headers(self):
-        - stream._get_key_names(self):
-        - stream._get_variance(key)    gui.statistics
-        - stream._convertstream(self, coordinate, **kwargs): 
-        - stream.aic_calc(self, key, **kwargs):                stormdet
-        - stream.amplitude(key)        gui.checkdefinitivedata
-        - stream.bc(self):
-        - stream.baseline(self, absolutestream, **kwargs):     stream.DS.bc
-        - stream.compensation(self, **kwargs):
-        - stream.cut(self,length,kind=0,order=0):
-        - stream.dailymeans(self):
-        - stream.delta_f(self, **kwargs):                      format_imf, like calc_f
-        - stream.differentiate(self, **kwargs):                stormdet
-        - stream.extract(self, key, value, compare=None, debug=None):
-        - stream.extrapolate(self, start, end):
-        - stream.fit(self, keys, **kwargs):
-        - stream.integrate(self, **kwargs):
-        - stream.interpol(self, keys, **kwargs):
-        - stream.mean(self, key, **kwargs):
-        - stream.multiply(self, factors):
-        - stream.randomdrop(self, percentage=None, fixed_indicies=None):
-        - stream.remove(self, starttime=starttime, endtime=endtime): stormdet
-        - stream.smooth(self, keys, **kwargs):
-        - stream.func2stream(self,function,**kwargs):                   stream.baseline
-        - stream.func2header(self,function,**kwargs):
-        - stream.interpolate_nans(self, keys)
-        - stream._select_keys(self, keys)
-        - stream.get_key_name(self,key)
-        - stream.get_key_unit(self,key)
-        - stream.determine_rotationangles(self, referenceD=0.0, referenceI=None, keys = ['x','y','z'], debug=False)
-        - stream.use_sectime(self)
-        - stream.steadyrise(self, key, timewindow, **kwargs):   running but should be tested with meteo data
-
-
-            Tested elsewhere:
-                - stream._aic(self, signal, k, debugmode=None):                 stream.aic_calc
-                - stream._det_trange(self, period):                             stream.filter
-                - stream._remove_nancolumns(self):                              subtract_streams
-                - stream._select_timerange(self, start, end):                   stream.DS.write 
-                - stream._tau(self, period):                                    stream.filter gaussianfilter
-                - stream.add(self, datlst):           old container, used by absolutes
-                - stream.dict2stream(self,dictkey='DataBaseValues')             stream.baseline
-                - stream.dropempty(self):                                       stream.sorting
-                - stream.extend(self,datlst,header):                            stream.read
-                - stream.fillempty(self, ndarray, keylist):                     stream.sorting
-                - stream.findtime(self,time):                          core.activity, stream.resample
-                - stream.get_fmi_array(self, missing_data=None, debug=False):   core.activity 
-                - stream.harmfit                                                stream.fit
-                - stream.hdz2xyz(self)                                          stream._convertstream 
-                - stream.idf2xyz(self)                                          stream._convertstream 
-                - stream.sorting(self):                                         stream.read
-                - stream.stream2dict(self,dictkey='DataBaseValues')             stream.baseline
-                - stream.xyz2hdz(self)                                          stream._convertstream 
-                - stream.xyz2idf(self)                                          stream._convertstream 
-                - stream.simplebasevalue2stream()                               stream.baseline - to be tested
-
-
-
-            Unused:
-
-            deprecated in 2.0.0:
-        - stream._is_number(self, s):
-        - stream._normalize(self, column):
-        - stream.union(self,column):
-        - stream.clear_header(self):
-        - stream._gf(self, t, tau):
-        - stream._hf(self, p, x):
-        - stream._residual_func(self, func, y):
-        - stream.selectkeys
-        - stream.GetKeyName(self,key)
-        - stream.GetKeyUnit(self,key)
-        - stream.get_rotation(self) -> replaced by determine_rotationangles
-        - stream.k_extend()
-        - stream.linestruct2ndarray(self)
-        - stream.baselineAdvanced()
-        - stream.func_add(self,function,**kwargs):
-
-            Removed in 2.0.0:
-        - stream.k_fmi(self, **kwargs):
-        - stream._get_line(self, key, value):
-        - stream._remove_lines(self, key, value):
-        - stream.eventlogger(self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None):
-        - stream.date_offset(self, offset):
-        - stream._append() for k_fmi
-        - stream._delete() for k_fmi
-        - stream.get_rotationangle(self)
-        - stream.scale_correction(self, keys, scales, **kwargs):   - replaced by multiply
-        - stream.variometercorrection(self, variopath, thedate, **kwargs):
-        - stream.func_subtract(self,function,**kwargs):       
-        - compareStreams()
-        - array2stream()
+            Unused or moved elswhere:
+        - obspy2magpy              -> core.conversions (untested)
 
     TODO: check validity of gaussian filter (as period treatment might have changed from day to second treatment) 
 
 
         Testing multiple stream methods:
-        subtract_streams
-        join_streams
-        merge_streams
-        - appendStreams()
-        - find_offset  -- should be replaced (i.e brute-force, correlation methods etc)
-        - stackStreams
-        - obspy2magpy
-        - denormalize
-
+        - append_streams()
+        - average_streams (to be written)
 
 
         # Flagging related
