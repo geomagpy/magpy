@@ -765,11 +765,20 @@ Sometimes it is necessary to examine the differences between two data streams e.
 This command will result in Figure ![5.10.6](./magpy/doc/ms_subtract.png "Subtract data2 from data1"). If you specify keys using option i.e. keys=['x'] only these data specific keys will remain. You might want to use diff.get_gaps() to fill np.nans into missing time steps. 
 
 
-#### 5.10.4 stack
-
 #### 5.10.5 append
 
-The append method is similar to join but can be applied to multiple streams
+The append method is applying the `join_streams` method to a list of streams. This is useful if you have many individual data sets and want to combine them.
+
+        long_stream = append_streams([list,with,many,streams])
+
+#### 5.10.4 average (TODO)
+
+Average stream is different from the other methods as it ignores the time steps of all except the first stream. You provide a list of streams, which all should cover the 
+same time range and contain the same amount of data (i.e. daily records). All these signals are them averaged and assigned to the time steps of the first stream.
+
+        average_stream = append_streams([list,with,many,streams,covering,similar,time,ranges])
+
+TODO: method to split a datastream into subsets of equal length
 
 #### 5.10.6 determine_time_shift
 
