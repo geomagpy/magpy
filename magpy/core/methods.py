@@ -7,6 +7,7 @@ the following methods are contained:
 - ceil_dt(datetime,seconds)  :  will round datetime towards the next time step defined by seconds
 - convert_geo_coordinate(lon,lat,pro1,pro2)  :  converts geographic coordinates based on EPSG codes
 - deprecated(reason)  :   create decrepated messages
+- denoralize - to be removed
 - evaluate_function(component, function, samplingrate, starttime=None, endtime=None, debug=False)
 - extract_date_from_string(datestring)
 - find_nearby(array, value)
@@ -202,6 +203,24 @@ def deprecated(reason):
 
     else:
         raise TypeError(repr(type(reason)))
+
+
+@deprecated("Apparently unused method - remove in 2.1")
+def denormalize(column, startvalue, endvalue):
+    """
+    converts [0:1] back with given start and endvalue
+    """
+    normcol = []
+    if startvalue>0:
+        if endvalue < startvalue:
+            raise ValueError("start and endval must be given, endval must be larger")
+        else:
+            for elem in column:
+                normcol.append((elem*(endvalue-startvalue)) + startvalue)
+    else:
+        raise ValueError("start and endval must be given as absolute times")
+
+    return normcol
 
 
 def extract_date_from_string(datestring):

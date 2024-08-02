@@ -3096,7 +3096,7 @@ CALLED BY:
             This method is based on the convolution of a scaled window with the signal.
             The signal is prepared by introducing reflected copies of the signal
             (with the window size) in both ends so that transient parts are minimized
-            in the begining and end part of the output signal.
+            in the beginning and end part of the output signal.
             This function is approximately twice as fast as the previous version.
             Difference: Gaps of the stream a filled by time steps with NaNs in the data columns
             By default missing values are interpolated if more than 90 percent of data is present
@@ -3318,9 +3318,11 @@ CALLED BY:
                 elif filter_type == 'wiener':
                     res = signal.wiener(v, int(window_len), noise=0.5)
                 elif filter_type == 'butterworth':
-                    dt = 800./float(len(v))
-                    nyf = 0.5/dt
-                    b, a = signal.butter(4, 1.5/nyf)
+                    # TODO - check
+                    # order of 4
+                    # frequency limit (1 corresponds to nyquist)
+                    nyf = 0.5/sampling_period
+                    b, a = signal.butter(4, 1/(window_len*nyf))
                     res = signal.filtfilt(b, a, v)
                 elif filter_type == 'flat':
                     w=np.ones(int(window_len),'d')
@@ -8516,7 +8518,6 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
             else:
                 array[i] = np.asarray([])
 
-    print (array)
     array = np.asarray(array, dtype=object)
     return DataStream(header=header,ndarray=array)
 
@@ -8531,6 +8532,73 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     return merge_streams(stream_a, stream_b, mode=mode, flag=flag, keys=keys, comment=comment, flagid=flagid)
 
 
+def determine_time_shift(array1, array2, col2compare='f', method='correlate', debug=False):
+    """
+    DESCRIPTION
+        Get the time shift between two data stream by comparing an eventual signal shift within the selected column.
+        The method  makes use of interpolation in order to virtually increase the sensitivity to below the sampling
+        resolution. Maximum is resolution is 0.01 of the sampling period.
+        Basically two methods are used:
+        fft method : should be much quicker for large data sets, will return two solutions
+        scipy.correlate method  : correct sign is obtained
+    PREREQUISITE
+        input data needs have an identical resolution and needs to cover the same range
+    VARIABLES
+        array1 : DataStream()
+        array2 : shifted DataStream()
+        col2compare : key of the column to compare
+        method : determination method of the shift 'correlate' (default), 'fft' or 'all'
+    RETURNS
+        shift : (float) in resolution 1/100 of the time timeinterval between successive point
+    APPLICATION
+        shift = determine_time_shift(tstream,shifted_stream, col2compare='f')
+    """
+    shift = None
+    s1, e1 = array1._find_t_limits()
+    s2, e2 = array2._find_t_limits()
+    sr1 = array1.samplingrate()
+    sr2 = array2.samplingrate()
+    if not (s1 == s2) or not (e1 == e2) or not (sr1 == sr2) or not len(array1) == len(array2):
+        print("determine_time_shift: prerequisites not met - aborting")
+        return None
+    a, b, N = 0, len(array1), len(array1) * 100
+    func1 = array1.interpol([col2compare])
+    i1 = np.linspace(a, b, N) / b
+    ar1 = func1[0].get('f{}'.format(col2compare))(i1)
+    ar1 = ar1 - np.nanmean(ar1)
+    func2 = array2.interpol([col2compare])
+    i2 = np.linspace(a, b, N) / b
+    ar2 = func2[0].get('f{}'.format(col2compare))(i2)
+    ar2 = ar2 - np.nanmean(ar2)
+
+    from scipy import signal, fftpack
+
+    if method == 'fft' or method == 'all':
+        A = fftpack.fft(ar1)
+        B = fftpack.fft(ar2)
+        Ar = -A.conjugate()
+        Br = -B.conjugate()
+        sol1 = np.argmax(np.abs(fftpack.ifft(Ar * B)))
+        sol2 = np.argmax(np.abs(fftpack.ifft(A * Br)))
+        lag = min([sol1, sol2])
+        sign = 1
+        if sol2 > sol1:
+            sign = -1
+        if debug:
+            print("FFT method: shift array2 by timedelta(seconds={}) to fit array1".format(sign * lag / 100. * sr1))
+        shift = sol1 / 100. * sr1
+    if method == 'correlate' or method == 'all':
+        correlation = signal.correlate(ar1, ar2, mode="full")
+        lags = signal.correlation_lags(len(ar1), len(ar2), mode="full")
+        lag = lags[np.argmax(abs(correlation))]
+        if debug:
+            print("Correlate method: shift array2 by timedelta(seconds={}) to fit array1".format(lag / 100. * sr1))
+        shift = lag / 100. * sr1
+
+    return shift
+
+
+@deprecated("Replaced by determine_time_shift")
 def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
         deltat_step=0.1,log_chi=False,**kwargs):
     '''
@@ -9059,23 +9127,6 @@ def extractDateFromString(datestring):
         return [datetime.date(date)]
     except:
         return [date]
-
-
-def denormalize(column, startvalue, endvalue):
-    """
-    converts [0:1] back with given start and endvalue
-    """
-    normcol = []
-    if startvalue>0:
-        if endvalue < startvalue:
-            raise ValueError("start and endval must be given, endval must be larger")
-        else:
-            for elem in column:
-                normcol.append((elem*(endvalue-startvalue)) + startvalue)
-    else:
-        raise ValueError("start and endval must be given as absolute times")
-
-    return normcol
 
 
 
