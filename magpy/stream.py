@@ -295,8 +295,10 @@ example6b = resource_filename('magpy', 'examples/example6b.txt')  #DI file
 
 class DataStream(object):
     """
-    Creates a list object from input files /url data
-    data is organized in columns
+    Creates a combination of an array and a dictionary. This object
+    is then used for various methods. The array columns
+    are organized by a predifined KEYLIST helping to
+    asign vector, scalar and descriptive data.
 
     keys are column identifier:
     key in keys: see KEYLIST
@@ -304,154 +306,92 @@ class DataStream(object):
     A note on headers:
     ALWAYS INITIATE STREAM WITH >>> stream = DataStream(ndarray=np.array([]),header={}).
 
-    All available methods of the DataStream class:
+    All available methods of the DataStream class and there test state:
     ----------------------------
 
-    _aic(self, signal, k, debugmode=None):  -- returns float -- determines Akaki Information Criterion for a specific index k
-    _convertstream(self, coordinate, **kwargs):   -- Convert coordinates of x,y,z columns in stream
-    _copy_column(self, key, put2key):  -- copy one column to another key
-    _det_trange(self, period):   -- starting with coefficients above 1%
-    _drop_column(self, key):   -- drop contents of a column from a stream
-    _drop_nans(self, key):   -- Helper to drop lines with NaNs in any of the selected keys.
-    _find_t_limits(self):   -- return times of first and last stream data points
-    _get_column(self, key):  -- returns a numpy array of selected columns from Stream
-    _get_key_headers(self,**kwargs):  -- Returns keys in datastream.
-    _get_max(self, key, returntime=False):  -- returns float
-    _get_min(self, key, returntime=False):  -- returns float
-    _move_column(self, key, put2key):  -- moves one column to another key
-    _print_key_headers(self):   -- Prints keys in datastream with variable and unit.
-    _put_column(self, column, key, columnname, columnunit):  -- adds a column to a Stream
-    _select_timerange(self, start, end)
-    _tau(self, period):  -- low pass filter with -3db point at period in sec (e.g. 120 sec)
+class  |  method  |  since version  |  until version  |  runtime test  |  result verificaton  |  manual  |  *tested by
+-----  |  ------  |  -------------  |  -------------  |  ------------  |  ------------------  |  ------  |  ----------
+**stream**  |    |    |    |    |    |    |
+DataStream  |  _aic  |  2.0.0  |    |  yes*  |    |    |  aic_calc
+DataStream  |  _convertstream  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _copy_column  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _det_trange  |  2.0.0  |    |  yes*  |    |    |  filter
+DataStream  |  _drop_column  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _get_column  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _get_key_headers  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _get_key_names  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _get_max  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _get_min  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _get_variance  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _move_column  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _print_key_headers  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _put_column  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _remove_nancolumns  |  2.0.0  |    |  yes*  |    |    |  subtract_streams
+DataStream  |  _select_keys  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  _select_timerange  |  2.0.0  |    |  yes*  |    |    |  write
+DataStream  |  _tau  |  2.0.0  |    |  yes*  |    |    |  filter
+DataStream  |  add  |  2.0.0  |    |  yes*  |    |    |  absolutes
+DataStream  |  aic_calc  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  amplitude  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  baseline  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  bc  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  calc_f  |  2.0.0  |    |    |    |    |
+DataStream  |  compensation  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  cut  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  dailymeans  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  delta_f  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  determine_rotationangles  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  dict2stream  |  2.0.0  |    |  yes*  |    |    |  baseline
+DataStream  |  differentiate  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  dropempty  |  2.0.0  |    |  yes*  |    |    |  sorting
+DataStream  |  dwt_calc  |  2.0.0  |    |  yes*  |    |    |  core.activity
+DataStream  |  end  |  2.0.0  |    |    |    |    |
+DataStream  |  extend  |  2.0.0  |    |  yes*  |    |    |  read
+DataStream  |  extract  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  extract_headerlist  |  2.0.0  |    |    |    |    |
+DataStream  |  extrapolate  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  filter  |  2.0.0  |    |    |    |    |
+DataStream  |  fillempty  |  2.0.0  |    |  yes*  |    |    |  sorting
+DataStream  |  findtime  |  2.0.0  |    |  yes*  |    |    |  resample
+DataStream  |  fit  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  func2header  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  func2stream  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  get_fmi_array  |  2.0.0  |    |  yes*  |    |    |  core.activity
+DataStream  |  get_gaps  |  2.0.0  |    |    |    |    |
+DataStream  |  get_key_name  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  get_key_unit  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  get_sampling_period  |  2.0.0  |    |  yes*  |    |    |  samplingrate
+DataStream  |  harmfit  |  2.0.0  |    |  yes*  |    |    |  fit
+DataStream  |  hdz2xyz  |  2.0.0  |    |  yes*  |    |    |  _convertstream
+DataStream  |  idf2xyz  |  2.0.0  |    |  yes*  |    |    |  _convertstream
+DataStream  |  integrate  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  interpol  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  interpolate_nans  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  mean  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  modwt_calc  |  2.0.0  |    |  yes*  |    |    |  core.activity
+DataStream  |  multiply  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  offset  |  2.0.0  |    |    |    |    |
+DataStream  |  randomdrop  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  remove  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  resample  |  2.0.0  |    |  yes*  |    |    |  filter
+DataStream  |  rotation  |  2.0.0  |    |    |    |    |
+DataStream  |  samplingrate  |  2.0.0  |    |    |    |    |
+DataStream  |  simplebasevalue2stream  |  2.0.0  |    |  no  |  no  |    |
+DataStream  |  smooth  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  sorting  |  2.0.0  |    |  yes*  |    |    |  read
+DataStream  |  start  |  2.0.0  |    |    |    |    |
+DataStream  |  steadyrise  |  2.0.0  |    |  yes  |  no  |    |
+DataStream  |  stream2dict  |  2.0.0  |    |  yes*  |    |    |  baseline
+DataStream  |  trim  |  2.0.0  |    |    |    |    |
+DataStream  |  use_sectime  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  write  |  2.0.0  |    |  yes  |    |    |
+DataStream  |  xyz2hdz  |  2.0.0  |    |  yes*  |    |    |  _convertstream
+DataStream  |  xyz2idf  |  2.0.0  |    |  yes*  |    |    |  _convertstream
+  |  determine_time_shift  |  2.0.0  |    |  yes  |    |    |
+  |  join_streams  |  2.0.0  |    |  yes  |    |    |
+  |  merge_streams  |  2.0.0  |    |  yes  |    |    |
+  |  subtract_streams  |  2.0.0  |    |  yes  |    |    |
 
-    add(self, datlst):
-    aic_calc(self, key, **kwargs)   -- returns stream (with !var2! filled with aic values), helper for storm detection
-    baseline(self, absolutestream, **kwargs):  -- calculates baseline correction for input stream (datastream)
-    bc(self, ??, **kwargs)   -- applies baseline correction based on header information
-    calc_f(self, **kwargs):
-    compensation(self,**kwargs)    -- applies compensation field values from header to x,y,z
-    cut(self,length,kind=0,order=0):
-    dailymeans(self):   -- for DI stream - obtains variometer corrected means fo basevalues
-    delta_f(self, **kwargs):   -- Calculates the difference of x+y+z to f
-    differentiate(self, **kwargs)   -- returns stream (with !dx!,!dy!,!dz!,!df! filled by derivatives)
-    dropempty
-    dwt_calc(self,key='x',wavelet='db4',level=3,plot=False,outfile=None, window=5)  -- helper method for storm detection
-    end(self):   -- return endtime
-    extend(self,datlst,header):   -- Extends stream object
-    extract(self, key, value, compare=None, debugmode=None):
-    extract_headerlist(self, element, parameter=1, year=None)   -- extracts value from lists in header
-    extrapolate(self, start, end):  -- read absolute stream and extrapolate the data
-    filter(self, **kwargs)    -- returns filtered stream (changes sampling_period)
-    fillempty
-    findtime(self,time):   -- returns index of given time (or the next times step)
-    fit(self, keys, **kwargs):   -- returns fitting function
-    get_fmi_array(self, missing_data=None, debug=False)   -- helper method for K_fmi determination
-    get_gaps(self, **kwargs)   -- determines gaps in time axis and fills them with NaN
-    get_sampling_period(self)   -- sampling perid in seconds (full resolution)
-    integrate(self, **kwargs):   -- returns stream (integrated vals at !dx!,!dy!,!dz!,!df!)
-    interpol(self, keys, **kwargs):    -- returns interpolation function
-    mean(self, key, **kwargs):  -- Calculates mean values for the specified key, Nan's are regarded for
-    modwt_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,window=5):  -- helper method for storm detection
-    multiply(self, factors):  -- multiply components as defined in dictionary factors
-    offset(self, offsets):   -- Apply constant offsets to elements of the datastream
-    randomdrop(self, percentage=None, fixed_indicies=None):
-    remove(self, starttime=starttime, endtime=endtime):
-    resample(self, keys, **kwargs):   -- Resample stream to given sampling period.
-    rotation(self,**kwargs):   -- Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
-    samplingrate(self, **kwargs)   -- sampling period in seconds (rounded)
-    smooth(self, keys, **kwargs):   -- smooth the data using a window with requested size
-    sorting(self):   -- Sorts object
-    start(self):   -- return starttime
-    stream2dict(self,dictkey='DataBaseValues')
-    trim(self, starttime=None, endtime=None, newway=False):   -- returns stream within new time frame
-    write(self, filepath, **kwargs):    -- Writing Stream to a file
-
-    - stream._remove_nancolumns(self, keys):
-    - stream.nan_helper(self, y) -- Helper to handle indices and logical indices of NaNs
-    - stream._get_k(self, **kwargs):
-    - stream._get_k_float(self, value, **kwargs):
-    - stream.bindetector(self,key,text=None,**kwargs):
-    - stream.baselineAdvanced(self, absdata, baselist, **kwargs):
-    - stream.stream2dict(self)
-    - stream.dict2stream(self,dictkey='DataBaseValues')
-    - stream.flag_outlier(self, **kwargs):
-    - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
-    - stream.func2stream(self,function,**kwargs):
-    - stream.func_add(self,function,**kwargs):
-    - stream.func_subtract(self,function,**kwargs):
-    - stream.remove_flagged(self, **kwargs):
-    - stream.scale_correction(self, keys, scales, **kwargs):
-    - stream.steadyrise(self, key, timewindow, **kwargs):
-    - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
-    - stream.variometercorrection(self, variopath, thedate, **kwargs):
-    hdz2xyz(self):
-
-    deprecated
-    ----------------------------
-    - stream._is_number(self, value):
-    - stream._normalize(self, column):   -- returns list,float,float -- normalizes selected column to range 0,1
-    - stream.union(self,column):
-    - stream.clear_header(self):
-    - stream._gf(self, t, tau):
-    - stream._hf(self, p, x):
-    - stream._residual_func(self, func, y):
-
-
-    Available methods for a list of two DataStreams:
-    * stream need to cover the same time range
-    ----------------------------
-    subtract_streams()*:    -- (old subtract) difference of two streams, create flagdict showing ranges only existing in a or b
-    join_streams():         -- join all contents from provided streams including length extension
-
-
-    Available methods for a list of multiple DataStreams:
-    ----------------------------
-    merge_streams()*:    -- merge contents from different streams, eventually fill gaps with data of subsequent streams
-
-
-    Methods to be moved and modified:
-    ----------------------------
-    Obtain flagging dictionaries from stream
-    ------>>> move to core.flagging (outside of the flagging class
-    - flag_outlier(stream, options)
-    - bindetectir(stream, options)
-    - quakeflags(stream, options)
-
-
-    Application methods:
-    ----------------------------
-
-    - stream.date_offset() -- Corrects the time column of the selected stream by the offst
-    - stream.find_offset(stream_a, stream_b) -- Finds offset of two data streams. (Not optimised.)
-    - stream.flag_stream() -- Add flags to specific times or time ranges
-    - stream.func2stream() -- Combine stream and function (add, subtract, etc)
-    - stream.func_add() -- Add a function to the selected values of the data stream
-    - stream.func_subtract() -- Subtract a function from the selected values of the data stream
-    - stream.linestruct2ndarray() -- converts linestrcut data to ndarray. should be avoided
-    - stream.remove_flagged() -- returns stream (removes data from stream according to flags)
-    - stream.selectkeys(keys) -- ndarray: remove all data except for provided keys (and flag/comment)
-    - stream.stream2flaglist() -- make flaglist out of stream
-    - stream.use_sectime() -- Swap between primary and secondary time (if sectime is available)
-    - stream.variometercorrection() -- Obtain average DI values at certain timestep(s)
-
-    Supporting INTERNAL methods:
-    ----------------------------
-
-    B. Internal Methods I: Line & column functions
-    - self._reduce_stream(self) -- Reduces stream below a certain limit.
-
-    B. Internal Methods II: Data manipulation functions
-    - self._get_k(self, **kwargs) -- Calculates the k value according to the Bartels scale
-    - self._get_k_float(self, value, **kwargs) -- Like _get_k, but for testing single values and not full stream keys (used in filtered function)
-
-    Supporting EXTERNAL methods:
-    ----------------------------
-
-    Useful functions:
-    - array2stream -- returns a data stream  -- converts a list of arrays to a datastream
-    - linestruct2ndarray -- returns a data ndarray  -- converts a old linestruct format
-    - denormalize -- returns list -- (column,startvalue,endvalue) denormalizes selected column from range 0,1 ro sv,ev
-    - find_nearest(array, value) -- find point in array closest to value
 
 *********************************************************************
     Standard function description format:
@@ -8596,193 +8536,6 @@ def determine_time_shift(array1, array2, col2compare='f', method='correlate', de
         shift = lag / 100. * sr1
 
     return shift
-
-
-@deprecated("Replaced by determine_time_shift")
-def find_offset(stream1, stream2, guess_low=-60., guess_high=60.,
-        deltat_step=0.1,log_chi=False,**kwargs):
-    '''
-    DEFINITION:
-        Uses least-squares method for a rough estimate of the offset in the time
-        axis of two different streams. Both streams must contain the same key, e.g. 'f'.
-        GENTLE WARNING: This method is FAR FROM OPTIMISED.
-                        Interpolation brings in errors, *however* does allow for
-                        a more exact result.
-
-    PARAMETERS:
-    Variables:
-        - stream1:      (DataStream object) First stream to compare.
-        - stream2:      (DataStream object) Second stream to compare.
-    Kwargs:
-        - deltat_step:  (float) Time value in s to iterate over. Accuracy is higher with
-                        smaller values.
-        - guess_low:    (float) Low guess for offset in s. Function will iterate from here.
-        - guess_high:   (float) High guess for offset in s. Function will iterate till here.
-        - log_chi:      (bool) If True, log chi values.
-        - plot:         (bool) Filename of plot to save chi-sq values to, e.g. "chisq.png"
-
-    RETURNS:
-        - t_offset:     (float) The offset (in seconds) calculated by least-squares method
-                        of stream_b.
-
-    EXAMPLE:
-        offset = find_offset(gdas_data, pos_data, guess=-30.,deltat_min = 0.1)
-
-    APPLICATION:
-
-    Challenge in this function:
-    --> Needs to be able to compare two non harmonic signals with different sampling
-        rates and a presumed time offset. The time offset may be smaller than the
-        sampling rate itself.
-    How to go about it:
-        1. Take arrays of key to compare
-        2. Resample arrays to same sampling period (or interpolate)
-        3. Determine offset between two arrays
-        """
-    '''
-
-    # 1. Define starting parameters:
-    N_iter = 0.
-
-    # Interpolate the function with the smaller sample period.
-    # Should hopefully lower error factors.
-
-    sp1 = stream1.get_sampling_period()
-    sp2 = stream2.get_sampling_period()
-
-    #if sp1 > sp2:
-    if sp1 < sp2:
-        stream_a = stream1
-        stream_b = stream2
-        main_a = True
-    #elif sp1 < sp2:
-    elif sp1 > sp2:
-        stream_a = stream2
-        stream_b = stream1
-        main_a = False
-    else:
-        stream_a = stream1
-        stream_b = stream2
-        main_a = True
-
-    # Important for least-squares method. Streams must have same length.
-    timeb = stream_b._get_column('time')
-    stime = np.min(timeb)
-    etime = np.max(timeb)
-
-    timespan = guess_high-guess_low
-
-    # TODO: Remove this trim function. It's destructive.
-    stream_a = stream_a.trim(starttime=num2date(stime).replace(tzinfo=None)+timedelta(seconds=timespan*2),
-                                endtime=num2date(etime).replace(tzinfo=None)+timedelta(seconds=-timespan*2))
-
-    mean_a = stream_a.mean('f')
-    mean_b = stream_b.mean('f')
-    difference = mean_a - mean_b
-
-    # Interpolate one stream:
-    # Note: higher errors with lower degree of interpolation. Highest degree possible is desirable, linear terrible.
-    try:
-        int_data = stream_b.interpol(['f'],kind='cubic')
-    except:
-        try:
-            logger.warning("find_offset: Not enough memory for cubic spline. Attempting quadratic...")
-            int_data = stream_b.interpol(['f'],kind='quadratic')
-        except:
-            logger.error("find_offset: Too much data! Cannot interpolate function with high enough accuracy.")
-            return "nan"
-
-    int_func = int_data[0]['ff']
-    int_min = date2num(num2date(int_data[1])+timedelta(milliseconds=guess_low*1000.))
-    int_max = date2num(num2date(int_data[2])+timedelta(milliseconds=guess_low*1000.))
-
-    timea = stream_a._get_column('f')
-    datarray_base = np.zeros((len(stream_a)))
-    count = 0
-
-    # 5. Create array of delta-f with offset times:
-    for elem in stream_a:
-        time = stream_a[count].time
-        if time > int_min and time < int_max:
-            functime = (time - int_min)/(int_max - int_min)
-            tempval = stream_a[count].f - int_func(functime)
-            datarray_base[count] += tempval
-        count = count+1
-
-    # 3. From data array calculate chi-squared array of null-offset as a base comparison:
-    chisq_ = 0.
-    for item in datarray_base:
-        chisq_ = chisq_ + (item)**2.
-        #chisq_ = chisq_ + (item-difference)**2.                # Correction may be needed for reasonable values.
-    deltat = guess_low
-
-    # (Write data to file for logging purposes.)
-    if log_chi:
-        newfile = open('chisq.txt','a')
-        writestring = str(deltat)+' '+str(chisq_)+' '+str(chisq_)+' '+str(len(datarray_base))+'\n'
-        newfile.write(writestring)
-        newfile.close()
-
-    # 4. Start iteration to find best chi-squared minimisation:
-
-    logger.info("find_offset: Starting chi-squared iterations...")
-
-    chi_lst = []
-    time_lst = []
-    min_lst = []
-    max_lst = []
-    results = []
-
-    while True:
-        deltat = deltat + deltat_step
-        if deltat > guess_high: break
-        N_iter = N_iter + 1.
-        flag == 0.
-
-        datarray = np.zeros((len(stream_a)))
-
-        count = 0
-        newc = 0
-        int_min = float(date2num(num2date(int_data[1]) + timedelta(milliseconds=deltat*1000.)))
-        int_max = float(date2num(num2date(int_data[2]) + timedelta(milliseconds=deltat*1000.)))
-
-        for elem in stream_a:
-            time = stream_a[count].time
-            if time > int_min and time < int_max:
-                functime = (time - int_min)/(int_max - int_min)
-                tempval = stream_a[count].f - int_func(functime)
-                datarray[count] += tempval
-            count = count+1
-
-        chisq = 0.
-        for item in datarray:
-            chisq = chisq + (item-difference)**2.
-
-        if log_chi:
-            newfile = open('chisq.txt','a')
-            writestring = str(deltat)+' '+str(chisq)+' '+str(chisq_)+' '+str(len(datarray))+'\n'
-            newfile.write(writestring)
-            newfile.close()
-
-        # Catch minimum:
-        if chisq < chisq_:
-            chisq_ = chisq
-            t_offset = deltat
-
-        chi_lst.append(chisq)
-        time_lst.append(deltat)
-
-    if plot:
-        plt.plot(time_lst,chi_lst,'-')
-        plt.show()
-
-    if not main_a:
-        t_offset = t_offset * (-1)
-
-    logger.info("find_offset: Found an offset of stream_a of %s seconds." % t_offset)
-
-    # RESULTS
-    return t_offset
 
 
 def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):

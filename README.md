@@ -771,12 +771,105 @@ This command will result in Figure ![5.10.6](./magpy/doc/ms_subtract.png "Subtra
 
 The append method is similar to join but can be applied to multiple streams
 
-#### 5.10.6 find_offset
+#### 5.10.6 determine_time_shift
 
+The method 'determine_time_shift' allows for determining phase shifts between to input signale. The shift can be obtained by two two different methods. Cross correlation
+based on scipy.signal.correlate is used when selecting method 'correlate'. More efficient on large data sets is the method 'fft'. Assume you have two shifted signals as shown in 
+Figure ![5.10.7](./magpy/doc/ms_timeshift.png "Two signals, of which one is shifted by 15 min from the first one"). The obtained shift will give you the amount of second to shift data2 in order to obtain data1. Apply time shift calculations result in
+
+         print ("(Correlate) Time shift in seconds: {}".format(determine_time_shift(data1,shifted_data1, method='correlate', col2compare='f')))
+         print ("(FFT) Time shift in seconds: {}".format(determine_time_shift(data1,shifted_data1, method='fft', col2compare='f')))
+
+         (Correlate) Time shift in seconds: -898.8000000000001
+         (FFT) Time shift in seconds: -896.4
 
 ### 5.12 All methods at a glance
 
 For a summary of all supported methods, see the section **List of all MagPy methods** below.
+
+class  |  method  |  since version  |  until version  |  runtime test  |  result verificaton  |  manual  |  *tested by
+-----  |  ------  |  -------------  |  -------------  |  ------------  |  ------------------  |  ------  |  ----------
+**stream**  |    |    |    |    |    |    |  
+DataStream  |  _aic  |  2.0.0  |    |  yes*  |    |    |  aic_calc
+DataStream  |  _convertstream  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _copy_column  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _det_trange  |  2.0.0  |    |  yes*  |    |    |  filter
+DataStream  |  _drop_column  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _get_column  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _get_key_headers  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _get_key_names  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _get_max  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _get_min  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _get_variance  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _move_column  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _print_key_headers  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _put_column  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _remove_nancolumns  |  2.0.0  |    |  yes*  |    |    |  subtract_streams
+DataStream  |  _select_keys  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  _select_timerange  |  2.0.0  |    |  yes*  |    |    |  write 
+DataStream  |  _tau  |  2.0.0  |    |  yes*  |    |    |  filter
+DataStream  |  add  |  2.0.0  |    |  yes*  |    |    |  absolutes
+DataStream  |  aic_calc  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  amplitude  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  baseline  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  bc  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  calc_f  |  2.0.0  |    |    |    |    |  
+DataStream  |  compensation  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  cut  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  dailymeans  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  delta_f  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  determine_rotationangles  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  dict2stream  |  2.0.0  |    |  yes*  |    |    |  baseline
+DataStream  |  differentiate  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  dropempty  |  2.0.0  |    |  yes*  |    |    |  sorting
+DataStream  |  dwt_calc  |  2.0.0  |    |  yes*  |    |    |  core.activity 
+DataStream  |  end  |  2.0.0  |    |    |    |    |  
+DataStream  |  extend  |  2.0.0  |    |  yes*  |    |    |  read
+DataStream  |  extract  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  extract_headerlist  |  2.0.0  |    |    |    |    |  
+DataStream  |  extrapolate  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  filter  |  2.0.0  |    |    |    |    |  
+DataStream  |  fillempty  |  2.0.0  |    |  yes*  |    |    |  sorting
+DataStream  |  findtime  |  2.0.0  |    |  yes*  |    |    |  resample
+DataStream  |  fit  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  func2header  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  func2stream  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  get_fmi_array  |  2.0.0  |    |  yes*  |    |    |  core.activity 
+DataStream  |  get_gaps  |  2.0.0  |    |    |    |    |  
+DataStream  |  get_key_name  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  get_key_unit  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  get_sampling_period  |  2.0.0  |    |  yes*  |    |    |  samplingrate
+DataStream  |  harmfit  |  2.0.0  |    |  yes*  |    |    |  fit
+DataStream  |  hdz2xyz  |  2.0.0  |    |  yes*  |    |    |  _convertstream 
+DataStream  |  idf2xyz  |  2.0.0  |    |  yes*  |    |    |  _convertstream 
+DataStream  |  integrate  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  interpol  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  interpolate_nans  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  mean  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  modwt_calc  |  2.0.0  |    |  yes*  |    |    |  core.activity 
+DataStream  |  multiply  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  offset  |  2.0.0  |    |    |    |    |  
+DataStream  |  randomdrop  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  remove  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  resample  |  2.0.0  |    |  yes*  |    |    |  filter
+DataStream  |  rotation  |  2.0.0  |    |    |    |    |  
+DataStream  |  samplingrate  |  2.0.0  |    |    |    |    |  
+DataStream  |  simplebasevalue2stream  |  2.0.0  |    |  no  |  no  |    |  
+DataStream  |  smooth  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  sorting  |  2.0.0  |    |  yes*  |    |    |  read
+DataStream  |  start  |  2.0.0  |    |    |    |    |  
+DataStream  |  steadyrise  |  2.0.0  |    |  yes  |  no  |    |  
+DataStream  |  stream2dict  |  2.0.0  |    |  yes*  |    |    |  baseline
+DataStream  |  trim  |  2.0.0  |    |    |    |    |  
+DataStream  |  use_sectime  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  write  |  2.0.0  |    |  yes  |    |    |  
+DataStream  |  xyz2hdz  |  2.0.0  |    |  yes*  |    |    |  _convertstream 
+DataStream  |  xyz2idf  |  2.0.0  |    |  yes*  |    |    |  _convertstream 
+  |  determine_time_shift  |  2.0.0  |    |  yes  |    |    |  
+  |  join_streams  |  2.0.0  |    |  yes  |    |    |  
+  |  merge_streams  |  2.0.0  |    |  yes  |    |    |  
+  |  subtract_streams  |  2.0.0  |    |  yes  |    |    |  
+
 
 ## 6. Annotating data and flagging
 
