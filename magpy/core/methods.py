@@ -23,9 +23,9 @@ the following methods are contained:
 - testtime(variable)     :    returns datetime object if variable can be converted to it
 - test_timestring(variable)     :
 
-class | method | since version | until version | runtime test | result verificaton | manual | *tested by
------ | ------ | ------------- | ------------- | ------------ | ------------------ | ------ | ----------
-**core.methods** |  |          |               |    |  |  |
+class | method | since version | until version | runtime test | result verification | manual | *tested by
+----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
+**core.methods** |  |          |               |              |  |  |
     | ceil_dt         |  2.0.0 |              | yes           |  |  |
     | convert_geo_coordinate | 2.0.0 |        | yes           |  |  |
     | deprecated      | 2.0.0 |               | yes           |  |  |

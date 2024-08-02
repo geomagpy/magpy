@@ -1,3 +1,23 @@
+# -*- coding: utf-8 -*-
+
+"""
+activity contain all methods for geomagnetic activity analysis
+
+class | method | since version | until version | runtime test | result verification | manual | *tested by
+----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
+**core.activity** |  |         |               |              |                    |        |
+core.conversions |  |          |               |              |                    |        |
+decompose |    | 2.0.0         |               | yes*         |                    |        | sqbase
+k_fmi |        | 2.0.0         |               | yes*         |                    |        | K_fmi
+stormdet |     | 2.0.0         |               | yes*         |                    |        | seek_storm
+      | emd_decompose | 2.0.0  |               | yes*         |                    |        | sqbase
+      | K_fmi | 2.0.0          |               | yes          |                    |        |
+      | seek_storm | 2.0.0     |               | yes          |                    |        |
+      | sqbase | 2.0.0         |               | yes          |                    |        |
+
+
+"""
+
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
