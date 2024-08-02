@@ -787,88 +787,88 @@ Figure ![5.10.7](./magpy/doc/ms_timeshift.png "Two signals, of which one is shif
 
 For a summary of all supported methods, see the section **List of all MagPy methods** below.
 
-class  |  method  |  since version  |  until version  |  runtime test  |  result verificaton  |  manual  |  *tested by
------  |  ------  |  -------------  |  -------------  |  ------------  |  ------------------  |  ------  |  ----------
-**stream**  |    |    |    |    |    |    |  
-DataStream  |  _aic  |  2.0.0  |    |  yes*  |    |    |  aic_calc
-DataStream  |  _convertstream  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _copy_column  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _det_trange  |  2.0.0  |    |  yes*  |    |    |  filter
-DataStream  |  _drop_column  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _get_column  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _get_key_headers  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _get_key_names  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _get_max  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _get_min  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _get_variance  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _move_column  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _print_key_headers  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _put_column  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _remove_nancolumns  |  2.0.0  |    |  yes*  |    |    |  subtract_streams
-DataStream  |  _select_keys  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  _select_timerange  |  2.0.0  |    |  yes*  |    |    |  write 
-DataStream  |  _tau  |  2.0.0  |    |  yes*  |    |    |  filter
-DataStream  |  add  |  2.0.0  |    |  yes*  |    |    |  absolutes
-DataStream  |  aic_calc  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  amplitude  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  baseline  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  bc  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  calc_f  |  2.0.0  |    |    |    |    |  
-DataStream  |  compensation  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  cut  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  dailymeans  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  delta_f  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  determine_rotationangles  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  dict2stream  |  2.0.0  |    |  yes*  |    |    |  baseline
-DataStream  |  differentiate  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  dropempty  |  2.0.0  |    |  yes*  |    |    |  sorting
-DataStream  |  dwt_calc  |  2.0.0  |    |  yes*  |    |    |  core.activity 
-DataStream  |  end  |  2.0.0  |    |    |    |    |  
-DataStream  |  extend  |  2.0.0  |    |  yes*  |    |    |  read
-DataStream  |  extract  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  extract_headerlist  |  2.0.0  |    |    |    |    |  
-DataStream  |  extrapolate  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  filter  |  2.0.0  |    |    |    |    |  
-DataStream  |  fillempty  |  2.0.0  |    |  yes*  |    |    |  sorting
-DataStream  |  findtime  |  2.0.0  |    |  yes*  |    |    |  resample
-DataStream  |  fit  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  func2header  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  func2stream  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  get_fmi_array  |  2.0.0  |    |  yes*  |    |    |  core.activity 
-DataStream  |  get_gaps  |  2.0.0  |    |    |    |    |  
-DataStream  |  get_key_name  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  get_key_unit  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  get_sampling_period  |  2.0.0  |    |  yes*  |    |    |  samplingrate
-DataStream  |  harmfit  |  2.0.0  |    |  yes*  |    |    |  fit
-DataStream  |  hdz2xyz  |  2.0.0  |    |  yes*  |    |    |  _convertstream 
-DataStream  |  idf2xyz  |  2.0.0  |    |  yes*  |    |    |  _convertstream 
-DataStream  |  integrate  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  interpol  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  interpolate_nans  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  mean  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  modwt_calc  |  2.0.0  |    |  yes*  |    |    |  core.activity 
-DataStream  |  multiply  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  offset  |  2.0.0  |    |    |    |    |  
-DataStream  |  randomdrop  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  remove  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  resample  |  2.0.0  |    |  yes*  |    |    |  filter
-DataStream  |  rotation  |  2.0.0  |    |    |    |    |  
-DataStream  |  samplingrate  |  2.0.0  |    |    |    |    |  
-DataStream  |  simplebasevalue2stream  |  2.0.0  |    |  no  |  no  |    |  
-DataStream  |  smooth  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  sorting  |  2.0.0  |    |  yes*  |    |    |  read
-DataStream  |  start  |  2.0.0  |    |    |    |    |  
-DataStream  |  steadyrise  |  2.0.0  |    |  yes  |  no  |    |  
-DataStream  |  stream2dict  |  2.0.0  |    |  yes*  |    |    |  baseline
-DataStream  |  trim  |  2.0.0  |    |    |    |    |  
-DataStream  |  use_sectime  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  write  |  2.0.0  |    |  yes  |    |    |  
-DataStream  |  xyz2hdz  |  2.0.0  |    |  yes*  |    |    |  _convertstream 
-DataStream  |  xyz2idf  |  2.0.0  |    |  yes*  |    |    |  _convertstream 
-  |  determine_time_shift  |  2.0.0  |    |  yes  |    |    |  
-  |  join_streams  |  2.0.0  |    |  yes  |    |    |  
-  |  merge_streams  |  2.0.0  |    |  yes  |    |    |  
-  |  subtract_streams  |  2.0.0  |    |  yes  |    |    |  
+class  |  method  |  variables  |  description
+-----  |  ------  |  ---------  |  -----------
+**stream**  |    |    |  
+DataStream  |  _aic  |  self, signal, k, debugmode=None  |  determines Akaki Information Criterion for a specific index k
+DataStream  |  _convertstream  |  self, coordinate, **kwargs  |  Convert coordinates of x,y,z columns in stream
+DataStream  |  _copy_column  |  self, key, put2key  |  copy one column to another key
+DataStream  |  _det_trange  |  self, period  |  starting with coefficients above 1%
+DataStream  |  _drop_column  |  self, key  |  drop contents of a column from a stream
+DataStream  |  _get_column  |  self, key  |  Helper to drop lines with NaNs in any of the selected keys
+DataStream  |  _get_key_headers  |  self  |  return times of first and last stream data points
+DataStream  |  _get_key_names  |  self, key  |  returns a numpy array of selected columns from Stream
+DataStream  |  _get_max  |  self,**kwargs  |  Returns keys in datastream
+DataStream  |  _get_min  |  self, key, returntime=False  |  returns float
+DataStream  |  _get_variance  |  self, key, returntime=False  |  returns float
+DataStream  |  _move_column  |  self, key, put2key  |  moves one column to another key
+DataStream  |  _print_key_headers  |  self  |  Prints keys in datastream with variable and unit
+DataStream  |  _put_column  |  self, column, key, columnname, columnunit  |  adds a column to a Stream
+DataStream  |  _remove_nancolumns  |    |  
+DataStream  |  _select_keys  |    |  
+DataStream  |  _select_timerange  |  self, start, end  |  
+DataStream  |  _tau  |  self, period  |  low pass filter with
+DataStream  |  add  |  self, datlst)  |  
+DataStream  |  aic_calc  |  self, key, **kwargs  |  returns stream
+DataStream  |  amplitude  |    |  
+DataStream  |  baseline  |  self, absolutestream, **kwargs  |  calculates baseline correction for input stream
+DataStream  |  bc  |  self, ??, **kwargs  |  applies baseline correction based on header information
+DataStream  |  calc_f  |  self, **kwargs  |  
+DataStream  |  compensation  |  self,**kwargs  |  applies compensation field values from header to x,y,z
+DataStream  |  cut  |  self,length,kind=0,order=0  |  
+DataStream  |  dailymeans  |  self  |  for DI stream
+DataStream  |  delta_f  |  self, **kwargs  |  Calculates the difference of x+y+z to f
+DataStream  |  determine_rotationangles  |    |  
+DataStream  |  dict2stream  |    |  
+DataStream  |  differentiate  |  self, **kwargs  |  returns stream
+DataStream  |  dropempty  |    |  
+DataStream  |  dwt_calc  |  self,key='x',wavelet='db4',level=3,plot=False,outfile=None, window=5  |  helper method for storm detection
+DataStream  |  end  |  self  |  return endtime
+DataStream  |  extend  |  self,datlst,header  |  Extends stream object
+DataStream  |  extract  |  self, key, value, compare=None, debugmode=None  |  
+DataStream  |  extract_headerlist  |  self, element, parameter=1, year=None  |  
+DataStream  |  extrapolate  |  self, start, end  |  read absolute stream and extrapolate the data
+DataStream  |  filter  |  self, **kwargs  |  returns filtered stream
+DataStream  |  fillempty  |    |  
+DataStream  |  findtime  |  self,time  |  returns index of given time
+DataStream  |  fit  |  self, keys, **kwargs  |  returns fitting function
+DataStream  |  func2header  |    |  
+DataStream  |  func2stream  |    |  
+DataStream  |  get_fmi_array  |  self, missing_data=None, debug=False  |  helper method for K_fmi determination
+DataStream  |  get_gaps  |  self, **kwargs  |  determines gaps in time axis and fills them with NaN
+DataStream  |  get_key_name  |    |  
+DataStream  |  get_key_unit  |    |  
+DataStream  |  get_sampling_period  |  self  |  sampling perid in seconds
+DataStream  |  harmfit  |    |  
+DataStream  |  hdz2xyz  |    |  
+DataStream  |  idf2xyz  |    |  
+DataStream  |  integrate  |  self, **kwargs  |  returns stream
+DataStream  |  interpol  |  self, keys, **kwargs  |  returns interpolation function
+DataStream  |  interpolate_nans  |    |  
+DataStream  |  mean  |  self, key, **kwargs  |  Calculates mean values for the specified key, Nan's are regarded for
+DataStream  |  modwt_calc  |  self,key='x',wavelet='haar',level=1,plot=False,outfile=None,window=5  |  helper method for storm detection
+DataStream  |  multiply  |  self, factors  |  
+DataStream  |  offset  |  self, offsets  |  Apply constant offsets to elements of the datastream
+DataStream  |  randomdrop  |  self, percentage=None, fixed_indicies=None  |  
+DataStream  |  remove  |  self, starttime=starttime, endtime=endtime  |  
+DataStream  |  resample  |  self, keys, **kwargs  |  Resample stream to given sampling period
+DataStream  |  rotation  |  self,**kwargs  |  Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
+DataStream  |  samplingrate  |  self, **kwargs  |  sampling period in seconds, rounded
+DataStream  |  simplebasevalue2stream  |    |  
+DataStream  |  smooth  |  self, keys, **kwargs  |  smooth the data using a window with requested size
+DataStream  |  sorting  |  self  |  Sorts object
+DataStream  |  start  |  self  |  return starttime
+DataStream  |  steadyrise  |    |  
+DataStream  |  stream2dict  |  self,dictkey='DataBaseValues'  |  
+DataStream  |  trim  |  self, starttime=None, endtime=None, newway=False  |  returns stream within new time frame
+DataStream  |  use_sectime  |  self  |  Swap between primary and secondary time (if sectime is available)
+DataStream  |  write  |  self, filepath, **kwargs  |  Writing Stream to a file
+DataStream  |  xyz2hdz  |    |  
+DataStream  |  xyz2idf  |    |  
+  |  determine_time_shift  |    |  find time shift between two streams
+  |  join_streams  |    |  join all contents from provided streams including length extension
+  |  merge_streams  |    |  merge contents from different streams, eventually fill gaps with data of subsequent streams
+  |  subtract_streams  |    |  differences of two stream
 
 
 ## 6. Annotating data and flagging
