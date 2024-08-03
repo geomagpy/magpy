@@ -25,10 +25,7 @@ def create_verificationstream(startdate=datetime(2022, 11, 22)):
     teststream.header['unit-col-z'] = 'nT'
     return teststream
 
-
 teststream = create_verificationstream()
-print (teststream.ndarray)
-
 
 class TestStream(unittest.TestCase):
 
@@ -84,7 +81,9 @@ class TestStream(unittest.TestCase):
     #    self.assertEqual(2, 1)
 
     def test_put_column(self):
-        self.assertEqual(2, 1)
+        cpstream = teststream.copy()
+        pustream = cpstream._put_column('x', 'var1')
+        self.assertEqual(len(pustream._get_column('var1')), 1440)
 
     def test_remove_nancolumns(self):
         self.assertEqual(2, 1)
@@ -117,7 +116,10 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_calc_f(self):
-        self.assertEqual(2, 1)
+        fstream = teststream.calc_f()
+        self.assertEqual(len(fstream.ndarray[4]), 1440)
+        fval = fstream.ndarray[4][0]
+        self.assertEqual(fval, np.sqrt(20000*20000 + 20000*20000))
 
     def test_compensation(self):
         self.assertEqual(2, 1)
@@ -126,12 +128,16 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_dailymeans(self):
-        self.assertEqual(2, 1)
+        dm = teststream.dailymeans()
+        print (len(dm))
+        self.assertEqual(len(dm), 1)
 
     def test_delta_f(self):
         self.assertEqual(2, 1)
 
     def test_determine_rotationangles(self):
+        rotstream = teststream.rotation(alpha=45,beta=45)
+        print (rotstream.ndarray)
         self.assertEqual(2, 1)
 
     def test_dict2stream(self):
@@ -147,12 +153,15 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_end(self):
-        self.assertEqual(2, 1)
+        end = teststream.end()
+        self.assertEqual(end, datetime(2022,11,22,23,59))
 
     def test_extend(self):
         self.assertEqual(2, 1)
 
     def test_extract(self):
+        extstream = teststream.extract({"x":20000})
+        print (len(extstream))
         self.assertEqual(2, 1)
 
     def test_extract_headerlist(self):
@@ -225,7 +234,9 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_multiply(self):
-        self.assertEqual(2, 1)
+        mstream = teststream.multiply({'x':2})
+        pmeanx = mstream.mean('x')
+        self.assertEqual(pmeanx, 40000)
 
     def test_offset(self):
         self.assertEqual(2, 1)
@@ -264,7 +275,8 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_start(self):
-        self.assertEqual(2, 1)
+        start = teststream.start()
+        self.assertEqual(start, datetime(2022,11,22))
 
     def test_steadyrise(self):
         self.assertEqual(2, 1)
