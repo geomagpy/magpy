@@ -598,17 +598,46 @@ Get sampling rate and filtered data after filtering (please note that all filter
 
 ### 5.2 Coordinate transformation and rotations
 
-Assuming vector data in columns [x,y,z] you can freely convert between xyz, hdz, and idf coordinates:
+Assuming vector data in columns x,y,z you can freely convert between xyz, hdz, and idf coordinates:
 
         cleandata = cleandata.xyz2hdz()
 
+The summary method `_convertstream` can also be used by giving the conversion type as option. The following conversions are possible: 'xyz2hdz','hdz2xyz','xyz2idf','idf2xyz':
+
+        xyzstream = hdzstream._convertstream('hdz2xyz')
+
+The vectorial data columns as defined by the keys 'x','y','z' need to filled accordingly. i.e. a XYZ data stream has X in key 'x', Y in key 'y' and Z in key 'z', all with the same unit, usually nT in magnetism.
+A HDZ data stream as H assigned to key 'x', D in key 'y' and Z in key 'z'. H and Z are provided with the same unit (nT) and D has to be provided in degrees.decimals.
+IDF data contains I in key 'x', D in key 'y' and F in key 'z', with I and D provided in degree.decimals.
+
+Vectorial data can be rotated using the `rotation` method by keeping F constant. Such rotations require just two angles which are referred to as *alpha* for rotations
+in the declination plane and *beta* for rotations in the inclination plane. Assume a simple vector x=4, y=0 and z=4. Rotation by alpha=45° will lead to x=2,y=2,z=4, a clockwise rotation.
+Rotating further by beta=45° will rotate F into the X-Y plane with x=4, y=4, z=0. Please note: you need to supply xyz data when applying the `rotation` method.
+
+        rotdata = cleandata.rotate(alpha=45,beta=45)
+
+If you have a measurement (XYZ data) and would like to obtain the rotation values regarding and expected reference direction defined by *referenceD* reference declination and
+*referenceI* inclination, both given in degree.decimals you can use the following method:
+
+        alpha, beta = rotateddata.determine_rotationangles(referenceD=4.3,referenceI=66.5)
+
+
 ### 5.3 Calculating vectorial F and delta F
 
-If the data file contains xyz (hdz, idf) data and an independently measured f value, you can calculate delta F between the two instruments using the following:
+Vectorial F can be easily calculated if the vectorial keys x,y,z are available. Just use the method
 
-        cleandata = cleandata.delta_f()
-        mp.plot(cleandata,plottitle='delta F')
+        data_with_f = data.calcf()
 
+Calculated F data will be filled into column 'f' of the data stream. Mostly however you will be interested not in vectorial F (F_V) but in delta values between F_V and a scalar F (F_S).
+Let us assume you have two data sources variodata with X,Y,and Z data as well as scalardata with F. Make sure that both data sets cover the same time range and are sampled at the same frequency and time steps:
+
+        combineddata = merge_streams(variodata,scalardata)   # checkout section 5.10 for details
+
+Now the data file contains xyz (hdz, idf) data and an independently measured f value. You can calculate delta F between the two instruments using the following:
+
+        combineddata = combineddata.delta_f()
+
+Combined data will now contain an additional column at key 'df' containing F_v - F_s, the scalar pier difference as defined within the IM technical manual.  
 
 ### 5.4 Applying offsets and scaling values
 

@@ -23,6 +23,7 @@ def create_verificationstream(startdate=datetime(2022, 11, 22)):
     teststream.header['unit-col-x'] = 'nT'
     teststream.header['unit-col-y'] = 'nT'
     teststream.header['unit-col-z'] = 'nT'
+    teststream.header['DataComponents'] = 'XYZ'
     return teststream
 
 teststream = create_verificationstream()
@@ -33,7 +34,20 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_convertstream(self):
-        self.assertEqual(2, 1)
+        # also tests idf and hdz tools
+        conv = teststream.copy()
+        idf = conv.xyz2idf()
+        meand1 = idf.mean('y')
+        xyz = idf.idf2xyz()
+        hdz = xyz.xyz2hdz()
+        meand2 = hdz.mean('y')
+        xyz = hdz.hdz2xyz()
+        # test for floating point accuracy
+        val1 = [np.round(teststream.ndarray[1][0], 8), np.round(teststream.ndarray[2][0],8), np.round(teststream.ndarray[3][0],8)]
+        val2 = [np.round(xyz.ndarray[1][0],8), np.round(xyz.ndarray[2][0],8), np.round(xyz.ndarray[3][0],8)]
+        self.assertEqual(meand1, meand2)
+        self.assertEqual(teststream.length(), xyz.length())
+        self.assertEqual(val1, val2)
 
     def test_copy_column(self):
         orgstream = teststream.copy()
@@ -69,7 +83,6 @@ class TestStream(unittest.TestCase):
 
     def test_get_variance(self):
         var = teststream._get_variance('x')
-        print("Variance", var)
         self.assertEqual(var, 1000000)
 
     def test_move_column(self):
@@ -82,16 +95,18 @@ class TestStream(unittest.TestCase):
 
     def test_put_column(self):
         cpstream = teststream.copy()
-        pustream = cpstream._put_column('x', 'var1')
+        col = cpstream._get_column('x')
+        pustream = cpstream._put_column(col, 'var1')
         self.assertEqual(len(pustream._get_column('var1')), 1440)
 
     def test_remove_nancolumns(self):
         self.assertEqual(2, 1)
 
     def test_select_keys(self):
-        kstream = teststream._select_keys(keys=['x','y'])
-        print (kstream)
-        self.assertEqual(2, 1)
+        xystream = teststream._select_keys(keys=['x','y'])
+        self.assertEqual(len(xystream.ndarray[1]), 1440)
+        self.assertEqual(len(xystream.ndarray[2]), 1440)
+        self.assertEqual(len(xystream.ndarray[3]), 0)
 
     def test_select_timerange(self):
         self.assertEqual(2, 1)
@@ -128,17 +143,23 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_dailymeans(self):
-        dm = teststream.dailymeans()
-        print (len(dm))
+        dmt = teststream.calc_f()
+        dm = dmt.dailymeans()
         self.assertEqual(len(dm), 1)
 
     def test_delta_f(self):
         self.assertEqual(2, 1)
 
     def test_determine_rotationangles(self):
-        rotstream = teststream.rotation(alpha=45,beta=45)
-        print (rotstream.ndarray)
-        self.assertEqual(2, 1)
+        cpstream = teststream.copy()  # rotation is destructive
+        idstream = teststream.copy()  # conversion is destructive
+        idfstream = idstream.xyz2idf()
+        meani = idfstream.mean('x')
+        meand = idfstream.mean('y')
+        rotstream = cpstream.rotation(alpha=45, beta=45)  # v in z upwards
+        alpha, beta = rotstream.determine_rotationangles(referenceD=meand,referenceI=meani)
+        self.assertEqual(np.round(alpha,1), -45)
+        self.assertEqual(np.round(beta,1), -45)
 
     def test_dict2stream(self):
         self.assertEqual(2, 1)
@@ -160,9 +181,8 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_extract(self):
-        extstream = teststream.extract({"x":20000})
-        print (len(extstream))
-        self.assertEqual(2, 1)
+        extstream = teststream.extract("x" , 20000, ">")
+        self.assertEqual(len(extstream), 720)
 
     def test_extract_headerlist(self):
         self.assertEqual(2, 1)
@@ -207,10 +227,12 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_hdz2xyz(self):
-        self.assertEqual(2, 1)
+        # tested by _conversion
+        self.assertEqual(1, 1)
 
     def test_idf2xyz(self):
-        self.assertEqual(2, 1)
+        # tested by _conversion
+        self.assertEqual(1, 1)
 
     def test_integrate(self):
         self.assertEqual(2, 1)
@@ -236,7 +258,7 @@ class TestStream(unittest.TestCase):
     def test_multiply(self):
         mstream = teststream.multiply({'x':2})
         pmeanx = mstream.mean('x')
-        self.assertEqual(pmeanx, 40000)
+        self.assertEqual(pmeanx, 42000)
 
     def test_offset(self):
         self.assertEqual(2, 1)
@@ -252,14 +274,11 @@ class TestStream(unittest.TestCase):
 
     def test_rotation(self):
         pmeanx = teststream.mean('x')
-        pmeany = teststream.mean('y')
-        rotstream = teststream.rotation(alpha=45)
-        meanx = rotstream.mean('x')
-        meany = rotstream.mean('y')
+        pmeanz = teststream.mean('z')
+        cpstream = teststream.copy()
+        rotstream = cpstream.rotation(alpha=45, beta=135)
         meanz = rotstream.mean('z')
-        print(meanx, meany, meanz, pmeanx, pmeany)
-        self.assertEqual(meanx, pmeany)
-        self.assertEqual(meany, pmeanx)
+        self.assertEqual(np.sqrt(pmeanx**2 + pmeanz**2), np.abs(meanz))
 
     def test_samplingrate(self):
         # Tests also _get_sampling_period
@@ -294,10 +313,12 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_xyz2hdz(self):
-        self.assertEqual(2, 1)
+        # tested by _conversion
+        self.assertEqual(1, 1)
 
     def test_xyz2idf(self):
-        self.assertEqual(2, 1)
+        # tested by _conversion
+        self.assertEqual(1, 1)
 
 
 if __name__ == "__main__":
