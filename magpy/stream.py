@@ -1822,7 +1822,7 @@ CALLED BY:
         return func
 
 
-    def stream2dict(self, keys=['dx','dy','dz'], dictkey='DataBaseValues'):
+    def stream2dict(self, keys=['dx','dy','dz','df'], dictkey='DataBaseValues'):
         """
         DESCRIPTION:
             Method to convert stream contents into a list and assign this to a dictionary.
@@ -1836,7 +1836,7 @@ CALLED BY:
         RETURNS:
             dict		(dictionary) with name dictkey
         APPLICATION:
-            d = absdata.stream2dict(['dx','dy','dz'],'DataBaseValues')
+            d = absdata.stream2dict(['dx','dy','dz','df'],'DataBaseValues')
             d = neicdata.stream2dict(['f','str3'],'Earthquakes')
         """
 
