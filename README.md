@@ -688,7 +688,13 @@ You can apply use this methods as follows:
 
         extdata = data.extrapolate(starttime=datetime(2022,11,22,7), endtime=datetime(2022,11,22,16), method='fourier')
 
-The different techniques will result in the following diagrams ![5.8.1](./magpy/doc/ms_extrapolate.png "Extrapolation")
+The different techniques will result in the following diagrams:
+
+1             |  2
+:-------------------------:|:-------------------------:
+![5.8.1](./magpy/doc/ms_extrapolate1.png)  |  ![5.8.3](./magpy/doc/ms_extrapolate3.png)
+![5.8.2](./magpy/doc/ms_extrapolate2.png)  |  ![5.8.4](./magpy/doc/ms_extrapolate4.png)
+
 
 ### 5.9 Functions
 

@@ -188,7 +188,9 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_extrapolate(self):
-        self.assertEqual(2, 1)
+        t1 = teststream.trim(starttime='2022-11-22T09:00:00', endtime='2022-11-22T14:00:00')
+        ex1 = t1.extrapolate(starttime='2022-11-22T07:00:00', endtime='2022-11-22T16:00:00',method='spline')
+        self.assertEqual(len(ex1), 538)
 
     def test_filter(self):
         self.assertEqual(2, 1)
@@ -304,7 +306,8 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_trim(self):
-        self.assertEqual(2, 1)
+        t1 = teststream.trim(starttime='2022-11-22T09:00:00', endtime='2022-11-22T14:00:00')
+        self.assertEqual(len(t1), 300)
 
     def test_use_sectime(self):
         self.assertEqual(2, 1)

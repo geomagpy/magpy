@@ -361,7 +361,7 @@ DataStream  |  end  |        2.0.0  |                 |  yes           |  yes   
 DataStream  |  extend  |     2.0.0  |                 |  yes*          |                  |    |  read
 DataStream  |  extract  |    2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  extract_headerlist  |  2.0.0  |        |                |                  |    |
-DataStream  |  extrapolate  |  2.0.0  |               |  yes           |                  |    |
+DataStream  |  extrapolate  |  2.0.0  |               |  yes           |  yes             |  5.8    |
 DataStream  |  filter  |     2.0.0  |                 |  yes           |                  |    |
 DataStream  |  fillempty  |  2.0.0  |                 |  yes*          |                  |    |  sorting
 DataStream  |  findtime  |   2.0.0  |                 |  yes*          |                  |    |  resample
@@ -395,7 +395,7 @@ DataStream  |  sorting  |    2.0.0  |                 |  yes*          |        
 DataStream  |  start  |      2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  steadyrise  |  2.0.0  |                |  yes           |  no              |    |
 DataStream  |  stream2dict  |  2.0.0  |               |  yes*          |                  |    |  baseline
-DataStream  |  trim  |       2.0.0  |                 |  yes           |                  |    |
+DataStream  |  trim  |       2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  use_sectime  |  2.0.0  |               |  yes           |                  |    |
 DataStream  |  write  |      2.0.0  |                 |  yes           |                  |    |
 DataStream  |  xyz2hdz  |    2.0.0  |                 |  yes*          |  yes*            |  5.2    |  _convertstream
@@ -2881,6 +2881,7 @@ CALLED BY:
                spline -- see here https://docs.scipy.org/doc/scipy/tutorial/interpolate/extrapolation_examples.html
                linear -- uses a simple linear extrapolation method
                fourier -- uses a technique based on this work: https://gist.github.com/tartakynov/83f3cd8f44208a1856ce
+            Important: any existing secondary time column will be dropped.
         PREREQUISITES
             Will raise an error of time distance between starttime respectively endtime
             towrads date in the stream is larger than the duration
@@ -2914,6 +2915,7 @@ CALLED BY:
         if debug:
             print(dist1, dist2, duration)
         st = self.copy()
+        st = st._drop_column('sectime')
         samprate = st.samplingrate() * 1000000
 
         # get the average sampling rate of st
@@ -6660,7 +6662,7 @@ CALLED BY:
         - stream:       (DataStream object) Trimmed stream
 
     EXAMPLE:
-        >>> data = data.trim(starttime=starttime, endtime=endtime)
+        data = data.trim(starttime=starttime, endtime=endtime)
 
     APPLICATION:
         """
