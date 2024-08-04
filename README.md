@@ -678,6 +678,17 @@ Time derivatives, which are useful to identify outliers and sharp changes, are c
 
 ### 5.8 Extrapolation
 
+The extrapolation method `extrapolate` allows to extrapolate a  data set towards given start and end times. Several 
+different methods are available for extrapolation: The most simple extrapolation method, which was already available
+in MagPy 1.x is the duplication method (option: *method='old'*) which duplicates the first and last existing points 
+at given times. New methods starting form 2.0 are the *'spline'* technique following 
+[this](https://docs.scipy.org/doc/scipy/tutorial/interpolate/extrapolation_examples.html) approach, a *'linear'* 
+extrapolation and a *'fourier'* technique as described [here](https://gist.github.com/tartakynov/83f3cd8f44208a1856ce).
+You can apply use this methods as follows:
+
+        extdata = data.extrapolate(starttime=datetime(2022,11,22,7), endtime=datetime(2022,11,22,16), method='fourier')
+
+The different techniques will result in the following diagrams ![5.8.1](./magpy/doc/ms_extrapolate.png "Extrapolation")
 
 ### 5.9 Functions
 
@@ -688,27 +699,32 @@ MagPy offers the possibility to fit functions to data using a number of differen
         func = cleandata.fit(keys=['x','y','z'], fitfunc='spline', knotstep=0.1)
         mp.tsplot([cleandata],[['x','y','z']],function=[[func,func,func]])
 
-Supported fitting functions *fitfunc* are polynomial 'poly', 'harmonic', 'least-squares', 'mean', 'spline'. The default fitting method 
-is the cubic spline function 'spline'. You need to specific the option *fitdegree* for polynomial and harmonic fitting functions. *fitdegree*=1 corresponds to a 
-linear fit. Default value is 5. For *fitfunc*='spline' you need to specify an average spacing for knots. The *knotstep* parameter will define at which percental distance a knot should be located. 
-i.e. *knotstep*=0.33 would place altogether 2 knots at 33% within the timeseries. Smaller values will increase the number of knots and thus the complexity of the fit.
-Thus, *knotstep* need to contain a positive number below 0.5.
+Supported fitting functions *fitfunc* are polynomial 'poly', 'harmonic', 'least-squares', 'mean', 'spline'. The default 
+fitting method is the cubic spline function 'spline'. You need to specific the option *fitdegree* for polynomial and 
+harmonic fitting functions. *fitdegree*=1 corresponds to a linear fit. Default value is 5. For *fitfunc*='spline' you 
+need to specify an average spacing for knots. The *knotstep* parameter will define at which percental distance a knot 
+should be located. i.e. *knotstep*=0.33 would place altogether 2 knots at 33% within the timeseries. Smaller values 
+will increase the number of knots and thus the complexity of the fit. Thus, *knotstep* need to contain a positive 
+number below 0.5.
 
 #### 5.9.2 Interpolation
 
-The interpol method uses Numpy's interpolate.interp1d to interpolate values of a timeseries. The option *kind* defines the type of interpolation. 
-Possible options are 'linear' (default), 'slinear ' which is a first order spline, 'quadratic' = spline (second order), 'cubic' corresponding to
-a third order spline, 'nearest' values and 'zero'. The interpolation method can be used to interpolate missing data.
+The interpol method uses Numpy's interpolate.interp1d to interpolate values of a timeseries. The option *kind* defines 
+the type of interpolation. Possible options are 'linear' (default), 'slinear ' which is a first order spline, 
+'quadratic' = spline (second order), 'cubic' corresponding to a third order spline, 'nearest' values and 'zero'. The 
+interpolation method can be used to interpolate missing data.
 
         func = gapstream.interpol(['x','y'],kind='linear')
 
-Another simple interpolation method allows for a quick linear interpolation of values, directly modifying the supplied timeseries.
+Another simple interpolation method allows for a quick linear interpolation of values, directly modifying the supplied 
+timeseries.
 
         interpolatedts = ts.interpolate_nans(['f'])
 
 #### 5.9.3 Adopted baselines
 
-Baselines are also treated as functions in MagPy. You can calculate the adopted baseline for a given timerange and a provided fitting function using the following command.
+Baselines are also treated as functions in MagPy. You can calculate the adopted baseline for a given timerange and a 
+provided fitting function using the following command.
 
         func = variationdata.baseline(absolutedata, xxx)
 
@@ -716,12 +732,13 @@ Further details on baseline adoption plus examples are summarized in section 7.5
 
 #### 5.9.4 Functions within a DataStream object
 
-Functions can be added to the timeseries meta information dictionary and stored along with the data set. Such Object storage is only supported for MagPy's PYCDF format.
-To add functions into the timeseries data header use:
+Functions can be added to the timeseries meta information dictionary and stored along with the data set. Such Object 
+storage is only supported for MagPy's PYCDF format. To add functions into the timeseries data header use:
 
         datastream = datastream.func2header(func)
 
-When reading PYCDF data files and also INTERMAGNET IBLV data files then functional values (adopted baselines of BLV files) are available in the header. Access it as follows:
+When reading PYCDF data files and also INTERMAGNET IBLV data files then functional values (adopted baselines of BLV 
+files) are available in the header. Access it as follows:
 
         blvdata = read('mmydata.blv')
         func = blvdata.header.get('DataFunctionObject')
@@ -729,9 +746,11 @@ When reading PYCDF data files and also INTERMAGNET IBLV data files then function
 
 #### 5.9.5 Applying functions to timeseries
 
-Functions can be transferred to data values and they can be subtracted for residual analysis. Use method func2stream for this purpose. You need to supply 
-the functions to func2stream, define the keys and a mode on how functions are applied to the new timeseries. Possible modes are 'add', 'sub' for subtracting, 'div' for division, 'multiply' and
-'values' to replace any existing data by function values. In order to analyse residuals for a adopted baseline function you would do the following: 
+Functions can be transferred to data values and they can be subtracted for residual analysis. Use method func2stream 
+for this purpose. You need to supply the functions to func2stream, define the keys and a mode on how functions are 
+applied to the new timeseries. Possible modes are 'add', 'sub' for subtracting, 'div' for division, 'multiply' and
+'values' to replace any existing data by function values. In order to analyse residuals for a adopted baseline function 
+you would do the following: 
 
         residuals = blvdata.copy()
         residuals = residuals.func2stream(func, keys=['dx','dy','dz','df'],mode='sub')
@@ -744,8 +763,9 @@ Replacing existing data by the interpolated values would work as follows:
 
 #### 5.9.6 Saving and reading functions separately 
 
-It is possible to save the functional parameters (NOT the functions) to a file and reload them for later usage. Please note that you will need to apply
-the desired fit/interpolation/baseline adoption again based on these parameters to obtain a function object. The parameters will be stored within a json dictionary.
+It is possible to save the functional parameters (NOT the functions) to a file and reload them for later usage. Please 
+note that you will need to apply the desired fit/interpolation/baseline adoption again based on these parameters to 
+obtain a function object. The parameters will be stored within a json dictionary.
 
         func_to_file(func, "/tmp/savedparameter.json")
 
@@ -753,57 +773,72 @@ To read parameters in again
 
         funcparameter = func_from_file("/tmp/savedparameter.json")
 
-The variable funcparameters will then contain a dictionary with all contents of the original function list, including time ranges and specific parameters for each value.
-Extract these values by standard dict.get() and reapply to the data stream. 
+The variable funcparameters will then contain a dictionary with all contents of the original function list, including 
+time ranges and specific parameters for each value. Extract these values by standard dict.get() and reapply to the data 
+stream. 
 
 ### 5.10 Multiple timeseries
 
 #### 5.10.1 join
 
-Let us assume you have two data sets, data1 containing X,Y,Z data and data2 containing X,Y,Z and F data with an overlapping time range. Such example data sets are shown in 
-Figure ![5.10.1](./magpy/doc/ms_data.png "Two example data stream with overlapping timeranges and different content"). Now you have a number of different possibilities to combine these two data sets. First of all you can use the `join_streams` method which always will keep the first provided stream unchanged and add information from the second stream into the data set.
+Let us assume you have two data sets, data1 containing X,Y,Z data and data2 containing X,Y,Z and F data with an 
+overlapping time range. Such example data sets are shown in 
+Figure ![5.10.1](./magpy/doc/ms_data.png "Two example data stream with overlapping timeranges and different content"). Now you have a 
+number of different possibilities to combine these two data sets. First of all you can use the `join_streams` method 
+which always will keep the first provided stream unchanged and add information from the second stream into the data set.
 
         joined_stream1 = join_streams(data1, data2)
 
-This command will result in a joint data set containing all data from data1 and, outside the time range of data1, the data of data2 as shown in Figure ![5.10.2](./magpy/doc/ms_join1.png "Joined streams in order data1, then data2"). Calling the same function with a different order
+This command will result in a joint data set containing all data from data1 and, outside the time range of data1, the 
+data of data2 as shown in Figure ![5.10.2](./magpy/doc/ms_join1.png "Joined streams in order data1, then data2"). Calling the same function 
+with a different order
 
         joined_stream1 = join_streams(data2, data1)
 
-will result in a combination as shown in Figure ![5.10.3](./magpy/doc/ms_join2.png "Joined streams in order data2, then data1"). `join_streams` has no further options.
+will result in a combination as shown in Figure ![5.10.3](./magpy/doc/ms_join2.png "Joined streams in order data2, then data1"). 
+`join_streams` has no further options.
 
 #### 5.10.2 merge
 
-Merging data comprises combining two streams into one new stream. The two data sets on which `merge_streams` is applied need to have the same sampling rate and need to overlap in time.
-The method includes adding a new column from a second stream, filling gaps with data from another stream (mode='insert') or replacing data with contents from another stream (mode='replace'). 
-The following examples sketch typical usages. Firstly, we use the default mode='insert': 
+Merging data comprises combining two streams into one new stream. The two data sets on which `merge_streams` is applied 
+need to have the same sampling rate and need to overlap in time. The method includes adding a new column from a second 
+stream, filling gaps with data from another stream (mode='insert') or replacing data with contents from another stream 
+(mode='replace'). The following examples sketch typical usages. Firstly, we use the default mode='insert': 
 
         merged_stream1 = merge_streams(data1, data2)
 
-Application results in an addition of the f-column to stream1 and the filling of the data gap in data 1 with values of data2 (see Figure ![5.10.4](./magpy/doc/ms_merge1.png "Merge data2 into data1").)
-The time range of the resulting stream will always cover the range of the data set provided first. Another option is demonstrated in the next example,
-Here data 1 im merged into data2. Here we replace the contents of column y by existing contents of column y from data1. Data not existing in data1 will remain unchanged. 
+Application results in an addition of the f-column to stream1 and the filling of the data gap in data 1 with values of 
+data2 (see Figure ![5.10.4](./magpy/doc/ms_merge1.png "Merge data2 into data1").) The time range of the resulting stream will always cover 
+the range of the data set provided first. Another option is demonstrated in the next example,
+Here data 1 im merged into data2. Here we replace the contents of column y by existing contents of column y from data1. 
+Data not existing in data1 will remain unchanged. 
 
         merged_stream1 = merge_streams(data2, data1, mode='replace', keys=['y'])
 
 #### 5.10.3 subtract
 
-Sometimes it is necessary to examine the differences between two data streams e.g. differences between the F values of two instruments running in parallel at an observatory. The method `subtract_streams` is provided for this analysis:
+Sometimes it is necessary to examine the differences between two data streams e.g. differences between the F values of 
+two instruments running in parallel at an observatory. The method `subtract_streams` is provided for this analysis:
 
         diff = subtract_streams(data1,data2)
 
-This command will result in Figure ![5.10.6](./magpy/doc/ms_subtract.png "Subtract data2 from data1"). If you specify keys using option i.e. keys=['x'] only these data specific keys will remain. You might want to use diff.get_gaps() to fill np.nans into missing time steps. 
+This command will result in Figure ![5.10.6](./magpy/doc/ms_subtract.png "Subtract data2 from data1"). If you specify keys using option 
+i.e. keys=['x'] only these data specific keys will remain. You might want to use diff.get_gaps() to fill np.nans into 
+missing time steps. 
 
 
-#### 5.10.5 append
+#### 5.10.4 append
 
-The append method is applying the `join_streams` method to a list of streams. This is useful if you have many individual data sets and want to combine them.
+The append method is applying the `join_streams` method to a list of streams. This is useful if you have many 
+individual data sets and want to combine them.
 
         long_stream = append_streams([list,with,many,streams])
 
-#### 5.10.4 average (TODO)
+#### 5.10.5 average (TODO)
 
-Average stream is different from the other methods as it ignores the time steps of all except the first stream. You provide a list of streams, which all should cover the 
-same time range and contain the same amount of data (i.e. daily records). All these signals are them averaged and assigned to the time steps of the first stream.
+Average stream is different from the other methods as it ignores the time steps of all except the first stream. You 
+provide a list of streams, which all should cover the same time range and contain the same amount of data (i.e. daily 
+records). All these signals are them averaged and assigned to the time steps of the first stream.
 
         average_stream = append_streams([list,with,many,streams,covering,similar,time,ranges])
 
@@ -811,15 +846,20 @@ TODO: method to split a datastream into subsets of equal length
 
 #### 5.10.6 determine_time_shift
 
-The method 'determine_time_shift' allows for determining phase shifts between to input signale. The shift can be obtained by two two different methods. Cross correlation
-based on scipy.signal.correlate is used when selecting method 'correlate'. More efficient on large data sets is the method 'fft'. Assume you have two shifted signals as shown in 
-Figure ![5.10.7](./magpy/doc/ms_timeshift.png "Two signals, of which one is shifted by 15 min from the first one"). The obtained shift will give you the amount of second to shift data2 in order to obtain data1. Apply time shift calculations result in
+The method 'determine_time_shift' allows for determining phase shifts between to input signale. The shift can be 
+obtained by two two different methods. Cross correlation based on scipy.signal.correlate is used when selecting method 
+*'correlate'*. More efficient on large data sets is the method 'fft'. Assume you have two shifted signals as shown in 
+Figure ![5.10.7](./magpy/doc/ms_timeshift.png "Two signals, of which one is shifted by 15 min from the first one"). 
+The obtained shift will give you the amount of second to shift data2 in order to obtain data1. Apply time shift 
+calculations result in
 
          print ("(Correlate) Time shift in seconds: {}".format(determine_time_shift(data1,shifted_data1, method='correlate', col2compare='f')))
          print ("(FFT) Time shift in seconds: {}".format(determine_time_shift(data1,shifted_data1, method='fft', col2compare='f')))
 
          (Correlate) Time shift in seconds: -898.8000000000001
          (FFT) Time shift in seconds: -896.4
+
+         Expected value: -900 sec
 
 ### 5.12 All methods at a glance
 
