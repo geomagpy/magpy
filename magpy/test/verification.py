@@ -2,6 +2,7 @@ import unittest
 import sys
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 from magpy.stream import *
+from magpy.core.flagging import *
 
 
 def create_verificationstream(startdate=datetime(2022, 11, 22)):
@@ -322,6 +323,246 @@ class TestStream(unittest.TestCase):
     def test_xyz2idf(self):
         # tested by _conversion
         self.assertEqual(1, 1)
+
+
+class TestFlagging(unittest.TestCase):
+    def test_add(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+        self.assertEqual(len(fl), 2)
+
+    def test_list(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+        l = fl._list(['starttime', 'endtime'])
+        self.assertEqual(len(l), len(fl))
+        self.assertEqual(l[0][1], datetime(2022, 11, 22, 23, 56, 12, 654362))
+
+    def test_copy(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+        newfl = fl.copy()
+        newfl = newfl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T19:56:12.654362",
+                          endtime="2022-11-22T19:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        self.assertNotEqual(newfl, fl)
+        self.assertEqual(len(fl), 2)
+        self.assertEqual(len(newfl), 3)
+
+    def test_trim(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+        newfl = fl.copy()
+        newfl = newfl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T19:56:12.654362",
+                          endtime="2022-11-22T19:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        test = newfl.trim(starttime='2022-11-22T19:57:12.654362', endtime='2022-11-22T22:59:12.654362')
+        self.assertEqual(len(test), 2)
+        test = newfl.trim(starttime='2022-11-22T20:53:12.654362', endtime='2022-11-22T20:59:12.654362')
+        self.assertEqual(len(test), 0)
+
+    def test_select(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+        newfl = fl.copy()
+        newfl = newfl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T19:56:12.654362",
+                          endtime="2022-11-22T19:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        newfl = newfl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
+                          endtime="2022-11-22T10:59:12.654362", components=['f'], labelid='050', debug=False)
+        newfl = newfl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                          endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001',
+                          comment="incredible lightning strike", debug=False)
+        obt1 = newfl.select('labelid', ['050'])
+        obt2 = newfl.select('comment', ['lightning'])
+        self.assertEqual(len(obt1), 1)
+        self.assertEqual(len(obt2), 1)
+        self.assertNotEqual(len(newfl), len(obt1))
+
+    def test_join(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+        fo = flags()
+        fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
+                    endtime="2022-11-22T10:59:12.654362", components=['f'], labelid='050', debug=False)
+        fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                    endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001',
+                    comment="incredible lightning strike", debug=False)
+        comb = fl.join(fo)
+        self.assertEqual(len(comb), 4)
+
+    def test_stats(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+        fo = flags()
+        fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
+                    endtime="2022-11-22T10:59:12.654362", components=['f'], labelid='050', debug=False)
+        fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                    endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001',
+                    comment="incredible lightning strike", debug=False)
+        out = fo.stats(intensive=True, output='variable')
+        self.assertIs(type(out), str)
+
+    def test_diff(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
+                    endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
+                    endtime="2022-11-22T21:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                    endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001',
+                    comment="incredible lightning strike", debug=False)
+        fo = flags()
+        fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
+                    endtime="2022-11-22T10:59:12.654362", components=['f'], labelid='050', debug=False)
+        fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                    endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001',
+                    comment="incredible lightning strike", debug=False)
+        diff = fl.diff(fo)
+        self.assertEqual(len(diff), 1)
+
+    def test_drop(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
+                    endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
+                    endtime="2022-11-22T21:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                    endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001',
+                    comment="incredible lightning strike", debug=False)
+        newfl = fl.drop(parameter='sensorid', values=['GSM90_Y1112_0001'])
+        self.assertEqual(len(newfl), 2)
+
+    def test_replace(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
+                    endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
+                    endtime="2022-11-22T21:59:12.654362", components=['x', 'y', 'z'], debug=False)
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                    endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001',
+                    comment="incredible lightning strike", debug=False)
+        flagsmodified = fl.replace('comment', 'lightning', 'hell of a lightining strike')
+        flagsmodified = flagsmodified.replace('groups', None, ['magnetism'])
+        flagsmodified = flagsmodified.replace('stationid', '', 'WIC')
+        newfl = flagsmodified.select(parameter='stationid', values=['WIC'])
+        self.assertEqual(len(newfl), 3)
+
+    def test_union(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
+                    endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], flagtype=0, debug=False)
+        # fitting overlap - level 0
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
+                    endtime="2022-11-22T21:59:12.654362", labelid='001', flagtype=3, components=['x', 'y', 'z'],
+                    debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:58:12.654362",
+                    endtime="2022-11-22T22:19:12.654362", labelid='001', flagtype=3, components=['x', 'y', 'z'],
+                    debug=False)
+        # non-fitting overlap - different label - similar flagtype, similar component
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                    endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001', flagtype=1,
+                    comment="incredible lightning strike", debug=False)
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:50:12.654362",
+                    endtime="2022-11-22T09:57:12.654362", components=['f'], labelid='002', flagtype=1, comment="spike",
+                    debug=False)
+        # non-fitting overlap - level 3 different label different flagtype, same component
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T16:36:12.654362",
+                    endtime="2022-11-22T16:39:12.654362", components=['x', 'y', 'z'], labelid='021', flagtype=2,
+                    debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T16:38:12.654362",
+                    endtime="2022-11-22T16:49:12.654362", components=['x', 'y', 'z'], labelid='050', flagtype=1,
+                    debug=False)
+        # non-fitting overlap - level 1 test similar flagtype, labels - different components (example - marked temperatures or df in additional set)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T17:36:12.654362",
+                    endtime="2022-11-22T17:39:12.654362", components=['x', 'y', 'z'], labelid='050', flagtype=3,
+                    debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T17:38:12.654362",
+                    endtime="2022-11-22T17:49:12.654362", components=['x', 'y', 'z', 'df'], labelid='050', flagtype=3,
+                    debug=False)
+        # non-fitting overlap - level 2 test similar flagtype, different labels and components (example - unkwon and car label)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T18:36:12.654362",
+                    endtime="2022-11-22T18:39:12.654362", components=['x', 'y', 'z'], labelid='050', flagtype=1,
+                    debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T18:38:12.654362",
+                    endtime="2022-11-22T18:49:12.654362", components=['x', 'y', 'z', 'f'], labelid='090', flagtype=1,
+                    debug=False)
+        # fitting overlap - directly consecutive
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T19:36:12", endtime="2022-11-22T19:39:12",
+                    components=['x', 'y', 'z'], labelid='090', flagtype=1, debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T19:39:12", endtime="2022-11-22T19:49:12",
+                    components=['x', 'y', 'z'], labelid='090', flagtype=3, debug=False)
+        # fitting overlap - consecutive within sampling rate 1 sec
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T20:36:12", endtime="2022-11-22T20:39:12",
+                    components=['x', 'y', 'z'], labelid='090', flagtype=1, debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T20:39:13", endtime="2022-11-22T20:49:12",
+                    components=['x', 'y', 'z'], labelid='090', flagtype=1, debug=False)
+        # level3 -> 13 data sets with similar sensorid OK                   --> 15 data ->  9 data
+        # level2 -> 7---flagtype1, 1---0, 1---2, 4---3  OK                  --> 15 data -> 11 data, with samplingrate 1 -> 10 data
+        # level1 -> 5--2---flagtype1, 1---0, 1---2, 2--2---3 OK             --> 15 data -> 13 data, with samplingrate 1 -> 12 data
+        # level0 -> 4-1-2--5--2---flagtype1, 1---0, 1---2, 2-1-1--2--2---3  --> 15 data -> 14 data, with samplingrate 1 -> 13 data, no samprate but with typeforce False -> 13 data
+        test = fl.union(samplingrate=1, level=0)
+        self.assertEqual(len(test), 13)
+        test = fl.union(level=0, typeforce=False)
+        self.assertEqual(len(test), 13)
+        test = fl.union(level=1)
+        self.assertEqual(len(test), 13)
+        test = fl.union(level=2)
+        self.assertEqual(len(test), 11)
+        test = fl.union(level=3)
+        self.assertEqual(len(test), 9)
+
+    def test_rename_nearby(self):
+        fl = flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
+                    endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], flagtype=0, debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
+                    endtime="2022-11-22T21:59:12.654362", labelid='001', flagtype=3, components=['x', 'y', 'z'],
+                    debug=False)
+        # non-fitting overlap - different label - similar flagtype, similar component
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
+                    endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001', flagtype=1,
+                    comment="incredible lightning strike", debug=False)
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:50:12.654362",
+                    endtime="2022-11-22T09:57:12.654362", components=['f'], labelid='002', flagtype=1, comment="spike",
+                    debug=False)
+        # non-fitting overlap - level 3 different label different flagtype, same component
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T16:36:12.654362",
+                    endtime="2022-11-22T16:39:12.654362", components=['x', 'y', 'z'], labelid='021', flagtype=2,
+                    debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T16:38:12.654362",
+                    endtime="2022-11-22T16:49:12.654362", components=['x', 'y', 'z'], labelid='090', flagtype=1,
+                    comment='autodetect', debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T17:36:12.654362",
+                    endtime="2022-11-22T17:39:12.654362", components=['x', 'y', 'z'], labelid='050', flagtype=1,
+                    comment='autodetect', debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T17:38:12.654362",
+                    endtime="2022-11-22T17:49:12.654362", components=['x', 'y', 'z', 'df'], labelid='001',
+                    label='lightning', comment='incredible lightning', operator='RL', flagtype=3, debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T18:36:12.654362",
+                    endtime="2022-11-22T18:39:12.654362", components=['x', 'y', 'z'], labelid='090', flagtype=1,
+                    comment='marked elsewhere', debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T18:38:12.654362",
+                    endtime="2022-11-22T18:49:12.654362", components=['x', 'y', 'z', 'f'], labelid='090', flagtype=1,
+                    comment='autodetect', debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T19:36:12", endtime="2022-11-22T19:39:12",
+                    components=['x', 'y', 'z'], labelid='090', flagtype=1, comment='autodetect', debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T19:39:12", endtime="2022-11-22T19:49:12",
+                    components=['x', 'y', 'z'], labelid='090', flagtype=1, comment='autodetect', debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T20:36:12", endtime="2022-11-22T20:39:12",
+                    components=['x', 'y', 'z'], labelid='090', flagtype=1, comment='autodetect', debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T20:39:13", endtime="2022-11-22T20:49:12",
+                    components=['x', 'y', 'z'], labelid='090', flagtype=1, comment='autodetect', debug=False)
+        results = fl.rename_nearby(parameter='labelid', values=['001'], searchcomment='auto')
+        label = results.flagdict.get('233844116124').get('label')
+        self.assertEqual(label, 'unknown disturbance')
+        results = fl.rename_nearby(parameter='labelid', values=['001'])
+        label = results.flagdict.get('233844116124').get('label')
+        self.assertEqual(label, 'lightning strike')
 
 
 if __name__ == "__main__":

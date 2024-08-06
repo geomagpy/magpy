@@ -1,48 +1,40 @@
 # -*- coding: utf-8 -*-
 
-"""
-Testing flagging:
-import flagging as fl
-anotherflaglist = fl.load("/Users/leon/Cloud/Software/MagPyAnalysis/FlagSignatures/Flagging/flags_Back-LEMI036_1_0002_0002_quietD_2021_average_emd.json_217.json",debug=True)
-flaglist = fl.load("/Users/leon/Cloud/Software/MagPyAnalysis/FlagSignatures/Training/original_flags_2021def.json",debug=True)
-fl1 = flaglist.copy()
-fl1.stats()
-fl2 = fl1.modify(mode='delete', parameter='flagnumber', value=1)
-fl2.stats()
-fl1.stats()
-fl3 = fl1.convert2version()
-fl4 = fl1.join(anotherflaglist)
-fl6 = flaglist.add("LEMI036_1_0002", "x", 3, "Test", "2022-08-15T23:30:30")
-fl7 = fl1.union(remove=True, flagids=[1], debug = False)
-fl7.save("/Users/leon/Cloud/Software/MagPyAnalysis/FlagSignatures/Training/mynewflags.json")
-fl8 = fl1.rename_nearby({"comment":"lightning"},{"comment":"threshold"})
-fl9 = fl8.drop({"comment":"no data"})
-fl10 = fl9.set_labelkey()
-fl10.save("/Users/leon/Cloud/Software/MagPyAnalysis/FlagSignatures/Training/mynewflags2.json")
+import sys
+sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
-"""
-from magpy.stream import * # os, num2date
-from magpy.core.methods import testtime
+from magpy.stream import DataStream, basestring, magpyversion, unicode
+from magpy.core.methods import *
+from collections import Counter
 import copy as cp
+import hashlib
+import json
+
 
 class flags(object):
     """
     DESCRIPTION:
-        A list object with flagging information
-        The list should contain information according to FLAGKEYS
-        Flag ID's are listed version specific in FLAGID dictionary.
+        Everything regarding flagging, marking and annotating data in MagPy 2.0 and future versions.
+        The main object of a flagging class is a dictionary and not a list as used in MagPy 1.x and 0.x.
+        The flagging class contains a number of functions and methods to create, modify and analyse data
+        flags. An overview about all supported methods is listed below.
+        Each flag is mainly characterized by a SensorID, the sensor which was used to determine the flag,
+        a time range and components at which the flag was identified. Type and label are also assigned.
+        If a flag should be applied to other sensors, you should use the group item, which contains a list
+        of sensors or general groups. Groups is a list of dictionaries
 
-        Some methods support a options dictionary
-
-    VERSIONS:
-        0.4 : traditional flagging version as supported by magpy
-        1.0 : extended flagging version
-        2.0 : including flagging labels
+    VERSIONS (MagPy):
+        since 0.4 : traditional flagging version as supported by MagPy 0.x and 1.x
+        since 1.1.5 : extended flagging version with dict support (has not been used in any productive environment)
+        since 2.0 : flagging dictionary including flagging labels and optional fields
 
     STRUCTURE
-        A flagging object consists of a list of dictionaries
-        flagdict = [{
-                    'flagid',            (int) # unique number assigned when using data base tools
+        A flagging object consists of a dictionary with unique identifiers as keys and a dictionary as value:
+        flags = {'flagid1' : flagvalue1, 'flagid2' : flagvalue2, ...}
+
+            flagid     (int) # unique integer identifier created from values (sensorid, starttime,enddtime,components,flagtype,labelid, modificatontime)
+
+            flagvalue = {
                     'sensorid',          (string) # SensorId of Sensor on which flagging was conducted
                     'starttime',         (datetime) # first flagged data point
                     'endtime',           (datetime) # last flagged data point
@@ -51,52 +43,87 @@ class flags(object):
                     'labelid',           (string) # string with number i.e. '001', see list below with prefilled options
                     'label',             (string) # name associated with labelid i.e. lightning
                     'comment',           (string) # text without special characters (utf-8)
-                    'group',             (list) # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'group',             (list) # define flaggroups-list i.e. [{'magnetism':['x','y','z','f']}, ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
                     'probabilities',     (list) # measure of probabilities - list
                     'stationid',         (string) # stationid of flag
                     'validity',          (char) # character code: d (delete in cleanup), h (invalid/hide), default None
                     'operator',          (string) # text with name/shortcut of flagging person i.e. RL
                     'color',             (string) # None or string with color code to override flagid, will override automatic choice by flagtype
                     'modificationtime',  (datetime) # datetime of last edition
-                    },
-                    'flagversion']       (string) # string like 2.0
-
+                    'flagversion'}       (string) # string like 2.0
 
     APPLICTAION:
         Initiate flags with >>> flag = flags().
 
-
     EXAMPLES:
+        # Load old flags and create new inputs by extracting labels and operators from comments
+        # Load a flag list and display contents for a specific sensor without data streams
+        # ...
 
 
     METHODS OVERVIEW:
     ----------------------------
 
-    - flag.union(self, options):
-    - flag.clean(options):
-    - flag.add(...):
-    - flag.extract(self, searchdict):
-    - flag.drop(self, searchdict):
-    - flag.join(self, newflag(s)):
-    - flag.save(self, path):
-    ? flag.sort(self,by):
-    - flag.rename_nearby(self, searchdict, replacedict):
-    - flag.modify(...):             modes delete, select, replace
-    - flag.stats(...):              provides stats on a flaglist
-    - flag.copy():                  creates a deep copy of the flags object
-    - flag.set_labelvalue():        replace label IDs with names
-    - flag.set_labelkey():          replace label names with IDs
-    - flag.l2d():                   creates flagdict from flaglist
-    - flag.d2l():                   creates flaglist from flagdict
-    - flag.convert2version(...):    transforms to a specific version
-    ? flag.convert2magpy(...):      transforms to a specific magpyversion
-    - flag.fprint(sensorid):        create a formated output
+    class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
+---------  |  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ----------
+**core.flagging** |   |                 |                 |                |                  |          |
+flags  |  _list       |  2.0.0          |                 |  yes           |  yes             |         |
+flags  |  _set_label_from_comment |  2.0.0 |              |                |                  |      | flagging.load
+flags  |  add         |  2.0.0          |                 |  yes           |  yes             |      |
+flags  |  copy        |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  create_patch |  2.0.0         |                 |                |                  |    |
+flags  |  diff        |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  drop        |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  fprint      |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  join        |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  replace     |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  rename_nearby |  2.0.0        |                 |  yes           |  yes             |    |
+flags  |  save        |  2.0.0          |                 |  yes           |                  |    |
+flags  |  select      |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  stats       |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  trim        |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  union       |  2.0.0          |                 |  yes           |  yes             |    |
+       |  _dateparser |  2.0.0          |                 |                |                  |    | flagging.load
+       |  _readJson   |  2.0.0          |                 |                |                  |    | flagging.load
+       |  _readPickle |  2.0.0          |                 |                |                  |    | flagging.load
+       |  load        |  2.0.0          |                 |                |                  |    |
 
-    - load(self, options):  # load function supports import of old versions
+
+class  |  method  |  variables  |  description
+-----  |  ------  |  ---------  |  -----------
+**core.flagging** |   |         |
+flags  |  _list       |           | convert flagging dictionary to a list
+flags  | _set_label_from_comment | dictionary | interprete comment as label when importing old data
+flags  |  add         |  ...      | insert, replace, modify, update flag as defined by its parameters
+flags  |  copy        |           | creates a deep copy of the flags object
+flags  |  create_patch |          | create a patch dictionary for plotting from flags
+flags  |  diff        |  flagobject | differences between two flag objects
+flags  |  drop        |  parameter, values | drop selected flags from object
+flags  |  fprint      |  sensorid | create a formated output
+flags  |  join        |  flagobject | combine two flagging objects
+flags  |  replace     |  parameter, value, newvalue | replace selected contents with new values
+flags  |  rename_nearby |  parameter, values, timerange | replace contents of nearby flags with reference
+flags  |  save        |  path     | save flagging dictionary
+flags  |  select      |  parameter, values | select specifc data
+flags  |  stats       |  intensive | provides stats on a flaglist
+flags  |  trim        |  starttime, endtime | trim the time range of flagging information
+flags  |  union        | level, samplingrate, typeforce | combine overlapping time ranges
+       |  _dateparser |           | load support - convert strings to datetimes
+       |  _readJson   |           | load support - interprete json
+       |  _readPickle |           | load support - interprete pickle
+       |  load        |  path     | load function needs to support import of old versions
+
+
+    deprecated in 2.0.0
+    - flag.clean(options):             # not necessary any more as id can not be duplicated
+    - flag.extract(self, searchdict):  # replaced by select
+    - flag.modify(...):                # replaced by replace
+    - flag.set_labelvalue():           # replaced by _set_label_from_comment
+    - flag.set_labelkey():             # replaced by _set_label_from_comment
 
     """
 
-    def __init__(self, flaglist=None, flagdict=None):
+    def __init__(self, flagdict=None):
         """
         Description
             currently supports two flagging containers (list and dict)
@@ -104,86 +131,51 @@ class flags(object):
             version is set as default
             The default structure should be changed to dictionary
         """
-        if flagdict==None:
-            flagdict={}
+        if flagdict == None:
+            flagdict = {}
         self.flagdict = flagdict
-        if flaglist == None:
-            flaglist = []
-        self.flaglist = flaglist
-        if flaglist and not flagdict:
-            #print ("No flagdict - constructing it")
-            self.flagdict = self.l2d(flaglist)
-            # reconstruct list in case flagversion is not originally in it (if i.e. a list is used to init a flags class)  
-            self.flaglist = self.d2l(self.flagdict)
-        if flagdict and not flaglist:
-            #print ("No flaglist - constructing it")
-            self.flaglist = self.d2l(flagdict)
 
+        self.FLAGKEYS = [
+            'flagid',  # integer - unique number
+            'sensorid',  # SensorId of Sensor on which flagging was conducted
+            'starttime',  # datetime
+            'endtime',  # datetime
+            'components',  # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys for the sensorid
+            'flagtype',
+            # integer 0 (just a comment), 1 (remove for definitiv - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
+            'labelid',  # string with number i.e. '001'
+            'label',  # name asociated with labelid i.e. lightning
+            'comment',  # text without special characters (utf-8)
+            'group',
+            # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+            'probabilities',  # measure of probabilities - list
+            'stationid',  # stationid of flag
+            'validity',  # character code: d (delete in cleanup), h (invalid/hide), default None
+            'operator',  # text with name/shortcut of flagging person i.e. RL
+            'color',  # None or string with color code to override flagid, will override automatic choice by flagtype
+            'modificationtime',  # datetime
+            'flagversion']  # string like 2.0
 
-        self.FLAGKEYS10 = ['starttime',         # datetime
-                    'endtime',           # datetime
-                    'components',        # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys
-                    'id',                # integer number
-                    'comment',           # text without special characters (utf-8)
-                    'sensorid',          # text without special characters (utf-8)
-                    'modificationtime',  # datetime
-                    'flagversion']       # string like 1.0
-
-        self.FLAGKEYS20 = [
-                    'flagid',            # integer - unique number
-                    'sensorid',          # SensorId of Sensor on which flagging was conducted
-                    'starttime',         # datetime
-                    'endtime',           # datetime
-                    'components',        # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys for the sensorid
-                    'flagtype',          # integer 0 (just a comment), 1 (remove for definitiv - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
-                    'labelid',           # string with number i.e. '001'
-                    'label',             # name asociated with labelid i.e. lightning
-                    'comment',           # text without special characters (utf-8)
-                    'group',             # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
-                    'probabilities',     # measure of probabilities - list
-                    'stationid',         # stationid of flag
-                    'validity',          # character code: d (delete in cleanup), h (invalid/hide), default None
-                    'operator',          # text with name/shortcut of flagging person i.e. RL
-                    'color',             # None or string with color code to override flagid, will override automatic choice by flagtype
-                    'modificationtime',  # datetime
-                    'flagversion']       # string like 2.0
-
-        self.FLAGID = {'0.4' : { 0: 'normal data',
-                            1: 'automatically flagged for removal',
-                            2: 'observer decision: keep data',
-                            3: 'observer decision: remove data',
-                            4: 'special flag: define in comment'
-                          },
-                  '1.0' : { 0: 'normal data',
-                            1: 'automatically flagged to keep',
-                            2: 'automatically flagged for removal',
-                            3: 'observer decision: keep data',
-                            4: 'observer decision: remove data',
-                            5: 'special flag: define in comment'
-                          },
-                  '2.0' : { 0: 'normal data', # the higher the number the more important
-                            1: 'automatically flagged for removal',
-                            2: 'automatically flagged to keep',
-                            3: 'observer decision: remove data',
-                            4: 'observer decision: keep data'
-                          }
-                  }
-
-        self.FLAGLABEL = {  '000':['','normal','ok'],       # datetime
-                            '001':['lightning','thunderstorm'],           # datetime
-                            '012':['pc2'],                  # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys
-                            '013':['pc3'],                  # integer number
-                            '014':['pc4'],                  # text without special characters (utf-8)
-                            '015':['pc5'],                  # text without special characters (utf-8)
-                            '016':['pi2'],                  # datetime
-                            '020':['ssc','storm onset'],
-                            '030':['earthquake','shaking ground'],
-                            '050':['moving object','vehicle','car','bike'],
-                            '051':['static object','parking','offset'],
-                            '052':['train'],
-                            '055':['train'],
-                            '090':['spike'],
-                          }
+        self.FLAGTYPE = {'0.4': {0: 'normal data',
+                                 1: 'automatically flagged for removal',
+                                 2: 'observer decision: keep data',
+                                 3: 'observer decision: remove data',
+                                 4: 'special flag: define in comment'
+                                 },
+                         '1.0': {0: 'normal data',
+                                 1: 'automatically flagged to keep',
+                                 2: 'automatically flagged for removal',
+                                 3: 'observer decision: keep data',
+                                 4: 'observer decision: remove data',
+                                 5: 'special flag: define in comment'
+                                 },
+                         '2.0': {0: 'normal data',  # the higher the number the more important
+                                 1: 'automatically flagged for removal',
+                                 2: 'automatically flagged to keep',
+                                 3: 'observer decision: remove data',
+                                 4: 'observer decision: keep data'
+                                 }
+                         }
 
         # Flaglabes of 2.0 - extendable
         # and associated flagids
@@ -198,805 +190,284 @@ class flags(object):
         # 080-089 : (0) data treatment notations
         # 090-    : (0,1,2,3,4) yet to be classified
         # Flagids of the labels
-        self.FLAGLABEL = { '000':'normal',
-                           '001': 'lightning strike',
-                           '002': 'spike',
-                           '012': 'pulsation pc 2',
-                           '013': 'pulsation pc 3',
-                           '014': 'pulsation pc 4',
-                           '015': 'pulsation pc 5',
-                           '016': 'pulsation pi 2',
-                           '020': 'ssc geomagnetic storm',
-                           '021': 'geomagnetic storm',
-                           '022': 'crochete',
-                           '030': 'earthquake',
-                           '050': 'vehicle passing above',
-                           '051': 'nearby moving disturbing source',
-                           '052': 'nearby static disturbing source',
-                           '053': 'train',
-                           '090': 'unknown disturbance'
-                           }
+        self.FLAGLABEL = {'000': 'normal',
+                          '001': 'lightning strike',
+                          '002': 'spike',
+                          '012': 'pulsation pc 2',
+                          '013': 'pulsation pc 3',
+                          '014': 'pulsation pc 4',
+                          '015': 'pulsation pc 5',
+                          '016': 'pulsation pi 2',
+                          '020': 'ssc geomagnetic storm',
+                          '021': 'geomagnetic storm',
+                          '022': 'crochete',
+                          '030': 'earthquake',
+                          '050': 'vehicle passing above',
+                          '051': 'nearby moving disturbing source',
+                          '052': 'nearby static disturbing source',
+                          '053': 'train',
+                          '090': 'unknown disturbance'
+                          }
 
     def __str__(self):
-        return str(self.flaglist)
+        return str(self.flagdict)
 
     def __repr__(self):
-        return str(self.flaglist)
+        return str(self.flagdict)
 
-    def __getitem__(self, var):
-        return self.flaglist.__getitem__(var)
+    # def __getitem__(self, var):
+    #    return self.flaglist.__getitem__(var)
 
-    #def __setitem__(self, var, value):
+    # def __setitem__(self, var, value):
     #    self.flaglist.__getitem__(var) = value
 
     def __len__(self):
-        return len(self.flaglist)
+        return len(self.flagdict)
 
-    # ------------------------------------------------------------------------
-    # Converion methods between list and dictionary
-    # ------------------------------------------------------------------------
-    def l2d(self,flaglist=None,flagversion='0.4'):
+    def _list(self, parameter=None):
         """
         DESCRIPTION
-             converts a flagging list to a flagging dictionary
+            create a list from flagdict consting of desired parameters and main key
         """
-        if not flaglist:
-            mylist = self.flaglist
-        else:
-            mylist = cp.deepcopy(flaglist)
-        # Convert mylist to a dictionary
-        mydic = {}
-        # if flagversion is contained in list, then extract and remove it
-        # if flagversion is NOT contained then either provide it or use default
-        if not len(mylist) > 0:
-            return {}
-        if len(mylist[0]) > 7:
-            flagversion = mylist[0][7]
-            mylist = [elem[:7] for elem in mylist]
-        # get a list of unique sensorid
-        sid = [elem[5] for elem in mylist]
-        sid = list(set(sid))
-        for s in sid:
-            slist = [elem[0:5]+elem[6:7] for elem in mylist if elem[5] == s]
-            mydic[s] = slist
-        mydic["flagversion"] = flagversion
-        return mydic
-
-    def d2l(self,flagdict=None):
-        """
-        DESCRIPTION
-             converts a flagging dictionary to a flagging list
-        """
-        mylist = []
-        if not flagdict:
-            mydict = self.flagdict
-        else:
-            mydict = cp.deepcopy(flagdict)
-        if not mydict:
+        if not parameter:
             return []
-        fv = mydict.get('flagversion','0.4')
-        #print ("Flagversion:", fv)
-        for s in mydict:
-            if not s in ["flagversion"]:
-                ml = mydict[s]
-                if isinstance(ml,list):
-                    do = [el.insert(5,s) for el in ml]
-                    do = [el.insert(7,fv) for el in ml]
-                    mylist.extend(mydict[s])
-        return mylist
+        if not isinstance(parameter, (list, tuple)):
+            return []
+        thelist = []
+        for el in self.flagdict:
+            cont = []
+            cont.append(el)
+            for p in parameter:
+                if p in self.FLAGKEYS:
+                    cont.append(self.flagdict[el].get(p))
+            thelist.append(cont)
+        return thelist
 
-    def convert2version(self,version="1.0"):
+    def _set_label_from_comment(self, dictionary, parameter='comment'):
         """
         DESCRIPTION
-             converts a flagging dictionary towards a specific FlagID version
+           helps to ill labels and labelids from comments
+        PARAMETER
+           dictionary like self.flagdict
+        APPLICATION
+           to be used by import routine
         """
-        def change_flagid(oldversion, oldid, newversion):
-            newid = 0
-            olddic = self.FLAGID.get(oldversion)
-            newdic = self.FLAGID.get(newversion)
-            olddesc = olddic.get(oldid)
-            for el in newdic:
-                if newdic.get(el) == olddesc:
-                    newid = el
-            # IF NOT EXISTING USE NORMAL DATA
-            return newid
+        # select comment which contains any thing from FLAGLABEL
+        cdictionary = cp.deepcopy(dictionary)
+        res = {}
+        ncont = {}
+        for id in self.FLAGLABEL:
+            label = self.FLAGLABEL.get(id)
+            labels = label.split()
+            for d in cdictionary:
+                econt = cdictionary[d]
+                ncont = {}
+                for value in labels:
+                    if econt.get(parameter).find(value) > -1:
+                        econt['labelid'] = id
+                        econt['label'] = label
+                ncont = econt
+            if ncont:
+                res[id] = ncont
+        return res
 
-        myflag = self.copy()
-        mylist = []
-        mydict = myflag.flagdict
-        fv = mydict.get('flagversion','0.4')
-        if version == fv:
-            return self
-        for s in mydict:
-            ml = mydict[s]
-            print (s,ml)
-            if isinstance(ml,list):
-                for el in ml:
-                    el[3] = change_flagid(fv, el[3], version)
-                mydict[s] = ml
-        mydict['flagversion'] = version
-        return flags(flaglist=None, flagdict=mydict)
+        # ------------------------------------------------------------------------
 
-
-    def convert2magpy(self,magpversion="1.0.0"):
-        pass
-
-    # ------------------------------------------------------------------------
     # Flag methods in alphabetical order
     # ------------------------------------------------------------------------
+
+    def add(self, sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000', label='',
+            comment='', groups=None, probabilities=None, stationid='', validity='', operator='', color='',
+            flagversion='2.0', debug=False):
+        """
+        DESCRIPTION
+            Create a flagging dictionary input oot of given information
+            Each flag will be defined by a unqiue flagID which is constructed
+            from sensorid,starttime,endtime,",".join(components),flagtype,labelid
+            if you want to add a flag with identical information use overwrite?
+        """
+        # check validity of information
+        if not sensorid or not starttime or not endtime or not components:
+            print("create_flag: essential information is missing -aborting")
+            return {}
+        if not isinstance(sensorid, basestring):
+            print("create_flag: sensorid need to be a string -. aborting")
+            return {}
+        starttime = testtime(starttime)
+        if not isinstance(starttime, datetime):
+            print("create_flag: starttime could not be interpreted as datetime  - aborting")
+            return {}
+        endtime = testtime(endtime)
+        if not isinstance(endtime, datetime):
+            print("create_flag: endtime could not be interpreted as datetime  - aborting")
+            return {}
+        if not isinstance(components, (list, tuple)):
+            print("create_flag: components need to be a list  - aborting")
+            return {}
+        if comment:
+            comment = str(comment)
+        if groups:
+            if not isinstance(group, (list, tuple)):
+                groups = None
+        if probabilities:
+            if not isinstance(probabilities, (list, tuple)):
+                probabilities = None
+        if labelid and labelid in self.FLAGLABEL:
+            label = self.FLAGLABEL.get(labelid)
+        modificationtime = datetime.utcnow()
+
+        if not isinstance(self.flagdict, dict):
+            return ("Provide a flagging dictionary")
+
+        # create a unique flagid
+        idgenerator = "{}{}{}{}{}{}".format(sensorid, starttime, endtime, ",".join(components), flagtype, labelid,
+                                            modificationtime)
+        if debug:
+            print("Creating ID out of ", idgenerator)
+        m = hashlib.md5()
+        m.update(idgenerator.encode())
+        idstring = str(int(m.hexdigest(), 16))[0:12]
+        if debug:
+            print("ID look like ", idstring)
+
+        # check if id is already exitsing
+        flagd = self.flagdict.get(idstring, {})
+        if flagd:
+            print("input {} already existing - replacing data".format(idstring))
+        flagid = idstring
+        flagd['sensorid'] = sensorid
+        flagd['starttime'] = starttime
+        flagd['endtime'] = endtime
+        flagd['components'] = components
+        flagd['flagtype'] = flagtype
+        flagd['labelid'] = labelid
+        flagd['label'] = label
+        flagd['comment'] = comment
+        flagd['groups'] = groups
+        flagd['probabilities'] = probabilities
+        flagd['stationid'] = stationid
+        flagd['validity'] = validity
+        flagd['operator'] = operator
+        flagd['color'] = color
+        flagd['modificationtime'] = modificationtime
+        flagd['flagversion'] = flagversion
+        self.flagdict[flagid] = flagd
+
+        return self
 
     def copy(self):
         """
         DESCRIPTION
             copy data into a new flaglist
+        RETURNS
+            a exact and independent copy of the input stream
         """
-        flaglist = []
-        if not type(self.flaglist) == list:
-            print ("Did not find flaglist - returning original object")
+        if not isinstance(self.flagdict, dict):
             return self
-        flagdict = cp.deepcopy(self.flagdict)
-        flaglist = cp.deepcopy(self.flaglist)
-        return flags(flaglist,flagdict)
+        flagdict = cp.deepcopy(self)
+        return flagdict
 
-
-    def trim(self, starttime=None,endtime=None,debug=False):
-        """
-        DESCRIPTION
-            trim flaglist
-        PARAMETER
-            starttime
-            endtime
-        """
-        fl = self.copy()
-        flaglist = fl.flaglist
-
-        if debug:
-            print (" trimming flaglist. original lenght: {}".format(len(flaglist)))
-        if len(flaglist) > 0:
-            if starttime:
-                starttime = testtime(starttime)
-                flaglist = [elem for elem in flaglist if elem[1] > starttime]
-            if endtime:
-                endtime = testtime(endtime)
-                flaglist = [elem for elem in flaglist if elem[0] < endtime]
-        if debug:
-            print (" -> new lenght: {}".format(len(flaglist)))
-        return flags(flaglist)
-
-    def join(self, newflaglst,debug=False):
-        """
-        DESCRIPTION
-            add data into a flaglist
-            please note: join is non-destructive.
-        """
-        fl = self.copy()
-        flaglist = fl.flaglist
-
-        # Get dimensions of flags
-        if type(newflaglst) == list:
-            newflags = newflaglst
-        elif type(newflaglst.flaglist) == list:
-            newflags = newflaglst.flaglist
-        else:
-            print ("Could not interprete provided flags")
-            return self
-
-        if not type(newflags[0]) == list:
-            # Single line
-            newflags = [newflags]
-
-        # check flagging versions:
-        try:
-            fl1version = flaglist[0][-1]
-        except:
-            print ("Flaglist seems to be empty - returning newflaglist")
-            return flags(newflags)
-        fl2version = newflags[0][-1]
-        if debug:
-            print ("Length flaglist 1", len(flaglist))
-            print ("Length flaglist 2", len(newflags))
-        if not fl1version == fl2version:
-            print ("Flagging versions do not match: {} vs {} - aborting".format(fl1version,fl2version))
-            return self
-        count=0
-        for flagline in newflags:
-            if len(flagline) == 8 and flagline[7] in self.FLAGID:
-                count+=1
-                flaglist.append(flagline)
-        if debug:
-            print ("added {} flags".format(count))
-        return flags(flaglist)
-
-
-    def extract(self, searchdict, combine='and'):
+    def create_patch(self):
         """
         DESCRIPTION:
-            extract data from flaglist
-            Difference to modify with option select:
-            modify select only get data with exact match
-
-        EXAMPLES:
-            vehicle_flags = flaglist.extract({'sensorid' : 'LEMI036_2_0001', 'comment':'vehicle'})
-            lightning_flags = flaglist.extract({'comment':'lightning'})
-        """
-        flagdict = cp.deepcopy(self.flagdict)
-        newdict = {}
-        sensorlist = []
-        selectedflags = []
-        def get_selection(sensorlist,searchdict):
-            newlist = []
-            comments = searchdict.get("comment",[])
-            if not isinstance(comments,list):
-                comments = [comments]
-            flagids = searchdict.get("flagid",[])
-            if not isinstance(flagids,list):
-                flagids = [flagids]
-            begin = searchdict.get("begin")
-            end = searchdict.get("end")
-            components = searchdict.get("components",[])
-            #print (comments,flagids,components)
-            if not isinstance(components,list):
-                components = [components]
-            for el in sensorlist:
-                ToAppend=[False,False,False]
-                if components:
-                    if el[2] in components:
-                        ToAppend[0]=True
-                else:
-                    ToAppend[0]=True
-                if flagids:
-                    if el[3] in flagids:
-                        ToAppend[1]=True
-                else:
-                    ToAppend[1]=True
-                if comments:
-                    hitlist = []
-                    for comment in comments:
-                        if el[4].find(comment)>-1:
-                            hitlist.append(True)
-                        else:
-                            hitlist.append(False)
-                        if combine in ["and","&","AND"]:
-                            tester = all(hitlist)
-                        else:
-                            tester = any(hitlist)
-                        ToAppend[2]=tester
-                else:
-                    ToAppend[2]=True
-                #print (ToAppend)
-                tester = all(ToAppend)
-                #print (tester)
-                if tester:
-                    newlist.append(el)
-
-            return newlist
-
-        selectedflags=[]
-        for sensorid in flagdict:
-                validsensorid = sensorid
-                if "sensorid" in searchdict:
-                    validsensorid = searchdict.get("sensorid")
-                if not sensorid == "flagversion" and sensorid == validsensorid:
-                    sensorlist = flagdict.get(sensorid)
-                    #print("Flags for sensor", len(sensorlist))
-                    if isinstance(sensorlist,list):
-                        selflags = get_selection(sensorlist,searchdict)
-                        #print (selflags, selectedflags)
-                        # why did I use this separation ?? does not work for examples
-                        #if not selectedflags and selflags:
-                        #    selectedflags = selflags
-                        #else:
-                        #    selectedflags += selflags
-                        selectedflags = selflags
-                    #print(selflags)
-                    newdict[sensorid] = selectedflags
-                    #print (sensorid, len(selectedflags))
-        newdict["flagversion"] = flagdict.get("flagversion")
-        flist = self.d2l(newdict)
-        return flags(flist,newdict)
-
-    def add(self, sensorid, keys, flagnumber, comment, startdate, enddate=None,debug=False):
-        """
-        DEFINITION:
-            Add a specific input to a flaglist
-            Flaglist elements look like
-            [st,et,key,flagnumber,comment,sensorid,now]
-
-        APPLICATION:
-            newflaglist = flaglist.add("LEMI036_1_0002", "x", 3, "Test", "2022-08-15T23:30:30")
-            newflaglist = flaglist.add("LEMI036_1_0002", ["y","z"], 3, "Test2", "2022-08-15T23:30:30",, "2022-08-15T23:45:00")
-            newflaglist = flaglist.add("LEMI025_22_0003", "all", 3, "Test3", "2022-08-15T23:30:30",, "2022-08-15T23:45:00")
-        """
-        flaglist = cp.deepcopy(self.flaglist)
-        # convert start and end to correct format
-        st = testtime(startdate)
-        if enddate:
-            et = testtime(enddate)
-        else:
-            et = st
-        now = datetime.utcnow()
-        if not keys:
-            return self
-        elif keys in ['all','All','ALL']:
-            keys = KEYLIST
-        elif not isinstance(keys,list):
-            keys = [keys]
-        for key in keys:
-            flagelem = [st,et,key,flagnumber,comment,sensorid,now]
-            exists = [elem for elem in flaglist if elem[:6] == flagelem[:5]]
-            if len(exists) == 0:
-                flaglist.append(flagelem)
-            else:
-                print ("flags.add: Flag already existing - skipping")
-        return flags(flaglist)
-
-
-    def stats(self,intensive=False, output='stdout'):
-        """
-        DESCRIPTION:
-            Provides some information on flag statistics
-        PARAMETER:
-            flaglist   (list) flaglist to be investigated
+            construct a simple patch dictionary for plotting from any given and preselected flaglist
         APPLICTAION:
-            flaglist = db2flaglist(db,'all')
-            flaglist.stats()
-        """
-        flaglist = self.flaglist
-        try:
-            flagversion = flaglist[0][7]
-        except:
-            flagversion = "0.4"
-        amountlist = []
-        outputt = '##########################################\n'
-        outputt += '           Flaglist statistics            \n'
-        outputt += '##########################################\n'
-        outputt += 'Flagging version: {}\n'.format(flagversion)
-        outputt += '\n'
-        outputt += 'A) Total contents: {}\n'.format(len(flaglist))
-        outputt += '\n'
-        outputt += 'B) Content for each ID:\n'
-        #print (flaglist[0], len(flaglist[0]))
-        if len(flaglist[0]) > 6:
-            ids = [el[5] for el in flaglist]
-            uniquenames = list(set(ids))
-        for name in uniquenames:
-            amount = len([el[0] for el in flaglist if el[5] == name])
-            amountlist.append([name,amount])
-            if intensive:
-                flagli = [el for el in flaglist if el[5] == name]
-                index = [el[3] for el in flagli]
-                uniqueindicies = list(set(index))
-                reasons = [el[4] for el in flagli]
-                uniquereasons = list(set(reasons))
-                intensiveinfo = []
-                for reason in uniquereasons:
-                    num = len([el for el in flagli if reason == el[4]])
-                    intensiveinfo.append([reason,num])
-                intensiveinfo = sorted(intensiveinfo,key=lambda x: x[1])
-                intensiveinfo = ["{} : {}\n".format(e[0],e[1]) for e in intensiveinfo]
-                amountlist[-1].append(intensiveinfo)
-        amountlist = sorted(amountlist,key=lambda x: x[1])
-        for el in amountlist:
-            outputt += "Dataset: {} \t Amount: {}\n".format(el[0],el[1])
-            if intensive:
-                for ele in el[2]:
-                    outputt += "   {}".format(ele)
-        if output=='stdout':
-            print (outputt)
-        else:
-            return outputt
-
-    def modify(self, mode='select', parameter='key', value=None, newvalue=None, starttime=None, endtime=None,debug=False):
-        """
-        DEFINITION:
-            Select/Replace/Delete information in flaglist
-            parameters are key, flagnumber, comment, startdate, enddate=None
-            mode delete: if only starttime and endtime are provided then all data inbetween is removed,
-                         if parameter and value are provided this data is removed, eventuall
-                         only between start and endtime
-        APPLICTAION
-
-        """
-        flaglist = self.flaglist
-        num = 0
-        # convert start and end to correct format
-        if parameter == 'key':
-            num = 2
-        elif parameter == 'flagnumber':
-            num = 3
-        elif parameter == 'comment':
-            num = 4
-        elif parameter == 'sensorid':
-            num = 5
-        if debug:
-            print ("flags.modify -> running with mode {}".format(mode))
-
-        if mode in ['select','replace'] or (mode=='delete' and value):
-            if starttime:
-                starttime = testtime(starttime)
-                flaglist = [elem for elem in flaglist if elem[1] > starttime]
-            if endtime:
-                endtime = testtime(endtime)
-                flaglist = [elem for elem in flaglist if elem[0] < endtime]
-        elif mode == 'delete' and not value:
-            print ("Only deleting")
-            flaglist1, flaglist2 = [],[]
-            if starttime:
-                starttime = testtime(starttime)
-                flaglist1 = [elem for elem in flaglist if elem[1] < starttime]
-            if endtime:
-                endtime = testtime(endtime)
-                flaglist2 = [elem for elem in flaglist if elem[0] > endtime]
-            flaglist1.extend(flaglist2)
-            flaglist = flaglist1
-
-        if mode == 'select':
-            if num>0 and value:
-                if num == 4:
-                    flaglist = [elem for elem in flaglist if elem[num].find(value) > 0]
-                elif num == 3:
-                    flaglist = [elem for elem in flaglist if elem[num] == int(value)]
-                else:
-                    flaglist = [elem for elem in flaglist if elem[num] == value]
-        elif mode == 'replace':
-            if num>0 and value:
-                for idx, elem in enumerate(flaglist):
-                    if num == 4:
-                        if elem[num].find(value) >= 0:
-                            flaglist[idx][num] = newvalue
-                    elif num == 3:
-                        if elem[num] == int(value):
-                            flaglist[idx][num] = int(newvalue)
-                    else:
-                        if elem[num] == value:
-                            flaglist[idx][num] = newvalue
-        elif mode == 'delete':
-            if num>0 and value:
-                if num == 4:
-                    flaglist = [elem for elem in flaglist if elem[num].find(value) < 0]
-                elif num == 3:
-                    flaglist = [elem for elem in flaglist if not elem[num] == int(value)]
-                else:
-                    flaglist = [elem for elem in flaglist if not elem[num] == value]
-
-        return flags(flaglist)
-
-    def clean(self,progress=False,debug=False):
-        """
-        DESCRIPTION:
-            identify and remove duplicates from flaglist, only the latest inputs are used
-            start, endtime and key are used to identfy duplicates
-        PARAMETER:
-            flaglist   (list) flaglist to be investigated
-        APPLICTAION:
-            stream = DataStream()
-            flaglist = db2flaglist(db,'all')
-            flaglistwithoutduplicates = stream.flaglistclean(flaglist)
-        """
-        flaglist = self.flaglist
-        # first step - remove all duplicates
-        testflaglist = ['____'.join([str(date2num(elem[0])),str(date2num(elem[1])),str(elem[2]),str(elem[3]),str(elem[4]),str(elem[5]),str(date2num(elem[6]))]) for elem in flaglist]
-        uniques,indi = np.unique(testflaglist,return_index=True)
-        flaglist = [flaglist[idx] for idx in indi]
-
-        # second step - remove all inputs without components
-        flaglist = [elem for elem in flaglist if not elem[2] == '']
-
-        ## Cleanup flaglist -- remove all inputs with duplicate start and endtime
-        ## (use only last input)
-        indicies = []
-        for ti, line in enumerate(flaglist):
-            if progress and ti/1000. == np.round(ti/1000.):
-                print ("flags.clean -> current state: {} percent".format(ti/len(flaglist)*100))
-            if len(line) > 5:
-                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2] and elem[5] == line[5]]
-            else:
-                inds = [ind for ind,elem in enumerate(flaglist) if elem[0] == line[0] and elem[1] == line[1] and elem[2] == line[2]]
-            if len(inds) > 1:
-                # get inputs dates for all duplicates and select the latest
-                dates = [[flaglist[dupind][-1], dupind] for dupind in inds]
-                indicies.append(sorted(dates)[-1][1])
-            else:
-                index = inds[-1]
-                indicies.append(index)
-
-        uniqueidx = (list(set(indicies)))
-        if debug:
-             print ("flags.clean: found {} unique inputs".format(len(uniqueidx)))
-        uniqueidx.sort()
-        flaglist = [flaglist[idx] for idx in uniqueidx]
-
-        return flags(flaglist)
-
-    def rename_nearby(self,searchdict,renamedict,timerange=timedelta(hours=1), debug=False):
-        """
-        DESCRIPTION:
-            Get flags according to a searchcriteria dictionary
-            Then find flags in the vicintiy with another "rename" searchcriteria
-            Those flags are then renamed using comments and flagids of searchcrit
-        PARAMETER:
-            searchdict   (dict)  :  searchcriteria
-            renamedict   (dict)  :
         RETURNS:
-            flaglist
-        EXAMPLES:
-
+            a patch dictionary for plotting
+            of the following structure
+            {flagid : {"start":"","end":"","flagtype":"","color":"","labelid":"","label":""}, nextflagid : {}}
         """
-        #find {"comment":[],"flagid":3} and replace all {comment,flagid} within timerange with searchdict
-        #1. get flags with searchdict
-        newflag = flags()
-        flaglist = self.flaglist
-        reference = self.extract(searchdict)
-        #print (reference)
-        #print ("----------------------------------------------")
-        if debug:
-            print (" Got reference data:", len(reference))
-        if len(reference) > 0:
-            for el in reference:
-                #take a time window around the reference element and get all rename elements
-                frame = self.trim(starttime=el[0]-timerange,endtime=el[1]+timerange, debug=debug)
-                frame = frame.extract(renamedict)
-                #print (frame)
-                #print ("----------------------------------------------")
-                if debug:
-                    print ("Extracting a data frame with {} inputs at {}".format(len(frame),el[0]))
-                for ele in frame:
-                    if "comment" in searchdict:
-                        comcol = self.FLAGKEYS.index('comment')
-                        ele[comcol] = searchdict.get("comment")
-                    if "id" in searchdict:
-                        idcol = self.FLAGKEYS.index('id')
-                        ele[idcol] = searchdict.get("id")
-                    modcol = self.FLAGKEYS.index('modificationtime')
-                    ele[modcol] = datetime.utcnow()
-                #print (frame)
-                if len(frame) > 0:
-                    newflag = newflag.join(frame)
-                #print (newflag)
-        #now join with original record and union to replace old flags
-        newflag = self.join(newflag)
-        newflag = newflag.union()
-        if debug:
-            print ("Amount of flags after renaming:", len(newflag))
-        return newflag
+        patchdict = {}
+        flagdict = self.flagdict
+        for d in flagdict:
+            cont = {}
+            cont['start'] = flagdict[d].get('starttime', None)
+            cont['end'] = flagdict[d].get('endtime')
+            cont['flagtype'] = flagdict[d].get('flagtype')
+            cont['color'] = flagdict[d].get('color')
+            cont['labelid'] = flagdict[d].get('labelid')
+            cont['label'] = flagdict[d].get('label')
+            if cont['start']:
+                patchdict[d] = cont
+        return patchdict
 
-    def set_labelvalue(self):
-        flaglist = self.flaglist
-        newflag=[]
-        for el in flaglist:
-            comcol = self.FLAGKEYS.index('comment')
-            cval = el[comcol]
-            for key in self.FLAGLABEL:
-                cont = self.FLAGLABEL.get(key)
-                if cval.find(key) > -1:
-                    el[comcol] = cont[0]
-            newflag.append(el)
-        return flags(newflag)
+    def diff(self, compare):
+        """
+        DESCRIPTION
+            compares two dictionaries and returns only the differences as flag object
+        APPLICATION
+             different_flags = fl.diff(myotherflags)
+        """
+        value = {k: compare.flagdict[k] for k in set(compare.flagdict) - set(self.flagdict)}
+        return flags(value)
 
-    def set_labelkey(self):
-        flaglist = self.flaglist
-        newflag=[]
-        for el in flaglist:
-            comcol = self.FLAGKEYS.index('comment')
-            cval = el[comcol]
-            for key in self.FLAGLABEL:
-                cont = self.FLAGLABEL.get(key)
-                for element in cont:
-                    if cval.find(element) > -1:
-                        el[comcol] = key
-            newflag.append(el)
-        return flags(newflag)
-
-    def drop(self,searchdict, debug=True):
-        newflag = []
-        flaglist = self.flaglist
-        reference = self.extract(searchdict)
-        for el in flaglist:
-            if not el in reference:
-                newflag.append(el)
-        return flags(newflag)
-
-
-    def union(self, sr=1, overlap=True, singular=False, remove=False, critamount=20, flagids=None, debug=False):
+    def drop(self, parameter='sensorid', values=None):
         """
         DESCRIPTION:
-            Method to inspect a flaglist and check for consecutive elements
-        PARAMETER:
-            sr           (float) :  [sec] Sampling rate of underlying flagged data sequence
-            critamount   (int)   :  Amount of maximum allowed consecutive (to be used when removing consecutive data)
-            remove       (BOOL)  :  True will replace consecutive data with a new flag, False will remove consecutive data from flaglist
-            overlap      (BOOL)  :  if True than overlapping flags will also be combined, comments from last modification will be used
-            singular     (BOOL)  :  if True than only single time stamp flags will be investigated (should be spikes)
-        OUTPUT:
-            flaglist
-        EXAMPLES:
+            drop specific flags from a flagdictionary.
+            For dropping specific time ranges use flagdict.trim
+            For the given values a "find" command is used. Thus also parts can be searched for
+            i.e. comment="incredible lightning strike" will be found by parameter value "lightning"
 
+            Filter options are:
+                    'sensorid',          # SensorId of Sensor on which flagging was conducted
+                    'components',        # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys for the sensorid
+                    'flagtype',          # integer 0 (just a comment), 1 (remove for definitiv - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
+                    'labelid',           # string with number i.e. '001'
+                    'label',             # name asociated with labelid i.e. lightning
+                    'comment',           # text without special characters (utf-8)
+                    'group',             # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'probabilities',     # measure of probabilities - list
+                    'stationid',         # stationid of flag
+                    'validity',          # character code: d (delete in cleanup), h (invalid/hide), default None
+                    'operator',          # text with name/shortcut of flagging person i.e. RL
+            Please note that every search parameter is provided as list
+        APPLICTAION:
+            flagswithoutcars = flags.drop('labelid',['050'])
+
+        RETURNS:
+            a filtered flag dictionary
         """
-
-        flaglist = cp.deepcopy(self.flaglist)
-        if flagids:
-            if isinstance(flagids, list):
-                uniqueids = flagids
-            elif isinstance(flagids, int):
-                uniqueids = [flagids]
-            else:
-                uniqueids = [0,1,2,3,4,5]
-        else:
-            uniqueids = [0,1,2,3,4,5]
-
-        if not len(flaglist) > 0:
-            return flaglist
-
-        # Ideally flaglist is a list of dictionaries:
-        # each dictionary consists of starttime, endtime, components, flagid, comment, sensorid, modificationdate
-        flagdict = [{"starttime" : el[0], "endtime" : el[1], "components" : el[2].split(','), "flagid" : el[3], "comment" : el[4], "sensorid" : el[5], "modificationdate" : el[6]} for el in flaglist]
-
-        ## Firstly extract all flagging IDs from flaglst
-        if len(flaglist[0]) > 6:
-            ids = [el[5] for el in flaglist]
-            uniquenames = list(set(ids))
-        else:
-            print ("Found an old flaglist type - aborting")
+        if not values:
             return self
-
-        newflaglist = []
-        for name in uniquenames:
-            if debug:
-                print (" Dealing with {}".format(name))
-            cflaglist = [el for el in flaglist if el[5] == name]
-            # if singular, extract flags with identical start and endtime
-            if singular:
-                nonsingularflaglist = [el for el in flaglist if el[0] != el[1]]
-                testlist = [el for el in flaglist if el[0] == el[1]]
-                newflaglist.extend(nonsingularflaglist)
-            else:
-                testlist = cflaglist
-
-            uniquecomponents = list(set([el[2] for el in testlist]))
-            if debug:
-                print (" - found flags for components", uniquecomponents)
-
-            for comp in uniquecomponents:
-                complist = [el for el in testlist if comp == el[2] and el[3] in uniqueids]
-                if debug:
-                    print ("  - Inputs for component {} with flagIDs {}: {}".format(comp,uniqueids,len(complist)))
-                idxtmp = 0
-                testcnt = 0
-                while idxtmp < len(complist):
-                    complist = complist[idxtmp:]
-                    extendedcomplist = []
-                    for idx,line in enumerate(complist):
-                        tdiff = (line[1]-line[0]).total_seconds()
-                        if tdiff > sr-(0.05*sr):
-                            # add steps
-                            firstt = line[0]
-                            lastt = line[1]
-                            steps = int(np.ceil(tdiff/float(sr)))
-                            for step in np.arange(steps):
-                                val0 = firstt+timedelta(seconds=int(step)*sr)
-                                extendedcomplist.append([val0,val0,line[2],line[3],line[4],line[5],line[6]])
-                            extendedcomplist.append([lastt,lastt,line[2],line[3],line[4],line[5],line[6]])
-                        else:
-                            extendedcomplist.append(line[:7])
-                        if len(extendedcomplist) > 500000:
-                            idxtmp = idx+1
-                            break
-                        idxtmp = idx+1
-                    if debug:
-                        print ("    -> Individual time stamps: {}".format(len(extendedcomplist)))
-                    if overlap:
-                        if debug:
-                            print ("    -> removing overlaps")
-                        # Now sort the extendedlist according to modification date
-                        extendedcomplist.sort(key=lambda x: x[-1], reverse=True)
-                        # Now remove all overlapping data
-                        seen = set()
-                        new1list = []
-                        for item in extendedcomplist:
-                            ti = np.round((item[0]-datetime(1900, 1, 1)).total_seconds(),0)
-                            # use a second resolution for identifying identical inputs
-                            if ti not in seen:
-                                new1list.append(item)
-                                seen.add(ti)
-                        extendedcomplist = new1list
-                        if debug:
-                            print (" - After overlap removal - time stamps: {}".format(len(extendedcomplist)))
-
-                    # now combine all subsequent time steps below sr to single inputs again
-                    extendedcomplist.sort(key=lambda x: x[0])
-                    # Important to consider FlagID in the following, otherwise ok (0,2) flags are joined with remove (1,3) flags
-                    new2list = []
-                    startt = None
-                    endt = None
-                    tmem = None
-                    for idx,line in enumerate(extendedcomplist):
-                        idnum0 = line[3]
-                        if idx < len(extendedcomplist)-1:
-                            t0 = line[0]
-                            t1 = extendedcomplist[idx+1][0]
-                            idnum1 = extendedcomplist[idx+1][3]
-                            tdiff = (t1-t0).total_seconds()
-                            if tdiff <= sr and idnum0 == idnum1:
-                                if not tmem:
-                                    tmem = t0
-                                endt = None
-                            else:
-                                startt = t0
-                                if tmem:
-                                    startt = tmem
-                                endt = t0
-                        else:
-                            t0 = line[0]
-                            startt = t0
-                            if tmem:
-                                startt = tmem
-                            endt = t0                            
-                        if startt and endt:
-                            # add new line
-                            if not remove:
-                                new2list.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
-                                newflaglist.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
-                            else:
-                                if idnum0 == 1 and (endt-startt).total_seconds()/float(sr) >= critamount:
-                                    # do not add subsequent automatic flags 
-                                    pass
-                                else:
-                                    new2list.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
-                                    newflaglist.append([startt,endt,line[2],line[3],line[4],line[5],line[6]])
-                            tmem = None
-                    if debug:
-                        print ("    -> After recombination: {}".format(len(new2list)))
-
-        return flags(newflaglist)
+        if not isinstance(values, (list, tuple)):
+            values = [values]
+        para = self.select(parameter=parameter, values=values)
+        diff = para.diff(self)
+        return diff
 
     def fprint(self, sensorid, type='date', debug=True):
-        nfl = self.flagdict.get(sensorid)
-        # combine list with components
-        mdic = {}
-        if not len(nfl) > 0:
-            return mdic
-        lwc = [l[:2] + l[3:] for l in nfl]
-        res = []
-        [res.append(x) for x in lwc if x not in res]
-        nl = []
-        for ind, el in enumerate(res):
-            comps = []
-            dic = {}
-            for line in nfl:
-                l = line[:2] + line[3:]
-                if el == l:
-                    comps.append(line[2])
-            dic['components'] = comps
-            dic['start'] = el[0]
-            dic['end'] = el[1]
-            dic['flag'] = el[2]
-            dic['description'] = el[3]
-            mdic[ind] = dic
-
+        """
+        DESCRIPTION
+           create a formated output of flags
+        """
+        nfl = self.select(parameter='sensorid', values=[sensorid])
         startdaylist = []
-        for el in mdic:
-            ld = mdic.get(el)
-            startday = ld.get('start').date()
-            endday = ld.get('end').date()
+        for el in nfl.flagdict:
+            ld = nfl.flagdict.get(el)
+            startday = ld.get('starttime').date()
+            endday = ld.get('endtime').date()
             if type == 'date':
                 if startday == endday:
                     if not startday in startdaylist:
                         startdaylist.append(startday)
-                        print("{} :  {}-{};  {}  (flag: {}, components: {})".format(startday, ld.get('start').time(),
-                                                                                    ld.get('end').time(),
-                                                                                    ld.get('description'),
-                                                                                    ld.get('flag'),
-                                                                                    ",".join(ld.get('components'))))
+                        print(
+                            "{} :  {}-{};  {}  (flag: {}, components: {})".format(startday, ld.get('starttime').time(),
+                                                                                  ld.get('endtime').time(),
+                                                                                  ld.get('label'),
+                                                                                  ld.get('flagtype'),
+                                                                                  ",".join(ld.get('components'))))
                     else:
-                        print("           :  {}-{};  {}  (flag: {}, components: {})".format(ld.get('start').time(),
-                                                                                            ld.get('end').time(),
-                                                                                            ld.get('description'),
-                                                                                            ld.get('flag'), ",".join(
-                                ld.get('components'))))
+                        print("           :  {}-{};  {}  (flag: {}, components: {})".format(ld.get('starttime').time(),
+                                                                                            ld.get('endtime').time(),
+                                                                                            ld.get('label'),
+                                                                                            ld.get('flagtype'),
+                                                                                            ",".join(
+                                                                                                ld.get('components'))))
                 else:
-                    print("{} - {};  {}  (flag: {}, components: {})".format(ld.get('start'), ld.get('end'),
-                                                                                ld.get('description'), ld.get('flag'),
-                                                                                ",".join(ld.get('components'))))
+                    print("{} - {};  {}  (flag: {}, components: {})".format(ld.get('starttime'), ld.get('endtime'),
+                                                                            ld.get('label'), ld.get('flagtype'),
+                                                                            ",".join(ld.get('components'))))
             elif type == 'onlydate':
                 if not startday in startdaylist:
                     startdaylist.append(startday)
@@ -1004,7 +475,130 @@ class flags(object):
             else:
                 print(ld)
 
-    def save(self, path=None, destination="file",overwrite=False):
+    def join(self, flagobject, debug=False):
+        """
+        DESCRIPTION
+            add data into a flaglist
+            please note: join is non-destructive.
+        """
+        fl = self.flagdict
+        fo = flagobject.flagdict
+        new = {**fl, **fo}
+        return flags(new)
+
+    def rename_nearby(self, parameter='labelid', values=None, searchcomment='', timerange=timedelta(hours=1),
+                      debug=False):
+        """
+        DESCRIPTION:
+            Get flags according to a select request. Then find all flags in the vincinity and replace contents
+            according with data of the selected 'reference' if flagtype - groups match (i.e. 1 and 3) and are smaller
+            i.e 1 in if reference type is 3.
+            The main reason for this method is replacing automatic outlier detection signals during thunderstorms
+            by "lightning" flags. The observer marks a single flag within the thunderstorm and then runs rename_nearby
+            to replace automatically assigned "outliers" with the "lightning" information data.
+            New Operator will be set to "rename_nearby"
+        PARAMETER:
+            parameter   (dict)  :  searchcriteria
+            values      (dict)  :
+            timerange
+        RETURNS:
+            flagobject
+        EXAMPLES:
+            results = fl.rename_nearby(parameter='labelid', values=['001'], searchcomment='autodetect')
+        """
+        if not values:
+            return self
+        if not isinstance(values, (list, tuple)):
+            values = [values]
+        newflag = self.copy()
+        # select reference data
+        reference = newflag.select(parameter=parameter, values=values)
+
+        if debug:
+            print(" Got reference data:", len(reference))
+        if len(reference) > 0:
+            for d in reference.flagdict:
+                # take a time window around the reference element and get all rename elements
+                st = reference.flagdict.get(d).get('starttime')
+                et = reference.flagdict.get(d).get('endtime')
+                reftype = reference.flagdict.get(d).get('flagtype')
+                reflabel = reference.flagdict.get(d).get('label')
+                reflabelid = reference.flagdict.get(d).get('labelid')
+                refcomment = reference.flagdict.get(d).get('comment')
+                refgroups = reference.flagdict.get(d).get('groups')
+                searchtype = reftype
+                if (reftype - 2) > 0:
+                    # if 3 select 1 (not-used for definitive), if 4 select 2
+                    searchtype = reftype - 2
+                frame = newflag.trim(starttime=st - timerange, endtime=et + timerange, debug=debug)
+                # select only flagtyps x-2 if x-2 > 0 (only automatic flags with the same flagtype group
+                # optional select only if searchcomment is found in comment
+                selframe = frame.select(parameter='flagtype', values=[searchtype])
+                if searchcomment:
+                    selframe = selframe.select(parameter='comment', values=[searchcomment])
+                if debug:
+                    print("Selected {} inputs for renaming close to reference at {}".format(len(selframe), st))
+                if selframe:
+                    for sel in selframe.flagdict:
+                        d = selframe.flagdict[sel]
+                        d['label'] = reflabel
+                        d['labelid'] = reflabelid
+                        d['comment'] = refcomment
+                        d['groups'] = refgroups
+                        d['operator'] = "rename_nearby"
+
+        if debug:
+            print("Amount of flags after renaming:", len(newflag))
+        return newflag
+
+    def replace(self, parameter='sensorid', value=None, newvalue=None):
+        """
+        DESCRIPTION:
+            modify specific flags from a flagdictionary.
+            For dropping specific time ranges use flagdict.trim
+            For the given values a "find" command is used. Thus also parts can be searched for
+            i.e. comment="incredible lightning strike" will be found by parameter value "lightning"
+
+            Filter options are:
+                    'sensorid',          # SensorId of Sensor on which flagging was conducted
+                    'components',        # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys for the sensorid
+                    'flagtype',          # integer 0 (just a comment), 1 (remove for definitiv - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
+                    'labelid',           # string with number i.e. '001'
+                    'label',             # name asociated with labelid i.e. lightning
+                    'comment',           # text without special characters (utf-8)
+                    'groups',             # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'probabilities',     # measure of probabilities - list
+                    'stationid',         # stationid of flag
+                    'validity',          # character code: d (delete in cleanup), h (invalid/hide), default None
+                    'operator',          # text with name/shortcut of flagging person i.e. RL
+            Please note that every search parameter is provided as list
+        APPLICTAION:
+            flagsmodified = fl.replace('comment','lightning','hell of a lightining strike')
+            flagsmodified = fl.replace('groups',None,['magnetism'])
+            flagsmodified = fl.replace('stationid','','WIC')
+
+
+        RETURNS:
+            a modified flag dictionary
+        """
+        fl = self.copy()
+        if not newvalue:
+            return self
+        res = {}
+        for id in fl.flagdict:
+            econt = fl.flagdict[id]
+            ncont = {}
+            if isinstance(econt.get(parameter), basestring):
+                if econt.get(parameter).find(value) > -1:
+                    econt[parameter] = newvalue
+            elif econt.get(parameter) == value:
+                econt[parameter] = newvalue
+            ncont = econt
+            if ncont:
+                res[id] = ncont
+        return flags(res)
+
+    def save(self, path=None, destination="file", overwrite=False, debug=False):
         """
         DEFINITION:
             Save list e.g. flaglist to file (using json or pickle) or db.
@@ -1016,47 +610,353 @@ class flags(object):
         RETURNS:
             - True if succesful otherwise False
         EXAMPLE:
-            >>> flaglist.save('/my/path/myfile.pkl')
+            fl.save('/my/path/myfile.json')
 
         """
-        print("Saving flaglist ...")
-        flag = self.copy()
-        if not self.flaglist:
+        if debug:
+            print("Saving flaglist ...")
+        if not self.flagdict:
             print("error 1")
             return False
         if not path:
             path = 'myfile.json'
+        flagdict = self.flagdict
         if not overwrite:
             existflag = load(path)
-            if existflag.flaglist:
-                existflag.join(flag)
-                flags = existflag
+            if existflag.flagdict:
+                fl = existflag.join(self)
+                flagdict = fl.flagdict
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
-        if path.endswith('.json'):
-            print(" -- using json format ")
+        if path.endswith('.pkl'):
+            if debug:
+                print(" -- using pickle")
             try:
-                import json
-                def dateconv(d):
-                    # Converter to serialize datetime objects in json
-                    if isinstance(d,datetime):
-                        return d.__str__()
-                with open(path,'w',encoding='utf-8') as file:
-                    file.write(unicode(json.dumps(self.flagdict,ensure_ascii=False,indent=4,default=dateconv)))
-                print("saveflags: list saved to a json file: {}".format(path))
+                # TODO: check whether package is already loaded
+                from pickle import dump
+                dump(flagdict, open(path, 'wb'))
+                if debug:
+                    print("save: saved to {}".format(path))
                 return True
             except:
                 return False
         else:
-            print(" -- using pickle")
+            if debug:
+                print(" -- using json format ")
             try:
-                # TODO: check whether package is already loaded
-                from pickle import dump
-                dump(self.flaglist,open(path,'wb'))
-                print("saveflags: list saved to {}".format(path))
+                def dateconv(d):
+                    # Converter to serialize datetime objects in json
+                    if isinstance(d, datetime):
+                        return d.__str__()
+
+                with open(path, 'w', encoding='utf-8') as file:
+                    file.write(unicode(json.dumps(flagdict, ensure_ascii=False, indent=4, default=dateconv)))
+                if debug:
+                    print("save: saved flagging data to a json file: {}".format(path))
                 return True
             except:
                 return False
+
+    def select(self, parameter='sensorid', values=None):
+        """
+        DESCRIPTION:
+            select specific flags from a flagdictionary.
+            For selecting specific time ranges use flagdict.trim
+            For the given values a "find" command is used. Thus also parts can be searched for
+            i.e. comment="incredible lightning strike" will be found by parameter value "lightning"
+
+            Filter options are:
+                    'flagid',            # FlagID of flag
+                    'sensorid',          # SensorId of Sensor on which flagging was conducted
+                    'components',        # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys for the sensorid
+                    'flagtype',          # integer 0 (just a comment), 1 (remove for definitiv - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
+                    'labelid',           # string with number i.e. '001'
+                    'label',             # name asociated with labelid i.e. lightning
+                    'comment',           # text without special characters (utf-8)
+                    'groups',             # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'probabilities',     # measure of probabilities - list
+                    'stationid',         # stationid of flag
+                    'validity',          # character code: d (delete in cleanup), h (invalid/hide), default None
+                    'operator',          # text with name/shortcut of flagging person i.e. RL
+            Please note that every search parameter is provided as list
+        APPLICTAION:
+            selected = flagdict.select('labelid',['050','052'])
+
+        RETURNS:
+            a filtered flag dictionary
+        """
+        if not values:
+            return self
+        if not isinstance(values, (list, tuple)):
+            values = [values]
+        res = {}
+        for id in self.flagdict:
+            if parameter == 'flagid' and id in values:
+                res[id] = self.flagdict[id]
+            else:
+                econt = self.flagdict[id]
+                ncont = {}
+                if values and isinstance(values, (list, tuple)):
+                    if isinstance(econt.get(parameter), basestring):
+                        for val in values:
+                            if econt.get(parameter).find(val) > -1:
+                                ncont = econt
+                    elif econt.get(parameter) in values:
+                        ncont = econt
+                if ncont:
+                    res[id] = ncont
+        return flags(res)
+
+    def stats(self, intensive=False, output='stdout'):
+        """
+        DESCRIPTION:
+            Provides some information on flags and their statistics
+        PARAMETER:
+            flags   (object) flagdict to be investigated
+        APPLICTAION:
+            fl = db2flaglist(db,'all')
+            fl.stats()
+        """
+
+        flaglist = np.asarray(self._list(
+            ['starttime', 'endtime', 'flagtype', 'labelid', 'sensorid', 'modificationtime', 'flagversion', 'stationid',
+             'groups', 'operator'])).T
+        verl = Counter(flaglist[7])
+        vers = verl.keys()
+        outputt = '##########################################\n'
+        outputt += '           Flaglist statistics            \n'
+        outputt += '##########################################\n'
+        for v in vers:
+            outputt += ('Flagging version: {}, Total:  {}\n'.format(v, verl[v]))
+        outputt += '\n Total contents: {}\n'.format(len(self.flagdict))
+        outputt += '-------------------------------------------\n'
+        sensl = Counter(flaglist[5])
+        sens = sensl.keys()
+        for s in sens:
+            outputt += (' SensorID: {}, Total:  {}\n'.format(s, sensl[s]))
+            if intensive:
+                # bylabel
+                # get indices of all data belonging to this sensorid/group
+                inds = np.where(flaglist[5] == s)
+                sellabid = flaglist[4][inds]
+                labl = Counter(sellabid)
+                labs = labl.keys()
+                for l in labs:
+                    outputt += ('     LabelID: {} - {}, Total:  {}\n'.format(l, self.FLAGLABEL.get(l), labl[l]))
+        if output == 'stdout':
+            print(outputt)
+        else:
+            return outputt
+
+    def trim(self, starttime=None, endtime=None, debug=False):
+        """
+        DESCRIPTION
+            trim flag dictionary by given starttime and endtime.
+            Return data which begins within the given time range datastart <= starttime
+            or ends within the timerange dataend <= endtime.
+        PARAMETER
+            starttime : interpretable as datetime (datetime, string, etc)
+            endtime   : interpretable as datetime
+        APPLICATION
+            test = newfl.trim(starttime='2022-11-22T20:53:12.654362',endtime='2022-11-22T20:59:12.654362')
+        """
+        # fl = self.copy()
+        fl = self.flagdict
+        st = testtime(starttime)
+        et = testtime(endtime)
+        if debug:
+            print(" trimming flaglist. original lenght: {}".format(len(fl)))
+
+        # extract starttime and endtimes from flagdict
+        array = np.asarray(self._list(['starttime', 'endtime'])).T
+        # get all indices where starttime <= lstarttime < endtime - > range begins within timerange
+        startinds = np.where(np.logical_and(array[1] >= st, array[1] < et))
+        # get all indices where starttime < lendtime <= lendtime  -> range end within timerange
+        endinds = np.where(np.logical_and(array[2] > st, array[2] <= et))
+        # combine indices lists
+        res = list(set(startinds[0]) | set(endinds[0]))
+        # get IDs for valid indices
+        validids = array[0][res]
+        nd = {key: fl.get(key) for key in fl if key in validids}
+        if debug:
+            print(" -> new lenght: {}".format(len(nd)))
+        return flags(nd)
+
+    def union(self, samplingrate=0, level=0, typeforce=True, debug=False):
+        """
+        DESCRIPTION:
+            Method to inspect a flaglist and check for consecutive/overlapping time ranges with identical or similar contents.
+            Three levels of union are available:
+            0 : combine consecutive and overlapping time ranges with identical sensor, flagtype, label, components
+            1 : combine consecutive and overlapping time ranges with identical sensor, flagtype, label even if
+                components differ (extend component list)
+            2 : combine consecutive and overlapping time ranges with identical sensor, flagtype, even if label and
+                components differ (extend component list)
+            3 : combine consecutive and overlapping time ranges with identical sensor, even if flagtype, label and
+                components differ (extend component list)
+            When combining data and eventually replacing other information then contents from higher flagtype and later
+            modification time are used (in this order).
+
+        PARAMETER:
+            samplingrate (float) :  [sec] Sampling rate of underlying flagged data sequence
+                                    if no sampling rate is provided then consecutivity can not be determined
+                                    and only overlapping time ranges are combined
+            level        (int)   :  if True than overlapping flags will also be combined, comments from last
+                                    modification will be used
+            typeforce    (BOOL)  :  if False than flagtype 1 and 3, as well 2 and 4 will be rated as equivalent for
+                                    combination (not for assigning the combined contents)
+        RETURNS:
+            flagobject
+
+        EXAMPLES:
+            combined = fl.union(samplingrate=1,level=0)
+        """
+
+        fl = self.copy()
+        if not len(fl) > 0:
+            return fl
+        newflags = flags()
+        ids_to_remember = []
+        idlist = []
+
+        # Ideally flaglist is a list of dictionaries:
+        # each dictionary consists of starttime, endtime, components, flagid, comment, sensorid, modificationdate
+        # flagdict = [{"starttime" : el[0], "endtime" : el[1], "components" : el[2].split(','), "flagid" : el[3], "comment" : el[4], "sensorid" : el[5], "modificationdate" : el[6]} for el in flaglist]
+        flaglist = np.asarray(fl._list(['starttime', 'endtime', 'flagtype', 'labelid', 'sensorid'])).T
+
+        ## Firstly extract all unique SensorIDs from flaglst
+        sensl = Counter(flaglist[5])
+        sens = sensl.keys()
+        uniquenames = list(sens)
+        if debug:
+            print("Sensorlist:", uniquenames)
+
+        for name in uniquenames:
+            if debug:
+                print(" Dealing with {}".format(name))
+            # get all flags with this name
+            flsens = fl.select(parameter='sensorid', values=[name])
+            # now create subdirectories depending on level
+            subflaglist = []
+            # get unique flagids, components and labelids for specific sensorlist
+            sensflaglist = np.asarray(flsens._list(
+                ['starttime', 'endtime', 'flagtype', 'labelid', 'sensorid', 'components', 'modificationtime',
+                 'flagversion', 'stationid', 'groups', 'operator']), dtype=object).T
+            sensflaglist[6] = [",".join(el) for el in sensflaglist[6]]
+            compsl = Counter(sensflaglist[6])
+            comps = list(compsl.keys())
+            labsl = Counter(sensflaglist[4])
+            labs = list(labsl.keys())
+            typsl = Counter(sensflaglist[3])
+            typs = list(typsl.keys())
+            # create lists of subgroups depending on levels, these subgroups will then be combined
+            # level separation has been tested
+            if level < 4:
+                # flsens is used for combination
+                idlist = [sensflaglist[0]]
+                if debug:
+                    print("Level 3: ", idlist)
+            if level < 3:
+                idlist = []
+                typs = [[el] for el in typs]
+                if not typeforce:
+                    # typs should then look like [[0],[1,3], [2,4]]
+                    typs = [[0], [1, 3], [2, 4]]
+                for typ in typs:
+                    subidlist = [id for i, id in enumerate(sensflaglist[0]) if sensflaglist[3][i] in typ]
+                    idlist.append(subidlist)
+                if debug:
+                    print("Level 2: ", idlist)
+            if level < 2:
+                newidlist = []
+                for lab in labs:
+                    for uids in idlist:
+                        labidlst = []
+                        for uid in uids:
+                            val = flsens.flagdict.get(uid)
+                            if val.get('labelid') == lab:
+                                labidlst.append(uid)
+                        if len(labidlst) > 0:
+                            newidlist.append(labidlst)
+                idlist = newidlist
+                if debug:
+                    print("Level 1: ", idlist)
+            if level < 1:
+                newidlist = []
+                for comp in comps:
+                    # print (comp, comp.split(','))
+                    for uids in idlist:
+                        compidlst = []
+                        for uid in uids:
+                            val = flsens.flagdict.get(uid)
+                            if val.get('components') == comp.split(','):
+                                compidlst.append(uid)
+                        if len(compidlst) > 0:
+                            newidlist.append(compidlst)
+                idlist = newidlist
+                if debug:
+                    print("Level 0: ", idlist)
+            for subids in idlist:  # speed this up
+                for flagid in subids:
+                    # get start and endtime for all ids and select ids with overlapping/consecutive time ranges
+                    # remember combined ids to remove them at the end
+                    val = flsens.flagdict.get(flagid)
+                    mod = val.get('modificationtime')
+                    typ = val.get('flagtype')
+                    comps = val.get('components')
+                    st = val.get('starttime') - timedelta(seconds=samplingrate)
+                    et = val.get('endtime') + timedelta(seconds=samplingrate)
+                    for id2 in subids:
+                        if not flagid == id2 and not id2 in ids_to_remember:
+                            val2 = flsens.flagdict.get(id2)
+                            mod2 = val2.get('modificationtime')
+                            typ2 = val2.get('flagtype')
+                            comps2 = val2.get('components')
+                            st2 = val2.get('starttime')
+                            et2 = val2.get('endtime')
+                            if st <= st2 <= et or st <= et2 <= et:
+                                # overlap found
+                                ids_to_remember.append(flagid)
+                                ids_to_remember.append(id2)
+                                if debug:
+                                    print("Found overlapp for {} and {}".format(flagid, id2))
+                                newst = np.min([val.get('starttime'), st2])
+                                newet = np.max([val.get('endtime'), et2])
+                                newcomps = list(set(comps + comps2))
+                                primval = val
+                                # select the dictionary with higest flagtype (observers decision, or latest modificationtime)
+                                if typ2 > typ:
+                                    primval = val2
+                                if mod2 > mod:
+                                    primval = val2
+                                newflags.add(sensorid=primval.get('sensorid'),
+                                             starttime=newst,
+                                             endtime=newet,
+                                             components=newcomps,
+                                             flagtype=primval.get('flagtype'),
+                                             labelid=primval.get('labelid'),
+                                             label=primval.get('label'),
+                                             comment=primval.get('comment'),
+                                             groups=primval.get('groups'),
+                                             probabilities=primval.get('probabilities'),
+                                             stationid=primval.get('stationid'),
+                                             validity=primval.get('vailidity'),
+                                             operator=primval.get('operator'),
+                                             color=primval.get('color'),
+                                             flagversion=primval.get('flagversion'))
+
+        # join new flags with fl
+        fl = fl.join(newflags)
+        # remove all ids which have been combined
+        fl = fl.drop(parameter='flagid', values=ids_to_remember)
+
+        if debug:
+            print("    -> Originally {} flags were provided".format(len(self)))
+            print("       of which {} were combined into {} new flags".format(len(ids_to_remember), len(newflags)))
+            print("       using level {}, samplingrate {} and typeforcing {}.".format(level, samplingrate, typeforce))
+            print("       New flaglist now contains {} flags.".format(len(fl)))
+
+        return fl
 
 
 def load(path, sensorid=None, begin=None, end=None, source='file', format='', debug=False):
@@ -1075,108 +975,263 @@ def load(path, sensorid=None, begin=None, end=None, source='file', format='', de
         - flags obsject (e.g. flaglist)
 
     TODO:
-        - Pickle import
+        - Pickle import and all old data formats!!!
 
     EXAMPLE:
-        >>> import magpy.core.flagging as flags
-        >>> flaglist = flags.load('/my/path/myfile.pkl')
+        import magpy.core.flagging as flags
+        flaglist = flags.load('/my/path/myfile.pkl')
+
+    TODO:
+    When loading old data, then flagids need to be constrcuted and flags shoudl be added using the add method with
+    last modifications dates at last. This makes sure that for identical flags the last modified ones are used.
 
     """
-    flaglist = flags()
+    fl = flags()
+    myd = {}
     if not path:
-        return flaglist
+        return fl
 
     if source == "db":
-        print ("Source from DATABASE - to be done")
+        print("Source from DATABASE - to be done")
     else:
         if "://" in path:
-            print ("Source from WEBPATH (only json supported) - to be done")
+            print("Source from WEBPATH (only json supported) - to be done")
         else:
             if not os.path.isfile(path):
                 if debug:
-                    print (" -> Could not find a file at the given path {}".format(path))
+                    print(" -> Could not find a file at the given path {}".format(path))
                 return flags([])
-            if format=="":
+            if format == "":
                 if debug:
-                    print (" -> format NOT manually provided")
+                    print(" -> format NOT manually provided")
                 if path.endswith(".pkl"):
                     if debug:
-                        print (" -> extension points towards a pickle file")
-                    format="pkl"
+                        print(" -> extension points towards a pickle file")
+                    format = "pkl"
                 elif path.endswith(".json"):
                     if debug:
-                        print (" -> extension points towards a json file")
-                    format="json"
+                        print(" -> extension points towards a json file")
+                    format = "json"
                 else:
                     if debug:
-                        print (" -> format unclear, asuming a json file")
-                    format="json"
+                        print(" -> format unclear, asuming a json file")
+                    format = "json"
             else:
                 if debug:
-                    print (" -> format {} provided".format(format))
+                    print(" -> format {} provided".format(format))
 
             if format == 'json':
-                mylist = _readJson(path,sensorid=sensorid,begin=begin,end=end,debug=debug)
+                myd = _readJson(path, debug=debug)
+                fl = flags(myd)
             elif format == 'pkl':
-                mylist = _readPickle(path,sensorid=sensorid,begin=begin,end=end,debug=debug)
-            return flags(mylist)
+                myd = _readPickle(path, sensorid=sensorid, begin=begin, end=end, debug=debug)
+                fl = flags(myd)
+            if begin or end:
+                fl = fl.trim(starttime=begin, endtime=end)
+            if sensorid:
+                fl = fl.select(parameter='sensorid', values=[sensorid])
+            return flags(myd)
+
 
 def _dateparser(dct):
     # Convert dates in dictionary to datetime objects
-    for (key,value) in dct.items():
-        for i,line in enumerate(value):
-            for j,elem in enumerate(line):
-                if str(elem).count('-') + str(elem).count(':') == 4:
-                    try:
-                        try:
-                            value[i][j] = datetime.strptime(elem,"%Y-%m-%d %H:%M:%S.%f")
-                        except:
-                            value[i][j] = datetime.strptime(elem,"%Y-%m-%d %H:%M:%S")
-                    except:
-                        pass
+    for (key, value) in dct.items():
+        if str(value).count('-') + str(value).count(':') == 4:
+            try:
+                try:
+                    value = datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f")
+                except:
+                    value = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+            except:
+                pass
         dct[key] = value
     return dct
 
-def _readJson(path, sensorid=None, begin=None, end=None, debug=False):
-    import json
-    if debug:
-        print ("Reading a json style flaglist...")
-    with open(path,'r') as file:
-        mydic = json.load(file,object_hook=_dateparser)
-    # test for flagversion flagnumber
-    fv = mydic.get('flagversion','0.4')
-    if sensorid:
-        mylist = mydic.get(sensorid,'')
-        do = [el.insert(5,sensorid) for el in mylist]
-        do = [el.insert(7,fv) for el in mylist]
-    else:
-        mylist = []
-        for s in mydic:
-            ml = mydic[s]
-            if isinstance(ml,list):
-                do = [el.insert(5,s) for el in ml]
-                do = [el.insert(7,fv) for el in ml]
-                mylist.extend(mydic[s])
-    if begin:
-        mylist = [el for el in mylist if el[1] > begin]
-    if end:
-        mylist = [el for el in mylist if el[0] < end]
-    #check if components is a list
-    if debug:
-        print (" -> Json style loaded. Imported {} flags".format(len(mylist)))
-    return mylist
 
-def _readPickle(path,sensorid=None, begin=None, end=None,debug=False):
-    from pickle import load as pklload
-    mylist = pklload(open(path,"rb"))
+def _readJson(path, debug=False):
     if debug:
-        print (len(mylist[0]))
-        print("load: list {a} successfully loaded, found {b} inputs".format(a=path,b=len(mylist)))
-    if sensorid:
-        print(" - extracting data for sensor {}".format(sensorid))
-        mylist = [el for el in mylist if el[5] == sensorid]
-    if begin:
-        mylist = [el for el in mylist if el[1] > begin]
-    if end:
-        mylist = [el for el in mylist if el[0] < end]
-    return mylist
+        print("Reading a json style flaglist...")
+    with open(path, 'r') as file:
+        mydic = json.load(file, object_hook=_dateparser)
+    return mydic
+
+
+def _readPickle(path, debug=False):
+    from pickle import load as pklload
+    myd = pklload(open(path, "rb"))
+    if debug:
+        print("load: list {a} successfully loaded, found {b} inputs".format(a=path, b=len(myd)))
+    return myd
+
+
+if __name__ == '__main__':
+
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: Flagging PACKAGE")
+    print("THIS IS A TEST RUN OF THE MAGPY.CORE FLAGGING PACKAGE.")
+    print("All main methods will be tested. This may take a while.")
+    print("If errors are encountered they will be listed at the end.")
+    print("Otherwise True will be returned")
+    print("----------------------------------------------------------")
+    print()
+
+import subprocess
+# #######################################################
+#                     Runtime testing
+# #######################################################
+
+fl = flags()
+newfl = flags()
+fo = flags()
+nextfl = flags()
+flagsmodified=flags()
+ok = True
+errors = {}
+successes = {}
+if ok:
+    testrun = './testflagfile.json' # define a test file later on
+    t_start_test = datetime.utcnow()
+    while True:
+        try:
+            ts = datetime.utcnow()
+            fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
+            fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+            te = datetime.utcnow()
+            successes['add'] = ("Version: {}: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['add'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR adding new data - will affect all other tests.")
+        try:
+            ts = datetime.utcnow()
+            reslist = fl._list(['starttime','endtime'])
+            te = datetime.utcnow()
+            successes['_list'] = ("Version: {}, _list: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['_list'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR extracting _list.")
+        try:
+            ts = datetime.utcnow()
+            newfl = fl.copy()
+            te = datetime.utcnow()
+            successes['copy'] = ("Version: {}, copy: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['copy'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR copy stream.")
+        try:
+            ts = datetime.utcnow()
+            trimfl = newfl.trim(starttime='2022-11-22T19:57:12.654362',endtime='2022-11-22T22:59:12.654362')
+            te = datetime.utcnow()
+            successes['trim'] = ("Version: {}, trim: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['trim'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR trim flag dictionary.")
+        try:
+            ts = datetime.utcnow()
+            nextfl = newfl.add(sensorid="GSM90_Y1112_0001",starttime="2022-11-22T10:56:12.654362",endtime="2022-11-22T10:59:12.654362",components=['f'],labelid='050',debug=False)
+            obt = nextfl.select('labelid',['050'])
+            te = datetime.utcnow()
+            successes['select'] = ("Version: {}, select: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['select'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR select flags.")
+        try:
+            ts = datetime.utcnow()
+            fo = flags()
+            fo = fo.add(sensorid="GSM90_Y1112_0001",starttime="2022-11-22T10:56:12.654362",endtime="2022-11-22T10:59:12.654362",components=['f'],labelid='050',debug=False)
+            combfl = newfl.join(fo)
+            te = datetime.utcnow()
+            successes['join'] = ("Version: {}, join: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['join'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR join flags.")
+        try:
+            ts = datetime.utcnow()
+            fo = flags()
+            fo = fo.add(sensorid="GSM90_Y1112_0001",starttime="2022-11-22T10:56:12.654362",endtime="2022-11-22T10:59:12.654362",components=['f'],labelid='050',debug=False)
+            fo.stats()
+            te = datetime.utcnow()
+            successes['stats'] = ("Version: {}, stats: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['stats'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR stats.")
+        try:
+            ts = datetime.utcnow()
+            diff = fo.diff(nextfl)
+            te = datetime.utcnow()
+            successes['diff'] = ("Version: {}, diff: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['diff'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR differences of flags.")
+        try:
+            ts = datetime.utcnow()
+            clean = fo.drop(parameter='sensorid', values=['GSM90_Y1112_0001'])
+            te = datetime.utcnow()
+            successes['drop'] = ("Version: {}, drop: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['drop'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in drop flags.")
+        try:
+            ts = datetime.utcnow()
+            flagsmodified = nextfl.replace('comment','lightning','hell of a lightining strike')
+            te = datetime.utcnow()
+            successes['replace'] = ("Version: {}, replace: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['replace'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in replace flags.")
+        try:
+            ts = datetime.utcnow()
+            flagsmodified.fprint('GSM90_Y1112_0001')
+            te = datetime.utcnow()
+            successes['fprint'] = ("Version: {}, fprint: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['fprint'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in fprint flags.")
+        try:
+            ts = datetime.utcnow()
+            combfl = nextfl.union(level=0)
+            te = datetime.utcnow()
+            successes['union'] = ("Version: {}, union: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['union'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in union flags.")
+        try:
+            ts = datetime.utcnow()
+            combfl = nextfl.rename_nearby(parameter='labelid', values=['001'])
+            te = datetime.utcnow()
+            successes['ename_nearby'] = ("Version: {}, ename_nearby: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['ename_nearby'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in ename_nearby flags.")
+        try:
+            ts = datetime.utcnow()
+            nextfl.save(path=testrun)
+            te = datetime.utcnow()
+            successes['save'] = ("Version: {}, save: {}".format(magpyversion,(te-ts).total_seconds()))
+        except Exception as excep:
+            errors['save'] = str(excep)
+            print(datetime.utcnow(), "--- ERROR saving flags.")
+
+        # If end of routine is reached... break.
+        break
+
+    t_end_test = datetime.utcnow()
+    time_taken = t_end_test - t_start_test
+    print(datetime.utcnow(), "- Flagging runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(testrun)
+    subprocess.call(del_test_files,shell=True)
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")
