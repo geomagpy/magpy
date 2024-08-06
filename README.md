@@ -957,9 +957,9 @@ DataStream  |  xyz2idf  |    |
 
 ## 6. Annotating data and flagging
 
-Data flagging is handled by an additional package.
+Data flagging is handled by magpy.core.flagging package.
 
-The flagging procedure allows the observer to mark specific data points or ranges. Falgs are useful for labelling data spikes, storm onsets, pulsations, disturbances, lightning strikes, etc. Each flag is asociated with a comment and a type number. The flagtype number ranges between 0 and 4:
+The flagging procedure allows the observer to mark specific data points or ranges. Flags are useful for labelling data spikes, storm onsets, pulsations, disturbances, lightning strikes, etc. Each flag is asociated with a comment and a type number. The flagtype number ranges between 0 and 4:
 
   - 0:  normal data with comment (e.g. "Hello World")
   - 1:  data marked by automated analysis (e.g. spike)
@@ -1356,8 +1356,25 @@ The method `seek_storm` will return two variables: `detection` is True if any de
         detection, ssc_dict = act.seek_storm(stormdata,
                     satdata_1m=satdata_ace_1m, satdata_5m=satdata_ace_5m,
                     method='MODWT', returnsat=True)
-        print("Possible CMEs detected:", ssc_dict.select_flags(parameter='sensorid', values=['ACE'])
-        print("Possible SSCs detected:", ssc_dict.select_flags(parameter='sensorid', values=['LEMI'])
+
+The obtained *ssc_list* can be directly transformed into a flagging structure
+
+        from magpy.core import flagging
+        stormflags = flagging.flags(ssc_list)
+
+and then all methods for flagging structures are available i.e. selecting specific data from the ssc_list
+
+        print("Possible CMEs detected:", stormflags.select(parameter='sensorid', values=['ACE'])
+        print("Possible SSCs detected:", stormflags.select(parameter='sensorid', values=['LEMI'])
+
+You can create patches for diagrams
+
+        stormpatches = stormflags.create_patches()
+        ssc = stormflags.select(parameter='sensorid', values=['LEMI'])
+        p1 = ssc.create_patch()
+        cme = stormflags.select(parameter='sensorid', values=['ACE'])
+        p2 = cme.create_patch()
+        mp.tsplot([stormdata,satdata_ace_1m],[['x','y'],['var2']],patch=[[p1,p1],[p2]])
 
 
 ### 8.3 Sq analysis

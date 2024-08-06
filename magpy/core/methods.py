@@ -417,7 +417,8 @@ def find_nearest(array, value):
     """
     Find the nearest element within an array
     """
-    array = np.ma.masked_invalid(array)
+    if not isinstance(value,(datetime, np.datetime64)):
+        array = np.ma.masked_invalid(array)
     idx = (np.abs(array-value)).argmin()
     return array[idx], idx
 

@@ -1497,9 +1497,7 @@ class stormdet(object):
                 if not maxfound:
                     break
 
-                print ("HERE", tmin)
                 idx = nst.findtime(tmin)
-                print ("HERE", idx)
                 # xmin = linemin.x
                 xmin = nst.ndarray[x_ind][idx]
                 elevatedrange = nst.extract(aic_dkey, onsetval, '>')
