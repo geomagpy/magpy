@@ -35,6 +35,7 @@ class | method | since version | until version | runtime test | result verificat
     | find_nearby     | 2.0.0 |               | yes           |  |  |
     | func_from_file  | 2.0.0 |               | yes           |  |  |
     | func_to_file    | 2.0.0 |               | yes           |  |  |
+    | get_chunks      | 2.0.0 |               | yes           |  |  |
     | group_indices   | 2.0.0 |               | yes           |  |  |
     | is_number       | 2.0.0 |               | yes           |  |  |
     | mask_nan        | 2.0.0 |               | yes           |  |  |
@@ -520,10 +521,17 @@ def func_to_file(funcparameter,functionpath,debug=False):
 
 
 def get_chunks(endchunk, wl=3600):
-    # get the distribution and lengths of time windows between potentially disturbed time ranges
-    # this statistic will help to identfy i.e. lightning strikes, eventually vecicles if passing and coming back
-    # do this analysis time dependent run a gliding window of 2h duration across the sequence and get the
-    # create 2h/2 overlapping 2h window with some characteristics on average window distances and amount
+    """
+    DESCRIPTION
+       get the distribution and lengths of time windows between potentially disturbed time ranges
+       this statistic will help to identify i.e. lightning strikes, eventually vehicles if passing and coming back
+       do this analysis time dependent run a gliding window of 2h duration across the sequence and get the
+       create 2h/2 overlapping 2h window with some characteristics on average window distances and amount
+
+    :param endchunk:
+    :param wl:
+    :return:
+    """
 
     chunks = []
     startchunk = 0
@@ -892,6 +900,12 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['convert_geo_coordinate'] = str(excep)
         print(datetime.utcnow(), "--- ERROR convert_geo_coordinate.")
+
+    try:
+        chunks = get_chunks(86400, wl=3600)
+    except Exception as excep:
+        errors['chunks'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR chunks.")
 
     try:
         datelist = extract_date_from_string("ccc_2022-11-22.txt")

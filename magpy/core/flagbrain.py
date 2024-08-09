@@ -4,13 +4,13 @@ sys.path.insert(1,'/home/leon/Software/magpy/')
 from magpy.stream import *
 from magpy.core import flagging
 from magpy.core.methods import get_chunks
-import csv
-import pandas as pd
+#import csv
+#import pandas as pd
 import scipy
 from scipy.stats import norm
 from scipy.stats import entropy as scentropy
 from collections import Counter
-import dateutil.parser as dparser
+#import dateutil.parser as dparser
 import matplotlib.pyplot as plt
 import emd
 
@@ -36,9 +36,9 @@ magnetic_flagidentifiers = {0 : {'flagid' : '000', 'description' : 'normal', 'fl
 def calculate_iqr(amp_curve ,f = 1.5):
     Q1 = np.nanquantile(amp_curve ,0.25)
     Q3 = np.nanquantile(amp_curve ,0.75)
-    IQR = Q 3 -Q1
+    IQR = Q3 -Q1
     # define an upper limit, for which amplitudes exceeding this limit are definitly indicating disturbed data
-    ul = Q 3 + f *IQR
+    ul = Q3 + f *IQR
     return ul
 
 
@@ -157,6 +157,7 @@ def window_analysis(chunk, disturbed_regions, debug=False):
     lchunk = list(chunk)
     win_len = []
     gap_len = []
+    prevend = 0
     if len(disturbed_regions) > 0:
         # Extend the size of each region by periods width before and after to be sure that beginning and end of disturbance is grapped
         for dw in disturbed_regions:
@@ -288,18 +289,10 @@ def calculate_frequency(list_values, dt=1, debug=False, diagram=False, reallydeb
         def Gauss(x, a, x0, sigma):
             return a * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
-        popt, pcov = curve_fit(Gauss, x, y, p0=[max(y), mean, sigma])
+        popt, pcov = scipy.optimize.curve_fit(Gauss, x, y, p0=[max(y), mean, sigma])
         FWHM = 2 * np.sqrt(2 * np.log(2)) * popt[1]  # full width at half maximum
     except:
         pass
-    if debug and diagram and reallydebug:
-        # plt.plot(x,y,'b+:',label='data')
-        plt.plot(f_values, abs(fft_values))
-        try:
-            plt.plot(x, Gauss(x, *popt), 'r:')
-        except:
-            pass
-        plt.show()
     # get f_value for max
     iddx = np.where(fft_values == np.max(fft_values))
     peakfrequency = f_values[iddx][0]
@@ -351,14 +344,15 @@ def hh_features(IP, IF, IA, n_imf, window):
 
 
 def disturbed_region_featues(imf, IP, IF, IA, n_imf, length, disturbed_regions, startindex=0, starttime=None,
-                             sample_rate=1, extfeatures=[]):
+                             sample_rate=1, extfeatures=None):
     # get characteristics of disturbed regions
     # entropy, stddev etc
 
     # Parameter
     # wl=3600 window size and distance of overlapping windows
     # for learing do not use the disturbed regions but use chunks, get features for each chunk ?
-
+    if not extfeatures:
+        extfeatures = []
     # add basic window characteristics
     wl = 3600
     if length / 2. < wl:
@@ -391,8 +385,10 @@ def disturbed_region_featues(imf, IP, IF, IA, n_imf, length, disturbed_regions, 
 
 
 def create_n_imf_layer(imf, minperiod=0, maxperiod=86400, sample_rate=1, startindex=0, starttime=None, factor=5,
-                       determine_disturbed_region=True, extfeatures=[], debug=False):
+                       determine_disturbed_region=True, extfeatures=None, debug=False):
     # perform the analysis for each imf separately
+    if not extfeatures:
+        extfeatures = []
     nimfdict = {}
     if not isinstance(factor, dict):
         factor = {99: 5}
@@ -446,7 +442,7 @@ def magn(d, a=2.4, c=-0.43):
     return a * np.log10(d) + c
 
 
-def determine_external_features(startindex=0, endindex=7200, sample_rate=1, starttime=None, externalconfig=[],
+def determine_external_features(startindex=0, endindex=7200, sample_rate=1, starttime=None, externalconfig=None,
                                 debug=False):
     """
     DESCRIPTION
@@ -541,9 +537,13 @@ def determine_external_features(startindex=0, endindex=7200, sample_rate=1, star
 
 
 # Create the full dictionary
-def create_feature_dictionary(data, factor=5, max_imfs=15, config={}, externalconfig={}, debug=False):
+def create_feature_dictionary(data, factor=5, max_imfs=15, config=None, externalconfig=None, debug=False):
     # Produce a full dictionary with imf information and features for each disturbed window
     # data needs to cover one day 86400 seconds or 1440 minutes
+    if not config:
+        config = {}
+    if not externalconfig:
+        externalconfig = {}
     analysisdict = {}
     sensorid = data.header.get('SensorID')
     comps = data.header.get('SensorKeys')
@@ -632,6 +632,7 @@ def create_basic_flagdict(analysisdict, components=['x'], sensorid='Dummy', mode
     # Method to create a specific initial flagging dictionary for each component based on probability "flagrating" method
     imfflagdict = {}
     count = 0
+    prob = {}
     for component in components:
         compdict = analysisdict.get(sensorid).get('emddata').get(component)
         for st in compdict:
@@ -936,3 +937,240 @@ def convert_flaglist_to_imfflagdict(name, flaglist, starttime=None, sample_rate=
             dic['description'] = 'not in flagid list'
         mdic[ind] = dic
     return mdic
+
+
+def create_flagrating(n_imf, component, features, mode='magnetism'):
+    # go through all disturbed regions and add some probability counter which increases depening on the likelyhood to which features
+    # are pointing to
+    # i.e. if n_imf is within 0,1 and then spike probability if related to 1/window amount and smallness of window , ligthning probaility is related to window amount
+    #
+    # flagidentifiers are used to asign probability values 0-100 for each signature, flagid (1: remove by automatic decision, 2: keep by automatic decision)
+    magnetic_flagidentifiers = {0: {'flagid': '000', 'description': 'normal', 'flag': 0, 'probability': 100},
+                                1: {'flagid': '001', 'description': 'lightning strike', 'flag': 1, 'probability': 0},
+                                2: {'flagid': '002', 'description': 'spike', 'flag': 1, 'probability': 0},
+                                3: {'flagid': '012', 'description': 'pulsation pc 2', 'flag': 2, 'probability': 0},
+                                4: {'flagid': '013', 'description': 'pulsation pc 3', 'flag': 2, 'probability': 0},
+                                5: {'flagid': '014', 'description': 'pulsation pc 4', 'flag': 2, 'probability': 0},
+                                6: {'flagid': '015', 'description': 'pulsation pc 5', 'flag': 2, 'probability': 0},
+                                7: {'flagid': '016', 'description': 'pulsation pi 2', 'flag': 2, 'probability': 0},
+                                8: {'flagid': '020', 'description': 'ssc geomagnetic storm', 'flag': 2,
+                                    'probability': 0},
+                                9: {'flagid': '021', 'description': 'geomagnetic storm', 'flag': 2, 'probability': 0},
+                                10: {'flagid': '022', 'description': 'crochete', 'flag': 2, 'probability': 0},
+                                11: {'flagid': '030', 'description': 'earthquake', 'flag': 1, 'probability': 0},
+                                12: {'flagid': '050', 'description': 'vehicle passing above', 'flag': 1,
+                                     'probability': 0},
+                                13: {'flagid': '051', 'description': 'nearby disturbing source', 'flag': 1,
+                                     'probability': 0},
+                                14: {'flagid': '052', 'description': 'train', 'flag': 1, 'probability': 0},
+                                15: {'flagid': '090', 'description': 'unknown disturbance', 'flag': 1, 'probability': 0}
+                                }
+
+    # features contain
+    """
+
+    0: average_disturbed_windowlength [seconds]                       12.67142857142857
+    1: average_gap_length between disturbed windows [seconds]         16.xxx
+    2: amount of disturbed windows within time chunk (2h)             210
+    3: amount of gaps within time chunk (2h)                          209
+    4: length of disturbed window                                     6
+    5: entropy of imf data within disturbed window                    1.5607104090414068
+    6: amount of zero-crossing of imf within disturbed window         3
+    7: amount of zero-crossings when removing mean                    3
+    8: median imf value                                               0.0005904629841294654
+    9: mean imf value                                                 -0.00016502880204196982
+    10: stdev of imf values                                            0.018773693415218912
+    11: peakfrequency                                                  0.25                        ~ 4 seconds
+    12: peakamplitude                                                  0.018132539517548334
+    13: peakwidth                                                      0
+    14: mean of instatenous amplitudes within disturbed window         3.3637792707533314
+    15: std of instatenous amplitudes                                  2.0131474970441836
+    16: mean of instatenous frequencies within disturbed window        0.19872917764908904         ~ 5 seconds
+    17: std of instatenous frequencies                                 0.03873203758048415
+    18: mean of instatenous phases within disturbed window             0.022228415922470005
+    19: std of instatenous phases                                      0.00650185583842977
+    20: time of day
+    21: day of year
+    """
+
+    """
+    Expected signatures:
+    '001' : {'description' : 'lightning strike'},        : imf 0 or 1: > 10 disturbed windows, (imf 0: high imf 2 low)
+    '002' : {'description' : 'spike'},                   : imf 0 or 1: < 10 disturbed windows, window length < 15 sec
+    '012' : {'description' : 'pulsation pc 2'},          : imf 0 or 1: window length > 24 sec, < 10 disturbed windows, 5 < IF <= 10, >= 6 mean_crossings
+    '013' : {'description' : 'pulsation pc 3'},          : imf 1 to 3: 10 < IF <= 40. >= 6 mean_crossings
+    '014' : {'description' : 'pulsation pc 4'},          : imf 3 to 5:  40 < IF <= 150, >= 6 mean_crossings
+    '015' : {'description' : 'pulsation pc 5'},          : imf 5 to 7: 150 < IF <= 600, >= 6 mean_crossings
+    '016' : {'description' : 'pulsation pi 1'},          : imf 0 to 3: 0 < IF <= 40. window length > 75 sec (3x mean), irregular, zero != mean
+    '017' : {'description' : 'pulsation pi 2'},          : imf 3 to 5: 40 < IF <= 150. window length > 300 sec (3x mean), irregular
+    '020' : {'description' : 'ssc geomagnetic storm'},   : 
+    '021' : {'description' : 'geomagnetic storm'},
+    '022' : {'description' : 'crochete'},
+    '030' : {'description' : 'earthquake'},
+    '050' : {'description' : 'vehicle passing above'},    :  5 to 30 sec, <=3 zero crossings, <=4 disturbed windows, largest amplitudes in z comp
+    '051' : {'description' : 'nearby disturbing source'},
+    '052' : {'description' : 'train'},
+    '090' : {'description' : 'unknown disturbance'}
+    """
+
+    """
+    examples:
+    n_imf = 2
+    60.625, 585.1428571428571, 8, 7, 134, 4.184268898558329, 11, 11, 0.017238620790681225, 0.005394183872791269, 0.11594867060000137, 0.045454545454545456, 0.14086193346707337, 0, 3.01200955379042, 1.7546715014907244, 0.04166338880822934, 0.002882226366570982, 0.15909802848693325, 0.03650476972860313
+
+    spike n_imf=0:
+    12.5, 553.0, 2, 1, 15, 2.5232109529528914, 4, 4, -0.016495251868467342, -0.010782435419923738,
+         0.12210212620502041,
+         0.25,
+         0.0852068308137039,
+         0,
+         3.303212877155905,
+         1.7579525105728901,
+         0.1491587967855677,
+         0.06448090244917083,
+         0.20310591230532682,
+         0.1367193817133022
+    """
+    # We always start with maximum counter for unkown disturbance reason
+    pc = [0] * len(magnetic_flagidentifiers)
+    pc[15] = 8
+
+    if n_imf < 3:
+        # if features[5] < 2.0:
+        #    pc[0] += 9
+        pc[1] += 1
+        pc[2] += 1
+        pc[3] += 1
+        pc[15] -= 1
+        if features[2] > 20:  # amount of events in 2hours
+            pc[1] += 6
+            pc[2] -= 2
+            pc[3] -= 2
+            pc[15] -= 6
+        elif features[2] > 10:  # amount of events in 2hours
+            pc[1] += 4
+            pc[2] -= 1
+            pc[3] -= 1
+            pc[15] -= 4
+            if n_imf == 0:
+                pc[1] += 4
+                pc[15] -= 4
+            elif n_imf == 1:
+                pc[1] += 2
+                pc[15] -= 2
+        elif 4 < features[2] < 10:  # amount of events in 2hours
+            if n_imf == 0:
+                pc[1] += 2
+            if features[1] < 600:  # average gap length 10 min
+                pc[1] += 4
+                pc[2] -= 1
+                pc[3] -= 1
+            else:  # average gap length 600sec
+                pc[1] += 1
+            pc[15] -= 4
+            if n_imf == 0:
+                pc[1] += 2
+                pc[2] += 2
+                pc[15] -= 4
+            elif n_imf == 1:
+                pc[1] += 1
+                pc[15] -= 2
+        else:
+            pc[15] -= 4
+            pc[2] += 4
+            if n_imf == 0:
+                pc[2] += 2
+                pc[3] += 1
+                pc[12] += 1
+            else:
+                pc[2] -= 1
+                pc[3] += 2
+                pc[12] += 2
+        if features[7] >= 6:
+            pc[2] -= 2
+            pc[12] -= 2
+            if n_imf < 2 and features[16] >= 0.1:
+                pc[3] += 2
+                if features[7] >= 10:
+                    pc[3] += 2
+        elif features[7] <= 4:
+            pc[2] += 2
+            pc[3] -= 2
+        else:
+            pc[2] -= 2
+            pc[12] += 2
+        if features[6] == features[7]:
+            pc[3] += 2
+    if n_imf < 4:
+        pc[7] += 1
+        pc[4] += 1
+        pc[15] -= 1
+        if features[7] >= 6:
+            pc[15] -= 4
+            if 0.025 <= features[16] < 0.1:
+                pc[4] += 6
+            if features[6] != features[7]:
+                pc[4] -= 2
+                pc[7] += 6
+    if 3 <= n_imf <= 5:
+        pc[5] += 1
+        pc[8] += 1
+        pc[15] -= 1
+        if features[7] >= 6:
+            pc[15] -= 4
+            if 0.00667 <= features[16] < 0.025:
+                if features[6] == features[7]:
+                    pc[5] += 6
+                else:
+                    pc[8] += 6
+    if 5 <= n_imf <= 7:
+        pc[6] += 1
+        pc[15] -= 1
+        if features[7] >= 6:
+            pc[15] -= 4
+            if features[6] == features[7]:
+                if 0.001667 <= features[16] < 0.00667:
+                    pc[6] += 6
+    if n_imf >= 8:
+        pc[0] += 6
+        pc[15] -= 6
+
+    most_likely_first = np.argmax(np.array(pc))
+    prob_flag = magnetic_flagidentifiers.get(most_likely_first)
+    prob_flag['probability count'] = pc
+
+    # print ("Probabilities:", pc)
+    # print ("{}-{}".format(prob_flag.get('flagid'), prob_flag.get('description')))
+    return prob_flag
+
+
+if __name__ == '__main__':
+
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: flagging brain PACKAGE")
+    print("THIS IS A TEST RUN OF THE MAGPY.CORE FLAGBRAIN PACKAGE.")
+    print("All main methods will be tested. This may take a while.")
+    print("If errors are encountered they will be listed at the end.")
+    print("Otherwise True will be returned")
+    print("----------------------------------------------------------")
+    print()
+
+    errors = {}
+    try:
+        ul = calculate_iqr(amp_curve, f=1.5)
+    except Exception as excep:
+        errors['calculate_iqr'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR testing number.")
+
+
+    print("----------------------------------------------------------")
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(str(errors.keys()))
+        print()
+        print("Exceptions thrown:")
+        for item in errors:
+            print("{} : errormessage = {}".format(item, errors.get(item)))
