@@ -519,6 +519,21 @@ def func_to_file(funcparameter,functionpath,debug=False):
         return True
 
 
+def get_chunks(endchunk, wl=3600):
+    # get the distribution and lengths of time windows between potentially disturbed time ranges
+    # this statistic will help to identfy i.e. lightning strikes, eventually vecicles if passing and coming back
+    # do this analysis time dependent run a gliding window of 2h duration across the sequence and get the
+    # create 2h/2 overlapping 2h window with some characteristics on average window distances and amount
+
+    chunks = []
+    startchunk = 0
+    for i in range(startchunk, endchunk, wl):
+        x = i
+        if x+ 2 * wl <= endchunk:
+            chunks.append(range(x, x + 2 * wl))
+    return chunks
+
+
 def group_indices(indexlist):
     """
     DESCRIPTION

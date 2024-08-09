@@ -5,6 +5,7 @@ sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
 from magpy.stream import DataStream, basestring, magpyversion, unicode
 from magpy.core.methods import *
+from magpy.core.flagbrain import *
 from collections import Counter
 import copy as cp
 import hashlib
@@ -70,6 +71,7 @@ class flags(object):
 flags  |  _list       |  2.0.0          |                 |  yes           |  yes             |         |
 flags  |  _set_label_from_comment |  2.0.0 |              |                |                  |      | flagging.load
 flags  |  add         |  2.0.0          |                 |  yes           |  yes             |      |
+flags  |  apply_flags |  2.0.0          |                 |  yes           |                  |      |
 flags  |  copy        |  2.0.0          |                 |  yes           |  yes             |    |
 flags  |  create_patch |  2.0.0         |                 |                |                  |    |
 flags  |  diff        |  2.0.0          |                 |  yes           |  yes             |    |
@@ -87,6 +89,9 @@ flags  |  union       |  2.0.0          |                 |  yes           |  ye
        |  _readJson   |  2.0.0          |                 |                |                  |    | flagging.load
        |  _readPickle |  2.0.0          |                 |                |                  |    | flagging.load
        |  load        |  2.0.0          |                 |                |                  |    |
+       |  flag_outlier |  2.0.0         |                 |  yes           |                  |    |
+       |  flag_range  |  2.0.0          |                 |  yes           |                  |    |
+       |  flag_ultra  |  2.0.0          |                 |  no            |  no              |    |
 
 
 class  |  method  |  variables  |  description
@@ -95,6 +100,7 @@ class  |  method  |  variables  |  description
 flags  |  _list       |           | convert flagging dictionary to a list
 flags  | _set_label_from_comment | dictionary | interprete comment as label when importing old data
 flags  |  add         |  ...      | insert, replace, modify, update flag as defined by its parameters
+flags  |  apply_flags |  datastream, mode | apply flag to a datastream
 flags  |  copy        |           | creates a deep copy of the flags object
 flags  |  create_patch |          | create a patch dictionary for plotting from flags
 flags  |  diff        |  flagobject | differences between two flag objects
@@ -112,6 +118,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
        |  _readJson   |           | load support - interprete json
        |  _readPickle |           | load support - interprete pickle
        |  load        |  path     | load function needs to support import of old versions
+       |  flag_outlier |  keys, threshold, timerange  | flag outliers based on IQR analysis
+       |  flag_range  |  keys, above, below, timerange  | flag ranges based on thresholds
+       |  flag_ultra  |  keys, parameter | experimental flagging label assignment
 
 
     deprecated in 2.0.0
@@ -307,11 +316,10 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         if comment:
             comment = str(comment)
         if groups:
-            if not isinstance(group, (list, tuple)):
+            if not isinstance(groups, (list, tuple)):
                 groups = None
-        if probabilities:
-            if not isinstance(probabilities, (list, tuple)):
-                probabilities = None
+        if not isinstance(probabilities, (list, tuple)):
+            probabilities = None
         if labelid and labelid in self.FLAGLABEL:
             label = self.FLAGLABEL.get(labelid)
         modificationtime = datetime.utcnow()
@@ -355,6 +363,66 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
 
         return self
 
+
+    def apply_flags(self, data, flagtype=[1, 3], mode='drop', addlabel=False):
+        """
+        DESCRIPTION
+            drop flagged sequences from the data stream. You selected which
+            flagtypes should be dropped and assign labels to the data stream's
+            flagging columns.
+        VARIABLES
+            datastream   (DataStream)
+            flagtypes    (list)   a list containing flagtypes - default is [1,3] - not to be used for
+                                  definitive data
+            mode         (string) 'drop' (default) - replaces data with np.nan for flags corresponding to flagtype
+                                                     (MagPy1.x stream.remove_flagged())
+                                  'insert' will keep data and just add labels to the stream (addlabel will be set True)
+                                                     (MagPy1.x stream.flag(), flag_stream())
+            addlabel     (bool)   add labels directly to the datastream (as done in MagPy 1.x)
+        EXAMPLES
+            1) old remove_flagged
+            ndata = flags.apply_flags(data, mode='drop',addlabel=True)
+            2) old flag/flag_stream
+            ndata = flags.apply_flags(data, mode='insert')
+        """
+        ndata = data.copy()
+        if not isinstance(flagtype, (list, tuple)):
+            flagtype = [flagtype]
+        st, et = ndata._find_t_limits()
+        tcol = ndata.ndarray[0]
+        commentcol = ndata.KEYLIST.index('comment')
+        flagcol = ndata.KEYLIST.index('flag')
+        if mode == 'insert':
+            addlabel = True
+        if addlabel:
+            if not len(data.ndarray[commentcol]) > 0:
+                ndata.ndarray[commentcol] = np.asarray([''] * len(tcol))
+            if not len(data.ndarray[flagcol]) > 0:
+                ndata.ndarray[flagcol] = np.asarray(['0000000000000000-'] * len(tcol))
+
+        fl = self.trim(starttime=st, endtime=et)
+        flagdict = fl.flagdict
+        for d in flagdict:
+            flagcont = flagdict[d]
+            stfind = ndata.findtime(flagcont.get('starttime'))
+            etfind = ndata.findtime(flagcont.get('endtime'))
+            comps = flagcont.get('components')
+            if addlabel:
+                ndata.ndarray[commentcol][stfind:etfind] = "{} - {}".format(flagcont.get('labelid'),
+                                                                            flagcont.get('label'))
+                codes = ['0' if not key in comps else str(flagcont.get('flagtype')) for key in data.FLAGKEYLIST]
+                codes.append('-')
+                flagcode = "".join(codes)
+                ndata.ndarray[flagcol][stfind:etfind] = flagcode
+            if mode == 'drop' and flagcont.get('flagtype') in flagtype:
+                for key in comps:
+                    ki = ndata.KEYLIST.index(key)
+                    ndata.ndarray[ki] = np.asarray(ndata.ndarray[ki], dtype=float)
+                    if len(data.ndarray[ki]) >= etfind:
+                        ndata.ndarray[ki][stfind:etfind] = np.nan
+        return ndata
+
+
     def copy(self):
         """
         DESCRIPTION
@@ -379,12 +447,30 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         """
         patchdict = {}
         flagdict = self.flagdict
+
+        def _get_color_from_flagtype(flagtype):
+            color = 'grey'
+            if flagtype==0:
+                color = 'grey'
+            elif flagtype==1:
+                color = 'coral'
+            elif flagtype == 2:
+                color = 'lime'
+            elif flagtype == 3:
+                color = 'r'
+            elif flagtype == 4:
+                color = 'g'
+            return color
+
         for d in flagdict:
             cont = {}
             cont['start'] = flagdict[d].get('starttime', None)
             cont['end'] = flagdict[d].get('endtime')
             cont['flagtype'] = flagdict[d].get('flagtype')
-            cont['color'] = flagdict[d].get('color')
+            color = flagdict[d].get('color')
+            if not color:
+                color = _get_color_from_flagtype(cont.get('flagtype'))
+            cont['color'] = color
             cont['labelid'] = flagdict[d].get('labelid')
             cont['label'] = flagdict[d].get('label')
             if cont['start']:
@@ -1063,6 +1149,306 @@ def _readPickle(path, debug=False):
         print("load: list {a} successfully loaded, found {b} inputs".format(a=path, b=len(myd)))
     return myd
 
+def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, groups=None, debug=False):
+    """
+    DEFINITION:
+        Flags outliers in data, using inner quartiles ranges
+        Coding : 0 take, 1 auto remove, 2 auto take, 3 force remove, 4 force take
+
+    PARAMETERS:
+    Variables:
+        - keys:         	(list) List of keys to evaluate. Default = all numerical
+        - threshold:   		(float) Determines threshold for outliers.
+                        	1.5 = standard
+                        	5 = weak condition, keeps storm onsets in (default)
+                        	4 = a useful comprimise to be used in automatic analysis.
+        - timerange:    	(timedelta Object) Time range. Default = samlingrate(sec)*600
+        - stdout:        	prints removed values to stdout
+        - returnflaglist	(bool) if True, a flaglist is returned instead of stream
+        - markall       	(bool) default is False. If True, all components (provided keys)
+                                 are flagged even if outlier is only detected in one. Useful for
+                                 vectorial data
+    RETURNS:
+        - flagobject:       (Flagging Object) Stream with flagged data.
+
+    EXAMPLE:
+        fl = flag_outlier(data, keys=['x','y','z'], threshold=2)
+
+    APPLICATION:
+    """
+    fl = flags()
+    sr = data.samplingrate()
+    if not timerange:
+        window = sr * 600
+    else:
+        window = timerange / sr
+    if not window > 30:
+        print(" timerange to small for a proper outlier detection")
+        return fl
+    else:
+        window = int(window)
+    if not keys:
+        keys = data._get_key_headers(numerical=True)
+    if not threshold:
+        threshold = 5.0
+
+    cdate = datetime.utcnow().replace(tzinfo=None)
+    sensorid = data.header.get('SensorID', '')
+    stationid = data.header.get('StationID', '')
+    flaglist = []
+
+    if not len(data) > 0:
+        return fl
+
+    # get a poslist of all keys - used for markall
+    flagposls = [data.FLAGKEYLIST.index(key) for key in keys]
+    tcol = data._get_column('time')
+    # Start here with for key in keys:
+    for key in keys:
+        flagpos = data.FLAGKEYLIST.index(key)
+        fkey = [key]
+        if markall:
+            fkey = keys
+        col = data._get_column(key)
+        if not len(col) > 0:
+            print("Flag_outlier: No data for key {} - skipping".format(key))
+            break
+
+        endchunk = len(col)
+        chunks = get_chunks(endchunk, wl=window)
+        for chunk in chunks:
+            selcol = col[chunk].astype(float)
+            seltcol = tcol[chunk]
+            # determine IQR
+            Q1 = np.nanquantile(selcol, 0.25)
+            Q3 = np.nanquantile(selcol, 0.75)
+            IQR = Q3 - Q1
+            md = np.nanmedian(selcol)
+            whisker = threshold * IQR
+            flaginds = np.where(np.logical_or(selcol < (md - whisker), selcol > (md + whisker)))
+            if debug:
+                print(len(selcol), md, IQR, whisker, flaginds)
+            flaginds = flaginds[0]
+            if len(flaginds) > 0:
+                grouped_inds = group_indices(flaginds)
+                # exclude a quarter double-window at the beginning and at the end, double window as chunck is using double windows
+                lowwin = 2 * window / 4
+                highwin = 6 * window / 4
+                flag_inds = [[flaginds[el[0]], flaginds[el[1]]] for el in grouped_inds if
+                             flaginds[el[0]] > lowwin and flaginds[el[1]] < highwin]
+                for flagtimes in flag_inds:
+                    fl.add(sensorid=sensorid, starttime=seltcol[flagtimes[0]], endtime=seltcol[flagtimes[0]],
+                           components=fkey, flagtype=1, labelid='002', label='spike',
+                           comment='automatically marked by flag_outlier with threshold {} and timerange {}'.format(
+                               threshold, timerange), groups=groups, stationid='stationid', operator='MagPy',
+                           flagversion='2.0')
+    fl = fl.union()
+
+    return fl
+
+def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, flagtype=1, labelid='002',
+                   keystoflag=None, text=None, groups=None):
+    """
+    DEFINITION:
+        Flags data within time range or data exceeding a certain threshold
+        Coding : 0 take, 1 remove, 2 force take, 3 force remove
+
+    PARAMETERS:
+    Variables:
+        - None.
+    Kwargs:
+        - keys:         (list) List of keys to check for criteria. Default = all numerical
+                            please note: for using above and below criteria only one element
+                            is accepted (e.g. ['x']
+        - text          (string) comment
+        - flagtype      (int) Flagtype (0,1,2,3,4)
+        - groups        (list) flagging groups
+        - keystoflag:   (list) List of keys to flag. Default = same as keys
+        - below:        (float) flag data of key below this numerical value.
+        - above:        (float) flag data of key exceeding this numerical value.
+        - starttime:    (datetime Object)
+        - endtime:      (datetime Object)
+    RETURNS:
+        - flaglist:     (list) flagging information - use stream.flag(flaglist) to add to stream
+
+    EXAMPLE:
+        fllist = flag_range(data, keys=['var1'], above=80, keystoflag=['x'])
+
+    APPLICATION:
+    """
+
+    fl = flags()
+    sensorid = data.header.get('SensorID')
+    stationid = data.header.get('StationID')
+    moddate = datetime.utcnow()
+    flaglist = []
+    if not keys:
+        keys = data._get_key_headers(numerical=True)
+    if not keystoflag:
+        keystoflag = keys
+    if not len(data.ndarray[0]) > 0:
+        print("flag_range: No data available - aborting")
+        return flaglist
+    if not len(keys) == 1:
+        if above or below:
+            print("flag_range: for using thresholds above and below only a single key has to be provided")
+            print("  -- ignoring given above and below values")
+            below = False
+            above = False
+    # test validity of starttime and endtime
+    trimmedstream = data.copy()
+    if starttime or endtime:
+        trimmedstream = data.trim(starttime=starttime, endtime=endtime)
+    tcol = trimmedstream.ndarray[0]
+    if not above and not below:
+        # return flags for all data in trimmed stream
+        fkeys = []
+        for elem in keystoflag:
+            fkeys.append(elem)
+        fl.add(sensorid=sensorid, starttime=tcol[0], endtime=tcol[-1],
+               components=fkeys, flagtype=flagtype, labelid=labelid,
+               comment='automatically marked by flag_range',
+               groups=groups, stationid=stationid, operator='MagPy',
+               flagversion='2.0')
+        return fl
+
+    if above and below:
+        # TODO create True/False list and then follow the bin detector example
+        ind = data.KEYLIST.index(keys[0])
+        trueindices = (trimmedstream.ndarray[ind] > above) + (trimmedstream.ndarray[ind] < below)
+        d = np.diff(trueindices)
+        idx, = d.nonzero()
+        idx += 1
+        if not text:
+            text = 'outside of range {} to {}'.format(below, above)
+        if trueindices[0]:
+            # If the start of condition is True prepend a 0
+            idx = np.r_[0, idx]
+        if trueindices[-1]:
+            # If the end of condition is True, append the length of the array
+            idx = np.r_[idx, trimmedstream.ndarray[ind].size]  # Edit
+        # Reshape the result into two columns
+        idx.shape = (-1, 2)
+        for start, stop in idx:
+            stop = stop - 1
+            fkeys = []
+            for elem in keystoflag:
+                fkeys.append(elem)
+            fl.add(sensorid=sensorid, starttime=tcol[start], endtime=tcol[stop],
+                   components=fkeys, flagtype=flagtype, labelid=labelid,
+                   comment=text,
+                   groups=groups, stationid=stationid, operator='MagPy',
+                   flagversion='2.0')
+    elif above:
+        # TODO create True/False list and then follow the bin detector example
+        ind = data.KEYLIST.index(keys[0])
+        trueindices = trimmedstream.ndarray[ind] > above
+        d = np.diff(trueindices)
+        idx, = d.nonzero()
+        idx += 1
+        if not text:
+            text = 'exceeding {}'.format(above)
+        if trueindices[0]:
+            # If the start of condition is True prepend a 0
+            idx = np.r_[0, idx]
+        if trueindices[-1]:
+            # If the end of condition is True, append the length of the array
+            idx = np.r_[idx, trimmedstream.ndarray[ind].size]  # Edit
+        # Reshape the result into two columns
+        idx.shape = (-1, 2)
+        for start, stop in idx:
+            stop = stop - 1
+            fkeys = []
+            for elem in keystoflag:
+                fkeys.append(elem)
+            fl.add(sensorid=sensorid, starttime=tcol[start], endtime=tcol[stop],
+                   components=fkeys, flagtype=flagtype, labelid=labelid,
+                   comment=text,
+                   groups=groups, stationid=stationid, operator='MagPy',
+                   flagversion='2.0')
+    elif below:
+        # TODO create True/False the other way round
+        ind = data.KEYLIST.index(keys[0])
+        truefalse = trimmedstream.ndarray[ind] < below
+        d = np.diff(truefalse)
+        idx, = d.nonzero()
+        idx += 1
+        if not text:
+            text = 'below {}'.format(below)
+        if truefalse[0]:
+            # If the start of condition is True prepend a 0
+            idx = np.r_[0, idx]
+        if truefalse[-1]:
+            # If the end of condition is True, append the length of the array
+            idx = np.r_[idx, trimmedstream.ndarray[ind].size]  # Edit
+        # Reshape the result into two columns
+        idx.shape = (-1, 2)
+        for start, stop in idx:
+            stop = stop - 1
+            fkeys = []
+            for elem in keystoflag:
+                fkeys.append(elem)
+            fl.add(sensorid=sensorid, starttime=tcol[start], endtime=tcol[stop],
+                   components=fkeys, flagtype=flagtype, labelid=labelid,
+                   comment=text,
+                   groups=groups, stationid=stationid, operator='MagPy',
+                   flagversion='2.0')
+    return fl
+
+def flag_ultra(data, keys=None, factordict=None, mode='magnetism', groups=None):
+    """
+    DEFINITION:
+        Flags data using IQR analysis in decomposed signals. An empirical probability method filled
+        with widely arbitray (August 2024) probability distributions is used to assign preliminary
+        labelid's. Please note, this method has been developed to assist (and better understand)
+        the creation of training data sets for the AI flagging bot. Probabilities and thresholds
+        are optimzed for very specific signatures strongly dependend on instruments and local
+        disturbances of the Conrad Observatory. For other locations/instruments the parameters
+        of this method need to be carefully adapted.
+        This method is very experimental and might fail for numerous different reasons.
+
+    PARAMETERS:
+    Variables:
+        - keys:         (list) List of keys to check for criteria. Default = all numerical
+                            please note: for using above and below criteria only one element
+                            is accepted (e.g. ['x']
+        - factordict    (dict) a decompositon/frequency dependend threshold dictionary for
+                            identification of disturbed sequences
+        - mode          (string) mode is used to select among stored probability label assignments
+        - groups        (list) flags will be assigned to these groups
+    RETURNS:
+        - flag object:  flagging information - use stream.flag(flaglist) to add to stream
+
+    EXAMPLE:
+        fllist = flag_ultra(data, keys=['x','y','z'])
+
+    APPLICATION:
+    """
+
+    fl = flagging.flags()
+    sensorid = data.header.get('SensorID')
+    stationid = data.header.get('StationID')
+    starttime, endtime = data._find_t_limits()  # obtain start and endtime
+    sample_rate = data.samplingrate()  # obtain sampling rate
+    if not keys:
+        keys = data._get_key_headers(numerical=True)
+    if not factordict:
+        factordict = {}
+        for key in keys:
+            factordict[key] = {0: 14, 1: 12, 2: 10, 3: 8, 4: 6, 5: 5}
+    if not groups:
+        groups = [mode]
+    elif not mode in groups:
+        groups.append(mode)
+
+    analysisdict = create_feature_dictionary(data, factor=factordict, config={})
+    imfflagdict = create_basic_flagdict(analysisdict, components=keys, sensorid=sensorid, mode='magnetism')
+    nimfflagdict = combine_flagid_ranges(imfflagdict, components=keys, debug=False)
+    timfflagdict = combine_frequency_ranges(nimfflagdict, components=keys, debug=False)
+    fl = convert_imfflagdict_to_flaglist(sensorid, timfflagdict, starttime=starttime, sample_rate=sample_rate,
+                                         stationid=stationid, groups=groups)
+    return fl
+
 
 if __name__ == '__main__':
 
@@ -1080,6 +1466,36 @@ if __name__ == '__main__':
     # #######################################################
     #                     Runtime testing
     # #######################################################
+
+    def create_secteststream(startdate=datetime(2022, 11, 21)):
+        # Create a random data signal with some nan values in x and z
+        c = 1000  # 1000 nan values are filled at random places
+        array = [[] for el in DataStream().KEYLIST]
+        x = np.random.uniform(20950, 21000, size=(72, 1))
+        x = np.tile(x, (1, 60 * 60)).flatten()
+        x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+        array[1] = x
+        y = np.random.uniform(1950, 2000, size=(72, 1))
+        array[2] = np.tile(y, (1, 60 * 60)).flatten()
+        z = np.random.uniform(44350, 44400, size=(72, 1))
+        z = np.tile(z, (1, 60 * 60)).flatten()
+        z.ravel()[np.random.choice(z.size, c, replace=False)] = np.nan
+        array[3] = z
+        array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)])
+        array[DataStream().KEYLIST.index('sectime')] = np.asarray(
+            [datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)]) + timedelta(minutes=15)
+        # array[KEYLIST.index('str1')] = ["xxx"]*len(z)
+        teststream = DataStream([], {'SensorID': 'Test_0001_0001'}, np.asarray(array, dtype=object))
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        return teststream
+
+
+    teststream = create_secteststream(startdate=datetime(2022, 11, 22))
 
     fl = flags()
     newfl = flags()
@@ -1199,10 +1615,21 @@ if __name__ == '__main__':
                 ts = datetime.utcnow()
                 combfl = nextfl.rename_nearby(parameter='labelid', values=['001'])
                 te = datetime.utcnow()
-                successes['ename_nearby'] = ("Version: {}, ename_nearby: {}".format(magpyversion,(te-ts).total_seconds()))
+                successes['rename_nearby'] = ("Version: {}, rename_nearby: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
-                errors['ename_nearby'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR in ename_nearby flags.")
+                errors['rename_nearby'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR in rename_nearby flags.")
+            try:
+                ts = datetime.utcnow()
+                trimstream = teststream.trim(starttime="2022-11-22", endtime="2022-11-23")
+                fl = flag_range(trimstream, keys=['x'], above=20990)
+                fstream = fl.apply_flags(trimstream, mode='insert')
+                fstream = fl.apply_flags(trimstream, mode='drop')
+                te = datetime.utcnow()
+                successes['apply_flags'] = ("Version: {}, apply_flags: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['apply_flags'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR in apply_flags flags.")
             try:
                 ts = datetime.utcnow()
                 nextfl.save(path=testrun)
@@ -1211,6 +1638,31 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['save'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR saving flags.")
+            try:
+                ts = datetime.utcnow()
+                stfl = flag_range(teststream, keys=['x'], above=340)
+                stfl = flag_range(teststream, keys=['x'], below=340)
+                stfl = flag_range(teststream, keys=['x'], starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00',
+                                keystoflag=['z'])
+                stfl = flag_range(teststream, keys=['x'], starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00',
+                                keystoflag=['z'])
+                te = datetime.utcnow()
+                successes['flag_range'] = (
+                    "Version: {}, flag_range: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['flag_range'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with flag_range")
+            try:
+                ts = datetime.utcnow()
+                # convertstream = teststream.copy()
+                stfl = flag_outlier(teststream)
+                stfl = flag_outlier(teststream, keys=['x'], threshold=4, timerange=200)
+                te = datetime.utcnow()
+                successes['flag_outlier'] = (
+                    "Version: {}, flag_outlier: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['flag_outlier'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with flag_outlier")
 
             # If end of routine is reached... break.
             break

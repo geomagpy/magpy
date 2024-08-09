@@ -406,18 +406,26 @@ DataStream  |  xyz2idf  |    2.0.0  |                 |  yes*          |  yes*  
     |  subtract_streams  |   2.0.0  |                 |  yes           |                  |  5.10   |
     |  append_streams  |     2.0.0  |                 |  ...           |                  |  5.10   |
 
+
+deprecated:
+    - stream.flag_range()   -> moved to core.flagging
+    - stream.flag_outlier(self, **kwargs)   -> moved to core.flagging
+
+
 To be transfered to 2.0.0:
     # Flagging related
     - stream.bindetector(self,key,text=None,**kwargs):
-    - stream.extractflags()
-    - stream.flagfast()
-    - stream.flag_range()
-    - stream.flag()
-    - stream.flag_outlier(self, **kwargs):
-    - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
-    - stream.flaglistadd(self, flaglist, sensorid, keys, flagnumber, comment, startdate, enddate=None):
     - stream.remove_flagged(self, **kwargs):
+
+    - stream.flag()
+    - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
+
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
+
+removed:
+    - stream.extractflags()  -> not useful any more
+    - stream.flagfast()      -> not useful any more - used for previous flagging plots outside xmagpy
+    - stream.flaglistadd()   -> core.flagging add
 
 
 *********************************************************************
@@ -3463,180 +3471,8 @@ CALLED BY:
         #    func = [functionkeylist, 0, 0]
         return func
 
-    def extractflags(self, debug=False):
-        """
-    DEFINITION:
-        Extracts flags asociated with the provided DataStream object
-        (as obtained by flaggedstream = stream.flag_outlier())
-
-    PARAMETERS:
-    Variables:
-        None
-    RETURNS:
-        - flaglist:     (list) a flaglist of type [st,et,key,flagnumber,commentarray[idx],sensorid,now]
-
-    EXAMPLE:
-        flaglist = stream.extractflags()
-        """
-        sensorid = self.header.get('SensorID','')
-        now = datetime.utcnow()
-        flaglist = []
-
-        flpos = KEYLIST.index('flag')
-        compos = KEYLIST.index('comment')
-        flags = self.ndarray[flpos]
-        comments = self.ndarray[compos]
-        if not len(flags) > 0 or not len(comments) > 0:
-            return flaglist
-
-        uniqueflags = self.union(flags)
-        uniquecomments = self.union(comments)
-
-        # 1. Extract relevant keys from uniqueflags
-        if debug:
-            print ("extractflags: Unique Flags -", uniqueflags)
-            print ("extractflags: Unique Comments -", uniquecomments)
-        # zeroflag = ''
-        keylist = []
-        for elem in uniqueflags:
-            if not elem in ['','-']:
-                #print (elem)
-                for idx,el in enumerate(elem):
-                    if not el == '-' and el in ['0','1','2','3','4','5','6']:
-                        keylist.append(self.NUMKEYLIST[idx-1])
-        # 2. Cycle through keys and extract comments
-        if not len(keylist) > 0:
-            return flaglist
-
-        keylist = self.union(np.asarray(keylist))
-
-        for key in keylist:
-            indexflag = KEYLIST.index(key)
-            for comment in uniquecomments:
-                flagindicies = []
-                for idx, elem in enumerate(comments):
-                    if not elem == '' and elem == comment:
-                        #print ("ELEM", elem)
-                        flagindicies.append(idx)
-                # 2. get consecutive groups
-                for k, g in groupby(enumerate(flagindicies), lambda ix: ix[0] - ix[1]):
-                    try:
-                        consecutives = list(map(itemgetter(1), g))
-                        st = num2date(self.ndarray[0][consecutives[0]]).replace(tzinfo=None)
-                        et = num2date(self.ndarray[0][consecutives[-1]]).replace(tzinfo=None)
-                        flagnumber = flags[consecutives[0]][indexflag]
-                        if not flagnumber in ['-',None]:
-                            flaglist.append([st,et,key,int(flagnumber),comment,sensorid,now])
-                    except:
-                        print ("extractflags: error when extracting flaglist")
-
-        return flaglist
-
-
-    def flagfast(self,indexarray,flag, comment,keys=None):
-        """
-    DEFINITION:
-        Add a flag to specific indicies of the streams ndarray.
-
-    PARAMETERS:
-    Variables:
-        - keys:         (list) Optional: list of keys to mark ['x','y','z']
-        - flag:         (int) 0 ok, 1 remove, 2 force ok, 3 force remove,
-                        4 merged from other instrument
-        - comment:      (str) The reason for flag
-        - indexarray:   (array) indicies of the datapoint(s) to mark
-
-    RETURNS:
-        - DataStream:   Input stream with flags and comments.
-
-    EXAMPLE:
-        >>> data = data.flagfast([155],'3','Lawnmower',['x','y','z'])
-
-    APPLICATION:
-        """
-
-        print("Adding flags .... ")
-        # Define Defaultflag
-        flagls = [str('-') for elem in self.FLAGKEYLIST]
-        defaultflag = ''
-
-        # Get new flag
-        newflagls = []
-        if not keys:
-            for idx,key in enumerate(self.FLAGKEYLIST): # Flag all existing data
-                if len(self.ndarray[idx]) > 0:
-                    newflagls.append(str(flag))
-                else:
-                    newflagls.append('-')
-            newflag = ''.join(newflagls)
-        else:
-            for idx,key in enumerate(self.FLAGKEYLIST): # Only key column
-                if len(self.ndarray[idx]) > 0 and self.FLAGKEYLIST[idx] in keys:
-                    newflagls.append(str(flag))
-                else:
-                    newflagls.append('-')
-            newflag = ''.join(newflagls)
-
-        flagarray, commentarray = [],[]
-        flagindex = KEYLIST.index('flag')
-        commentindex = KEYLIST.index('comment')
-
-        # create a predefined list
-        # ########################
-        # a) get existing flags and comments or create empty lists
-        if len(self.ndarray[flagindex]) > 0:
-            flagarray = self.ndarray[flagindex].astype(object)
-        else:
-            flagarray = [''] * len(self.ndarray[0])
-        if len(self.ndarray[commentindex]) > 0:
-            commentarray = self.ndarray[commentindex].astype(object)
-        else:
-            commentarray = [''] * len(self.ndarray[0])
-        # b) insert new info
-        for i in indexarray:
-            flagarray[i] = newflag
-            commentarray[i] = comment
-
-        commentarray = np.asarray(commentarray, dtype='object')
-        flagarray = np.asarray(flagarray, dtype='object')
-
-        flagnum = KEYLIST.index('flag')
-        commentnum = KEYLIST.index('comment')
-        self.ndarray[flagnum] = flagarray
-        self.ndarray[commentnum] = commentarray
-        #print "... finished"
-        return self
-
-
+    @deprecated("replaced by core.flagging flag_range")
     def flag_range(self, **kwargs):
-        """
-    DEFINITION:
-        Flags data within time range or data exceeding a certain threshold
-        Coding : 0 take, 1 remove, 2 force take, 3 force remove
-
-    PARAMETERS:
-    Variables:
-        - None.
-    Kwargs:
-        - keys:         (list) List of keys to check for criteria. Default = all numerical
-                            please note: for using above and below criteria only one element
-                            need to be provided (e.g. ['x']
-        - text          (string) comment
-        - flagnum       (int) Flagid
-        - keystoflag:   (list) List of keys to flag. Default = all numerical
-        - below:        (float) flag data of key below this numerical value.
-        - above:        (float) flag data of key exceeding this numerical value.
-        - starttime:    (datetime Object)
-        - endtime:      (datetime Object)
-    RETURNS:
-        - flaglist:     (list) flagging information - use stream.flag(flaglist) to add to stream
-
-    EXAMPLE:
-
-        >>> fllist = stream.flag_range(keys=['x'], above=80)
-
-    APPLICATION:
-        """
 
         keys = kwargs.get('keys')
         above = kwargs.get('above')
@@ -3646,163 +3482,13 @@ CALLED BY:
         text = kwargs.get('text')
         flagnum = kwargs.get('flagnum')
         keystoflag = kwargs.get('keystoflag')
+        from magpy.core import flagging
+        fl = flagging.flag_range(self,keys=keys, above=above, below=below, starttime=starttime, endtime=endtime, flagtype=flagnum, labelid='002',
+                   keystoflag=keystoflag, text=text)
+        return fl
 
-        numuncert = 0.0000000001 # numerical uncertainty on different machines when using date2num()
-
-        sensorid = self.header.get('SensorID')
-        moddate = datetime.utcnow()
-        flaglist=[]
-        if not keystoflag:
-            keystoflag = self._get_key_headers(numerical=True)
-        if not flagnum:
-            flagnum = 0
-
-        if not len(self.ndarray[0]) > 0:
-            print ("flag_range: No data available - aborting")
-            return flaglist
-
-        if not len(keys) == 1:
-            if above or below:
-                print ("flag_range: for using thresholds above and below only a single key needs to be provided")
-                print ("  -- ignoring given above and below values")
-                below = False
-                above = False
-
-        # test validity of starttime and endtime
-
-        trimmedstream = self.copy()
-        if starttime and endtime:
-            trimmedstream = self._select_timerange(starttime=starttime,endtime=endtime)
-            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
-        elif starttime:
-            trimmedstream = self._select_timerange(starttime=starttime)
-            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
-        elif endtime:
-            trimmedstream = self._select_timerange(endtime=endtime)
-            trimmedstream = DataStream([LineStruct()],self.header,trimmedstream)
-
-        if not above and not below:
-            # return flags for all data in trimmed stream
-            for elem in keystoflag:
-                flagline = [num2date(trimmedstream.ndarray[0][0]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][-1]-numuncert).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
-                flaglist.append(flagline)
-            return flaglist
-
-        if above and below:
-            # TODO create True/False list and then follow the bin detector example
-            ind = KEYLIST.index(keys[0])
-            trueindicies = (trimmedstream.ndarray[ind] > above) & (trimmedstream.ndarray[ind] < below)
-
-            d = np.diff(trueindicies)
-            idx, = d.nonzero()
-            idx += 1
-
-            if not text:
-                text = 'outside of range {} to {}'.format(below,above)
-            if trueindicies[0]:
-                # If the start of condition is True prepend a 0
-                idx = np.r_[0, idx]
-            if trueindicies[-1]:
-                # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
-            # Reshape the result into two columns
-            idx.shape = (-1,2)
-
-            for start,stop in idx:
-                stop = stop-1
-                for elem in keystoflag:
-                    # numerical uncertainty is subtracted from both time steps, as the flagging procedure (findtime) links
-                    # flags to the exact time stamp or, if not found, due to numerical diffs, to the next timestamp
-                    flagline = [num2date(trimmedstream.ndarray[0][start]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]-numuncert).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
-                    flaglist.append(flagline)
-        elif above:
-            # TODO create True/False list and then follow the bin detector example
-            ind = KEYLIST.index(keys[0])
-            trueindicies = trimmedstream.ndarray[ind] > above
-
-            d = np.diff(trueindicies)
-            idx, = d.nonzero()
-            idx += 1
-
-            if not text:
-                text = 'exceeding {}'.format(above)
-            if trueindicies[0]:
-                # If the start of condition is True prepend a 0
-                idx = np.r_[0, idx]
-            if trueindicies[-1]:
-                # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
-            # Reshape the result into two columns
-            idx.shape = (-1,2)
-
-            for start,stop in idx:
-                stop = stop-1
-                for elem in keystoflag:
-                    flagline = [num2date(trimmedstream.ndarray[0][start]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]-numuncert).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
-                    flaglist.append(flagline)
-        elif below:
-            # TODO create True/False the other way round
-            ind = KEYLIST.index(keys[0])
-            truefalse = trimmedstream.ndarray[ind] < below
-
-            d = np.diff(truefalse)
-            idx, = d.nonzero()
-            idx += 1
-
-            if not text:
-                text = 'below {}'.format(below)
-            if truefalse[0]:
-                # If the start of condition is True prepend a 0
-                idx = np.r_[0, idx]
-            if truefalse[-1]:
-                # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, trimmedstream.ndarray[ind].size] # Edit
-            # Reshape the result into two columns
-            idx.shape = (-1,2)
-
-            for start,stop in idx:
-                stop = stop-1
-                for elem in keystoflag:
-                    flagline = [num2date(trimmedstream.ndarray[0][start]-numuncert).replace(tzinfo=None),num2date(trimmedstream.ndarray[0][stop]-numuncert).replace(tzinfo=None),elem,int(flagnum),str(text),sensorid,moddate]
-                    flaglist.append(flagline)
-
-        return flaglist
-
+    @deprecated("replaced by core.flagging flag_outlier")
     def flag_outlier(self, **kwargs):
-        """
-    DEFINITION:
-        Flags outliers in data, using quartiles.
-        Coding : 0 take, 1 remove, 2 force take, 3 force remove
-        Example:
-        0000000, 0001000, etc
-        012 = take f, automatically removed v, and force use of other
-        300 = force remove f, take v, and take other
-
-    PARAMETERS:
-    Variables:
-        - None.
-    Kwargs:
-        - keys:         	(list) List of keys to evaluate. Default = all numerical
-        - threshold:   		(float) Determines threshold for outliers.
-                        	1.5 = standard
-                        	5 = weak condition, keeps storm onsets in (default)
-                        	4 = a useful comprimise to be used in automatic analysis.
-        - timerange:    	(timedelta Object) Time range. Default = samlingrate(sec)*600
-        - stdout:        	prints removed values to stdout
-        - returnflaglist	(bool) if True, a flaglist is returned instead of stream
-        - markall       	(bool) default is False. If True, all components (provided keys)
-                                 are flagged even if outlier is only detected in one. Useful for
-                                 vectorial data
-    RETURNS:
-        - stream:       (DataStream Object) Stream with flagged data.
-
-    EXAMPLE:
-
-        >>> stream.flag_outlier(keys=['x','y','z'], threshold=2)
-
-    APPLICATION:
-        """
-
         # Defaults:
         timerange = kwargs.get('timerange')
         threshold = kwargs.get('threshold')
@@ -3811,185 +3497,9 @@ CALLED BY:
         stdout = kwargs.get('stdout')
         returnflaglist = kwargs.get('returnflaglist')
 
-        sr = self.samplingrate()
-        flagtimeprev = 0
-        startflagtime = 0
-
-        numuncert = 0.0000000001 # numerical uncertainty on different machines when using date2num()
-
-        if not timerange:
-            sr = self.samplingrate()
-            timerange = timedelta(seconds=sr*600)
-        if not keys:
-            keys = self._get_key_headers(numerical=True)
-        if not threshold:
-            threshold = 5.0
-
-        cdate = datetime.utcnow().replace(tzinfo=None)
-        sensorid = self.header.get('SensorID','')
-        flaglist = []
-
-        # Position of flag in flagstring
-        # f (intensity): pos 0
-        # x,y,z (vector): pos 1
-        # other (vector): pos 2
-
-        if not len(self.ndarray[0]) > 0:
-            logger.info('flag_outlier: No ndarray - starting old remove_outlier method.')
-            self = self.remove_outlier(keys=keys,threshold=threshold,timerange=timerange,stdout=stdout,markall=markall)
-            return self
-
-        logger.info('flag_outlier: Starting outlier identification...')
-
-        flagidx = KEYLIST.index('flag')
-        commentidx = KEYLIST.index('comment')
-        if not len(self.ndarray[flagidx]) > 0:
-            self.ndarray[flagidx] = [''] * len(self.ndarray[0])
-        else:
-            self.ndarray[flagidx] = self.ndarray[flagidx].astype(object)
-        if not len(self.ndarray[commentidx]) > 0:
-            self.ndarray[commentidx] = [''] * len(self.ndarray[0])
-        else:
-            self.ndarray[commentidx] = self.ndarray[commentidx].astype(object)
-
-        # get a poslist of all keys - used for markall
-        flagposls = [self.FLAGKEYLIST.index(key) for key in keys]
-        # Start here with for key in keys:
-        for key in keys:
-            flagpos = self.FLAGKEYLIST.index(key)
-            if not len(self.ndarray[flagpos]) > 0:
-                print("Flag_outlier: No data for key %s - skipping" % key)
-                break
-
-            #print ("-------------------------")
-            #print ("Dealing with key:", key)
-
-            st = 0
-            et = len(self.ndarray[0])
-            incrt = int(timerange.total_seconds()/sr)
-            if incrt == 0:
-                print("Flag_outlier: check timerange ... seems to be smaller as sampling rate")
-                break
-            at = incrt
-
-            while st < et:
-                idxst = st
-                idxat = at
-                st = at
-                at += incrt
-                if idxat > et:
-                    idxat = et
-
-                #print key, idxst, idxat
-                selcol = self.ndarray[flagpos][idxst:idxat].astype(float)
-                selcol = selcol[~np.isnan(selcol)]
-
-                if len(selcol) > 0:
-                    try:
-                        q1 = stats.scoreatpercentile(selcol,16)
-                        q3 = stats.scoreatpercentile(selcol,84)
-                        iqd = q3-q1
-                        md = np.median(selcol)
-                        if iqd == 0:
-                            iqd = 0.000001
-                        whisker = threshold*iqd
-                        #print key, md, iqd, whisker
-                    except:
-                        try:
-                            md = np.median(selcol)
-                            whisker = md*0.005
-                        except:
-                            logger.warning("remove_outlier: Eliminate outliers produced a problem: please check.")
-                            pass
-
-                    #print md, whisker, np.asarray(selcol)
-                    for elem in range(idxst,idxat):
-                        #print flagpos, elem
-                        if not md-whisker < self.ndarray[flagpos][elem] < md+whisker and not np.isnan(self.ndarray[flagpos][elem]):
-                            #print "Found:", key, self.ndarray[flagpos][elem]
-                            #if key == 'df':
-                            #    x = 1/0
-                            try:
-                                if not self.ndarray[flagidx][elem] == '':
-                                    #print "Got here", self.ndarray[flagidx][elem]
-                                    newflagls = list(self.ndarray[flagidx][elem])
-                                    #print newflagls
-                                    if newflagls[flagpos] == '-':
-                                        newflagls[flagpos] = 0
-                                    if not int(newflagls[flagpos]) > 1:
-                                        newflagls[flagpos] = '1'
-                                    if markall:
-                                        for p in flagposls:
-                                            if not newflagls[p] > 1:
-                                                newflagls[p] = '1'
-                                    newflag = ''.join(newflagls)
-                                else:
-                                    x=1/0 # Force except
-                            except:
-                                newflagls = []
-                                for idx,el in enumerate(self.FLAGKEYLIST): # Only key column
-                                    if idx == flagpos:
-                                        newflagls.append('1')
-                                    else:
-                                        newflagls.append('-')
-                                if markall:
-                                    for p in flagposls:
-                                        newflagls[p] = '1'
-                                newflag = ''.join(newflagls)
-
-                            self.ndarray[flagidx][elem] = newflag
-                            #print self.ndarray[flagidx][elem]
-                            commline = "aof - threshold: {a}, window: {b} sec".format(a=str(threshold), b=str(timerange.total_seconds()))
-                            self.ndarray[commentidx][elem] = commline
-                            infoline = "flag_outlier: at {a} - removed {b} (= {c})".format(a=str(self.ndarray[0][elem]), b=key, c=self.ndarray[flagpos][elem])
-                            logger.info(infoline)
-                            #[starttime,endtime,key,flagid,flagcomment]
-                            flagtime = self.ndarray[0][elem]
-
-                            if markall:
-                                # if not flagtime and key and commline in flaglist
-                                for fkey in keys:
-                                    ls = [flagtime,flagtime,fkey,1,commline]
-                                    if not ls in flaglist:
-                                        flaglist.append(ls)
-                            else:
-                                flaglist.append([flagtime,flagtime,key,1,commline])
-                            if stdout:
-                                print(infoline)
-                        else:
-                            try:
-                                if not self.ndarray[flagidx][elem] == '':
-                                    pass
-                                else:
-                                    x=1/0 # Not elegant but working
-                            except:
-                                self.ndarray[flagidx][elem] = ''
-                                self.ndarray[commentidx][elem] = ''
-
-        self.ndarray[flagidx] = np.asarray(self.ndarray[flagidx])
-        self.ndarray[commentidx] = np.asarray(self.ndarray[commentidx])
-
-        logger.info('flag_outlier: Outlier flagging finished.')
-
-        ## METHOD WHICH SORTS/COMBINES THE FLAGLIST
-        #print("flag_outlier",flaglist)
-        # Combine subsequent time steps with identical flags to one flag range
-        newlist = []
-        srday = sr/(3600.*24.)
-
-        # Keep it simple - no cleaning here - just produce new format
-        if len(flaglist)>0:
-            #flaglist = sorted(flaglist, key=lambda x: x[0])
-            for line in flaglist:
-                newlist.append([num2date(line[0]-numuncert).replace(tzinfo=None),num2date(line[1]-numuncert).replace(tzinfo=None),line[2],line[3],line[4],sensorid,cdate])
-        else:
-            newlist = []
-
-
-        if returnflaglist:
-            return newlist
-
-        return self
+        from magpy.core import flagging
+        fl = flagging.flag_range(self,keys=keys, threshold=threshold, timerange=timerange, markall=markall)
+        return fl
 
     def flag(self, flaglist, removeduplicates=False, debug=False):
         """
@@ -4008,8 +3518,8 @@ CALLED BY:
         - DataStream:   flagged version of stream.
 
     EXAMPLE:
-        >>> flaglist = db.db2flaglist(db,sensorid_data)
-        >>> data = data.flag(flaglist)
+        flaglist = db.db2flaglist(db,sensorid_data)
+        data = data.flag(flaglist)
         """
         self.progress = 0
 
@@ -4167,34 +3677,6 @@ CALLED BY:
         return res
 
 
-    def flaglistadd(self, flaglist, sensorid, keys, flagnumber, comment, startdate, enddate=None):
-        """
-        DEFINITION:
-            Add a specific input to a flaglist
-            Flaglist elements look like
-            [st,et,key,flagnumber,comment,sensorid,now]
-
-        APPLICATION:
-            newflaglist = stream.flaglistadd(oldflaglist,sensorid, keys, flagnumber, comment, startdate, enddate)
-        """
-        # convert start and end to correct format
-        st = testtime(startdate)
-        if enddate:
-            et = testtime(enddate)
-        else:
-            et = st
-        now = datetime.utcnow()
-        if keys in ['all','All','ALL']:
-            keys = KEYLIST
-        for key in keys:
-            flagelem = [st,et,key,flagnumber,comment,sensorid,now]
-            exists = [elem for elem in flaglist if elem[:5] == flagelem[:5]]
-            if len(exists) == 0:
-                flaglist.append(flagelem)
-            else:
-                print ("flaglistadd: Flag already exists")
-        return flaglist
-
     def flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate=0., debug=False):
         """
     DEFINITION:
@@ -4215,7 +3697,7 @@ CALLED BY:
         - DataStream:   Input stream with flags and comments.
 
     EXAMPLE:
-        >>> data = data.flag_stream('x',0,'Lawnmower',flag1,flag1_end)
+        data = data.flag_stream('x',0,'Lawnmower',flag1,flag1_end)
 
     APPLICATION:
         """
@@ -8984,7 +8466,7 @@ if __name__ == '__main__':
     def create_secteststream(startdate=datetime(2022, 11, 21)):
         # Create a random data signal with some nan values in x and z
         c = 1000  # 1000 nan values are filled at random places
-        array = [[] for el in KEYLIST]
+        array = [[] for el in DataStream().KEYLIST]
         x = np.random.uniform(20950, 21000, size=(72, 1))
         x = np.tile(x, (1, 60 * 60)).flatten()
         x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
@@ -8996,7 +8478,7 @@ if __name__ == '__main__':
         z.ravel()[np.random.choice(z.size, c, replace=False)] = np.nan
         array[3] = z
         array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)])
-        array[KEYLIST.index('sectime')] = np.asarray(
+        array[DataStream().KEYLIST.index('sectime')] = np.asarray(
             [datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)]) + timedelta(minutes=15)
         # array[KEYLIST.index('str1')] = ["xxx"]*len(z)
         teststream = DataStream([], {'SensorID': 'Test_0001_0001'}, np.asarray(array, dtype=object))
