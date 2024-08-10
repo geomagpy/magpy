@@ -2206,86 +2206,14 @@ CALLED BY:
         return bcdata
 
 
+    @deprecated("replaced by core.flagging flag_binary")
     def bindetector(self,key,flagnum=1,keystoflag=['x'],sensorid=None,text=None,**kwargs):
-        """
-        DEFINITION:
-            Function to detect changes between 0 and 1 and create a flaglist for zero or one states
-        PARAMETERS:
-            key:           (key) key to investigate
-            flagnum:        (int) integer between 0 and 4, default is 0
-            keystoflag:	   (list) list of keys to be flagged
-            sensorid:	   (string) sensorid for flaglist, default is sensorid of self
-            text:          (string) text to be added to comments/stdout,
-                                    will be extended by on/off
-        Kwargs:
-            markallon:     (BOOL) add comment to all ons
-            markalloff:    (BOOL) add comment to all offs
-            onvalue:       (float) critical value to determin on stage (default = 0.99)
-        RETURNS:
-            - flaglist
-
-        EXAMPLE:
-            flaglist = stream.bindetector('z',0,'x',SensorID,'Maintanence switch for rain bucket',markallon=True)
-        """
         markallon = kwargs.get('markallon')
         markalloff = kwargs.get('markalloff')
-        onvalue = kwargs.get('onvalue')
-
-        if not markallon and not markalloff:
-            markallon = True
-        if not onvalue:
-            onvalue = 0.99
-        if not sensorid:
-            sensorid = self.header.get('SensorID')
-
-        if not len(self.ndarray[0]) > 0:
-            print ("bindetector: No ndarray data found - aborting")
-            return self
-
-        moddate = datetime.utcnow()
-        ind = KEYLIST.index(key)
-        startstate = self.ndarray[ind][0]
-        flaglist=[]
-        # Find switching states (Joe Kington: http://stackoverflow.com/questions/4494404/find-large-number-of-consecutive-values-fulfilling-condition-in-a-numpy-array)
-        d = np.diff(self.ndarray[ind])
-        idx, = d.nonzero()
-        idx += 1
-
-        if markallon:
-            if not text:
-                text = 'on'
-            if self.ndarray[ind][0]:
-                # If the start of condition is True prepend a 0
-                idx = np.r_[0, idx]
-            if self.ndarray[ind][-1]:
-                # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, self.ndarray[ind].size] # Edit
-            # Reshape the result into two columns
-            #print("Bindetector", idx, idx.size)
-            idx.shape = (-1,2)
-            for start,stop in idx:
-                stop = stop-1
-                for elem in keystoflag:
-                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagnum),text,sensorid,moddate]
-                    flaglist.append(flagline)
-        if markalloff:
-            if not text:
-                text = 'off'
-            if not self.ndarray[ind][0]:
-                # If the start of condition is True prepend a 0
-                idx = np.r_[0, idx]
-            if not self.ndarray[ind][-1]:
-                # If the end of condition is True, append the length of the array
-                idx = np.r_[idx, self.ndarray[ind].size] # Edit
-            # Reshape the result into two columns
-            idx.shape = (-1,2)
-            for start,stop in idx:
-                stop = stop-1
-                for elem in keystoflag:
-                    flagline = [num2date(self.ndarray[0][start]).replace(tzinfo=None),num2date(self.ndarray[0][stop]).replace(tzinfo=None),elem,int(flagid),text,sensorid,moddate]
-                    flaglist.append(flagline)
-
-        return flaglist
+        from magpy.core import flagging
+        fl = flagging.flag_binary(self , key, flagtype=flagnum, keystoflag=keystoflag, sensorid=sensorid, text=text, markallon=markallon, markalloff=markalloff,
+                    groups=None)
+        return fl
 
     def calc_f(self, skipdelta = False):
         """

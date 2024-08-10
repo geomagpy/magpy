@@ -1395,6 +1395,97 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
                    flagversion='2.0')
     return fl
 
+def flag_binary(data, key, flagtype=0, keystoflag=None, sensorid=None, text=None, markallon=False, markalloff=False,
+                    groups=None):
+    """
+    DEFINITION:
+        Function to detect changes between 0 and 1 and create a flaglist for zero or one states.
+        Please note, the last state will not be flagged if markallon/off is selectefd, simply
+        because this state is obviously not over yet
+    PARAMETERS:
+        key:           (key) key to investigate
+        flagnum:        (int) integer between 0 and 4, default is 0
+        keystoflag:	   (list) list of keys to be flagged
+        sensorid:	   (string) sensorid for flaglist, default is sensorid of self
+        text:          (string) text to be added to comments/stdout,
+                                will be extended by on/off
+        markallon:     (BOOL) add comment to all ons
+        markalloff:    (BOOL) add comment to all offs
+        groups:        (list) flagging group
+    RETURNS:
+        - flag object
+
+    EXAMPLE:
+        flags = bindetector(data, 'z', flagtype=0, ['x'], sensorid='SensorID',
+                            text='Maintanence switch for rain bucket',
+                            markallon=True, groups=['RCST7', 'meteosgo'])
+    """
+    fl = flags()
+    if not key:
+        print("bindetector: define key wih binary data")
+        return data
+
+    if not keystoflag:
+        keystoflag = [key]
+    if not sensorid:
+        sensorid = data.header.get('SensorID')
+    if not groups:
+        groups = []
+    stationid = data.header.get('StationID')
+
+    if not len(data.ndarray[0]) > 0:
+        print("bindetector: No ndarray data found - aborting")
+        return data
+
+    tcol = data.ndarray[0]
+    ind = KEYLIST.index(key)
+    startstate = data.ndarray[ind][0]
+    flaglist = []
+    switchindices, = np.nonzero(np.diff(data.ndarray[ind], prepend=startstate))
+
+    prevelem = 0
+    for elem in switchindices:
+        csprev = 'off'
+        csnew = 'on'
+        if startstate:
+            csprev = 'on'
+            csnew = 'off'
+        if not text:
+            descr = 'switching {} from {} to {}'.format(data.header.get('col-{}'.format(key)), csprev, csnew)
+        else:
+            descr = '{} from {} to {}'.format(text, csprev, csnew)
+        # create a label for switches
+        fl.add(sensorid=sensorid, starttime=tcol[elem - 1], endtime=tcol[elem],
+               components=keystoflag, flagtype=flagtype, labelid='100',
+               comment=descr,
+               groups=groups, stationid=stationid, operator='MagPy',
+               flagversion='2.0')
+        if markallon and startstate:
+            if not text:
+                descr = 'switch {} is on'.format(data.header.get('col-{}'.format(key)))
+            else:
+                descr = '{} is on'.format(text)
+            fl.add(sensorid=sensorid, starttime=tcol[prevelem], endtime=tcol[elem - 1],
+                   components=keystoflag, flagtype=flagtype, labelid='100',
+                   comment=descr,
+                   groups=groups, stationid=stationid, operator='MagPy',
+                   flagversion='2.0')
+        if markalloff and not startstate:
+            if not text:
+                descr = 'switch {} is off'.format(data.header.get('col-{}'.format(key)))
+            else:
+                descr = '{} is off'.format(text)
+            fl.add(sensorid=sensorid, starttime=tcol[prevelem], endtime=tcol[elem - 1],
+                   components=keystoflag, flagtype=flagtype, labelid='100',
+                   comment=descr,
+                   groups=groups, stationid=stationid, operator='MagPy',
+                   flagversion='2.0')
+        startstate = np.abs(startstate - 1)
+        prevelem = elem
+
+    return fl
+
+
 def flag_ultra(data, keys=None, factordict=None, mode='magnetism', groups=None):
     """
     DEFINITION:
