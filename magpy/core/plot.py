@@ -69,7 +69,7 @@ def fill_list(mylist, target_len, value):
 def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=None, yranges=None, padding=None,
            symbols=None, symbolcolor=[[0.8, 0.8, 0.8]], title=None, xinds=[None], legend={}, grid={}, patch={},
            fill=None, showpatch=[True], errorbars=None, functions=None, functionfmt="r-", xlabelposition=None,
-           ylabelposition=None, yscale=None, width=10, height=4, alpha=0.5, debug=False):
+           ylabelposition=None, yscale=None, dateformatter=None, width=10, height=4, alpha=0.5, debug=False):
     """
     DESCRIPTION:
         tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a shared x axis based on the first plot.
@@ -113,6 +113,8 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         ylabelposition (float) :    default none - if defined then all ylabels are set to this x position
                                  EXAMPLE: ylabelposition=-0.1
         ysacle (string)     :    'linear' (default), 'log'
+        dateformatter (string) : if provided then autoformat x is activated and the choosen format is used for the datecolumn
+                                 i.e. dateformatter="%Y-%m-%d %H"
         height (float)      :    default 4 - default height of each individual plot
                                  EXAMPLE: height=2
         width (float)       :    default 10 - default width of all plots
@@ -197,7 +199,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
     if not functionfmt:
         functionfmt = 'r-'
 
-    plt.figure(figsize=(width, hght))
+    fig = plt.figure(figsize=(width, hght))
 
     # parameter for separate plots
     total_pos = 0
@@ -282,7 +284,10 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                 plt.plot(t, comp, symbol, color=symbolcolor[idx])
                 # plt.hlines(0,t[0],t[-1])
                 plt.yscale(yscale[idx][i])
-
+                if dateformatter:
+                    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter(dateformatter))
+                    # plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=5))
+                    plt.gcf().autofmt_xdate()
                 # Padding and y ranges
                 # ------------------
                 mincomp = np.nanmin(comp)
@@ -312,19 +317,21 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                 if pat and isinstance(pat, dict) and showpatch[idx]:
                     for line in pat:
                         l = pat.get(line)
-                        winmin = date2num(l.get('start'))
-                        winmax = date2num(l.get('end'))
-                        edgecolor = l.get('color')
-                        if not edgecolor:
-                            if l.get('flag', 0) in [1, 3]:
-                                edgecolor = 'r'
-                            elif l.get('flag', 0) in [2, 4]:
-                                edgecolor = 'g'
-                            elif l.get('flag', 0) == 0:
-                                edgecolor = 'y'
-                        rect = patches.Rectangle((winmin, mincomp), winmax - winmin, maxcomp - mincomp,
-                                                 edgecolor=edgecolor, facecolor=edgecolor, alpha=0.2)
-                        plt.gca().add_patch(rect)
+                        patchcomps = l.get('components')
+                        if component in patchcomps:
+                            winmin = date2num(l.get('start'))
+                            winmax = date2num(l.get('end'))
+                            edgecolor = l.get('color')
+                            if not edgecolor:
+                                if l.get('flag', 0) in [1, 3]:
+                                    edgecolor = 'r'
+                                elif l.get('flag', 0) in [2, 4]:
+                                    edgecolor = 'g'
+                                elif l.get('flag', 0) == 0:
+                                    edgecolor = 'y'
+                            rect = patches.Rectangle((winmin, mincomp), winmax - winmin, maxcomp - mincomp,
+                                                     edgecolor=edgecolor, facecolor=edgecolor, alpha=0.2)
+                            plt.gca().add_patch(rect)
                 # Plottitle
                 # ------------------
                 if not isinstance(title, (list, tuple)) and not titledone:
@@ -406,7 +413,8 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                 total_pos += 1
             else:
                 print(" tsplot: warning component {} of stream {} is empty".format(component, idx))
-    return plt
+
+    return fig, plt.gca()
 
 
 #####################################################################
