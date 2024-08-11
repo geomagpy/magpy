@@ -44,7 +44,7 @@ class flags(object):
                     'labelid',           (string) # string with number i.e. '001', see list below with prefilled options
                     'label',             (string) # name associated with labelid i.e. lightning
                     'comment',           (string) # text without special characters (utf-8)
-                    'group',             (list) # define flaggroups-list i.e. [{'magnetism':['x','y','z','f']}, ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'groups',            (dict) # define flaggroups-list i.e. [{'magnetism':['x','y','z','f']}, ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
                     'probabilities',     (list) # measure of probabilities - list
                     'stationid',         (string) # stationid of flag
                     'validity',          (char) # character code: d (delete in cleanup), h (invalid/hide), default None
@@ -155,8 +155,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             'labelid',  # string with number i.e. '001'
             'label',  # name asociated with labelid i.e. lightning
             'comment',  # text without special characters (utf-8)
-            'group',
-            # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+            'groups',
+            # define flaggroups-dictionary i.e. {'magnetism':['X','y','z']}, ['meteorology':['X','y','z'],'gravity':['X','y','z']] , ['SensorID_1':['X','y','z'],'SensorID_1']
             'probabilities',  # measure of probabilities - list
             'stationid',  # stationid of flag
             'validity',  # character code: d (delete in cleanup), h (invalid/hide), default None
@@ -316,8 +316,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         if comment:
             comment = str(comment)
         if groups:
-            if not isinstance(groups, (list, tuple)):
-                groups = None
+            if not isinstance(groups, dict):
+                groups = {}
         if not isinstance(probabilities, (list, tuple)):
             probabilities = None
         if labelid and labelid in self.FLAGLABEL:
@@ -502,7 +502,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                     'labelid',           # string with number i.e. '001'
                     'label',             # name asociated with labelid i.e. lightning
                     'comment',           # text without special characters (utf-8)
-                    'group',             # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'groups',             # define flaggroups-dict i.e. {'magnetism':['x']}
                     'probabilities',     # measure of probabilities - list
                     'stationid',         # stationid of flag
                     'validity',          # character code: d (delete in cleanup), h (invalid/hide), default None
@@ -652,7 +652,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                     'labelid',           # string with number i.e. '001'
                     'label',             # name asociated with labelid i.e. lightning
                     'comment',           # text without special characters (utf-8)
-                    'groups',             # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'groups',            # define flaggroups-dict
                     'probabilities',     # measure of probabilities - list
                     'stationid',         # stationid of flag
                     'validity',          # character code: d (delete in cleanup), h (invalid/hide), default None
@@ -660,7 +660,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             Please note that every search parameter is provided as list
         APPLICTAION:
             flagsmodified = fl.replace('comment','lightning','hell of a lightining strike')
-            flagsmodified = fl.replace('groups',None,['magnetism'])
+            flagsmodified = fl.replace('groups',None,{'magnetism':['#'x']})
             flagsmodified = fl.replace('stationid','','WIC')
 
 
@@ -759,7 +759,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                     'labelid',           # string with number i.e. '001'
                     'label',             # name asociated with labelid i.e. lightning
                     'comment',           # text without special characters (utf-8)
-                    'groups',             # define flaggroups-list i.e. ['magnetism'], ['meteorology','gravity'] , ['SensorID_1','SensorID_1']
+                    'groups',             # define flaggroups-dict
                     'probabilities',     # measure of probabilities - list
                     'stationid',         # stationid of flag
                     'validity',          # character code: d (delete in cleanup), h (invalid/hide), default None
@@ -1191,6 +1191,8 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
         keys = data._get_key_headers(numerical=True)
     if not threshold:
         threshold = 5.0
+    if not groups:
+        groups = {}
 
     cdate = datetime.utcnow().replace(tzinfo=None)
     sensorid = data.header.get('SensorID', '')
@@ -1262,7 +1264,7 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
                             is accepted (e.g. ['x']
         - text          (string) comment
         - flagtype      (int) Flagtype (0,1,2,3,4)
-        - groups        (list) flagging groups
+        - groups        (dict) flagging groups
         - keystoflag:   (list) List of keys to flag. Default = same as keys
         - below:        (float) flag data of key below this numerical value.
         - above:        (float) flag data of key exceeding this numerical value.
@@ -1280,6 +1282,8 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
     fl = flags()
     sensorid = data.header.get('SensorID')
     stationid = data.header.get('StationID')
+    if not groups:
+        groups = {}
     moddate = datetime.utcnow()
     flaglist = []
     if not keys:
@@ -1411,26 +1415,25 @@ def flag_binary(data, key, flagtype=0, keystoflag=None, sensorid=None, text=None
                                 will be extended by on/off
         markallon:     (BOOL) add comment to all ons
         markalloff:    (BOOL) add comment to all offs
-        groups:        (list) flagging group
+        groups:        (dict) flagging group
     RETURNS:
         - flag object
 
     EXAMPLE:
         flags = bindetector(data, 'z', flagtype=0, ['x'], sensorid='SensorID',
                             text='Maintanence switch for rain bucket',
-                            markallon=True, groups=['RCST7', 'meteosgo'])
+                            markallon=True, groups=['RCST7':['f'], 'meteosgo':['x']])
     """
     fl = flags()
     if not key:
         print("bindetector: define key wih binary data")
         return data
-
     if not keystoflag:
         keystoflag = [key]
     if not sensorid:
         sensorid = data.header.get('SensorID')
     if not groups:
-        groups = []
+        groups = {}
     stationid = data.header.get('StationID')
 
     if not len(data.ndarray[0]) > 0:
@@ -1506,7 +1509,7 @@ def flag_ultra(data, keys=None, factordict=None, mode='magnetism', groups=None):
         - factordict    (dict) a decompositon/frequency dependend threshold dictionary for
                             identification of disturbed sequences
         - mode          (string) mode is used to select among stored probability label assignments
-        - groups        (list) flags will be assigned to these groups
+        - groups        (dict) flags will be assigned to these groups
     RETURNS:
         - flag object:  flagging information - use stream.flag(flaglist) to add to stream
 
@@ -1528,9 +1531,9 @@ def flag_ultra(data, keys=None, factordict=None, mode='magnetism', groups=None):
         for key in keys:
             factordict[key] = {0: 14, 1: 12, 2: 10, 3: 8, 4: 6, 5: 5}
     if not groups:
-        groups = [mode]
+        groups = {mode: ['x','y','z','f']}
     elif not mode in groups:
-        groups.append(mode)
+        groups[mode] =  ['x','y','z','f']
 
     analysisdict = create_feature_dictionary(data, factor=factordict, config={})
     imfflagdict = create_basic_flagdict(analysisdict, components=keys, sensorid=sensorid, mode='magnetism')

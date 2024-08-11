@@ -38,7 +38,6 @@ def isPYCDF(filename):
         return False
     try:
         cdfformat = temp.globalattsget().get('DataFormat')
-        print (cdfformat)
         if not cdfformat.startswith('MagPyCDF'):
             return False
     except:
@@ -120,7 +119,8 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if not att in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList','DataFunctionObject']:
                     stream.header[att] = value
                 else:
-                        print ("Found special header content !!!!!!!!!!!!!!!! --  version {}".format(version))
+                        if debug:
+                            print ("Found special header content !!!!!!!!!!!!!!!! --  version {}".format(version))
                         #TODO check this - is pickle really necessary?
                         logger.debug("readPYCDF: Found object - loading and unpickling")
                         func = ''
@@ -137,7 +137,8 @@ def readPYCDF(filename, headonly=False, **kwargs):
                                 print ("FAILED to load special content")
                                 logger.debug("readPYCDF: Failed to load Object - constructed before v0.2.000?")
                         stream.header[att] = func
-                        print (" -> functions loaded")
+                        if debug:
+                            print (" -> functions loaded")
 
         logger.info('readPYCDF: %s Format: %s ' % (filename, cdfformat))
 
