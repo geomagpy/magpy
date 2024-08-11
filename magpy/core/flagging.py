@@ -1558,35 +1558,44 @@ if __name__ == '__main__':
     #                     Runtime testing
     # #######################################################
 
-    def create_secteststream(startdate=datetime(2022, 11, 21)):
+    def create_teststream(startdate=datetime(2022, 11, 21), coverage=86400):
         # Create a random data signal with some nan values in x and z
         c = 1000  # 1000 nan values are filled at random places
+        l = coverage
         array = [[] for el in DataStream().KEYLIST]
-        x = np.random.uniform(20950, 21000, size=(72, 1))
-        x = np.tile(x, (1, 60 * 60)).flatten()
-        x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
-        array[1] = x
-        y = np.random.uniform(1950, 2000, size=(72, 1))
-        array[2] = np.tile(y, (1, 60 * 60)).flatten()
-        z = np.random.uniform(44350, 44400, size=(72, 1))
-        z = np.tile(z, (1, 60 * 60)).flatten()
-        z.ravel()[np.random.choice(z.size, c, replace=False)] = np.nan
-        array[3] = z
-        array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)])
-        array[DataStream().KEYLIST.index('sectime')] = np.asarray(
-            [datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, 3 * 86400)]) + timedelta(minutes=15)
-        # array[KEYLIST.index('str1')] = ["xxx"]*len(z)
-        teststream = DataStream([], {'SensorID': 'Test_0001_0001'}, np.asarray(array, dtype=object))
+        import scipy
+        win = scipy.signal.windows.hann(60)
+        a = np.random.uniform(20950, 21000, size=int((l + 2880) / 2))
+        b = np.random.uniform(20950, 21050, size=int((l + 2880) / 2))
+        x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        array[1] = np.asarray(x[1440:-1440])
+        a = np.random.uniform(1950, 2000, size=int((l + 2880) / 2))
+        b = np.random.uniform(1900, 2050, size=int((l + 2880) / 2))
+        y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+        array[2] = np.asarray(y[1440:-1440])
+        a = np.random.uniform(44300, 44400, size=(l + 2880))
+        z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+        array[3] = np.asarray(z[1440:-1440])
+        array[4] = np.asarray(np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440])
+        var1 = [0] * l
+        var1[43200:50400] = [1] * 7200
+        varind = DataStream().KEYLIST.index('var1')
+        array[varind] = np.asarray(var1)
+        array[0] = np.asarray([startdate + timedelta(seconds=i) for i in range(0, l)])
+        teststream = DataStream(header={'SensorID': 'Test_0001_0001'}, ndarray=np.asarray(array, dtype=object))
         teststream.header['col-x'] = 'X'
         teststream.header['col-y'] = 'Y'
         teststream.header['col-z'] = 'Z'
+        teststream.header['col-f'] = 'F'
         teststream.header['unit-col-x'] = 'nT'
         teststream.header['unit-col-y'] = 'nT'
         teststream.header['unit-col-z'] = 'nT'
+        teststream.header['unit-col-f'] = 'nT'
+        teststream.header['col-var1'] = 'Switch'
         return teststream
 
-
-    teststream = create_secteststream(startdate=datetime(2022, 11, 22))
+    teststream = create_teststream(startdate=datetime(2022, 11, 22))
 
     fl = flags()
     newfl = flags()
@@ -1754,6 +1763,15 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['flag_outlier'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with flag_outlier")
+            try:
+                ts = datetime.utcnow()
+                bifl = flag_binary(teststream, key='var1', keystoflag=['f'], markalloff=True)
+                te = datetime.utcnow()
+                successes['flag_binary'] = (
+                    "Version: {}, flag_outlier: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['flag_binary'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with flag_binary")
 
             # If end of routine is reached... break.
             break
