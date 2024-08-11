@@ -83,6 +83,7 @@ flags  |  rename_nearby |  2.0.0        |                 |  yes           |  ye
 flags  |  save        |  2.0.0          |                 |  yes           |                  |    |
 flags  |  select      |  2.0.0          |                 |  yes           |  yes             |    |
 flags  |  stats       |  2.0.0          |                 |  yes           |  yes             |    |
+flags  |  timerange   |  2.0.0          |                 |  yes           |                  |    |
 flags  |  trim        |  2.0.0          |                 |  yes           |  yes             |    |
 flags  |  union       |  2.0.0          |                 |  yes           |  yes             |    |
        |  _dateparser |  2.0.0          |                 |                |                  |    | flagging.load
@@ -114,6 +115,7 @@ flags  |  rename_nearby |  parameter, values, timerange | replace contents of ne
 flags  |  save        |  path     | save flagging dictionary
 flags  |  select      |  parameter, values | select specifc data
 flags  |  stats       |  intensive | provides stats on a flaglist
+flags  |  timerange   |            | get min and maxtime of flagging data
 flags  |  trim        |  starttime, endtime | trim the time range of flagging information
 flags  |  union        | level, samplingrate, typeforce | combine overlapping time ranges
        |  _dateparser |           | load support - convert strings to datetimes
@@ -881,6 +883,18 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         else:
             return outputt
 
+
+    def timerange(self):
+        """
+        DESCRIPTION
+            get the time range covered by a flag object
+        """
+        array = np.asarray(self._list(['starttime', 'endtime'])).T
+        mintime = np.min(array[1])
+        maxtime = np.max(array[2])
+        return mintime, maxtime
+
+
     def trim(self, starttime=None, endtime=None, debug=False):
         """
         DESCRIPTION
@@ -1347,7 +1361,7 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
     return fl
 
 def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, flagtype=1, labelid='002',
-                   keystoflag=None, text=None, groups=None):
+                   keystoflag=None, text=None, groups=None, operator='MagPy'):
     """
     DEFINITION:
         Flags data within time range or data exceeding a certain threshold
@@ -1410,7 +1424,7 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
         fl.add(sensorid=sensorid, starttime=tcol[0], endtime=tcol[-1],
                components=fkeys, flagtype=flagtype, labelid=labelid,
                comment='automatically marked by flag_range',
-               groups=groups, stationid=stationid, operator='MagPy',
+               groups=groups, stationid=stationid, operator=operator,
                flagversion='2.0')
         return fl
 
@@ -1439,7 +1453,7 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
             fl.add(sensorid=sensorid, starttime=tcol[start], endtime=tcol[stop],
                    components=fkeys, flagtype=flagtype, labelid=labelid,
                    comment=text,
-                   groups=groups, stationid=stationid, operator='MagPy',
+                   groups=groups, stationid=stationid, operator=operator,
                    flagversion='2.0')
     elif above:
         # TODO create True/False list and then follow the bin detector example
@@ -1466,7 +1480,7 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
             fl.add(sensorid=sensorid, starttime=tcol[start], endtime=tcol[stop],
                    components=fkeys, flagtype=flagtype, labelid=labelid,
                    comment=text,
-                   groups=groups, stationid=stationid, operator='MagPy',
+                   groups=groups, stationid=stationid, operator=operator,
                    flagversion='2.0')
     elif below:
         # TODO create True/False the other way round
@@ -1493,7 +1507,7 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
             fl.add(sensorid=sensorid, starttime=tcol[start], endtime=tcol[stop],
                    components=fkeys, flagtype=flagtype, labelid=labelid,
                    comment=text,
-                   groups=groups, stationid=stationid, operator='MagPy',
+                   groups=groups, stationid=stationid, operator=operator,
                    flagversion='2.0')
     return fl
 
@@ -1813,6 +1827,14 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['union'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR in union flags.")
+            try:
+                ts = datetime.utcnow()
+                mit,mat = nextfl.timerange()
+                te = datetime.utcnow()
+                successes['timerange'] = ("Version: {}, timerange: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['timerange'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR in timerange flags.")
             try:
                 ts = datetime.utcnow()
                 combfl = nextfl.rename_nearby(parameter='labelid', values=['001'])

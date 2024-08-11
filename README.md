@@ -957,9 +957,71 @@ DataStream  |  xyz2idf  |    |
 
 ## 6. Annotating data and flagging
 
+Geomagnetic raw data (and also data from all other disciplines) contains numerous signals of different natural and 
+artificial sources, affecting various different frequency bands. These signals can generally be divided into two 
+subgroups. Group 1 comprises all disturbing signals of mainly anthropogenic origin which are not considered for 
+definitive data production. Such disturbing signals are typically removed before final data production. The basic 
+treatment as well as the definition of such disturbances is not uniform. Some disturbances depend strongly on site 
+location and  environment. 
+Group 2 consist of mainly natural signals, which are not removed for definitive data production. Among these signals 
+are  long and short term variations of which especially some short term variations are sometimes not easily 
+distinguishable from group 1 disturbances. Ideally such data is flagged/labelled , which however is not performed 
+very often in geomagnetic data analysis.
+
+Hereinafter we will follow the same way as originally suggested as part of the MagPy software. We will label (flag) 
+data in dependency of the observed signal. Signals will be assigned to either "suitable for definitive data" or 
+"not suitable for definitive data". MagPy 2.x will use flagtypes, an integer value, to describe this assignment.
+Flagtype 1 and 3 will be used for signals to be removed, flagtype 1 for automatically identified signals, flagtype 3
+for signals marked and labeled by an observer. Flagtype 2 and 4 are used for signals to be kept, 2 automatically 
+identified by i.e. SSC detector, flagtype 4 for manually assigned markings. Flagtype 0 is used for labeled data without 
+verified assignment to any of the types above. Such data will be kept for analysis. 
+Each flagtype can contain various different individual labels. These labels will be characterized by a unique label 
+identifier and a human readable description of the label. The following table contains an overview of the labels 
+currently included in MagPy. Please note that additional labels can be easily incorporated into the processing scheme. 
+Some details on specific labels are discussed later in this manual. 
+
+FlagID   |  Description | LabelGroup
+-------- | -------- | -------- 
+000 | normal | 0
+001 | lightning strike | 1
+002 | spike | 1
+012 | pulsation pc 2 | 2
+013 | pulsation pc 3 | 2
+014 | pulsation pc 4 | 2 
+015 | pulsation pc 5 | 2
+016 | pulsation pi 2 | 2
+020 | ssc geomagnetic storm | 2
+021 | geomagnetic storm |  2
+022 | crochete | 2
+030 | earthquake | 1
+050 | vehicle passing above | 1
+051 | nearby disturbing source | 1
+052 | train | 1
+090 | unknown disturbance |  1
+
+LabelGroups: 0 - normal data, 1 - disturbance to be removed, 2 - signal to be kept
+
+
+## 6.1 Basics of the flagging package
+
 Data flagging is handled by magpy.core.flagging package.
 
-The flagging procedure allows the observer to mark specific data points or ranges. Flags are useful for labelling data spikes, storm onsets, pulsations, disturbances, lightning strikes, etc. Each flag is asociated with a comment and a type number. The flagtype number ranges between 0 and 4:
+        from magpy.core import flagging
+
+Now create an empty flagging object
+
+        fo = flagging.flags()
+
+Add a flag to this object
+
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T16:36:12.654362",
+                    endtime="2022-11-22T16:41:12.654362", components=['x', 'y', 'z'], labelid='020', flagtype=4,
+                    comment="SSC with an amplitude of 40 nT", operator='John Doe')
+
+
+The flagging procedure allows the observer to mark specific data points or ranges. Flags are useful for labelling data 
+spikes, storm onsets, pulsations, disturbances, lightning strikes, etc. Each flag is asociated with a comment and a 
+type number. The flagtype number ranges between 0 and 4:
 
   - 0:  normal data with comment (e.g. "Hello World")
   - 1:  data marked by automated analysis (e.g. spike)
