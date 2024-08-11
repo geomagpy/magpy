@@ -89,8 +89,10 @@ flags  |  union       |  2.0.0          |                 |  yes           |  ye
        |  _readJson   |  2.0.0          |                 |                |                  |    | flagging.load
        |  _readPickle |  2.0.0          |                 |                |                  |    | flagging.load
        |  load        |  2.0.0          |                 |                |                  |    |
+       |  convert_to_flags |  2.0.0     |                 |                |                  |    |
        |  flag_outlier |  2.0.0         |                 |  yes           |                  |    |
        |  flag_range  |  2.0.0          |                 |  yes           |                  |    |
+       |  flag_binary |  2.0.0          |                 |  yes           |                  |    |
        |  flag_ultra  |  2.0.0          |                 |  no            |  no              |    |
 
 
@@ -118,9 +120,11 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
        |  _readJson   |           | load support - interprete json
        |  _readPickle |           | load support - interprete pickle
        |  load        |  path     | load function needs to support import of old versions
-       |  flag_outlier |  keys, threshold, timerange  | flag outliers based on IQR analysis
-       |  flag_range  |  keys, above, below, timerange  | flag ranges based on thresholds
-       |  flag_ultra  |  keys, parameter | experimental flagging label assignment
+       |  convert_to_flags |  data, ...   | convert contents of a data set to a flagging structure
+       |  flag_outlier |  data, keys, threshold, timerange  | flag outliers based on IQR analysis
+       |  flag_range  |  data, keys, above, below, timerange  | flag ranges based on thresholds
+       |  flag_binary |  data, keys, keystoflag,              | flag switches from 0-1 and 1-0
+       |  flag_ultra  |  data, keys, parameter | experimental flagging label assignment
 
 
     deprecated in 2.0.0
@@ -196,6 +200,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         # 030-039 : () natural disturbances with physically different effects (i.e. earthquake affecting suspended systems)
         # 040-049 : (2,4) long period natural signals
         # 050-059 : (1,3) sub-minute to sub-hourly anthropogenic disturbances
+        # 070-079 : (0) switches and state information
         # 080-089 : (0) data treatment notations
         # 090-    : (0,1,2,3,4) yet to be classified
         # Flagids of the labels
@@ -215,6 +220,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                           '051': 'nearby moving disturbing source',
                           '052': 'nearby static disturbing source',
                           '053': 'train',
+                          '070': 'switch',
                           '090': 'unknown disturbance'
                           }
 
@@ -232,6 +238,32 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
 
     def __len__(self):
         return len(self.flagdict)
+
+    def _match_groups(self, header, flag_sensor, flag_keys=None, flag_groups=None):
+        """
+        DESCRIPTION
+            check if sensorid/group from is matching to the current data stream
+        VARIABLES
+            header        (dict) the header of the current data stream
+            flag_sensor   (string) sensorid of current flagdict
+            flag_keys     (list) components of current flagdict
+            flag_groups   (dict) groups of current flagdict
+        RETURNS
+            bool, keystoflag
+        """
+        sensorid = header.get('SensorID')
+        sensorgroup = header.get('SensorGroup')
+        gkeys = list(flag_groups.keys())
+        if sensorid == flag_sensor:
+            return True, flag_keys
+        elif sensorid in gkeys:
+            flkeys = flag_groups.get(sensorid)
+            return True, flkeys
+        elif sensorgroup in gkeys:
+            flkeys = flag_groups.get(sensorgroup)
+            return True, flkeys
+        return False, []
+
 
     def _list(self, parameter=None):
         """
@@ -364,7 +396,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         return self
 
 
-    def apply_flags(self, data, flagtype=[1, 3], mode='drop', addlabel=False):
+    def apply_flags(self, data, flagtype=None, mode='drop', addlabel=False):
         """
         DESCRIPTION
             drop flagged sequences from the data stream. You selected which
@@ -386,6 +418,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             ndata = flags.apply_flags(data, mode='insert')
         """
         ndata = data.copy()
+        if not flagtype:
+            flagtype = [1,3]
         if not isinstance(flagtype, (list, tuple)):
             flagtype = [flagtype]
         st, et = ndata._find_t_limits()
@@ -404,22 +438,25 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         flagdict = fl.flagdict
         for d in flagdict:
             flagcont = flagdict[d]
-            stfind = ndata.findtime(flagcont.get('starttime'))
-            etfind = ndata.findtime(flagcont.get('endtime'))
-            comps = flagcont.get('components')
-            if addlabel:
-                ndata.ndarray[commentcol][stfind:etfind] = "{} - {}".format(flagcont.get('labelid'),
-                                                                            flagcont.get('label'))
-                codes = ['0' if not key in comps else str(flagcont.get('flagtype')) for key in data.FLAGKEYLIST]
-                codes.append('-')
-                flagcode = "".join(codes)
-                ndata.ndarray[flagcol][stfind:etfind] = flagcode
-            if mode == 'drop' and flagcont.get('flagtype') in flagtype:
-                for key in comps:
-                    ki = ndata.KEYLIST.index(key)
-                    ndata.ndarray[ki] = np.asarray(ndata.ndarray[ki], dtype=float)
-                    if len(data.ndarray[ki]) >= etfind:
-                        ndata.ndarray[ki][stfind:etfind] = np.nan
+            # test, if sensorid is fitting or sensorid/group is part of groups
+            valid, comps = self._match_groups(data.header, flagcont.get('sensorid'), flag_keys=flagcont.get('components'), flag_groups=flagcont.get('groups'))
+            if valid:
+                stfind = ndata.findtime(flagcont.get('starttime'))
+                etfind = ndata.findtime(flagcont.get('endtime'))
+                #comps = flagcont.get('components')
+                if addlabel:
+                    ndata.ndarray[commentcol][stfind:etfind] = "{} - {}".format(flagcont.get('labelid'),
+                                                                                flagcont.get('label'))
+                    codes = ['0' if not key in comps else str(flagcont.get('flagtype')) for key in data.FLAGKEYLIST]
+                    codes.append('-')
+                    flagcode = "".join(codes)
+                    ndata.ndarray[flagcol][stfind:etfind] = flagcode
+                if mode == 'drop' and flagcont.get('flagtype') in flagtype:
+                    for key in comps:
+                        ki = ndata.KEYLIST.index(key)
+                        ndata.ndarray[ki] = np.asarray(ndata.ndarray[ki], dtype=float)
+                        if len(data.ndarray[ki]) >= etfind:
+                            ndata.ndarray[ki][stfind:etfind] = np.nan
         return ndata
 
 
@@ -435,11 +472,15 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         flagdict = cp.deepcopy(self)
         return flagdict
 
-    def create_patch(self):
+    def create_patch(self, data=None):
         """
         DESCRIPTION:
             construct a simple patch dictionary for plotting from any given and preselected flaglist
-        APPLICTAION:
+        VARIABLES:
+            data    (DataStream) : the data stream for which the patches are created
+                                   if not provided then patches are created by ignoring
+                                   sensorids
+        APPLICATION:
         RETURNS:
             a patch dictionary for plotting
             of the following structure
@@ -464,17 +505,23 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
 
         for d in flagdict:
             cont = {}
-            cont['start'] = flagdict[d].get('starttime', None)
-            cont['end'] = flagdict[d].get('endtime')
-            cont['flagtype'] = flagdict[d].get('flagtype')
-            color = flagdict[d].get('color')
-            if not color:
-                color = _get_color_from_flagtype(cont.get('flagtype'))
-            cont['color'] = color
-            cont['labelid'] = flagdict[d].get('labelid')
-            cont['label'] = flagdict[d].get('label')
-            if cont['start']:
-                patchdict[d] = cont
+            valid = True
+            comps = flagdict[d].get('components')
+            if data:
+                valid, comps = self._match_groups(data.header, flagdict[d].get('sensorid'), flag_keys=flagdict[d].get('components'), flag_groups=flagdict[d].get('groups'))
+            if valid:
+                cont['components'] = comps
+                cont['start'] = flagdict[d].get('starttime', None)
+                cont['end'] = flagdict[d].get('endtime')
+                cont['flagtype'] = flagdict[d].get('flagtype')
+                color = flagdict[d].get('color')
+                if not color:
+                    color = _get_color_from_flagtype(cont.get('flagtype'))
+                cont['color'] = color
+                cont['labelid'] = flagdict[d].get('labelid')
+                cont['label'] = flagdict[d].get('label')
+                if cont['start']:
+                    patchdict[d] = cont
         return patchdict
 
     def diff(self, compare):
@@ -1149,6 +1196,57 @@ def _readPickle(path, debug=False):
         print("load: list {a} successfully loaded, found {b} inputs".format(a=path, b=len(myd)))
     return myd
 
+
+def convert_to_flags(data, flagtype=2, labelid='030', sensorid=None, keystoflag=None, commentkeys=None, groups=None):
+    """
+    DESCRIPTION:
+        Constructs a flag object dependent on the content of stream
+    PARAMETER:
+        flagtype    (int)    integer number between 0 and 4, default is 2
+        labelid     (string) default is 030 for earthquakes
+        commentkeys (list)   list of keys from which comment is constructed i.e. ['f','str3'] with f=3.52 and str3='wow'
+                             will be transformed to comment='3.52 wow'
+                             ['magnitude','f','earthquake'] -> 'magnitude 3.52 earthquake'
+                             sensorid    (string) will override sensorid of data
+        groups      (dict)   define other sensors to which this flags apply
+
+    APPLICATION
+        fl = convert_to_flags(data, comment='f,str3',sensorid=nstream.header["SensorID"], userange=False, keystoflag="x")
+    """
+    fl = flags()
+    ### identify any given gaps and flag time ranges regarding gaps
+    if not isinstance(commentkeys, (list,tuple)):
+        commentkeys = ['Flagged']
+    if not keystoflag:
+        keystoflag = [el for el in commentkeys if el in data.KEYLIST]
+        if not len(keystoflag) > 0:
+            # Flag all
+            keystoflag = data.FLAGKEYLIST
+    if not sensorid:
+        sensorid = data.header.get('SensorID')
+    stationid = data.header.get('StationID','')
+    if not groups:
+        groups = {}
+
+    tcol = data.ndarray[0]
+    for ind in range(0,len(data)):
+        part = []
+        for comm in commentkeys:
+            if comm in data.KEYLIST:
+                j = data.KEYLIST.index(comm)
+                part.append(str(data.ndarray[j][ind]))
+            else:
+                part.append(str(comm))
+        descr = " ".join(part)
+        fl.add(sensorid=sensorid, starttime=tcol[ind], endtime=tcol[ind],
+               components=keystoflag, flagtype=flagtype, labelid=labelid,
+               comment=descr,
+               groups=groups, stationid=stationid, operator='MagPy',
+               flagversion='2.0')
+
+    return fl
+
+
 def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, groups=None, debug=False):
     """
     DEFINITION:
@@ -1399,7 +1497,7 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
                    flagversion='2.0')
     return fl
 
-def flag_binary(data, key, flagtype=0, keystoflag=None, sensorid=None, text=None, markallon=False, markalloff=False,
+def flag_binary(data, key, flagtype=0, labelid='070', keystoflag=None, sensorid=None, text=None, markallon=False, markalloff=False,
                     groups=None):
     """
     DEFINITION:
@@ -1408,7 +1506,8 @@ def flag_binary(data, key, flagtype=0, keystoflag=None, sensorid=None, text=None
         because this state is obviously not over yet
     PARAMETERS:
         key:           (key) key to investigate
-        flagnum:        (int) integer between 0 and 4, default is 0
+        flagtype:      (int) integer between 0 and 4, default is 0
+        labelid:       (string) default is 070 for some switch
         keystoflag:	   (list) list of keys to be flagged
         sensorid:	   (string) sensorid for flaglist, default is sensorid of self
         text:          (string) text to be added to comments/stdout,
@@ -1459,7 +1558,7 @@ def flag_binary(data, key, flagtype=0, keystoflag=None, sensorid=None, text=None
             descr = '{} from {} to {}'.format(text, csprev, csnew)
         # create a label for switches
         fl.add(sensorid=sensorid, starttime=tcol[elem - 1], endtime=tcol[elem],
-               components=keystoflag, flagtype=flagtype, labelid='100',
+               components=keystoflag, flagtype=flagtype, labelid=labelid,
                comment=descr,
                groups=groups, stationid=stationid, operator='MagPy',
                flagversion='2.0')
@@ -1469,7 +1568,7 @@ def flag_binary(data, key, flagtype=0, keystoflag=None, sensorid=None, text=None
             else:
                 descr = '{} is on'.format(text)
             fl.add(sensorid=sensorid, starttime=tcol[prevelem], endtime=tcol[elem - 1],
-                   components=keystoflag, flagtype=flagtype, labelid='100',
+                   components=keystoflag, flagtype=flagtype, labelid=labelid,
                    comment=descr,
                    groups=groups, stationid=stationid, operator='MagPy',
                    flagversion='2.0')
@@ -1479,7 +1578,7 @@ def flag_binary(data, key, flagtype=0, keystoflag=None, sensorid=None, text=None
             else:
                 descr = '{} is off'.format(text)
             fl.add(sensorid=sensorid, starttime=tcol[prevelem], endtime=tcol[elem - 1],
-                   components=keystoflag, flagtype=flagtype, labelid='100',
+                   components=keystoflag, flagtype=flagtype, labelid=labelid,
                    comment=descr,
                    groups=groups, stationid=stationid, operator='MagPy',
                    flagversion='2.0')
@@ -1726,8 +1825,8 @@ if __name__ == '__main__':
                 ts = datetime.utcnow()
                 trimstream = teststream.trim(starttime="2022-11-22", endtime="2022-11-23")
                 fl = flag_range(trimstream, keys=['x'], above=20990)
-                fstream = fl.apply_flags(trimstream, mode='insert')
-                fstream = fl.apply_flags(trimstream, mode='drop')
+                f1stream = fl.apply_flags(trimstream, mode='insert')
+                f2stream = fl.apply_flags(trimstream, mode='drop')
                 te = datetime.utcnow()
                 successes['apply_flags'] = ("Version: {}, apply_flags: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
@@ -1743,11 +1842,11 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR saving flags.")
             try:
                 ts = datetime.utcnow()
-                stfl = flag_range(teststream, keys=['x'], above=340)
-                stfl = flag_range(teststream, keys=['x'], below=340)
-                stfl = flag_range(teststream, keys=['x'], starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00',
+                stfl1 = flag_range(teststream, keys=['x'], above=340)
+                stfl2 = flag_range(teststream, keys=['x'], below=340)
+                stfl3 = flag_range(teststream, keys=['x'], starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00',
                                 keystoflag=['z'])
-                stfl = flag_range(teststream, keys=['x'], starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00',
+                stfl4 = flag_range(teststream, keys=['x'], starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00',
                                 keystoflag=['z'])
                 te = datetime.utcnow()
                 successes['flag_range'] = (
@@ -1758,8 +1857,8 @@ if __name__ == '__main__':
             try:
                 ts = datetime.utcnow()
                 # convertstream = teststream.copy()
-                stfl = flag_outlier(teststream)
-                stfl = flag_outlier(teststream, keys=['x'], threshold=4, timerange=200)
+                stfl1 = flag_outlier(teststream)
+                stfl2 = flag_outlier(teststream, keys=['x'], threshold=4, timerange=200)
                 te = datetime.utcnow()
                 successes['flag_outlier'] = (
                     "Version: {}, flag_outlier: {}".format(magpyversion, (te - ts).total_seconds()))

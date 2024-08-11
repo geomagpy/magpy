@@ -412,12 +412,9 @@ deprecated:
     - stream.flag_outlier(self, **kwargs)   -> moved to core.flagging
     - stream.remove_flagged(self, **kwargs)  -> core.flagging.apply_flags
     - stream.flag()  -> core.flagging.apply_flags
-
-
-To be transfered to 2.0.0:
-    # Flagging related
     - stream.bindetector(self,key,text=None,**kwargs):
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
+
 
 removed:
     - stream.extractflags()  -> not useful any more
@@ -3434,87 +3431,12 @@ CALLED BY:
         return data
 
 
+    @deprecated("replaced by core.flagging convert_to_stream")
     def stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None):
-        """
-        DESCRIPTION:
-            Constructs a flaglist input dependent on the content of stream
-        PARAMETER:
-            comment    (key or string) if key (or comma separted list of keys) are
-                       found, then the content of this column is used (first input
-            flagnumber (int) integer number between 0 and 4
-            userange   (bool) if False, each stream line results in a flag,
-                              if True the full time range is marked
-
-        """
-        ### identify any given gaps and flag time ranges regarding gaps
-        if not comment:
-            print("stream2flag: you need to provide either a key or a text comment. (e.g. 'str1,str2' or 'Flagged'")
-            return []
-        if not flagnumber:
-            flagnumber = 0
-        if not keystoflag:
-            print("stream2flag: you need to provide a list of keys to which you apply the flags (e.g. ['x','z']")
-            return []
-        if not sensorid:
-            print("stream2flag: you need to provide a sensorid")
-            return []
-
-        commentarray = np.asarray([])
-        uselist = False
-
-        if comment in KEYLIST:
-            pos = KEYLIST.index(comment)
-            if userange:
-                comment = self.ndarray[pos][0]
-            else:
-                uselist = True
-                commentarray = self.ndarray[pos]
-        else:
-            lst,poslst = [],[]
-            commentlist = comment.split(',')
-            try:
-                for commkey in commentlist:
-                    if commkey in KEYLIST:
-                        #print(commkey)
-                        pos = KEYLIST.index(commkey)
-                        if userange:
-                            lst.append(str(self.ndarray[pos][0]))
-                        else:
-                            poslst.append(pos)
-                    else:
-                        # Throw exception
-                        x= 1/0
-                if userange:
-                    comment = ' : '.join(lst)
-                else:
-                    uselist = True
-                    resultarray = []
-                    for pos in poslst:
-                        resultarray.append(self.ndarray[pos])
-                    resultarray = np.transpose(np.asarray(resultarray))
-                    commentarray = [''.join(str(lst)) for lst in resultarray]
-            except:
-                #comment remains unchanged
-                pass
-
-        now = datetime.utcnow()
-        res = []
-        if userange:
-            st = np.min(self.ndarray[0])
-            et = np.max(self.ndarray[0])
-            st = num2date(float(st)).replace(tzinfo=None)
-            et = num2date(float(et)).replace(tzinfo=None)
-            for key in keystoflag:
-                res.append([st,et,key,flagnumber,comment,sensorid,now])
-        else:
-            for idx,st in enumerate(self.ndarray[0]):
-                for key in keystoflag:
-                    st = num2date(float(st)).replace(tzinfo=None)
-                    if uselist:
-                        res.append([st,st,key,flagnumber,commentarray[idx],sensorid,now])
-                    else:
-                        res.append([st,st,key,flagnumber,comment,sensorid,now])
-        return res
+        from magpy.core import flagging
+        commentkeys = comment.split(',')
+        fl = flagging.convert_to_flags(self, flagtype=flagnumber, labelid='030', sensorid=sensorid, keystoflag=keystoflag, commentkeys=commentkeys, groups=None)
+        return fl
 
 
     def simplebasevalue2stream(self,basevalue,basecomp="HDZ",**kwargs):
