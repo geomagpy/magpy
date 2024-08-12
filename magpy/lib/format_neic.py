@@ -8,6 +8,7 @@ Written by Roman Leonhardt February 2015
 
 from magpy.stream import *
 from magpy.core.methods import testtime
+import dateutil.parser as dparser
 import csv
 
 def isNEIC(filename):
@@ -47,8 +48,8 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
     datalist = []
     pos = KEYLIST.index('str1')
     if getfile:
-        infile = open(filename, 'rb')
-        with infile as csvfile:
+        #infile = open(filename, 'rb')
+        with open(filename) as csvfile:
             neicreader = csv.reader(csvfile, delimiter=str(','), quotechar=str('"'))
             #print (neicreader)
             for row in neicreader:
@@ -78,7 +79,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
 
     neicarray = np.asarray(datalist)
     neicar = neicarray.transpose()
-    timecol = np.asarray([testtime(elem) for elem in neicar[0]])
+    timecol = np.asarray([dparser.parse(elem).replace(tzinfo=None) for elem in neicar[0]])
     array[0] = timecol
     for i in range(1,5):
         array[i] = neicar[i].astype(float)
@@ -90,11 +91,12 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
         array[i] = neicar[i-dxp+15]
     array[pos] = neicar[11]
     # sec time
-    array[secp] = np.asarray([testtime(elem) for elem in neicar[12]])
+    array[secp] = np.asarray([dparser.parse(elem).replace(tzinfo=None) for elem in neicar[12]])
     # status
     array[pos+1] = neicar[i-dxp+17]
 
     ## General Header data
+    headers['SensorID'] = 'NEIC_USGS_0001'
     headers['DataFormat'] = 'NEICCSV'
     headers['DataSource'] = 'Earthquake Hazards Program of the USGS'
     #headers['DataTerms'] = ''

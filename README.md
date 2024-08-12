@@ -542,7 +542,7 @@ You will find some example plots at the [Conrad Observatory](http://www.conrad-o
         import magpy.core.plot as mp
         mp.tsplot(data)
 
-### 4.2 Some options
+### 4.2 Often used options
 
 Select specific keys to plot:
 
@@ -550,7 +550,7 @@ Select specific keys to plot:
 
 Defining a plot title and specific colors:
 
-        mp.tsplot(data,keys=['x','y'],plottitle="Test plot",
+        mp.tsplot(data,keys=['x','y'],title="Test plot",
                 colorlist=['g', 'c'])
 
 Refining the y-axis range for the y colum between 0 and automatic maximum value (see `help(mp.plot)` for list and all options):
@@ -568,7 +568,7 @@ Many more examples are provided in chapter 5:
 
 Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array of keys:
 
-        mp.tsplot([data1,data2],[['x','y','z'],['f']])
+        fig, ax = mp.tsplot([data1,data2],[['x','y','z'],['f']])
 
 ### 4.4 Getting an options overview
 
@@ -1096,7 +1096,11 @@ information, default is level=0.
 
 ### 6.2 Identifying spikes in data sets
 
-Import the necessary packages
+Spikes are identified by a well known and commonly used technique for outlier detection. By running window of defined 
+timerange across the sequence we determine the inner quartile range IQR for the sequence. Any datapoint exceeding
+the IQR by a given multiplier as defined in *threshold* will be termed "outlier". 
+
+Import the necessary packages:
 
         from magpy.stream import *
         from magpy.core import plot as mp
@@ -1106,42 +1110,180 @@ Load a data record with data spikes:
 
         datawithspikes = read(example1)
 
-Mark all spikes using the automated function `flag_outlier` with default options and return a flagging object:
+Lets trim the dataset to a disturbed sequence for better visibility
 
-        fl = flagging.flag_outlier(datawithspikes, timerange=120, threshold=3)
+        datawithspikes = datawithspikes.trim(starttime="2018-08-02T14:30:00",endtime="2018-08-02T15:30:00")
+
+Mark all spikes using the automated function `flag_outlier` and return a flagging object. We define a timerange of 
+60 seconds and a threshold commonly applied for IQR techniques. The *markall* option defines that a data flagged in
+any component will also create a flag in all other components as we assume that the full vector is affected:
+
+        fl = flagging.flag_outlier(datawithspikes, timerange=60, threshold=1.5, markall=True)
 
 Drop flagged data from the "disturbed" data set.
 
         datawithoutspikes = fl.apply_flags(datawithspikes, mode='drop')
 
-Create graphical patches for displaying flagging information:
+Show original data in red and cleand data in grey in a single plot:
 
-        p = fl.create_patches()
+        mp.tsplot([datawithspikes,datawithoutspikes],['x','y','z'], symbolcolors=['r','grey'])
 
-Show original data in grey, cleand data in black and flagging ranges in a single plot:
-
-        mp.tsplot([datawithspikes,datawithoutspikes],['f'], symbolcolors=[['grey','black']], patch=p)
+This results in Figure ![6.2.](./magpy/doc/fl_outlier.png "Removing outlier from data")
 
 
+### 6.3 Flagging ranges
 
-### 6.2 Flag time range
+You can flag ranges either in time or value by using the `flag_range` method.
+Import the necessary packages:
 
-Flag a certain time range:
+        from magpy.stream import *
+        from magpy.core import plot as mp
+        from magpy.core import flagging
 
-        flaglist = flaggeddata.flag_range(keys=['f'], starttime='2012-08-02T04:33:40',
-                                          endtime='2012-08-02T04:44:10',
-                                          flagnum=3, text="iron metal near sensor")
+Then load a data record and firstly add a flagging range in time.
 
-Apply these flags to the data:
+        data = read(example1)
 
-        flaggeddata = flaggeddata.flag(flaglist)
+        timefl = flagging.flag_range(data, keys=['x'], 
+                                     starttime='2018-08-02T14:30:00', 
+                                     endtime='2018-08-02T15:15:00', 
+                                     flagtype=3, 
+                                     labelid='051', 
+                                     text="iron maiden dancing near sensor",
+                                     operator="Max Mustermann")
+
+We also will flag values exceeding a given threshold in the same data set:
+
+        valuefl = flagging.flag_range(data, keys=['x'], 
+                                  above=21067,
+                                  flagtype=0,
+                                  labelid='000',
+                                  text="interesting values for later discussion",
+                                  operator="Mimi Musterfrau")
+
+For displaying put these flags together using the `join`method:
+
+        fl = valuefl.join(timefl)
+
+Create graphical patches for displaying this flagging information:
+
+        p = fl.create_patch()
 
 Show flagged data in a plot:
 
-        mp.plot(flaggeddata,['f'],annotate=True)
+        fig, ax = mp.tsplot(data,['x'],patch=p, height=2)
+
+This results in the following plot ![6.3.](./magpy/doc/fl_range.png "Flagging ranges")
+
+### 6.4 Flagging binary states 
+
+You can flag data based on binary states. This method can be used i.e. to flag data if a certain switch, stored
+as binary state in some data column, is turned on.
+
+Import the necessary packages:
+
+        from magpy.stream import *
+        from magpy.core import plot as mp
+        from magpy.core import flagging
+
+Then load a data record:
+
+        data = read(example1)
+
+Add some artificial binary data i.e. a light switch
+
+        var1 = [0]*len(data)
+        var1[43200:50400] = [1]*7200
+        data = data._put_column(np.asarray(var1), 'var1')
+
+Flag column x based on the switching state of column var1. By default status changes are flagged.
+The option *markallon* will additionally mark the full time range containing 1 in var1.
+
+        fl = flagging.flag_binary(data, key='var1', keystoflag=["x"],
+                                     flagtype=3, 
+                                     text="light switch affecting signal",
+                                     markallon=True)
+
+Create graphical patches for displaying this flagging information:
+
+        p = fl.create_patch()
+
+Show flagged data in a plot:
+
+        fig, ax = mp.tsplot(data,['x'],patch=p, height=2)
+
+TODO: add some words on annotation here
+Result: ![6.4.](./magpy/doc/fl_binary.png "Flagging binary data")
+
+### 6.5 Converting data sets to flagging information
+
+This example covers two subjects: Firstly we will obtain flags directly from a data stream. Secondly we will apply flags 
+defined for one data set to another one.
+By default any flagging information is directly related to the sensor information of the instrument on which 
+flagging has been performed. Sometimes however it is necessary to apply flags identified in one data set on data 
+from another independent data set. A typical example would be the quake information as follows. 
+
+Import the necessary packages:
+
+        from magpy.stream import *
+        from magpy.core import plot as mp
+        from magpy.core import flagging
+
+Lets load some data from a suspended magnetometer. Such data might be affected by nearby earthquakes
+
+        yesterday = datetime.now() - timedelta(1)
+        today = datetime.now()
+        data = read("https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC&starttime={}&endtime={}".format(yesterday.date(),today.date()))
+        print ("Got {} data points for data set with sensorid {}".format(len(data),data.header.get('SensorID')))
+
+Get some information on earthquakes
+
+        quake = read('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv')
+
+Here you might want to filter the earthquake data and select only nearby shakes. This is described elsewhere. Now we 
+just plot everything for the day covered by our data set. Trim the earthquake information to the same timerange as the 
+data set:
+
+        quake = quake.trim(starttime="{}".format(yesterday.date()),endtime="{}".format(today.date()))
+        print ("Found {} earthquakes".format(len(quake)))
+
+Transform quake data to a flagging object. Please note that we assign this flagging information to a group of instruments
+The group contains xyz keys of the data set imported above.
+
+        fl = flagging.convert_to_flags(quake, flagtype=2, labelid='030', commentkeys=['M','f',' - ','str3'], groups={data.header.get('SensorID'):['x','y','z']})
+
+Lets get a formated output of the flagging contents
+
+        fl.fprint(data.header.get('SensorID'))
+
+Then create some patches for the variometer data 
+
+        p = fl.create_patch(data)
+
+Show flagged data in a plot:
+
+        fig, ax = mp.tsplot(data,['x'],patch=p, height=2)
 
 
-### 6.3 Save flagged data
+### 6.7 Saving and loading flagging data
+
+#### 6.7.1 Saving flagging objects
+
+To save the list of flags seperately from the data in a pickled binary file:
+
+        fullflaglist = flaggeddata.extractflags()
+        saveflags(fullflaglist,"/tmp/MyFlagList.pkl"))
+
+#### 6.7.2 Loading flagging objects
+
+These flags can be loaded in and then reapplied to the data set:
+
+        data = read(example1)
+        flaglist = loadflags("/tmp/MyFlagList.pkl")
+        data = data.flag(flaglist)
+        mp.plot(data,annotate=True, plottitle='Raw data with flags from file')
+
+#### 6.7.3 Save flagged data
 
 To save the data together with the list of flags to a CDF file:
 
@@ -1153,26 +1295,9 @@ To check for correct save procedure, read and plot the new file:
         mp.plot(newdata,annotate=True, plottitle='Reloaded flagged CDF data')
 
 
-### 6.4 Save flags separately
+### 6.8 Advanced flagging methods
 
-To save the list of flags seperately from the data in a pickled binary file:
 
-        fullflaglist = flaggeddata.extractflags()
-        saveflags(fullflaglist,"/tmp/MyFlagList.pkl"))
-
-These flags can be loaded in and then reapplied to the data set:
-
-        data = read(example1)
-        flaglist = loadflags("/tmp/MyFlagList.pkl")
-        data = data.flag(flaglist)
-        mp.plot(data,annotate=True, plottitle='Raw data with flags from file')
-
-### 6.5 Drop flagged data
-
-For some analyses it is necessary to use "clean" data, which can be produced by dropping data flagged as invalid (e.g. spikes). By default, the following method removes all data marked with flagtype numbers 1 and 3.
-
-        cleandata = flaggeddata.remove_flagged()
-        mp.plot(cleandata, ['f'], plottitle='Flagged data dropped')
 
 
 ## 7. DI-flux measurements, basevalues and baselines

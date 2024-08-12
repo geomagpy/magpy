@@ -374,7 +374,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
 
         # check if id is already exitsing
         flagd = self.flagdict.get(idstring, {})
-        if flagd:
+        if flagd and debug:
             print("input {} already existing - replacing data".format(idstring))
         flagid = idstring
         flagd['sensorid'] = sensorid
@@ -398,7 +398,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         return self
 
 
-    def apply_flags(self, data, flagtype=None, mode='drop', addlabel=False):
+    def apply_flags(self, data, flagtype=None, mode='drop', addlabel=False, debug=False):
         """
         DESCRIPTION
             drop flagged sequences from the data stream. You selected which
@@ -442,9 +442,12 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             flagcont = flagdict[d]
             # test, if sensorid is fitting or sensorid/group is part of groups
             valid, comps = self._match_groups(data.header, flagcont.get('sensorid'), flag_keys=flagcont.get('components'), flag_groups=flagcont.get('groups'))
+            if debug:
+                print (valid, comps)
             if valid:
                 stfind = ndata.findtime(flagcont.get('starttime'))
-                etfind = ndata.findtime(flagcont.get('endtime'))
+                etfind = ndata.findtime(flagcont.get('endtime'))+1
+                # etfind need to be etfind +1 as this will replace input at stfind until etfind
                 #comps = flagcont.get('components')
                 if addlabel:
                     ndata.ndarray[commentcol][stfind:etfind] = "{} - {}".format(flagcont.get('labelid'),
@@ -1353,7 +1356,7 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
                 flag_inds = [[flaginds[el[0]], flaginds[el[1]]] for el in grouped_inds if
                              flaginds[el[0]] > lowwin and flaginds[el[1]] < highwin]
                 for flagtimes in flag_inds:
-                    fl.add(sensorid=sensorid, starttime=seltcol[flagtimes[0]], endtime=seltcol[flagtimes[0]],
+                    fl.add(sensorid=sensorid, starttime=seltcol[flagtimes[0]], endtime=seltcol[flagtimes[0]+1],
                            components=fkey, flagtype=1, labelid='002', label='spike',
                            comment='automatically marked by flag_outlier with threshold {} and timerange {}'.format(
                                threshold, timerange), groups=groups, stationid='stationid', operator='MagPy',
@@ -1398,7 +1401,6 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
     stationid = data.header.get('StationID')
     if not groups:
         groups = {}
-    moddate = datetime.utcnow()
     flaglist = []
     if not keys:
         keys = data._get_key_headers(numerical=True)
@@ -1417,15 +1419,22 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
     trimmedstream = data.copy()
     if starttime or endtime:
         trimmedstream = data.trim(starttime=starttime, endtime=endtime)
+    if not len(trimmedstream) > 0:
+        print ("flag_range: Flag times outside of data range")
+        return fl
     tcol = trimmedstream.ndarray[0]
     if not above and not below:
         # return flags for all data in trimmed stream
+        if not text:
+            comment = 'marked by flag_range'
+        else:
+            comment = text
         fkeys = []
         for elem in keystoflag:
             fkeys.append(elem)
         fl.add(sensorid=sensorid, starttime=tcol[0], endtime=tcol[-1],
                components=fkeys, flagtype=flagtype, labelid=labelid,
-               comment='automatically marked by flag_range',
+               comment=comment,
                groups=groups, stationid=stationid, operator=operator,
                flagversion='2.0')
         return fl
