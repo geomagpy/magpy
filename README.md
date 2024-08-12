@@ -1002,49 +1002,126 @@ FlagID   |  Description | LabelGroup
 LabelGroups: 0 - normal data, 1 - disturbance to be removed, 2 - signal to be kept
 
 
+Marking or labelling certain signals within data sets is supported since the first versions of MagPy. MagPy2.x comes
+with a number of reorganizations and new functions to assist the observers. In section 6.1 we will firstly give you 
+some instructions to some underlying routines of the new flagging package. Then, starting in section 6.2, we will 
+focus on flagging methods which can be directly applied to data sets in order to obtain specific information on 
+contained signals.
+
 ## 6.1 Basics of the flagging package
 
 Data flagging is handled by magpy.core.flagging package.
 
         from magpy.core import flagging
 
-Now create an empty flagging object
+After importing this functionality we create an empty flagging object
 
         fo = flagging.flags()
 
-Add a flag to this object
+This flagging object corresponds to a python dictionary consisting of a unique identifier as key and flagging contents
+as value. Flagging contents are subject to the following fields: obligatory are 'sensorid', 'starttime', 'endtime', 
+'components', 'flagtype' and 'labelid'. Optional fields are 'label', 'comment', 'groups', 'probabilities' 'stationid', 
+'validity', 'operator', 'color'. Automatically filled are fields 'modificationtime' and 'flagversion'. The unique 
+identifier is constructed from the obligatory fields. 
+
+Add flags to this object
 
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T16:36:12.654362",
                     endtime="2022-11-22T16:41:12.654362", components=['x', 'y', 'z'], labelid='020', flagtype=4,
                     comment="SSC with an amplitude of 40 nT", operator='John Doe')
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
+                          endtime="2022-11-22T10:59:12.654362", components=['f'], flagtype=3, labelid='050')
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:58:12.654362",
+                          endtime="2022-11-22T11:09:45.654362", components=['f'], flagtype=3, labelid='050')
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T20:59:13.0",
+                    endtime="2022-11-22T20:59:14.0", components=['x', 'y', 'z'], labelid='001', flagtype=3,
+                    operator='John Doe')
+
+You can get a formated output of the flagging contents by 
+
+        fl.fprint()
+
+You might want to limit the output to specific sensorids by providing the Sensor ID as option. If you want to modify 
+flags and keep the original state in the memory use the copy method
+
+        orgfl = fl.copy()
+
+A number of methods are available for modifying and extracting flagging information. You can extract specific
+information for any content (field):
+
+        lightningfl = fl.select('comment', ['lightning'])
+
+You can also select a specific time range by using the trim method
+
+        timefl = fl.trim(starttime='2022-11-22T09:00:00', endtime='2022-11-22T11:00:00')
+
+Combination of different flagging objects is possible as follows
+
+        comb = timefl.join(lightningfl)
+
+Sometime you are interested in the differences of two flagging objects
+
+        diff = comb.diff(fl)
+
+Flags defined by a parameter (field) and searchterms for this parameter can be dropped from the flagging object
+
+        newfl = fl.drop(parameter='sensorid', values=['GSM90_Y1112_0001'])
+
+Specific contents associated to a given field can be replaced 
+
+        flmodified = fl.replace('stationid', '', 'WIC')
+
+Time ranges of overlapping flags can be combined using the `union` method. Hereby the option level defines the required 
+grad of similarity with level=0 being the most stringent criteria - only combine if identical fields are found. 
+Providing a sampling period of the underlying data set will also combine consecutive flags within a sampling rate
+time difference. 
+
+        combfl = fl.union(samplingrate=1, level=0)
+
+Sometimes automatically determined flags (i.e. outliers), need to be renamed in dependency of an observers decision. 
+I.e. a lot of lightning strike have been marked as "spikes" by an automatic routine. The observer identifies these 
+spikes to be of lightning origin. The observer can now just assign a single lightning flag and then run the 
+`rename_nearby` method to change any automatic flags within a given timerange (default is one hour):
+
+        renamedfl = fl.rename_nearby(parameter='labelid', values=['001'])
+
+Finally, if you would like to obtain some general information on contents of your flagging object or just the overall 
+coverage you can use the following methods. The `stats` method comes with an "level" option, for more detailed 
+information, default is level=0.
+
+        mintime, maxtime = fl.timerange()
+
+        fl.stats(level=1)
 
 
-The flagging procedure allows the observer to mark specific data points or ranges. Flags are useful for labelling data 
-spikes, storm onsets, pulsations, disturbances, lightning strikes, etc. Each flag is asociated with a comment and a 
-type number. The flagtype number ranges between 0 and 4:
+### 6.2 Identifying spikes in data sets
 
-  - 0:  normal data with comment (e.g. "Hello World")
-  - 1:  data marked by automated analysis (e.g. spike)
-  - 2:  data marked by observer as valid geomagnetic signature (e.g. storm onset, pulsation). Such data cannot be marked invalid by automated procedures
-  - 3:  data marked by observer as invalid (e.g. lightning, magnetic disturbance)
-  - 4:  merged data (e.g. data inserted from another source/instrument as defined in the comment)   
+Import the necessary packages
 
-Flags can be stored along with the data set (requires CDF format output) or separately in a binary archive. These flags can then be applied to the raw data again, ascertaining perfect reproducibility.
-
-
-### 6.1 Mark data spikes
+        from magpy.stream import *
+        from magpy.core import plot as mp
+        from magpy.core import flagging
 
 Load a data record with data spikes:
 
         datawithspikes = read(example1)
 
-Mark all spikes using the automated function `flag_outlier` with default options:
+Mark all spikes using the automated function `flag_outlier` with default options and return a flagging object:
 
-        flaggeddata = datawithspikes.flag_outlier(timerange=timedelta(minutes=1),threshold=3)
+        fl = flagging.flag_outlier(datawithspikes, timerange=120, threshold=3)
 
-Show flagged data in a plot:
+Drop flagged data from the "disturbed" data set.
 
-        mp.plot(flaggeddata,['f'],annotate=True)
+        datawithoutspikes = fl.apply_flags(datawithspikes, mode='drop')
+
+Create graphical patches for displaying flagging information:
+
+        p = fl.create_patches()
+
+Show original data in grey, cleand data in black and flagging ranges in a single plot:
+
+        mp.tsplot([datawithspikes,datawithoutspikes],['f'], symbolcolors=[['grey','black']], patch=p)
+
 
 
 ### 6.2 Flag time range

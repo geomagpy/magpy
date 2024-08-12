@@ -842,7 +842,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                     res[id] = ncont
         return flags(res)
 
-    def stats(self, intensive=False, output='stdout'):
+    def stats(self, level=0, intensive=False, output='stdout'):
         """
         DESCRIPTION:
             Provides some information on flags and their statistics
@@ -853,6 +853,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             fl.stats()
         """
 
+        if level:
+            intensive=True
         flaglist = np.asarray(self._list(
             ['starttime', 'endtime', 'flagtype', 'labelid', 'sensorid', 'modificationtime', 'flagversion', 'stationid',
              'groups', 'operator'])).T
