@@ -619,7 +619,7 @@ CALLED BY:
                         array[idx] = ndarray[idx].astype(object)
             self.ndarray = np.asarray(array, dtype=object)
 
-    @deprecated("Used only fy old flagging routines")
+    @deprecated("Used only by old flagging routines")
     def union(self,column):
         seen = set()
         seen_add = seen.add

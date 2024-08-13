@@ -1307,8 +1307,8 @@ fields like "groups", "operator" and many others. You might want to fill these f
 cannot append flagging data to files containing earlier flagging versions. 
 
         data = read(example1)
-        flaglist = loadflags("/tmp/MyFlagList.pkl")
-        data = data.flag(flaglist)
+        fl = flagging.load("/tmp/myoldflags.json")
+        ndata = fl.apply_flags(data)
 
 #### 6.6.3 Saving data with incorporated flagging information
 
@@ -1328,15 +1328,33 @@ flagging contents
 
         dataiwithflags.write('/tmp/',filenamebegins='MyFlaggedExample_', format_type='PYCDF')
 
-To check for a correct saving procedure, read and extract flagging info:
-
-        fldata = read("/tmp/MyFlaggedExample_*")
+Extracting such incorporated flagging information is currently not possible in MagPy 2.0.
 
 
 ### 6.7 Advanced flagging methods and *flag_bot*
 
+#### 6.7.1 Preparing data for AI - flag_ultra
 
-Import packages:
+Identifying signals is a matter of significance and significance is typically defined by some threshold. Based on these 
+prerequisites it is rather simple to apply artificial intelligence (AI) for analysis support. We only need to 
+create a training and a test data set which is defined by raw data files associated by its manually determined optimal 
+labeling information. When making use of the MagPy software the applicant only needs to defined a label table and 
+use MagPy's flagging routines to create this information.
+
+In the following approach we are (A) identifying "non-normal" signals and then (B), based on characteristics of this 
+signal, assign a label. 
+Identification (A) is solely based on a simple threshold definition making use of quartile analysis of time ranges. 
+Parts of the sequence exceeding the value level by a given multiple of quartile ranges are termed to be suspicious 
+data. These multipliers are different for each instrument and observatory (even for each component) and should be 
+chosen so that data is automatically selected which  would also be selected by the observer.
+When suspicious data has been marked, (B) flag_bot can be used to obtain best fitting labels for these sequences. 
+In a productive environment both steps can be performed fully automatically, thus providing a fully flagged data set 
+to the observer for final verification. 
+
+Assigning flag labels without AI can be done by the flag_ultra probability technique. This is only useful for 
+testing purposes.  
+
+TODO - Import packages:
 
         from magpy.stream import *
         from magpy.core import plot as mp
@@ -1450,7 +1468,7 @@ The `baseline` method will determine and return a fit function between the two g
         corrdata = rawdata.bc()
 
 
-Pease note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt).
+Please note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt).
 
 
 If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent segment and combine the resulting baseline functions to  a list:

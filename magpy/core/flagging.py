@@ -68,40 +68,44 @@ class flags(object):
     class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
 ---------  |  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ----------
 **core.flagging** |   |                 |                 |                |                  |          |
+flags  |  _check_version |  2.0.0       |                 |                |                  |         | flagging.load
+flags  |  _match_groups |  2.0.0        |                 |  yes           |  yes*         |    | apply_flags, create_patch
 flags  |  _list       |  2.0.0          |                 |  yes           |  yes             |         |
-flags  |  _set_label_from_comment |  2.0.0 |              |                |                  |      | flagging.load
-flags  |  add         |  2.0.0          |                 |  yes           |  yes             |      |
-flags  |  apply_flags |  2.0.0          |                 |  yes           |                  |      |
-flags  |  copy        |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  create_patch |  2.0.0         |                 |                |                  |    |
-flags  |  diff        |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  drop        |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  fprint      |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  join        |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  replace     |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  rename_nearby |  2.0.0        |                 |  yes           |  yes             |    |
-flags  |  save        |  2.0.0          |                 |  yes           |                  |    |
-flags  |  select      |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  stats       |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  timerange   |  2.0.0          |                 |  yes           |                  |    |
-flags  |  trim        |  2.0.0          |                 |  yes           |  yes             |    |
-flags  |  union       |  2.0.0          |                 |  yes           |  yes             |    |
-       |  _dateparser |  2.0.0          |                 |                |                  |    | flagging.load
-       |  _readJson   |  2.0.0          |                 |                |                  |    | flagging.load
-       |  _readPickle |  2.0.0          |                 |                |                  |    | flagging.load
-       |  load        |  2.0.0          |                 |                |                  |    |
-       |  convert_to_flags |  2.0.0     |                 |                |                  |    |
-       |  flag_outlier |  2.0.0         |                 |  yes           |                  |    |
-       |  flag_range  |  2.0.0          |                 |  yes           |                  |    |
-       |  flag_binary |  2.0.0          |                 |  yes           |                  |    |
-       |  flag_ultra  |  2.0.0          |                 |  no            |  no              |    |
+flags  |  _set_label_from_comment |  2.0.0 |              |                |                  |         | flagging.load
+flags  |  add         |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  apply_flags |  2.0.0          |                 |  yes           |                  |  6.1    |
+flags  |  copy        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  create_patch |  2.0.0         |                 |                |  app**           |  6.1    |
+flags  |  diff        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  drop        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  fprint      |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  join        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  replace     |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  rename_nearby |  2.0.0        |                 |  yes           |  yes             |  6.1    |
+flags  |  save        |  2.0.0          |                 |  yes           |                  |  6.1    |
+flags  |  select      |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  stats       |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  timerange   |  2.0.0          |                 |  yes           |                  |  6.1    |
+flags  |  trim        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+flags  |  union       |  2.0.0          |                 |  yes           |  yes             |  6.1    |
+       |  _dateparser |  2.0.0          |                 |                |                  |         | flagging.load
+       |  _readJson   |  2.0.0          |                 |                |                  |         | flagging.load
+       |  _readPickle |  2.0.0          |                 |                |                  |         | flagging.load
+       |  load        |  2.0.0          |                 |                |  app**           |  6.6    |
+       |  convert_to_flags |  2.0.0     |                 |                |  app**           |  6.5    |
+       |  flag_outlier |  2.0.0         |                 |  yes           |  app**           |  6.2    |
+       |  flag_range  |  2.0.0          |                 |  yes           |  app**           |  6.3    |
+       |  flag_binary |  2.0.0          |                 |  yes           |  app**           |  6.4    |
+       |  flag_ultra  |  2.0.0          |                 |  no            |  no              |  6.7    |
 
+
+verification test marked by app** are done within the manual and example data sets
 
 class  |  method  |  variables  |  description
 -----  |  ------  |  ---------  |  -----------
 **core.flagging** |   |         |
 flags  |  _list       |           | convert flagging dictionary to a list
-flags  | _set_label_from_comment | dictionary | interprete comment as label when importing old data
+flags  | _set_label_from_comment | dictionary | interpret comment as label when importing old data
 flags  |  add         |  ...      | insert, replace, modify, update flag as defined by its parameters
 flags  |  apply_flags |  datastream, mode | apply flag to a datastream
 flags  |  copy        |           | creates a deep copy of the flags object
@@ -113,14 +117,14 @@ flags  |  join        |  flagobject | combine two flagging objects
 flags  |  replace     |  parameter, value, newvalue | replace selected contents with new values
 flags  |  rename_nearby |  parameter, values, timerange | replace contents of nearby flags with reference
 flags  |  save        |  path     | save flagging dictionary
-flags  |  select      |  parameter, values | select specifc data
+flags  |  select      |  parameter, values | select specific data
 flags  |  stats       |  intensive | provides stats on a flaglist
 flags  |  timerange   |            | get min and maxtime of flagging data
 flags  |  trim        |  starttime, endtime | trim the time range of flagging information
 flags  |  union        | level, samplingrate, typeforce | combine overlapping time ranges
        |  _dateparser |           | load support - convert strings to datetimes
-       |  _readJson   |           | load support - interprete json
-       |  _readPickle |           | load support - interprete pickle
+       |  _readJson   |           | load support - interpret json
+       |  _readPickle |           | load support - interpret pickle
        |  load        |  path     | load function needs to support import of old versions
        |  convert_to_flags |  data, ...   | convert contents of a data set to a flagging structure
        |  flag_outlier |  data, keys, threshold, timerange  | flag outliers based on IQR analysis
