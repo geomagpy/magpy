@@ -1016,7 +1016,7 @@ Data flagging is handled by magpy.core.flagging package.
 
 After importing this functionality we create an empty flagging object
 
-        fo = flagging.flags()
+        fl = flagging.flags()
 
 This flagging object corresponds to a python dictionary consisting of a unique identifier as key and flagging contents
 as value. Flagging contents are subject to the following fields: obligatory are 'sensorid', 'starttime', 'endtime', 
@@ -1039,7 +1039,7 @@ Add flags to this object
 
 You can get a formated output of the flagging contents by 
 
-        fl.fprint()
+        fl.fprint(sensorid="LEMI025_X56878_0002_0001")
 
 You might want to limit the output to specific sensorids by providing the Sensor ID as option. If you want to modify 
 flags and keep the original state in the memory use the copy method
@@ -1217,8 +1217,8 @@ Result: ![6.4.](./magpy/doc/fl_binary.png "Flagging binary data")
 
 ### 6.5 Converting data sets to flagging information
 
-This example covers two subjects: Firstly we will obtain flags directly from a data stream. Secondly we will apply flags 
-defined for one data set to another one.
+This example covers two subjects: Firstly we will convert a data stream into flagging information. Secondly we will 
+apply flags defined for one data set to another one.
 By default any flagging information is directly related to the sensor information of the instrument on which 
 flagging has been performed. Sometimes however it is necessary to apply flags identified in one data set on data 
 from another independent data set. A typical example would be the quake information as follows. 
@@ -1236,7 +1236,7 @@ Lets load some data from a suspended magnetometer. Such data might be affected b
         data = read("https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC&starttime={}&endtime={}".format(yesterday.date(),today.date()))
         print ("Got {} data points for data set with sensorid {}".format(len(data),data.header.get('SensorID')))
 
-Get some information on earthquakes
+Get a timeseries of some recent earthquakes
 
         quake = read('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv')
 
@@ -1247,14 +1247,16 @@ data set:
         quake = quake.trim(starttime="{}".format(yesterday.date()),endtime="{}".format(today.date()))
         print ("Found {} earthquakes".format(len(quake)))
 
-Transform quake data to a flagging object. Please note that we assign this flagging information to a group of instruments
-The group contains xyz keys of the data set imported above.
+Transform quake data to a flagging object. Please note that we assign this flagging information to a group of 
+instruments. Groups can look like "{'magnetism':['x','y','z','f'], 'gravity':['x'], 'RADONSGO_1234_0001':['x']}" and thus
+consist of SensorGroup or SensorID inputs from the data stream header plus the potentially affected keys by the flag.
+The here selected group contains xyz keys of the suspended variometer data set imported above.
 
         fl = flagging.convert_to_flags(quake, flagtype=2, labelid='030', commentkeys=['M','f',' - ','str3'], groups={data.header.get('SensorID'):['x','y','z']})
 
 Lets get a formated output of the flagging contents
 
-        fl.fprint(data.header.get('SensorID'))
+        fl.fprint(sensorid=quake.header.get('SensorID'))
 
 Then create some patches for the variometer data 
 
@@ -1262,42 +1264,92 @@ Then create some patches for the variometer data
 
 Show flagged data in a plot:
 
-        fig, ax = mp.tsplot(data,['x'],patch=p, height=2)
+        fig, ax = mp.tsplot(data, ['x'], patch=p, height=2)
+
+Result: ![6.5.](./magpy/doc/fl_quakes.png "Quakes flagged as flagtype 4 - to be kept in definitive data")
 
 
-### 6.7 Saving and loading flagging data
+### 6.6 Saving and loading flagging data
 
-#### 6.7.1 Saving flagging objects
+Firstly we will import some necessary packages:
 
-To save the list of flags seperately from the data in a pickled binary file:
+        from magpy.stream import *
+        from magpy.core import flagging
 
-        fullflaglist = flaggeddata.extractflags()
-        saveflags(fullflaglist,"/tmp/MyFlagList.pkl"))
+#### 6.6.1 Saving flagging objects
 
-#### 6.7.2 Loading flagging objects
+Lets create a small flagging object
 
-These flags can be loaded in and then reapplied to the data set:
+        fl = flagging.flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T16:36:12.654362",
+                    endtime="2022-11-22T16:41:12.654362", components=['x', 'y', 'z'], labelid='020', flagtype=4,
+                    comment="SSC with an amplitude of 40 nT", operator='John Doe')
+        fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
+                          endtime="2022-11-22T10:59:12.654362", components=['f'], flagtype=3, labelid='050')
+
+You can save this object to a file using the following commend. The recommended file format corresponds to a json
+object, an ideal type for dictionary like structure and readable as plain text. In MagPy2.x only "json" is supported.
+
+        fl.save("/tmp/myflags.json")
+
+By default any new data is appended to an existing file. In order to overwrite the file you specifically need to 
+supply option "overwrite=True".
+
+
+#### 6.6.2 Loading flagging objects
+
+In order to load flagging data use the `load` method of the flagging package
+
+        fl = flagging.load("/tmp/myflags.json")
+
+The `load` method is fully compatible with earlier versions of MagPy. Any earlier flagging data however does not have
+fields like "groups", "operator" and many others. You might want to fill these fields and store the data again. You
+cannot append flagging data to files containing earlier flagging versions. 
 
         data = read(example1)
         flaglist = loadflags("/tmp/MyFlagList.pkl")
         data = data.flag(flaglist)
-        mp.plot(data,annotate=True, plottitle='Raw data with flags from file')
 
-#### 6.7.3 Save flagged data
+#### 6.6.3 Saving data with incorporated flagging information
 
-To save the data together with the list of flags to a CDF file:
+We strongly recommend to keep flagging information and data separately. Nevertheless, and as typically used in earlier
+MagPy versions, it is still possible to save data together with the list of flags to a CDF file. Lets do that for
+example1 and its outliers:
 
-        flaggeddata.write('/tmp/',filenamebegins='MyFlaggedExample_', format_type='PYCDF')
+        data = read(example1)
+        fl = flagging.flag_outlier(data, timerange=120, threshold=3, markall=True)
 
-To check for correct save procedure, read and plot the new file:
+Now we need to apply the flagging object to the data and insert flagging information directly into the data stream
 
-        newdata = read("/tmp/MyFlaggedExample_*")
-        mp.plot(newdata,annotate=True, plottitle='Reloaded flagged CDF data')
+        dataiwithflags = fl.apply_flags(data, mode='insert')
+
+And then we can save this data set with flagging data included as CDF. Please note that only CDF export types support
+flagging contents
+
+        dataiwithflags.write('/tmp/',filenamebegins='MyFlaggedExample_', format_type='PYCDF')
+
+To check for a correct saving procedure, read and extract flagging info:
+
+        fldata = read("/tmp/MyFlaggedExample_*")
 
 
-### 6.8 Advanced flagging methods
+### 6.7 Advanced flagging methods and *flag_bot*
 
 
+Import packages:
+
+        from magpy.stream import *
+        from magpy.core import plot as mp
+        from magpy.core import flagging
+
+        data = read(example1)
+        fl = flag_ultra(data)
+
+        cleandata = fl.apply_flags(data, mode='drop')
+
+Show original data in red and cleand data in grey in a single plot:
+
+        mp.tsplot([data,cleandata],['x','y','z'], symbolcolors=['r','grey'])
 
 
 ## 7. DI-flux measurements, basevalues and baselines

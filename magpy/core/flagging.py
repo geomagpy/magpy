@@ -267,6 +267,111 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         return False, []
 
 
+    def _check_version(self, commentconversion='cobs', debug=False):
+        """
+        DESCRIPTION
+            check the current flagging version and transform into a flagdict structure as used
+            by the current flagging package
+        DEVELOPMENTS
+            The method might be transformed into a library based reading system as used for file
+            imports. As it is unlikely that many different formats for flagging information are
+            devekloped in the near future this is postponed so far
+        APPLICATION
+            used by magpy.core.flagging load
+        SUPPORTS
+            MagPy1.1.x flagging structures (version 0.4) (version 1.0 has never been used in any productive environment
+                {'WIC_1_0001': [['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'x', 3, 'lightning RL', '2023-02-02 10:22:28.888995'], ['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'y', 3, 'lightning RL', '2023-02-02 10:22:28.888995']]}
+        """
+
+        def _round_second(obj: datetime) -> datetime:
+            if obj.microsecond >= 500_000:
+                obj += timedelta(seconds=1)
+            return obj.replace(microsecond=0)
+
+        newfl = flags()
+        fd = self.flagdict
+        converted = False
+        version = '2.0'
+        # identify data source
+        for key in fd:
+            value = fd[key]
+            if isinstance(value, dict):
+                version = '2.0'
+                converted = False
+            elif isinstance(value, (list, tuple)):
+                version = '1.0'
+                converted = True
+                labelid = '000'
+                operator = 'unknown'
+                # check if data is contained
+                if len(value) > 0:
+                    newlist = []
+                    for line in value:
+                        # extract all line with indetical infoprmation except components
+                        newlist.append(line[:2] + line[3:])
+                    # print (newlist)
+                    newlist = [i for n, i in enumerate(newlist) if i not in newlist[:n]]
+                    for line in newlist:
+                        # now add a component list to each new line and construct a version 2.0 dict
+                        comps = []
+                        for oline in value:
+                            if oline[:2] + oline[3:] == line:
+                                comps.append(oline[2])
+                        ft = line[2]
+                        if ft == 2:
+                            ft = 4
+                        # round endtime to the next second
+                        st = testtime(line[0])
+                        et = _round_second(testtime(line[1]))
+                        if not st <= et:
+                            st = _round_second(testtime(line[0]))
+                            et = testtime(line[1])
+                        if commentconversion == 'cobs':
+                            labelid, operator = newfl._import_conradosb(line[3])
+                        newfl.add(sensorid=key, starttime=st, endtime=et,
+                                  components=comps, flagtype=ft, labelid=labelid,
+                                  comment=line[3], modificationtime=line[4],
+                                  operator=operator,
+                                  flagversion='2.0')
+
+        if debug:
+            print (" loaded flagging data of version {}".format(version))
+        if converted:
+            return newfl
+        else:
+            # if no conversion is necessary
+            newfl = self.copy()
+            return newfl
+
+
+    def _import_conradosb(self, comment):
+        """
+        DESCRIPTION
+            Specific method of the Conrad Observatory to convert old flags into the new format
+            and evetually assign labels and operator. Will not affect imports of other observatories.
+            This method was incorporated for simplicity of converting my data. Can be remove in a later
+            version but will not affect any other usage.
+        """
+        labelid = '090'
+        operator = 'unkown'
+        not_consider_list = ['nearby', 'passing', 'normal']
+        # drop numbers from string
+        testcomment = re.sub(r'[0-9]', '', comment)
+        for lab in self.FLAGLABEL:
+            lid = lab
+            lct = self.FLAGLABEL.get(lid)
+            lcts = lct.split()
+            lcts = [el for el in lcts if el not in not_consider_list]
+            for el in lcts:
+                if el in testcomment.lower():
+                    labelid = lid
+                    break
+            if 'BL' in testcomment:
+                operator = 'Barbara Leichter'
+            if 'RL' in testcomment:
+                operator = 'Roman Leonhardt'
+        return labelid, operator
+
     def _list(self, parameter=None):
         """
         DESCRIPTION
@@ -321,7 +426,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
 
     def add(self, sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000', label='',
             comment='', groups=None, probabilities=None, stationid='', validity='', operator='', color='',
-            flagversion='2.0', debug=False):
+            modificationtime=None, flagversion='2.0', debug=False):
         """
         DESCRIPTION
             Create a flagging dictionary input oot of given information
@@ -356,7 +461,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             probabilities = None
         if labelid and labelid in self.FLAGLABEL:
             label = self.FLAGLABEL.get(labelid)
-        modificationtime = datetime.utcnow()
+        if not modificationtime:
+            modificationtime = datetime.utcnow()
 
         if not isinstance(self.flagdict, dict):
             return ("Provide a flagging dictionary")
@@ -1127,16 +1233,11 @@ def load(path, sensorid=None, begin=None, end=None, source='file', format='', de
         - flags obsject (e.g. flaglist)
 
     TODO:
-        - Pickle import and all old data formats!!!
+        - Pickle import !!!
 
     EXAMPLE:
-        import magpy.core.flagging as flags
-        flaglist = flags.load('/my/path/myfile.pkl')
-
-    TODO:
-    When loading old data, then flagids need to be constrcuted and flags shoudl be added using the add method with
-    last modifications dates at last. This makes sure that for identical flags the last modified ones are used.
-
+        import magpy.core import flagging
+        fl = flagging.load('/my/path/myfile.json')
     """
     fl = flags()
     myd = {}
@@ -1152,7 +1253,7 @@ def load(path, sensorid=None, begin=None, end=None, source='file', format='', de
             if not os.path.isfile(path):
                 if debug:
                     print(" -> Could not find a file at the given path {}".format(path))
-                return flags([])
+                return fl
             if format == "":
                 if debug:
                     print(" -> format NOT manually provided")
@@ -1174,15 +1275,17 @@ def load(path, sensorid=None, begin=None, end=None, source='file', format='', de
 
             if format == 'json':
                 myd = _readJson(path, debug=debug)
+                # myd_analyse and create flagdict
                 fl = flags(myd)
             elif format == 'pkl':
                 myd = _readPickle(path, sensorid=sensorid, begin=begin, end=end, debug=debug)
                 fl = flags(myd)
+            fl = fl._check_version(debug=debug)
             if begin or end:
                 fl = fl.trim(starttime=begin, endtime=end)
             if sensorid:
                 fl = fl.select(parameter='sensorid', values=[sensorid])
-            return flags(myd)
+            return fl
 
 
 def _dateparser(dct):
