@@ -14,7 +14,7 @@ Installation instructions can be found on the main download page.
     - jupyter-notebook examples for backend functionality
 
     Please note: despite the removal of py2.x support, MagPy2.x is fully
-    compatible with all datas tructures and DB contents created with MagPy1.x
+    compatible with all datas structures and DB contents created with MagPy1.x
 
 2.0.0 important removals/modifications affecting definitive data production:
     - internal K_fmi code was replaced by the generally used routine as provided
@@ -54,7 +54,7 @@ Installation instructions can be found on the main download page.
      - opt.emd replaced by official python emd package
      - opt.stormdet is now part of the activity package
      - mpplot removed and replaced by core.plot
-     - tranfer and database moved to core
+     - transfer and database moved to core
      - deleted old MARTAS related items (collector, acquisition)
 
 2.0.0 XMagPy - graphical user interface:
