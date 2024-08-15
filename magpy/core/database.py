@@ -1,0 +1,1799 @@
+#!/usr/bin/env python
+
+import sys
+sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
+from magpy.stream import loggerdatabase, magpyversion, basestring, DataStream
+import pymysql as mysql
+import numpy as np
+from datetime import datetime, timedelta
+from magpy.core.methods import testtime, is_number
+
+mysql.install_as_MySQLdb()
+
+
+class DataBank(object):
+    """
+    DESCRIPTION:
+        Everything regarding flagging, marking and annotating data in MagPy 2.0 and future versions.
+        The main object of a flagging class is a dictionary and not a list as used in MagPy 1.x and 0.x.
+        The flagging class contains a number of functions and methods to create, modify and analyse data
+        flags. An overview about all supported methods is listed below.
+        Each flag is mainly characterized by a SensorID, the sensor which was used to determine the flag,
+        a time range and components at which the flag was identified. Type and label are also assigned.
+        If a flag should be applied to other sensors, you should use the group item, which contains a list
+        of sensors or general groups. Groups is a list of dictionaries
+
+    AVAILABLE METHODS:
+
+        dbupload(db, path,stationid,**kwargs):
+        dbdict2fields(db,header_dict,**kwargs):
+        dbfields2dict(db,datainfoid):
+        dbupadteDataInfo(db, "MyTable_12345_0001", myheader)
+        dbselect(db, element, table, condition=None, expert=None):
+        dbcoordinates(db, pier, epsgcode='epsg:4326')
+        dbtableexists(db,tablename)
+        stream2db(db, datastream, noheader=None, mode=None, tablename=None, **kwargs):
+        readDB(db, table, starttime=None, endtime=None, sql=None):
+        db2stream(db, sensorid=None, begin=None, end=None, tableext=None, sql=None):
+        diline2db(db, dilinestruct, mode=None, **kwargs):
+        db2diline(db,**kwargs):
+        getBaselineProperties(db,datastream,pier=None,distream=None):
+        flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
+        db2flaglist(db,sensorid, begin=None, end=None):
+        string2dict(string, typ='oldlist'):
+
+
+        the following methods are contained:
+        - _executesql(sqlcommand)  :  execute a sql command
+        - info(destination,level)  :  database information
+        - get_pier(pierid, rp, value)  :  Gets values from DeltaDictionary of the PIERS table
+        - get_float(tablename,sensorid,columnid)  :  Perform a select search and return floats
+        - get_lines()  : Get the last x lines from the selected table
+        - get_string(tablename,sensorid,columnid)  :   Perform a select search and return strings
+        - update(table, [key], [value], condition)  :  perfomr an update call
+        - dbinit()  :  Initialize a mysql database and set up standard tables of magpy
+        - delete(datainfoid)  :  Delete contents of the database
+        - alter()  :  Use KEYLISTS and changes the columns of standard tables
+        - set_time_in_datainfo()  :  update timerange in datainfo
+        - write()  :    read function parameters (NOT the function) to file
+        - datainfo(indexlist)   :  datainfo already contained - return a valid data id
+        - sensorinfo(sensorid, sensorkeydict, sensorrevision) :  sensorid already contained
+
+        - mask_nan(array)        :    returns an array without nan or empty elements
+        - missingvalue()         :    will replace nan vaules in array with means, interpolation or given fill values
+        - nan_helper(y)
+        - nearestpow2
+        - normalize
+        - testtime(variable)     :    returns datetime object if variable can be converted to it
+        - test_timestring(variable)     :
+
+        class | method | since version | until version | runtime test | result verification | manual | *tested by
+        ----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
+        **core.methods** |  |          |               |              |  |  |
+            | _executesql     |  2.0.0 |              | yes           |  |  |
+            | info            |  2.0.0 |              | yes           |  |  |
+            | get_pier        |  2.0.0 |              | yes           |  |  |
+            | dbinit          | 2.0.0 |               |            |  |  |
+            | delete          | 2.0.0 |               |            |  |  |
+         d  | get_float       | 2.0.0 |               |             |  |  |
+            | get_lines       | 2.0.0 |               |            |  |  |
+            | get_string      | 2.0.0 |               |            |  |  |
+            | update          | 2.0.0 |               |            |  |  |
+
+            | alter           | 2.0.0 |               |               |  |  |
+            | datainfo    | 2.0.0 |               | yes           |  |  |
+            | sensorinfo      | 2.0.0 |               | yes           |  |  |
+            | write   | 2.0.0 |               | yes           |  |  |
+            | set_time_in_datainfo       | 2.0.0 |               | yes           |  |  |
+
+            | mask_nan        | 2.0.0 |               | yes           |  |  |
+            | missingvalue    | 2.0.0 |               | yes           |  |  |
+            | nan_helper      | 2.0.0 |               | yes           |  |  |
+            | nearestpow2     | 2.0.0 |               | yes           |  |  |
+            | normalize       | 2.0.0 |               | yes           |  |  |
+            | testtime        | 2.0.0 |               | yes           |  |  |
+            | test_timestring | 2.0.0 |               | yes           |  |  |
+
+    DATABASE FIELDS:
+
+        SENSOR:
+                SensorID: a combination of name, serialnumber and revision
+                SensorName: a name defined by the observers to refer to the instrument
+                SensorType: type of sensor (e.g. fluxgate, overhauzer, temperature ...)
+                SensorSerialNum: its serial number
+                SensorGroup: Geophysical group (e.g. Magnetism, Gravity, Environment, Meteorology, Seismology,
+                             Radiometry, ...)
+                SensorDataLogger: type of any electronics connected to the sensor
+                SensorDataLoggerSerNum: its serial number
+                SensorDataLoggerRevision: 4 digit revision id '0001'
+                SensorDataLoggerRevisionComment: description of revision
+                SensorDescription: Description of the sensor
+                SensorElements: Measured components e.g. x,y,z,t_sensor,t_electonics
+                SensorKeys: the keys to be used for the elements in MagPy e.g. 'x,y,z,t1,t2', should have the same
+                            number as Elements (check MagPy Manual for this)
+                SensorModule: type of sensor connection
+                SensorDate: Date of Sensor construction/buy
+                SensorRevision: 4 digit number defining a revision ID
+                SensorRevisionComment: Comment for current revision - changes to previous number (e.g. calibration)
+                SensorRevisionDate: Date of revision - for 0001 this equals the SensorDate
+                SensorDynamicRange:
+                SensorTimestepAccuracy:
+                SensorGroupDelay:
+                SensorPassband:
+                SensorAttenuation:
+                SensorRMSNoise:
+                SensorSpectralNoise:
+                SensorAbsoluteError:
+                SensorOrthogonality:
+                SensorVerticallity:
+                SensorTCoeff:
+                SensorElectronicsTCoeff:
+                SensorAnalogSampling:
+                SensorResolution:
+        STATION:
+                StationID: unique ID of the station e.g. IAGA code
+                StationIAGAcode:
+                StationName: e.g. Cobenzl
+                StationStreet: Stations address
+                StationCity: Vienna
+                StationEmail: 'ramon.egli@zamg.ac.at',
+                StationPostalCode: '1190',
+                StationCountry: 'Austria',
+                StationInstitution: 'Zentralanstalt fuer Meteorologie und Geodynamik',
+                StationWebInfo: 'http://www.zamg.ac.at',
+                StationDescription: 'Running since 1951.'
+                StationK9: k9 limit for location
+                StationMeans: Contains a list with mean values e.g. Year:2015,H:20800nT,Z:43000nT
+        DATAINFO:
+                DataID:
+                DataTimezone:  contains timezone info (e.g. UTC) if empty, UTC is assumed
+
+        FLAGS: (used to store flagging information)
+
+        BASELINE: (used to store baseline fit parameters)
+
+        IP:
+                IpName          name of the machine
+                IP              IP address
+                IpSensors       comma separated list of sensors eventually attached to the system
+                IpDuty          Job of the system behind the ip address: (acquisition, collector, fileserver, backup)
+                IpType          Logger type (e.g. eBox 4310 JSK)
+                IpAccess        e.g. global, local, only from ip xy
+                IpLocation      Location name (GMO-Lab1)
+                IpLocationLat   Lat
+                IpLocationLong  Long
+                IpSystem        operating system (e.g. Ubuntu12.04)
+                IpMainUser      add the user
+                IpComment       optional comments
+
+        PIER:
+                PierName                e.g. A2
+                PierID                  Reference Number used by BEV
+                PierAlernativeName      e.g. Mioara
+                PierType                e.g. Aim, Pillar, Groundmark
+                PierConstruction        e.g. Glascube, Concretepillar with glasplate, Groundmark
+                PierLong                Longitude
+                PierLat                 Latitude
+                PierAltidude            Altitude surface of Pier or
+                PierCoordinateSystem    Location name (GMO-Lab1)
+                PierReference           Reference(s) for coordinates and construction
+                DeltaDictinoary         Reference List: Looking like A2: 201502_-0.45_0.002_201504_2.15, A16:
+                                        None_None_None_201505_1.15
+                                        ( containing pier plus epoch - year or year/month of determination- for dir
+                                          as well as delta D, Delta I; and Epoch and delta D - order sensitive -
+                                          separated by underlines; non-existing values are marked by 'None')
+                AzimuthDictinoary       Reference List: Looking like Z12345_xxx.xx, Z12345_xxx.xx
+                                        ( containing AzimuthMark plus angle )
+                DeltaComment            optional comments on delta values
+                PierComment             optional comments on Pier
+                StationID               Station at which Pier is located
+
+    """
+
+    def __init__(self, host=None, user='cobs', password='secret', database='cobsdb'):
+        """
+        Description
+            initialize a MagPy database structure and some predefined fields
+        """
+
+        self.db = mysql.connect(host=host, user=user, passwd=password, db=database)
+
+        self.DATAINFOKEYLIST = ['DataID', 'SensorID', 'StationID', 'ColumnContents', 'ColumnUnits', 'DataFormat',
+                                'DataMinTime', 'DataMaxTime', 'DataTimezone',
+                                'DataSamplingFilter', 'DataDigitalSampling', 'DataComponents', 'DataSamplingRate',
+                                'DataType',
+                                'DataDeltaReferencePier', 'DataDeltaReferenceEpoch', 'DataScaleX',
+                                'DataScaleY', 'DataScaleZ', 'DataScaleUsed', 'DataCompensationX',
+                                'DataCompensationY', 'DataCompensationZ', 'DataSensorOrientation',
+                                'DataSensorAzimuth', 'DataSensorTilt', 'DataAngularUnit', 'DataPier',
+                                'DataAcquisitionLatitude', 'DataAcquisitionLongitude', 'DataLocationReference',
+                                'DataElevation', 'DataElevationRef', 'DataFlagModification', 'DataAbsFunc',
+                                'DataAbsDegree', 'DataAbsKnots', 'DataAbsMinTime', 'DataAbsMaxTime', 'DataAbsDate',
+                                'DataRating', 'DataComments', 'DataSource', 'DataAbsFunctionObject',
+                                'DataDeltaValues', 'DataDeltaValuesApplied', 'DataTerms', 'DataReferences',
+                                'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
+                                'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc', 'DataRotationAlpha',
+                                'DataRotationBeta', 'DataAbsInfo', 'DataBaseValues', 'DataArchive']
+
+        self.DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
+                                 'CHAR(50)', 'CHAR(50)', 'CHAR(100)',
+                                 'CHAR(100)', 'CHAR(100)', 'CHAR(10)', 'CHAR(100)',
+                                 'CHAR(100)',
+                                 'CHAR(20)', 'CHAR(50)', 'DECIMAL(20,9)',
+                                 'DECIMAL(20,9)', 'DECIMAL(20,9)', 'CHAR(2)', 'DECIMAL(20,9)',
+                                 'DECIMAL(20,9)', 'DECIMAL(20,9)', 'CHAR(10)',
+                                 'DECIMAL(20,9)', 'DECIMAL(20,9)', 'CHAR(5)', 'TEXT',
+                                 'TEXT', 'TEXT', 'CHAR(50)',
+                                 'TEXT', 'CHAR(10)', 'CHAR(50)', 'CHAR(20)',
+                                 'INT', 'DECIMAL(20,9)', 'CHAR(50)', 'CHAR(50)', 'CHAR(50)',
+                                 'CHAR(10)', 'TEXT', 'CHAR(100)', 'TEXT',
+                                 'TEXT', 'INT', 'TEXT', 'TEXT',
+                                 'CHAR(50)', 'CHAR(50)', 'CHAR(50)',
+                                 'CHAR(100)', 'CHAR(50)',
+                                 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'CHAR(50)']
+
+        self.SENSORSKEYLIST = ['SensorID', 'SensorName', 'SensorType', 'SensorSerialNum', 'SensorGroup',
+                               'SensorDataLogger',
+                               'SensorDataLoggerSerNum', 'SensorDataLoggerRevision', 'SensorDataLoggerRevisionComment',
+                               'SensorDescription', 'SensorElements', 'SensorKeys', 'SensorModule', 'SensorDate',
+                               'SensorRevision', 'SensorRevisionComment', 'SensorRevisionDate', 'SensorDynamicRange',
+                               'SensorTimestepAccuracy', 'SensorGroupDelay', 'SensorPassband', 'SensorAttenuation',
+                               'SensorRMSNoise', 'SensorSpectralNoise', 'SensorAbsoluteError', 'SensorOrthogonality',
+                               'SensorVerticality', 'SensorTCoeff', 'SensorElectronicsTCoeff', 'SensorAnalogSampling',
+                               'SensorResolution', 'SensorTime', 'SensorPicture', 'SensorManual']
+
+        self.STATIONSKEYLIST = ['StationID', 'StationName', 'StationIAGAcode', 'StationInstitution', 'StationStreet',
+                                'StationCity', 'StationPostalCode', 'StationCountry', 'StationWebInfo',
+                                'StationEmail', 'StationDescription', 'StationK9', 'StationMeans', 'StationLongitude',
+                                'StationLatitude', 'StationLocationReference', 'StationElevation',
+                                'StationElevationRef', 'StationType', 'StationSince', 'StationUntil', 'StationPicture']
+
+        self.FLAGSKEYLIST = ['FlagID', 'SensorID', 'FlagBeginTime', 'FlagEndTime', 'FlagComponents', 'FlagNum',
+                             'FlagReason', 'ModificationDate']
+
+        self.BASELINEKEYLIST = ['SensorID', 'MinTime', 'MaxTime', 'TmpMaxTime', 'BaseFunction', 'BaseDegree',
+                                'BaseKnots', 'BaseComment']
+
+        # Optional (if acquisition routine is used)
+        self.IPKEYLIST = ['IpName', 'IP', 'IpSensors', 'IpDuty', 'IpType', 'IpAccess', 'IpLocation', 'IpLocationLat',
+                          'IpLocationLong', 'IpSystem', 'IpMainUser', 'IpComment']
+
+        # Optional (if many piers are available)
+        self.PIERLIST = ['PierID', 'PierName', 'PierAlternativeName', 'PierType', 'PierConstruction', 'StationID',
+                         'PierLong', 'PierLat', 'PierAltitude', 'PierCoordinateSystem', 'PierReference',
+                         'DeltaDictionary', 'AzimuthDictionary', 'DeltaComment']
+
+    def _executesql(self, cursor, sqlcommand):
+        """
+        DESCRIPTION
+            helper method to execute sql and provid some error check.
+            if not message
+        :param sqlcommand:
+        :return:
+        """
+
+        message = ''
+        try:
+            cursor.execute(sqlcommand)
+        except mysql.IntegrityError as message:
+            return message
+        except mysql.Error as message:
+            return message
+        except:
+            return 'unkown error'
+        return message
+
+
+    def alter(self):
+        """
+        DEFINITION:
+            Use KEYLISTS and changes the columns of standard tables
+            DATAINFO, SENSORS, and STATIONS.
+            Can be used for changing (adding) contents to tables
+
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+        Kwargs:
+            --
+        RETURNS:
+            --
+        EXAMPLE:
+            dbalter(db)
+
+        APPLICATION:
+            Requires an existing mysql database (e.g. mydb)
+            1. Connect to the database
+            db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
+            2. use method
+            dbalter(db)
+        """
+        if not self:
+            loggerdatabase.error("dbalter: No database connected - aborting -- please create an empty database first")
+            return
+        cursor = self.db.cursor()
+
+        try:
+            checksql = 'SELECT SensorID FROM SENSORS'
+            cursor.execute(checksql)
+            for key in self.SENSORSKEYLIST:
+                try:
+                    checksql = 'SELECT ' + key + ' FROM SENSORS'
+                    loggerdatabase.debug("dbalter: Checking key: %s" % key)
+                    cursor.execute(checksql)
+                    loggerdatabase.debug("dbalter: Found key: %s" % key)
+                except:
+                    loggerdatabase.debug("dbalter: Missing key: %s" % key)
+                    addstr = 'ALTER TABLE SENSORS ADD ' + key + ' CHAR(100)'
+                    cursor.execute(addstr)
+                    loggerdatabase.debug("dbalter: Key added: %s" % key)
+        except:
+            loggerdatabase.warning("dbalter: Table SENSORS not existing")
+
+        try:
+            checksql = 'SELECT StationID FROM STATIONS'
+            cursor.execute(checksql)
+            for key in self.STATIONSKEYLIST:
+                try:
+                    checksql = 'SELECT ' + key + ' FROM STATIONS'
+                    loggerdatabase.debug("dbalter: Checking key: %s" % key)
+                    cursor.execute(checksql)
+                    loggerdatabase.debug("dbalter: Found key: %s" % key)
+                except:
+                    loggerdatabase.debug("dbalter: Missing key: %s" % key)
+                    addstr = 'ALTER TABLE STATIONS ADD ' + key + ' CHAR(100)'
+                    cursor.execute(addstr)
+                    loggerdatabase.debug("dbalter: Key added: %s" % key)
+        except:
+            loggerdatabase.warning("dbalter: Table STATIONS not existing")
+
+        try:
+            checksql = 'SELECT DataID FROM DATAINFO'
+            cursor.execute(checksql)
+            for ind, key in enumerate(self.DATAINFOKEYLIST):
+                try:
+                    checksql = 'SELECT ' + key + ' FROM DATAINFO'
+                    loggerdatabase.debug("Checking key: %s" % key)
+                    cursor.execute(checksql)
+                    loggerdatabase.debug("Found key: %s" % key)
+                except:
+                    loggerdatabase.debug("Missing key: %s" % key)
+                    if len(self.DATAVALUEKEYLIST) == len(self.DATAINFOKEYLIST):
+                        addstr = 'ALTER TABLE DATAINFO ADD ' + key + ' ' + self.DATAVALUEKEYLIST[ind]
+                    else:
+                        print("dbalter: Differences between provided DATAVALUEKEYLIST and DATAINFOKEYLIST")
+                        addstr = 'ALTER TABLE DATAINFO ADD ' + key + ' CHAR(100)'
+                    cursor.execute(addstr)
+                    loggerdatabase.debug("Key added: %s" % key)
+        except:
+            loggerdatabase.warning("Table DATAINFO not existing")
+
+        try:
+            checksql = 'SELECT PierID FROM PIERS'
+            cursor.execute(checksql)
+            for ind, key in enumerate(self.PIERLIST):
+                try:
+                    checksql = 'SELECT ' + key + ' FROM PIERS'
+                    loggerdatabase.debug("Checking key: %s" % key)
+                    cursor.execute(checksql)
+                    loggerdatabase.debug("Found key: %s" % key)
+                except:
+                    loggerdatabase.debug("Missing key: %s" % key)
+                    addstr = 'ALTER TABLE PIERS ADD ' + key + ' TEXT'
+                    cursor.execute(addstr)
+                    loggerdatabase.debug("Key added: %s" % key)
+        except:
+            loggerdatabase.warning("Table PIERS not existing")
+
+        self.db.commit()
+        cursor.close()
+
+
+    def datainfo(self, sensorid, datakeydict=None, tablenum=None, defaultstation='WIC', updatedb=True):
+        """
+        DEFINITION:
+            provide sensorid and any relevant meta information for datainfo tab
+            returns the full datainfoid
+
+        PARAMETERS:
+        Variables:
+            - db:             (mysql database) defined by mysql.connect().
+            - sensorid:       (string) code for sensor if.
+        Optional variables:
+            - datakeydict:    (dict) provide a dictionary with data table information (see DATAINFO) .
+            - tablenum:       (string) provide a table number in format '0001' .
+                   If tablenum is specified, the corresponding table is selected and DATAINFO is updated with the provided datakeydictdbdatainfo
+                   If tablenum = 'new', a new number is generated e.g. 0006 if no DATAINFO matching the provided info is found
+                   If no tablenum is selected all data including all Datainfo is appended to the latest numbe if no DATAINFO matching the provided info is found and no conflict with the existing DATAINFO is found
+            - defaultstation: (string) provide a default station code.
+                   An important keyword is the StationID. Please make sure to provide it. Otherwise the defaultvalue 'WIC' is used
+
+            - updatedb:      (bool) if true (default) then the new infoid is added into the database
+        Kwargs:
+            --
+        RETURNS:
+           datainfoid e.g. DIDD_235178_0001_0001
+        USED BY:
+           stream2db, writeDB
+        EXAMPLE:
+            tablename = dbdatainfo(db,sensorid,headdict,None,stationid)
+
+        APPLICATION:
+            1. read a datastream: stream = read(file)
+            2. add additional header info: stream.header['StationID'] = 'WIC'
+            3. Open a mysql database
+            4. write stream2db
+            5. check DATAINFO table: num = dbdatainfo(db,steam.header['SensorID'],stream.header,None,None)
+                  case 1: new sensor - not yet existing
+                          tablenum = 0001
+                  case 2: sensor existing
+                          default: select fitting datainfo (compare only provided fields - not in DATAINFO existing) and get highest number matching the info
+                          tablenum=new: add new number, disregarding any previous matching DATAINFO
+                          tablenum=0003: returns 0003 if case 1 is satisfied
+
+            Not changeable are:
+            DataMinTime CHAR(50)
+            DataMaxTime CHAR(50)
+        """
+
+        # 1. Define keys here which do not trigger a new revision number in the table
+        SKIPKEYS = ['DataID', 'SensorID', 'ColumnContents', 'ColumnUnits', 'DataFormat', 'DataTerms', 'DataDeltaF',
+                    'DataDeltaT1', 'DataDeltaT2', 'DataFlagModification', 'DataAbsFunc', 'DataAbsInfo',
+                    'DataBaseValues', 'DataFlagList',
+                    'DataAbsDegree', 'DataAbsKnots', 'DataAbsMinTime', 'DataAbsMaxTime', 'DataAbsDate', 'DataRating',
+                    'DataComments', 'DataSource', 'DataAbsFunctionObject', 'DataDeltaValues', 'DataTerms',
+                    'DataReferences', 'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
+                    'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc', 'DataRotationAlpha',
+                    'DataRotationBeta']
+
+        # 2. Scan through header and modify/cleanup formats (e.g. StationID to upper case)
+        datakeydict['StationID'] = datakeydict.get('StationID', '').upper()
+
+        # 3. extract keys to be checked and create a searchlist of them
+        searchlst = ' '
+        datainfohead, datainfovalue = [], []
+        rows = []
+        novalues = False
+        if datakeydict:
+            # add some expections for DataSamplingRate
+            sm = datakeydict.get('SensorModule', '')
+            # if sm in ['OW','RCS','ow','rcs'] or 'Status' in sensorid or 'status' in sensorid:
+            if sm in ['OW', 'ow', 'Ow', 'RCS', 'rcs', 'Rcs'] or 'Status' in sensorid or 'status' in sensorid:
+                # Avoid sampling rate criteria for data revision for rcs and one wire sensors, as well
+                # as any sensorid containing Status information
+                # print ("dbdatainfo: Skipping SamplingRate for data revision")
+                SKIPKEYS.append('DataSamplingRate')
+
+            for key in datakeydict:
+                if key in self.DATAINFOKEYLIST and not key in ['DataMaxTime', 'DataMinTime']:
+                    # All keys are tested and added to infohead and infovalue to be updated or
+                    # MinTime and Maxtime are changing and therefore are excluded from check
+                    if not str(datakeydict[key]) in ['', None, 'Null']:
+                        datainfohead.append(key)
+                        ind = self.DATAINFOKEYLIST.index(key)
+                        ### if key in ['DataFlagList']:
+                        ###     add keycontents to FLAGS if not existing
+                        if key in ['DataAbsFunctionObject', 'DataBaseValues']:
+                            import pickle
+                            pfunc = pickle.dumps(datakeydict[key])
+                            datainfovalue.append(pfunc)
+                        elif self.DATAVALUEKEYLIST[ind].startswith('DEC') or self.DATAVALUEKEYLIST[ind].startswith('FLO'):
+                            try:
+                                datainfovalue.append(float(datakeydict[key]))
+                            except:
+                                loggerdatabase.warning("dbdatainfo: Trying to read FLOAT value failed")
+                                datainfovalue.append(str(datakeydict[key]))
+                        elif self.DATAVALUEKEYLIST[ind].startswith('INT'):
+                            # This was wrong until 0.3.98
+                            try:
+                                datainfovalue.append(int(datakeydict[key]))
+                            except:
+                                loggerdatabase.warning("dbdatainfo: Trying to read INT value failed")
+                                datainfovalue.append(str(datakeydict[key]))
+                        else:
+                            datainfovalue.append(str(datakeydict[key]))
+                        # Extend searchlist to identify revision numbers only with critical info
+                        if not key in SKIPKEYS:
+                            # For SamplingRate add a range to searchlist allowing for 10percent variation
+                            # This is sensible if as minor variation are expected due to rounding in
+                            # in arrays of different lengths
+                            # "datainfovalue" is not affected
+                            if key in ['DataSamplingRate']:
+                                # Also regard for not-yet-existing db inputs
+                                searchlst += 'AND (({a} > "{b:.2f}" AND {a} < "{c:.2f}") OR {a} IS NULL) '.format(a=key,
+                                                                                                                  b=float(
+                                                                                                                      datakeydict[
+                                                                                                                          key]) * 0.9,
+                                                                                                                  c=float(
+                                                                                                                      datakeydict[
+                                                                                                                          key]) * 1.1)
+                            else:
+                                # Also regard for not-yet-existing db inputs
+                                # searchlst += 'AND ' + key + ' = "'+ str(datakeydict[key]) +'" '
+                                searchlst += 'AND ({} = "{}" or {} IS NULL) '.format(key, str(datakeydict[key]), key)
+
+        datainfonum = '0001'
+        numlst, intnumlst = [], []
+
+        cursor = self.db.cursor()
+
+        # check for appropriate sensorid
+        loggerdatabase.debug("dbdatainfo: Reselecting SensorID")
+        # print "dbdatainfo: (1)", sensorid, datakeydict
+        sensorid = self.sensorinfo(sensorid, datakeydict)
+        # print "dbdatainfo: (2)", sensorid
+        if 'SensorID' in datainfohead:
+            index = datainfohead.index('SensorID')
+            datainfovalue[index] = sensorid
+        loggerdatabase.debug("dbdatainfo:  -- SensorID is now %s" % sensorid)
+
+        checkinput = 'SELECT StationID FROM DATAINFO WHERE SensorID = "' + sensorid + '"'
+        # print checkinput
+        try:
+            mesg = self._executesql(cursor, checkinput)
+            rows = cursor.fetchall()
+        except:
+            loggerdatabase.warning(
+                "dbdatainfo: Column StationID not yet existing in table DATAINFO (very old magpy version) - creating it ...")
+            stationaddstr = 'ALTER TABLE DATAINFO ADD StationID CHAR(50) AFTER SensorID'
+            cursor.execute(stationaddstr)
+
+        # Check STATIONS
+        # ##############
+        if datakeydict:
+            checkstation = 'SELECT StationID FROM STATIONS WHERE StationID = "' + datakeydict.get("StationID", '') + '"'
+            try:
+                cursor.execute(checkstation)
+                rows = cursor.fetchall()
+            except:
+                loggerdatabase.warning("dbdatainfo: STATIONS not yet existing ...")
+                rows = [1]
+            if not len(rows) > 0:
+                print("dbdatainfo: Did not find StationID in STATIONS - adding it")
+                # Add all Station info to STATIONS
+                stationhead, stationvalue = [], []
+                for key in datakeydict:
+                    if key in self.STATIONSKEYLIST:
+                        stationhead.append(key)
+                        stationvalue.append('"' + str(datakeydict[key]) + '"')
+                sql = 'INSERT INTO STATIONS(%s) VALUES (%s)' % (', '.join(stationhead), ', '.join(stationvalue))
+                # loggerdatabase.debug("dbdatainfo: sql: %s" % datainfosql)
+                if updatedb:
+                    cursor.execute(sql)
+
+        checkinput = 'SELECT DataID FROM DATAINFO WHERE SensorID = "' + sensorid + '"'
+        loggerdatabase.debug("dbdatainfo: %s " % checkinput)
+        try:
+            # print checkinput
+            cursor.execute(checkinput)
+            rows = cursor.fetchall()
+            loggerdatabase.debug("dbdatainfo: Number of existing DATAINFO lines: %s" % str(rows))
+        except:
+            loggerdatabase.warning("dbdatainfo: Could not access table DATAINFO in database")
+            loggerdatabase.warning("dbdatainfo: Creating it now")
+            if not len(self.DATAINFOKEYLIST) == len(self.DATAVALUEKEYLIST):
+                loggerdatabase.error("CHECK your DATA KEYLISTS")
+                return
+            fullDATAKEYLIST = []
+            for i, elem in enumerate(self.DATAINFOKEYLIST):
+                newelem = elem + ' ' + self.DATAVALUEKEYLIST[i]
+                fullDATAKEYLIST.append(newelem)
+            datainfostr = ', '.join(fullDATAKEYLIST)
+
+            createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
+
+            cursor.execute(createdatainfotablesql)
+
+        def joindatainfovalues(head, lst):
+            # Submethod for getting sql string from values
+            dst = []
+            for i, elem in enumerate(head):
+                ind = self.DATAINFOKEYLIST.index(elem)
+                if self.DATAVALUEKEYLIST[ind].startswith('DEC') or self.DATAVALUEKEYLIST[ind].startswith('FLO') or \
+                        self.DATAVALUEKEYLIST[ind].startswith('INT'):
+                    dst.append(str(lst[i]))
+                else:
+                    dst.append('"' + str(lst[i]) + '"')
+            return ','.join(dst)
+
+        # check whether input in DATAINFO with sensorid is existing already
+        nullnames = []
+        if len(rows) > 0:
+            datainfostring = ''
+            loggerdatabase.debug("dbdatainfo: Found existing tables")
+            # Get maximum number
+            for i in range(len(rows)):
+                rowval = rows[i][0].replace(sensorid + '_', '')
+                # print len(rows), rowval, sensorid+'_', rows[i][0]
+                try:
+                    numlst.append(int(rowval))
+                    # print numlst
+                except:
+                    print("crap")
+                    pass
+            maxnum = max(numlst)
+            loggerdatabase.debug("dbdatainfo: Maxnum: %i" % maxnum)
+            # Perform intensive search using any given meta info
+            intensivesearch = 'SELECT DataID FROM DATAINFO WHERE SensorID = "' + sensorid + '"' + searchlst
+            loggerdatabase.info("dbdatainfo: Searchlist: %s" % intensivesearch)
+            cursor.execute(intensivesearch)
+            intensiverows = cursor.fetchall()
+            # print intensivesearch, intensiverows
+            loggerdatabase.debug("dbdatainfo: Found matching table: %s" % str(intensiverows))
+            loggerdatabase.debug("dbdatainfo: using searchlist %s" % intensivesearch)
+            loggerdatabase.debug("dbdatainfo: intensiverows: %i" % len(intensiverows))
+            if len(intensiverows) > 0:
+                loggerdatabase.debug("dbdatainfo: DataID existing - updating {}".format(intensiverows[0]))
+                selectupdate = True
+                for i in range(len(intensiverows)):
+                    # if more than one record is existing select the latest (highest) number
+                    introwval = intensiverows[i][0].replace(sensorid + '_', '')
+                    try:
+                        intnumlst.append(int(introwval))
+                    except:
+                        pass
+                intmaxnum = max(intnumlst)
+                datainfonum = '{0:04}'.format(intmaxnum)
+
+                # get a NULL list (identify all keys with input zero)
+                # selectedline = [elem for elem in intensiverows if intensiverows[i][0].endswith(datainfonum)][0]
+                # Get all fields not in SKIPKEYS with zero values
+                #   too be updated as well
+                try:
+                    getallfields = 'SELECT column_name FROM information_schema.columns WHERE table_name = "DATAINFO" AND column_name NOT IN ("{}")'.format(
+                        '","'.join(SKIPKEYS))
+                    cursor.execute(getallfields)
+                    fieldrows = cursor.fetchall()
+                    notskipcolumns = (list(set([el[0] for el in fieldrows])))
+                    valselect = 'SELECT {} FROM DATAINFO WHERE DataID = "{}"'.format(','.join(notskipcolumns),
+                                                                                     sensorid + '_' + datainfonum)
+                    cursor.execute(valselect)
+                    fieldrows = cursor.fetchall()
+                    valscolumns = [el for el in fieldrows[0]]
+                    nullnames = [el for ii, el in enumerate(notskipcolumns) if valscolumns[ii] == None]
+                except:
+                    nullnames = []
+            else:
+                loggerdatabase.debug("dbdatainfo: Creating new DataID")
+                loggerdatabase.debug("dbdatainfo: because - {}".format(intensiverows))
+                # print (intensivesearch)
+                selectupdate = False
+                datainfonum = '{0:04}'.format(maxnum + 1)
+
+                if 'DataID' in datainfohead:
+                    selectindex = datainfohead.index('DataID')
+                    datainfovalue[selectindex] = sensorid + '_' + datainfonum
+                else:
+                    datainfohead.append('DataID')
+                    datainfovalue.append(sensorid + '_' + datainfonum)
+                datainfostring = joindatainfovalues(datainfohead, datainfovalue)
+
+            if selectupdate:
+                sqllst = [key + " ='" + str(datainfovalue[idx]) + "'" for idx, key in enumerate(datainfohead) if (
+                            key in SKIPKEYS or key in nullnames) and not key == 'DataAbsFunctionObject' and not key == 'DataBaseValues' and not key == 'DataFlagList' and not key == 'DataID']
+                # Add also values if existing input is NULL
+
+                if 'DataAbsFunctionObject' in datainfohead:  ### Tested Text and Binary so far. No quotes is OK.
+                    print("dbdatainfo: adding DataAbsFunctionObjects to DATAINFO is not yet working")
+                    # pfunc = pickle.dumps(datainfovalue[datainfohead.index('DataAbsFunctionObject')])
+                    # sqllst.append('DataAbsFunctionObject' + '=' + pfunc)
+                    # For testing:
+                    # datainfosql = 'INSERT INTO DATAINFO(DataAbsFunctionObject) VALUES (%s)' % (pfunc)
+                    # cursor.execute(datainfosql)
+                if 'DataBaseValues' in datainfohead:  ### Tested Text and Binary so far. No quotes is OK.
+                    loggerdatabase.debug("dbdatainfo: adding DataBaseValues to DATAINFO is not yet working")
+                    # pfunc = pickle.dumps(datainfovalue[datainfohead.index('DataBaseValues')])
+                    # TODO convert pfunc to string
+                    # sqllst.append('DataBaseValues' + '=' + pfunc)
+                    # For testing:
+                    # datainfosql = 'INSERT INTO DATAINFO(DataBaseValues) VALUES (%s)' % (pfunc)
+                    # cursor.execute(datainfosql)
+                if not len(sqllst) > 0:
+                    novalues = True
+                datainfosql = "UPDATE DATAINFO SET " + ", ".join(
+                    sqllst) + " WHERE DataID = '" + sensorid + "_" + datainfonum + "'"
+            else:
+                # print "No, Here"
+                datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), datainfostring)
+                loggerdatabase.debug("dbdatainfo: sql: %s" % datainfosql)
+            if updatedb and not novalues:
+                cursor.execute(datainfosql)
+            datainfoid = sensorid + '_' + datainfonum
+        else:
+            loggerdatabase.debug("dbdatainfo: Creating new table")
+            # return 0001
+            datainfoid = sensorid + '_' + datainfonum
+            if not 'DataID' in datainfohead:
+                datainfohead.append('DataID')
+                datainfovalue.append(datainfoid)
+            else:
+                ind = datainfohead.index('DataID')
+                datainfovalue[ind] = datainfoid
+            # and create datainfo input
+            loggerdatabase.debug("dbdatainfo: %s, %s" % (datainfohead, datainfovalue))
+            datainfostring = joindatainfovalues(datainfohead, datainfovalue)
+            datainfosql = 'INSERT INTO DATAINFO(%s) VALUES (%s)' % (', '.join(datainfohead), datainfostring)
+
+            if updatedb:
+                try:
+                    # print ("Updating DATAINFO table with {}".format(datainfosql))
+                    cursor.execute(datainfosql)
+                except mysql.Error as e:
+                    print("Failed: {}".format(e))
+                except:
+                    print("Failed for unknown reason")
+
+        self.db.commit()
+        cursor.close()
+
+        return datainfoid
+
+
+    def dbinit(self):
+        """
+        DEFINITION:
+            set up standard tables of magpy:
+            DATAINFO, SENSORS, and STATIONS (and FlAGGING).
+            Existing and valid inputs remain unchanged
+
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+        Kwargs:
+            --
+        RETURNS:
+            --
+        EXAMPLE:
+            dbinit(db)
+
+        APPLICATION:
+            Requires an existing mysql database (e.g. mydb)
+            1. Connect to the database
+            db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
+            2. use method
+            dbinit(db)
+        """
+
+        # SENSORS TABLE
+        # Create station table input
+        headstr = ' CHAR(100), '.join(self.SENSORSKEYLIST) + ' CHAR(100)'
+        headstr = headstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL PRIMARY KEY')
+        headstr = headstr.replace('SensorDescription CHAR(100)', 'SensorDescription TEXT')
+        createsensortablesql = "CREATE TABLE IF NOT EXISTS SENSORS (%s)" % headstr
+
+        # STATIONS TABLE
+        # Create station table input
+        stationstr = ' CHAR(100), '.join(self.STATIONSKEYLIST) + ' CHAR(100)'
+        stationstr = stationstr.replace('StationID CHAR(100)', 'StationID CHAR(50) NOT NULL PRIMARY KEY')
+        stationstr = stationstr.replace('StationDescription CHAR(100)', 'StationDescription TEXT')
+        stationstr = stationstr.replace('StationIAGAcode CHAR(100)', 'StationIAGAcode CHAR(10)')
+        # stationstr = 'StationID CHAR(50) NOT NULL PRIMARY KEY, StationName CHAR(100), StationIAGAcode CHAR(10), StationInstitution CHAR(100), StationStreet CHAR(50), StationCity CHAR(50), StationPostalCode CHAR(20), StationCountry CHAR(50), StationWebInfo CHAR(100), StationEmail CHAR(100), StationDescription TEXT'
+        createstationtablesql = "CREATE TABLE IF NOT EXISTS STATIONS (%s)" % stationstr
+
+        # DATAINFO TABLE
+        # Create datainfo table
+        if not len(self.DATAINFOKEYLIST) == len(self.DATAVALUEKEYLIST):
+            loggerdatabase.error("CHECK your DATA KEYLISTS")
+            return
+        fullDATAKEYLIST = []
+        for i, elem in enumerate(self.DATAINFOKEYLIST):
+            newelem = elem + ' ' + self.DATAVALUEKEYLIST[i]
+            fullDATAKEYLIST.append(newelem)
+        datainfostr = ', '.join(fullDATAKEYLIST)
+        createdatainfotablesql = "CREATE TABLE IF NOT EXISTS DATAINFO (%s)" % datainfostr
+
+        # FLAGS TABLE
+        # Create flagging table
+        flagstr = ' CHAR(100), '.join(self.FLAGSKEYLIST) + ' CHAR(100)'
+        flagstr = flagstr.replace('FlagID CHAR(100)', 'FlagID CHAR(50) NOT NULL PRIMARY KEY')
+        flagstr = flagstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL')
+        createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS (%s)" % flagstr
+
+        # BASELINE TABLE
+        # Create baseline table
+        basestr = ' CHAR(100), '.join(self.BASELINEKEYLIST) + ' CHAR(100)'
+        basestr = basestr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL')
+        createbaselinetablesql = "CREATE TABLE IF NOT EXISTS BASELINE (%s)" % basestr
+
+        # IP TABLE
+        # Create ip addresses table
+        ipstr = ' CHAR(100), '.join(self.IPKEYLIST) + ' CHAR(100)'
+        ipstr = ipstr.replace('IP CHAR(100)', 'IP CHAR(50) NOT NULL')
+        ipstr = ipstr.replace('IpComment CHAR(100)', 'IpComment TEXT')
+        ipstr = ipstr.replace('IpSensors CHAR(100)', 'IpSensors TEXT')
+        createiptablesql = "CREATE TABLE IF NOT EXISTS IPS (%s)" % ipstr
+
+        # Pier TABLE
+        # Create Pier overview table
+        pierstr = ' CHAR(100), '.join(self.PIERLIST) + ' CHAR(100)'
+        pierstr = pierstr.replace('PierID CHAR(100)', 'PierID CHAR(50) NOT NULL')
+        pierstr = pierstr.replace('PierComment CHAR(100)', 'PierComment TEXT')
+        pierstr = pierstr.replace('DeltaComment CHAR(100)', 'DeltaComment TEXT')
+        pierstr = pierstr.replace('DeltaDictionary CHAR(100)', 'DeltaDictionary TEXT')
+        pierstr = pierstr.replace('PierReference CHAR(100)', 'PierReference TEXT')
+        createpiertablesql = "CREATE TABLE IF NOT EXISTS PIERS (%s)" % pierstr
+
+        cursor = self.db.cursor()
+
+        cursor.execute(createsensortablesql)
+        cursor.execute(createstationtablesql)
+        cursor.execute(createdatainfotablesql)
+        cursor.execute(createflagtablesql)
+        cursor.execute(createbaselinetablesql)
+        cursor.execute(createiptablesql)
+        cursor.execute(createpiertablesql)
+
+        self.db.commit()
+        cursor.close()
+        self.alter()
+
+    def delete(self, datainfoid, **kwargs):
+        """
+        DEFINITION:
+           Delete contents of the database
+           If datainfoid is provided only this database contents are deleted
+           If before is specified all data before the given date are erased
+           Else before is determined according to the  samplingrateratio
+
+        PARAMETERS:
+        Variables:
+            - db:               (mysql database) defined by mysql.connect().
+            - datainfoid:       (string) table and dataid
+        Kwargs:
+            - samplingrateratio:(float) defines the ratio for deleting data older than (samplingperiod(sec)*samplingrateratio) DAYS
+                            default = 45
+            - timerange:        (int) time range to keep from now in days
+
+        RETURNS:
+            --
+
+        EXAMPLE:
+            delete(db,'DIDD_3121331_0002_0001')
+
+        APPLICATION:
+            Requires an existing mysql database (e.g. mydb)
+            so first connect to the database
+            db = mysql.connect(host="localhost",user="user",passwd="secret",db="mysql")
+            # Delete everything older then the last 3 days
+            dbdelete(db,'DIDD_3121331_0002_0001',timerange=3)
+            # Keep data in dependency of the samplingrate
+            #  days2keep = ceil(samplingrate[sec] * samplingrateratio)  (e.g. 12 days for 1 sec data)
+            dbdelete(db,'DIDD_3121331_0002_0001',samplingrateratio=12)
+        TODO:
+            - If sampling rate not given in DATAINFO get it from the datastream
+        """
+
+        samplingrateratio = kwargs.get("samplingrateratio")
+        timerange = kwargs.get("timerange")
+
+        if not samplingrateratio:
+            samplingrateratio = 12.0
+
+        cursor = self.db.cursor()
+        timeunit = 'DAY'
+
+        # Do steps 1 to 2 if time interval is not given (parameter interval, before)
+        if not timerange:
+            # 1. Get sampling rate
+            # option a - get from db
+            try:
+                getsr = 'SELECT DataSamplingRate FROM DATAINFO WHERE DataID = "%s"' % datainfoid
+                cursor.execute(getsr)
+                samplingperiod = float(cursor.fetchone()[0].strip(' sec'))
+                loggerdatabase.debug("dbdelete: samplingperiod = %s" % str(samplingperiod))
+            except:
+                loggerdatabase.error("dbdelete: could not access DataSamplingRate in table %s" % datainfoid)
+                samplingperiod = None
+            # option b - get directly from stream
+            if samplingperiod == None:
+                # read stream and get sampling rate there
+                # stream = db2stream(db,datainfoid)
+                samplingperiod = 5  # TODO
+            # 2. Determine time interval to delete
+            # factor depends on available space...
+            timerange = np.ceil(samplingperiod * samplingrateratio)
+
+        loggerdatabase.debug("dbdelete: selected timerange of %s days" % str(timerange))
+
+        # 3. Delete time interval
+        loggerdatabase.info("dbdelete: deleting data of %s older than %s days" % (datainfoid, str(timerange)))
+        try:
+            delcount = 100000
+            countstr = "SELECT COUNT(*) FROM {} WHERE time < ADDDATE(NOW(), INTERVAL -{} {})".format(datainfoid,
+                                                                                                     timerange,
+                                                                                                     timeunit)
+            try:
+                cursor.execute(countstr)
+                msg = cursor.fetchone()
+                lines = int(msg[0])
+                rangemax = int(np.ceil(lines / delcount))
+                deletesql = "DELETE FROM {} WHERE time < ADDDATE(NOW(), INTERVAL -{} {}) LIMIT {}".format(datainfoid,
+                                                                                                          timerange,
+                                                                                                          timeunit,
+                                                                                                          delcount)
+                for i in range(0, rangemax):
+                    cursor.execute(deletesql)
+            except:
+                # old way ... faster on short sequences, considerable slower on large
+                deletesql = "DELETE FROM %s WHERE time < ADDDATE(NOW(), INTERVAL -%i %s)" % (
+                datainfoid, timerange, timeunit)
+                cursor.execute(deletesql)
+        except:
+            loggerdatabase.error("dbdelete: error when deleting data")
+
+        # 4. Re-determine length for Datainfo
+        try:
+            newdatesql = "SELECT min(time),max(time) FROM %s" % datainfoid
+            cursor.execute(newdatesql)
+            value = cursor.fetchone()
+            mintime = value[0]
+            maxtime = value[1]
+            updatedatainfosql = 'UPDATE DATAINFO SET DataMinTime="%s", DataMaxTime="%s" WHERE DataID="%s"' % (
+            mintime, maxtime, datainfoid)
+            cursor.execute(updatedatainfosql)
+            loggerdatabase.info("dbdelete: DATAINFO for %s now covering %s to %s" % (datainfoid, mintime, maxtime))
+        except:
+            loggerdatabase.error("dbdelete: error when re-determining dates for DATAINFO")
+
+        self.db.commit()
+        cursor.close()
+
+    def info(self, destination='log', level='full'):
+        """
+        DEFINITION:
+            Provide version info of database and write to log
+        PARAMETERS:
+            - db:           (mysql database) defined by mysql.connect().
+            - destination:  (string) either "log"(default) or "stdout"
+            - level:        (string) "full"(default) -> show size as well, else skip size
+        """
+        report = ""
+        size = 'not determined'
+        versionsql = "SELECT VERSION()"
+        namesql = "SELECT DATABASE()"
+        cursor = self.db.cursor()
+        cursor.execute(versionsql)
+        version = cursor.fetchone()[0]
+        cursor.execute(namesql)
+        databasename = cursor.fetchone()[0]
+        if level == 'full':
+            sizesql = 'SELECT sum(round(((data_length + index_length) / 1024 / 1024 / 1024), 2)) as "Size in GB" FROM information_schema.TABLES WHERE table_schema="{}"'.format(
+                databasename)
+            cursor.execute(sizesql)
+            size = cursor.fetchone()[0]
+        if destination == 'log':
+            loggerdatabase.info(
+                "connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename, version, size))
+        else:
+            report = "connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename, version,
+                                                                                             size)
+            print(report)
+        self.db.commit()
+        cursor.close()
+        return report
+
+
+    def get_float(self, tablename, sensorid, columnid):
+        """
+        DEFINITION:
+            Perform a select search and return floats
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+            - tablename:    name of the table
+            - sensorid:     sensor to match
+            - columnid:     column in which search is performed
+        APPLICATION:
+            deltaf =  dbgetfloat(db, 'DATAINFO', Sensor, 'DataDeltaF')
+            returns deltaF from the DATAINFO table which matches the Sensor
+        """
+        sql = 'SELECT ' + columnid + ' FROM ' + tablename + ' WHERE SensorID = "' + sensorid + '"'
+        try:
+            cursor = self.db.cursor()
+            cursor.execute(sql)
+            row = cursor.fetchone()
+            if not row[0] == None:
+                try:
+                    fl = float(row[0])
+                    return fl
+                except:
+                    print("no float found")
+                    return row[0]
+            else:
+                return 0.0
+        except:
+                return 0.0
+
+    def get_lines(self, tablename, lines):
+        """
+        DEFINITION:
+            Get the last x lines from the selected table
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+            - tablename:    name of the table
+            - lines:        (int) amount of lines to extract
+        APPLICATION:
+            data = dbgetlines(db, 'DATA_0001_0001', 3600)
+            returns a data stream object
+        """
+        cursor = self.db.cursor()
+
+        stream = DataStream()
+        headsql = 'SHOW COLUMNS FROM %s' % (tablename)
+        message = self._executesql(cursor, headsql)
+        if not message:
+            head = cursor.fetchall()
+        else:
+            print(message)
+            return stream
+        keys = list(np.transpose(np.asarray(head))[0])
+
+        getsql = 'SELECT * FROM %s ORDER BY time DESC LIMIT %d' % (tablename, lines)
+        message = self._executesql(cursor, getsql)
+        if not message:
+            result = cursor.fetchall()
+        else:
+            print(message)
+            return stream
+        res = np.transpose(np.asarray(result))
+
+        array = [[] for key in DataStream().KEYLIST]
+        for idx, key in enumerate(DataStream().KEYLIST):
+            if key in keys:
+                pos = keys.index(key)
+                if key == 'time':
+                    array[idx] = np.asarray([testtime(elem) for elem in res[pos]])
+                elif key in DataStream().NUMKEYLIST:
+                    array[idx] = res[pos].astype(float)
+                else:
+                    array[idx] = res[pos].astype(object)
+
+        #header = self.fields2dict(tablename)
+        header = {}
+        stream = DataStream(header=header, ndarray=np.asarray(array))
+
+        return stream.sorting()
+
+    def get_pier(self, pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'):
+        """
+        DEFINITION:
+            Gets values from DeltaDictionary of the PIERS table
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+            - pierid:       (string) The pier you are interested in
+            - RP:           (string) ReferencePier
+            - value:        (string) one of 'deltaD', 'deltaI' and 'deltaF' - default is 'deltaF'
+            - maxdate:      (string) get last value before maxdate
+            - l:            (bool) if true return a list of all inputs
+            - dic:          (string) dictionary to look at, default is 'DeltaDictionary'
+        APPLICATION:
+            deltaD =  dbgetPier(db, 'A7','A2','deltaD')
+
+            returns deltaD of A7 relative to A2
+        """
+        sql = 'SELECT '+ dic +' FROM PIERS WHERE PierID = "' + pierid + '"'
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        row = cursor.fetchone()
+
+        if not row:
+            print("dbgetPier: No data found for your selection")
+            return 0.0
+
+        key = ['pier', 'epochDir', 'deltaD', 'deltaI', 'epochF', 'deltaF']
+        ind = key.index(value)
+        indtdir = key.index('epochDir')
+        indtf = key.index('epochF')
+
+        if not row[0] == None:
+            try:
+                pl1 = row[0].split(',')
+                pierlist = [elem.strip().split('_') for elem in pl1 if elem.split('_')[0] == rp]
+                if l:
+                    return pierlist
+                else:
+                    if not value in ['deltaD','deltaI','deltaF']:
+                        print("dbgetPier: Select a valid value paramater - check help")
+                        return 0.0
+                    if value in ['deltaD','deltaI']:
+                        valuetimes = [t[indtdir] for t in pierlist]
+                    else:
+                        valuetimes = [t[indtf] for t in pierlist]
+                    if not maxdate:
+                        indlv = valuetimes.index(max(valuetimes))
+                        return float(pierlist[indlv][ind])
+                    else:
+                        # reformat maxdate to yearmonth
+                        valuetimes = [el for el in valuetimes if el <= maxdate]
+                        indlv = valuetimes.index(max(valuetimes))
+                        return float(pierlist[indlv][ind])
+            except:
+                print("no deltas found")
+                #return row[0]
+        else:
+            return 0.0
+
+
+    def get_string(self,tablename,sensorid,columnid,revision=None):
+        """
+        DEFINITION:
+            Perform a select search and return strings
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+            - tablename:    name of the table
+            - sensorid:     sensor to match
+            - columnid:     column in which search is performed
+        Kwargs:
+            - revision:     optional sensor revision (not used so far)
+        APPLICATION:
+            stationid =  dbgetstring(db, 'DATAINFO', 'LEMI25_22_0001', 'StationID')
+            returns the stationid from the DATAINFO table which matches the Sensor
+        """
+        sql = 'SELECT ' + columnid + ' FROM ' + tablename + ' WHERE SensorID = "' + sensorid + '"'
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        row = cursor.fetchone()
+        try:
+            fl = float(row[0])
+            return fl
+        except:
+            return row[0]
+
+
+    def sensorinfo(self, sensorid, sensorkeydict=None, sensorrevision='0001'):
+        """
+        DEFINITION:
+            checks whether sensorinfo is already available in SENSORS tab
+            if not, it creates a new line for the provided sensorid in the selected database db
+            Keywords are all database fields provided as dictionary
+
+        PARAMETERS:
+        Variables:
+            - db:             (mysql database) defined by mysql.connect().
+            - sensorid:       (string) code for sensor if.
+        Optional variables:
+            - sensorkeydict:  (dict) provide a dictionary with sensor information (see SENSORS) .
+            - sensorrevision: (string) provide a revision number in format '0001' .
+        Kwargs:
+            --
+        RETURNS:
+           sensorid with revision number e.g. DIDD_235178_0001
+        USED BY:
+           stream2db
+        EXAMPLE:
+            dbsensorinfo()
+
+        APPLICATION:
+            Requires an existing mysql database (e.g. mydb)
+            1. Connect to the database
+            db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
+            2. use method
+            dbalter(db)
+        """
+
+        sensorhead, sensorvalue, numlst = [], [], []
+
+        cursor = self.db.cursor()
+
+        if sensorkeydict:
+            for key in sensorkeydict:
+                if key in self.SENSORSKEYLIST:
+                    sensorhead.append(key)
+                    sensorvalue.append(sensorkeydict[key])
+
+        loggerdatabase.debug("dbsensorinfo: sensor: ", sensorhead, sensorvalue)
+        rows = []
+
+        check = 'SELECT SensorID, SensorRevision, SensorName, SensorSerialNum FROM SENSORS WHERE SensorID LIKE "' + sensorid + '%"'
+        try:
+            cursor.execute(check)
+            rows = cursor.fetchall()
+        except:
+            loggerdatabase.warning("dbsensorinfo: Could not access table SENSORS in database - creating table SENSORS")
+            headstr = ' CHAR(100), '.join(self.SENSORSKEYLIST) + ' CHAR(100)'
+            headstr = headstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL PRIMARY KEY')
+            createsensortablesql = "CREATE TABLE IF NOT EXISTS SENSORS (%s)" % headstr
+            cursor.execute(createsensortablesql)
+
+        if len(rows) > 0:
+            loggerdatabase.debug("SensorID is existing in Table SENSORS")
+            # SensorID is existing in Table
+            loggerdatabase.info("dbsensorinfo: Sensorid already existing in SENSORS")
+            loggerdatabase.info("dbsensorinfo: rows: {}".format(rows))
+            # Get the maximum revision number
+            for i in range(len(rows)):
+                rowval = rows[i][1]
+                try:
+                    numlst.append(int(rowval))
+                except:
+                    pass
+            try:
+                maxnum = max(numlst)
+            except:
+                maxnum = None
+
+            if isinstance(maxnum, int):
+                index = numlst.index(maxnum)
+                sensorid = rows[index][0]
+            else:
+                loggerdatabase.warning("dbsensorinfo: SensorRevision not set - changing to %s" % sensorrevision)
+                if rows[0][2] == None:
+                    sensoridsplit = sensorid.split('_')
+                    if len(sensoridsplit) == 2:
+                        sensorserialnum = sensoridsplit[1]
+                    else:
+                        sensorserialnum = sensorid
+                else:
+                    sensorserialnum = rows[0][2]
+                oldsensorid = sensorid
+                sensorid = sensorid + '_' + sensorrevision
+                updatesensorsql = 'UPDATE SENSORS SET SensorID = "' + sensorid + '", SensorRevision = "' + sensorrevision + '", SensorSerialNum = "' + sensorserialnum + '" WHERE SensorID = "' + oldsensorid + '"'
+                cursor.execute(updatesensorsql)
+        else:
+            sensorserialnum = ''
+            print("SensorID not yet existing in Table SENSORS")
+            # SensorID is not existing in Table
+            loggerdatabase.info("dbsensorinfo: Sensorid not yet existing in SENSORS.")
+            # Check whether given sensorid is incomplete e.g. revision number is missing
+            loggerdatabase.info("dbsensorinfo: Creating new sensorid %s " % sensorid)
+            if not 'SensorSerialNum' in sensorhead:
+                print("No serial number")
+                sensoridsplit = sensorid.split('_')
+                if len(sensoridsplit) in [2, 3]:
+                    sensorserialnum = sensoridsplit[1]
+                if len(sensoridsplit) == 3:
+                    if not 'SensorRevision' in sensorhead:
+                        sensorhead.append('SensorRevision')
+                        sensorvalue.append(sensoridsplit[2])
+                    index = sensorhead.index('SensorID')
+                    sensorvalue[index] = sensorid
+                else:
+                    sensorserialnum = sensorid
+                sensorhead.append('SensorSerialNum')
+                sensorvalue.append(sensorserialnum)
+                loggerdatabase.debug("dbsensorinfo: sensor %s, %s" % (sensoridsplit, sensorserialnum))
+
+            if not 'SensorRevision' in sensorhead:
+                sensoridsplit = sensorid.split('_')
+                if len(sensoridsplit) > 1:
+                    sensorrevision = sensoridsplit[-1]
+                sensorhead.append('SensorRevision')
+                sensorvalue.append(sensorrevision)
+                if not 'SensorID' in sensorhead:
+                    sensorhead.append('SensorID')
+                    sensorvalue.append(sensorid + '_' + sensorrevision)
+                    sensorid = sensorid + '_' + sensorrevision
+                else:
+                    index = sensorhead.index('SensorID')
+                    # Why???????? This seems to be wrong (maybe important for OW  -- added an untested corr (leon))
+                    if 'OW' in sensorvalue:
+                        sensorvalue[index] = sensorid + '_' + sensorrevision
+
+            ### create an input for the new sensor
+            sensorsql = "INSERT INTO SENSORS(%s) VALUES (%s)" % (
+            ', '.join(sensorhead), '"' + '", "'.join(sensorvalue) + '"')
+            # print "Adding the following info to SENSORS: ", sensorsql
+            cursor.execute(sensorsql)
+
+        self.db.commit()
+        cursor.close()
+
+        return sensorid
+
+    def set_times_in_datainfo(self, tablename, colstr, unitstr):
+        """
+        DEFINITION:
+            Method to update min time and max time variables in DATAINFO table
+            using data from table tablename
+
+        PARAMETERS:
+            - db:           (mysql database) defined by mysql.connect().
+            - tablename:    (string) name of the table
+        APPLICATION:
+            dbsetTimesDataInfo(db, "MyTable_12345_0001_0001")
+        USED BY:
+            - writeDB, stream2DB
+        """
+        cursor = self.db.cursor()
+
+        getminmaxtimesql = "Select MIN(time),MAX(time) FROM " + tablename
+        mesg = self._executesql(cursor, getminmaxtimesql)
+        if not mesg:
+            rows = cursor.fetchall()
+        else:
+            print (mesg)
+            return
+        updatedatainfotimesql = 'UPDATE DATAINFO SET DataMinTime = "' + rows[0][0] + '", DataMaxTime = "' + rows[0][
+            1] + '", ColumnContents = "' + colstr + '", ColumnUnits = "' + unitstr + '" WHERE DataID = "' + tablename + '"'
+        mesg = self._executesql(cursor, updatedatainfotimesql)
+        if not mesg:
+            rows = cursor.fetchall()
+        else:
+            print (mesg)
+            return
+        self.db.commit()
+        cursor.close()
+
+
+    def update(self, tablename, keys, values, condition=None):
+        """
+        DEFINITION:
+            Perform an update call to add values into specific keys of the selected table
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+            - tablename:    name of the table
+            - keys:         (list) list of keys to modify
+            - values:       (list) list of values for the keys
+        Kwargs:
+            - condition:     (string) put in an optional where condition
+        APPLICATION:
+            dbupdate(db, 'DATAINFO', [], [], condition='SensorID="MySensor"')
+            returns a string with either 'success' or an error message
+        """
+        try:
+            if not len(keys) == len(values):
+                print("dbupdate: amount of keys does not fit provided values")
+                return False
+        except:
+            print("dbupdate: keys and values must be provided as list e.g. [key1,key2,...]")
+        if not len(keys) > 0:
+            print("dbupdate: provide at least on key/value pair")
+            return False
+
+        if not condition:
+            condition = ''
+        else:
+            condition = 'WHERE %s' % condition
+
+        setlist = []
+        for idx, el in enumerate(keys):
+            st = '%s="%s"' % (el, values[idx])
+            setlist.append(st)
+        if len(setlist) > 0:
+            setstring = ','.join(setlist)
+        else:
+            setstring = setlist[0]
+        updatesql = 'UPDATE %s SET %s %s' % (tablename, setstring, condition)
+        cursor = self.db.cursor()
+        print(updatesql)
+        try:
+            cursor.execute(updatesql)
+        except mysql.IntegrityError as message:
+            return message
+        except mysql.Error as message:
+            return message
+        except:
+            return 'dbupdate: unkown error'
+        self.db.commit()
+        cursor.close()
+        return 'success'
+
+
+    def write(self, datastream, tablename=None, StationID=None, mode='replace', revision=None, roundtime=0, keepempty=False, debug=False, **kwargs):
+
+        """
+        DEFINITION:
+            Method to write datastreams to a mysql database
+
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+            - datastream:   (magpy datastream)
+        Kwargs:
+            - mode:         (string)
+                                mode: replace -- replaces existing table contents with new one, also replaces informations from sensors and station table
+                                mode: delete -- deletes existing tables and writes new ones -- remove (or make it extremeley difficult to use) this method after initializing of tables
+                                mode: insert -- add data not existing in table from stream
+
+             - tablename:   (string) provide the tablename to which data is written
+                                     SENSORS and STATIONS remain unchanged, DATAINFO data
+                                     is updated if existing
+             - StationID:   (string) provide the StationID
+             - roundtime:   (int)    round timesteps - default is 0,
+                                     can be 0, 10 (round to 10microsec),
+                                     100 (round to 100microsec),1000 (round to 1millisec)
+                                     Rounding is can be necessary as MagPy uses date2num and num2date methods:
+                                     Accuracy of this methods is between 1 micro and 1 milli sec, sometimes an
+                                     error of a few microseconds is obtained
+
+        REQUIRES:
+            dbdatainfo
+
+        RETURNS:
+            --
+
+        EXAMPLE:
+            db.write(stream,mode='replace')
+
+            # Writing data without any header info (does not update SENSORS, STATIONS)
+            # DATAINFO is updated however, keeping blanks for sensorid and stationid
+            db.write(stream,tablename='myid_0001_0001',noheader=True)
+
+        APPLICATION:
+            db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
+            stream = read('/path/to/my/files/*', starttime='2013-01-01',endtime='2013-02-01')
+            writeDB(db,stream,StationID='MyObsCode')
+
+        """
+
+        if not self.db:
+            loggerdatabase.error("write: No database connected - aborting -- please create and initiate a database first")
+            return
+
+        if not len(datastream.ndarray[0]) > 0:
+            print ("no data found")
+            return
+
+        if not roundtime in [False,None,0,10,100,1000]:
+            roundtime = False
+
+        # ----------------------------------------------
+        #   Identify tablename
+        # ----------------------------------------------
+
+        if tablename:
+            if debug:
+                print ("writeDB: not bothering with header, sensorid etc")
+                print ("         updating DATAINFO only if existing")
+            # Just check whether DataID, if not a table, exists and append data
+            #return some message on success
+        else:
+            if not StationID==None:
+                datastream.header['StationID'] = StationID
+
+            if not 'SensorID' in datastream.header:
+                #loggerdatabase.error("writeDB: No SensorID provided in header - aborting")
+                print ("write: No SensorID provided in header - define by datastream.header['SensorID'] = 'YourID' before calling writeDB - aborting")
+                return
+            if not 'StationID' in datastream.header and not StationID:
+                #loggerdatabase.error("writeDB: No StationID provided - use option StationID='MyID'")
+                print ("write: No StationID provided - use option StationID='MyStationID'")
+                return
+
+            # Check data sampling rate:
+            # #########################
+            # 1. Get sampling rate of sequence to be written (will be 0 if only one record is provided)
+            rsr = datastream.samplingrate()
+            # 2. get eventually provided sampling rate
+            """
+            try:
+                psr = float(datastream.header.get('DataSamplingRate','').replace('sec').strip())
+            except:
+                psr = None
+            #print ("Samplingrate provided with stream", psr)
+            if not psr in [None,'','Null',0,'0'] and not rsr==0.0:
+                # 3. Both values are existing - check consistency
+                # if this value is not considerably different from the psr then use it
+                try:
+                    # get relative diff
+                    #print ("Determining diff")
+                    rdiff = np.abs(float(psr)-float(rsr))/float(rsr)
+                    print ("Found sampling rate difference of {}".format(rdiff))
+                    if rdiff > 0.1:
+                        datastream.header['DataSamplingRate'] = rsr
+                    else:
+                        datastream.header['DataSamplingRate'] = psr
+                except:
+                    datastream.header['DataSamplingRate'] = rsr
+            elif not psr in [None,'','Null',0,'0'] and rsr==0.0:
+                # 4. information is provided and no value can be determined from stream
+                datastream.header['DataSamplingRate'] = psr
+            elif psr in [None,'','Null',0,'0'] and not rsr==0.0:
+                # 5. use calculated rsr (eventually add a validity flag?)
+                datastream.header['DataSamplingRate'] = rsr
+            elif psr in [None,'','Null',0,'0'] and rsr==0.0:
+                datastream.header['DataSamplingRate'] = ''
+            else:
+                print ("Well, I forgot something obviously - check writeDB sampling rate determination")
+            """
+
+            # Updating DATAINFO, SENSORS and STATIONS
+            # TODO: Abolute function object
+            # Current solution: remove it
+            datastream.header['DataAbsFunctionObject'] = ''
+            tablename = self.datainfo(datastream.header['SensorID'], datastream.header, None, datastream.header.get('StationID'))
+
+            #print ("After", tablename, datastream.header.get('SensorID'))
+
+        # ----------------------------------------------
+        #   Putting together all data
+        # ----------------------------------------------
+
+        keys = datastream._get_key_headers()
+        ti = ['time']
+        ti.extend(keys)
+        keys = ti
+        #array = np.asarray([elem for elem in datastream.ndarray if len(elem) > 0], dtype=object)
+
+        # delete all columns which only contain nans ot '-'
+        def checkEqual3(lst):
+            return lst[1:] == lst[:-1]
+
+        def trim_time(s,roundtime):
+            # Rounding time to 100 microseconds
+            #print ("Entered round time method")
+            # Not essential for 0.3.99 in combination with MQTT Martas
+            # It is essential: -> example
+            # Data is send out by mqtt with 432000 microseconds and is added to database with 432004 ms
+            # Data is written to bin file with 43200 microseconds and read as ?
+            # Input is date like '%Y-%m-%d %H:%M:%S.%f'
+            if not roundtime:
+                return s
+            elif roundtime == 10:
+                tail = s[-7:]
+                f = round(float(tail), 5)
+                temp = "%.5f0" % f
+            elif roundtime == 100:
+                tail = s[-7:]
+                f = round(float(tail), 4)
+                temp = "%.4f00" % f
+            elif roundtime == 1000:
+                tail = s[-7:]
+                f = round(float(tail), 3)
+                temp = "%.3f000" % f
+            if f == 1.0:
+                t = datetime.strptime(s,'%Y-%m-%d %H:%M:%S.%f')
+                t = t+timedelta(seconds=1)
+                s = t.strftime('%Y-%m-%d %H:%M:%S.%f')
+                return s
+            return "%s%s" % (s[:-7], temp[1:])
+
+
+        array = [[] for key in DataStream().KEYLIST]
+        timeformat='%Y-%m-%d %H:%M:%S.%f'
+        # Changed 2018-11 because 1 sec NTP data still needs .%f
+        for idx,col in enumerate(datastream.ndarray):
+            key = DataStream().KEYLIST[idx]
+            nosingleelem = True
+            if len(col) > 0:
+                nantest = False
+                if key in DataStream().NUMKEYLIST:
+                    col = col.astype(np.float64)
+                    # First test for nans, as this is not easily possible in arrays because nan != nan
+                    if np.isnan(np.array(col)).all():
+                        # checking whether only nans are present
+                        array[idx] = np.asarray([])
+                        nosingleelem = False
+                        nantest = True
+                if not False in checkEqual3(col) and not nantest:
+                    # checking for identical elements
+                    # TODO Unicode equal comparison in the following - see whether error still present after Jan2019
+                    if not keepempty and not col[0] or col[0] in ['nan', '-','']: #remove place holders
+                        array[idx] = np.asarray([])
+                        nosingleelem = False
+            if key.endswith('time') and len(col) > 0 and nosingleelem:
+                tcol = col.astype(datetime)
+                """
+                try:
+                    tcol = np.asarray([trim_time(datetime.strftime(num2date(elem).replace(tzinfo=None),timeformat),roundtime) for elem in col.astype(float)])
+                except:
+                    try:
+                        tstr = DataStream()
+                        tcol = np.asarray([trim_time(tstr._testtime(elem).strftime(timeformat),roundtime) for elem in col])
+                    except:
+                        tcol = np.asarray([])
+                """
+                array[idx]=np.asarray(tcol)
+            elif len(col) > 0 and nosingleelem: # and KEYLIST[idx] in NUMKEYLIST:
+                array[idx] = [el if isinstance(el, basestring) or el in [None] else float(el) for el in datastream.ndarray[idx]] # converts float64 to float-pymsqldb (required for python3 and pymsqldb)
+                try:
+                    array[idx] = [None if np.isnan(el) else el for el in array[idx]]
+                except:
+                    pass # will fail for strings
+
+        keys = np.asarray([DataStream().KEYLIST[idx] for idx,elem in enumerate(array) if len(elem)>0])
+        array = np.asarray([elem for elem in array if len(elem)>0], dtype=object)
+        dollarstring = ['%s' for elem in keys]
+
+        values = array.transpose()
+
+        insertmanysql = "INSERT INTO %s(%s) VALUES (%s)" % (tablename, ', '.join(keys), ', '.join(dollarstring))
+
+        values = tuple([tuple(list(val)) for val in values])
+
+        # ----------------------------------------------
+        #   if tablename does not yet exist create table/ add column if not yet existing
+        # ----------------------------------------------
+        cursor = self.db.cursor ()
+
+        count = 0
+        dataheads,collst,unitlst = [],[],[]
+        for key in DataStream().KEYLIST:
+            colstr = ''
+            unitstr = ''
+            if key in keys:
+                if key in DataStream().NUMKEYLIST:
+                    dataheads.append(key + ' DOUBLE')
+                elif key.endswith('time'):
+                    if key == 'time':
+                        dataheads.append(key + ' CHAR(40) NOT NULL PRIMARY KEY')
+                    else:
+                        dataheads.append(key + ' CHAR(40)')
+                else:
+                    dataheads.append(key + ' CHAR(100)')
+                ## Getting column and units
+                for hkey in datastream.header:
+                    if key == hkey.replace('col-',''):
+                        colstr = datastream.header[hkey]
+                    elif key == hkey.replace('unit-col-',''):
+                        unitstr = datastream.header[hkey]
+
+                try:
+                    sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
+                    cursor.execute(sql)
+                    count +=1
+                except mysql.Error as e:
+                    emsg = str(e)
+                    if emsg.find("Table") >= 0 and emsg.find("doesn't exist") >= 0:
+                        # if table not existing
+                        pass
+                    elif emsg.find("Unknown column") >= 0:
+                        print ("writeDB: key %s not existing - adding it" % key)
+                        # if key not yet existing
+                        addsql = "ALTER TABLE " + tablename + " ADD " + dataheads[-1]
+                        cursor.execute(addsql)
+                    else:
+                        print ("writeDB: unknown MySQL error when checking for existing tables! SQL: {}, error: {}".format(sql,emsg))
+                except:
+                    print ("writeDB: unknown error when checking for existing tables")
+
+            if not key=='time':
+                collst.append(colstr)
+                unitlst.append(unitstr)
+
+        # override collst/unitlst with contents in header (ColumnContents, UnitContents)
+        if not datastream.header.get('ColumnContents','') == '':
+            collst = datastream.header.get('ColumnContents').split(',')
+        if not datastream.header.get('ColumnUnits','') == '':
+            unitlst = datastream.header.get('ColumnUnits').split(',')
+
+        if count == 0:
+            print ("Table not existing - creating it")
+            # Creating table
+            createdatatablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename,', '.join(dataheads))
+            cursor.execute(createdatatablesql)
+
+
+        # ----------------------------------------------
+        #   upload data
+        # ----------------------------------------------
+
+        #print insertmanysql
+        if mode == 'replace':
+            insertmanysql = insertmanysql.replace("INSERT","REPLACE")
+
+        #t1 = datetime.utcnow()
+
+        ## Alternative upload for very large lists (from 0.4.6 on)
+        START_INDEX = 0
+        LIST_LENGTH=1000
+        errorfound = True
+        while values[START_INDEX:START_INDEX+LIST_LENGTH]:
+            try:
+                cursor.executemany(insertmanysql,values[START_INDEX:START_INDEX+LIST_LENGTH])
+                errorfound = False
+            except mysql.Error as e:
+                emsg = str(e)
+                print ("write: mysql error when writing - {}".format(emsg))
+            except:
+                print ("write: unknown error when checking for existing tables")
+            START_INDEX += LIST_LENGTH
+
+        # ----------------------------------------------
+        #   update DATAINFO - move to a separate method
+        # ----------------------------------------------
+
+        if not errorfound:
+            self.set_times_in_datainfo(tablename,','.join(collst),','.join(unitlst))
+
+        self.db.commit()
+        cursor.close ()
+
+
+if __name__ == '__main__':
+
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: Database PACKAGE")
+    print("THIS IS A TEST RUN OF THE MAGPY.CORE DATABASE PACKAGE.")
+    print("All main methods will be tested. This may take a while.")
+    print("If errors are encountered they will be listed at the end.")
+    print("Otherwise True will be returned")
+    print("----------------------------------------------------------")
+    print()
+
+    import subprocess
+    # #######################################################
+    #                     Runtime testing
+    # #######################################################
+
+    def create_teststream(startdate=datetime(2022, 11, 21), coverage=86400):
+        # Create a random data signal with some nan values in x and z
+        c = 1000  # 1000 nan values are filled at random places
+        l = coverage
+        array = [[] for el in DataStream().KEYLIST]
+        import scipy
+        win = scipy.signal.windows.hann(60)
+        a = np.random.uniform(20950, 21000, size=int((l + 2880) / 2))
+        b = np.random.uniform(20950, 21050, size=int((l + 2880) / 2))
+        x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        array[1] = np.asarray(x[1440:-1440])
+        a = np.random.uniform(1950, 2000, size=int((l + 2880) / 2))
+        b = np.random.uniform(1900, 2050, size=int((l + 2880) / 2))
+        y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+        array[2] = np.asarray(y[1440:-1440])
+        a = np.random.uniform(44300, 44400, size=(l + 2880))
+        z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+        array[3] = np.asarray(z[1440:-1440])
+        array[4] = np.asarray(np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440])
+        var1 = [0] * l
+        var1[43200:50400] = [1] * 7200
+        varind = DataStream().KEYLIST.index('var1')
+        array[varind] = np.asarray(var1)
+        array[0] = np.asarray([startdate + timedelta(seconds=i) for i in range(0, l)])
+        teststream = DataStream(header={'SensorID': 'Test_0001_0001'}, ndarray=np.asarray(array, dtype=object))
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['col-f'] = 'F'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        teststream.header['unit-col-f'] = 'nT'
+        teststream.header['col-var1'] = 'Switch'
+        return teststream
+
+    teststream = create_teststream(startdate=datetime(2022, 11, 22))
+
+    ok = True
+    errors = {}
+    successes = {}
+    if ok:
+        #testrun = './testflagfile.json' # define a test file later on
+        t_start_test = datetime.utcnow()
+        while True:
+            try:
+                ts = datetime.utcnow()
+                db = DataBank("localhost","cobs","8ung2rad","cobsdb")
+                te = datetime.utcnow()
+                successes['__init__'] = ("Version: {}: __init__ {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['__init__'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with __init__.")
+            try:
+                ts = datetime.utcnow()
+                db.info('stdout')
+                te = datetime.utcnow()
+                successes['info'] = ("Version: {}, info: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['info'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with info.")
+
+            # If end of routine is reached... break.
+            break
+
+        t_end_test = datetime.utcnow()
+        time_taken = t_end_test - t_start_test
+        print(datetime.utcnow(), "- Database runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+        print()
+        print("----------------------------------------------------------")
+        #del_test_files = 'rm {}*'.format(testrun)
+        #subprocess.call(del_test_files,shell=True)
+        if errors == {}:
+            print("0 errors! Great! :)")
+        else:
+            print(len(errors), "errors were found in the following functions:")
+            print(" {}".format(errors.keys()))
+            print()
+            for item in errors:
+                    print(item + " error string:")
+                    print("    " + errors.get(item))
+        print()
+        print("Good-bye!")
+        print("----------------------------------------------------------")

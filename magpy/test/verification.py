@@ -327,13 +327,13 @@ class TestStream(unittest.TestCase):
 
 class TestFlagging(unittest.TestCase):
     def test_add(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
         self.assertEqual(len(fl), 2)
 
     def test_list(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
         l = fl._list(['starttime', 'endtime'])
@@ -341,7 +341,7 @@ class TestFlagging(unittest.TestCase):
         self.assertEqual(l[0][1], datetime(2022, 11, 22, 23, 56, 12, 654362))
 
     def test_copy(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
         newfl = fl.copy()
@@ -352,7 +352,7 @@ class TestFlagging(unittest.TestCase):
         self.assertEqual(len(newfl), 3)
 
     def test_trim(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
         newfl = fl.copy()
@@ -364,7 +364,7 @@ class TestFlagging(unittest.TestCase):
         self.assertEqual(len(test), 0)
 
     def test_select(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
         newfl = fl.copy()
@@ -382,10 +382,10 @@ class TestFlagging(unittest.TestCase):
         self.assertNotEqual(len(newfl), len(obt1))
 
     def test_join(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
-        fo = flags()
+        fo = Flags()
         fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
                     endtime="2022-11-22T10:59:12.654362", components=['f'], labelid='050', debug=False)
         fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
@@ -395,10 +395,10 @@ class TestFlagging(unittest.TestCase):
         self.assertEqual(len(comb), 4)
 
     def test_stats(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
-        fo = flags()
+        fo = Flags()
         fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
                     endtime="2022-11-22T10:59:12.654362", components=['f'], labelid='050', debug=False)
         fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
@@ -408,7 +408,7 @@ class TestFlagging(unittest.TestCase):
         self.assertIs(type(out), str)
 
     def test_diff(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
                     endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
@@ -416,7 +416,7 @@ class TestFlagging(unittest.TestCase):
         fl = fl.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
                     endtime="2022-11-22T09:59:12.654362", components=['f'], labelid='001',
                     comment="incredible lightning strike", debug=False)
-        fo = flags()
+        fo = Flags()
         fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T10:56:12.654362",
                     endtime="2022-11-22T10:59:12.654362", components=['f'], labelid='050', debug=False)
         fo = fo.add(sensorid="GSM90_Y1112_0001", starttime="2022-11-22T09:56:12.654362",
@@ -426,7 +426,7 @@ class TestFlagging(unittest.TestCase):
         self.assertEqual(len(diff), 1)
 
     def test_drop(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
                     endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
@@ -438,7 +438,7 @@ class TestFlagging(unittest.TestCase):
         self.assertEqual(len(newfl), 2)
 
     def test_replace(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
                     endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
@@ -453,7 +453,7 @@ class TestFlagging(unittest.TestCase):
         self.assertEqual(len(newfl), 3)
 
     def test_union(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
                     endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], flagtype=0, debug=False)
         # fitting overlap - level 0
@@ -517,7 +517,7 @@ class TestFlagging(unittest.TestCase):
         self.assertEqual(len(test), 9)
 
     def test_rename_nearby(self):
-        fl = flags()
+        fl = Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
                     endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], flagtype=0, debug=False)
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",

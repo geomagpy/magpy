@@ -445,7 +445,7 @@ try:
     import emd
     emdpackage = True
 
-    class decompose(object):
+    class Decompose(object):
         """
         DESCRIPTION
             Class to decompse any given signal into frequency bands using a emperical mode decomposition, The frequency bands
@@ -503,7 +503,7 @@ try:
             return imf_stats_dict
 
 
-    class quietday(object):
+    class QuietDay(object):
         """
         DESCRIPTION
             class to determine a mainly frequency dependend quiet day curve for activity estimates
@@ -742,7 +742,7 @@ try:
         """
         imf_opts = imf_opts if imf_opts else {'sd_thresh': 0.1}
 
-        dc = decompose(sample_frequ=sample_frequ, max_imfs=max_imfs, imf_opts=imf_opts, nensembles=nensembles,
+        dc = Decompose(sample_frequ=sample_frequ, max_imfs=max_imfs, imf_opts=imf_opts, nensembles=nensembles,
                        nprocesses=nprocesses, ensemble_noise=ensemble_noise)
         comp = dc.normalize_component(onedarray)
         imf, IP, IF, IA = dc.emd_sift(comp, sift_type=sift_type, debug=debug)
@@ -792,7 +792,7 @@ try:
         t = datastream.ndarray[0]
         array = [np.asarray([]) for el in datastream.KEYLIST]
         # step2 - test datastream vailidity
-        qd = quietday()
+        qd = QuietDay()
         # step3 - extract components
         for c in components:
             compindex = datastream.KEYLIST.index(c)
@@ -832,7 +832,7 @@ except:
     pass
 
 
-class stormdet(object):
+class StormDet(object):
 
     def __init__(self, funcvars=None, d_amp_min=5, ace_window=30, a_varr=-0.000064328748639, b_varr=0.0599247768):
 
@@ -1841,7 +1841,7 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
     # For testing purpose:
     from magpy.core import plot as mp
 
-    stdt = stormdet()
+    stdt = StormDet()
     if not variables:
         variables = stdt.funcvars[method]
 

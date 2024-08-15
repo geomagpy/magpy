@@ -12,7 +12,7 @@ import hashlib
 import json
 
 
-class flags(object):
+class Flags(object):
     """
     DESCRIPTION:
         Everything regarding flagging, marking and annotating data in MagPy 2.0 and future versions.
@@ -54,7 +54,7 @@ class flags(object):
                     'flagversion'}       (string) # string like 2.0
 
     APPLICTAION:
-        Initiate flags with >>> flag = flags().
+        Initiate flags with >>> flag = Flags().
 
     EXAMPLES:
         # Load old flags and create new inputs by extracting labels and operators from comments
@@ -292,7 +292,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                 obj += timedelta(seconds=1)
             return obj.replace(microsecond=0)
 
-        newfl = flags()
+        newfl = Flags()
         fd = self.flagdict
         converted = False
         version = '2.0'
@@ -647,7 +647,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
              different_flags = fl.diff(myotherflags)
         """
         value = {k: compare.flagdict[k] for k in set(compare.flagdict) - set(self.flagdict)}
-        return flags(value)
+        return Flags(value)
 
     def drop(self, parameter='sensorid', values=None):
         """
@@ -732,7 +732,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         fl = self.flagdict
         fo = flagobject.flagdict
         new = {**fl, **fo}
-        return flags(new)
+        return Flags(new)
 
     def rename_nearby(self, parameter='labelid', values=None, searchcomment='', timerange=timedelta(hours=1),
                       debug=False):
@@ -844,7 +844,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             ncont = econt
             if ncont:
                 res[id] = ncont
-        return flags(res)
+        return Flags(res)
 
     def save(self, path=None, destination="file", overwrite=False, debug=False):
         """
@@ -953,7 +953,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                         ncont = econt
                 if ncont:
                     res[id] = ncont
-        return flags(res)
+        return Flags(res)
 
     def stats(self, level=0, intensive=False, output='stdout'):
         """
@@ -1042,7 +1042,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         nd = {key: fl.get(key) for key in fl if key in validids}
         if debug:
             print(" -> new lenght: {}".format(len(nd)))
-        return flags(nd)
+        return Flags(nd)
 
     def union(self, samplingrate=0, level=0, typeforce=True, debug=False):
         """
@@ -1077,7 +1077,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         fl = self.copy()
         if not len(fl) > 0:
             return fl
-        newflags = flags()
+        newflags = Flags()
         ids_to_remember = []
         idlist = []
 
@@ -1243,7 +1243,7 @@ def load(path, sensorid=None, begin=None, end=None, source='file', format='', de
         import magpy.core import flagging
         fl = flagging.load('/my/path/myfile.json')
     """
-    fl = flags()
+    fl = Flags()
     myd = {}
     if not path:
         return fl
@@ -1280,10 +1280,10 @@ def load(path, sensorid=None, begin=None, end=None, source='file', format='', de
             if format == 'json':
                 myd = _readJson(path, debug=debug)
                 # myd_analyse and create flagdict
-                fl = flags(myd)
+                fl = Flags(myd)
             elif format == 'pkl':
                 myd = _readPickle(path, sensorid=sensorid, begin=begin, end=end, debug=debug)
-                fl = flags(myd)
+                fl = Flags(myd)
             fl = fl._check_version(debug=debug)
             if begin or end:
                 fl = fl.trim(starttime=begin, endtime=end)
@@ -1339,7 +1339,7 @@ def convert_to_flags(data, flagtype=2, labelid='030', sensorid=None, keystoflag=
     APPLICATION
         fl = convert_to_flags(data, comment='f,str3',sensorid=nstream.header["SensorID"], userange=False, keystoflag="x")
     """
-    fl = flags()
+    fl = Flags()
     ### identify any given gaps and flag time ranges regarding gaps
     if not isinstance(commentkeys, (list,tuple)):
         commentkeys = ['Flagged']
@@ -1400,7 +1400,7 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
 
     APPLICATION:
     """
-    fl = flags()
+    fl = Flags()
     sr = data.samplingrate()
     if not timerange:
         window = sr * 600
@@ -1503,7 +1503,7 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
     APPLICATION:
     """
 
-    fl = flags()
+    fl = Flags()
     sensorid = data.header.get('SensorID')
     stationid = data.header.get('StationID')
     if not groups:
@@ -1655,7 +1655,7 @@ def flag_binary(data, key, flagtype=0, labelid='070', keystoflag=None, sensorid=
                             text='Maintanence switch for rain bucket',
                             markallon=True, groups=['RCST7':['f'], 'meteosgo':['x']])
     """
-    fl = flags()
+    fl = Flags()
     if not key:
         print("bindetector: define key wih binary data")
         return data
@@ -1750,7 +1750,7 @@ def flag_ultra(data, keys=None, factordict=None, mode='magnetism', groups=None):
     APPLICATION:
     """
 
-    fl = flagging.flags()
+    fl = flagging.Flags()
     sensorid = data.header.get('SensorID')
     stationid = data.header.get('StationID')
     starttime, endtime = data._find_t_limits()  # obtain start and endtime
@@ -1831,11 +1831,11 @@ if __name__ == '__main__':
 
     teststream = create_teststream(startdate=datetime(2022, 11, 22))
 
-    fl = flags()
-    newfl = flags()
-    fo = flags()
-    nextfl = flags()
-    flagsmodified=flags()
+    fl = Flags()
+    newfl = Flags()
+    fo = Flags()
+    nextfl = Flags()
+    flagsmodified=Flags()
     ok = True
     errors = {}
     successes = {}
@@ -1887,7 +1887,7 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR select flags.")
             try:
                 ts = datetime.utcnow()
-                fo = flags()
+                fo = Flags()
                 fo = fo.add(sensorid="GSM90_Y1112_0001",starttime="2022-11-22T10:56:12.654362",endtime="2022-11-22T10:59:12.654362",components=['f'],labelid='050',debug=False)
                 combfl = newfl.join(fo)
                 te = datetime.utcnow()
@@ -1897,7 +1897,7 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR join flags.")
             try:
                 ts = datetime.utcnow()
-                fo = flags()
+                fo = Flags()
                 fo = fo.add(sensorid="GSM90_Y1112_0001",starttime="2022-11-22T10:56:12.654362",endtime="2022-11-22T10:59:12.654362",components=['f'],labelid='050',debug=False)
                 fo.stats()
                 te = datetime.utcnow()
