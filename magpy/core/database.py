@@ -68,22 +68,22 @@ class DataBank(object):
         class | method | since version | until version | runtime test | result verification | manual | *tested by
         ----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
         **core.database** |  |          |              |              |  |  |
-        DataBank | _executesql |  2.0.0 |              | yes*          |  |  | many
-        DataBank | alter       | 2.0.0 |               |               |  |  | db.dbinit
-        DataBank | datainfo    | 2.0.0 |               | yes           |  |  | db.write
-        DataBank | dbinit      | 2.0.0 |               |            |  |  |
-        DataBank | delete      | 2.0.0 |               |            |  |  |
-        DataBank | dict_to_fields | 2.0.0 |            |            |  |  | unused?
-        DataBank | fields_to_dict | 2.0.0 |            |            |  |  | db.read, db.get_lines
-        DataBank | get_float   | 2.0.0 |               |             |  |  |
-        DataBank | get_lines   | 2.0.0 |               |            |  |  |
-        DataBank | get_pier    |  2.0.0 |              | yes           |  |  |
-        DataBank | get_string  | 2.0.0 |               |            |  |  |
-        DataBank | info        |  2.0.0 |              | yes           |  |  |
-        DataBank | read        |  2.0.0 |              |               |  |  |
-        DataBank | sensorinfo  | 2.0.0 |               | yes           |  |  | db.write
-        DataBank | set_time_in_datainfo | 2.0.0 |      | yes*           |  |  | db.write
-        DataBank | update      | 2.0.0 |               |            |  |  |
+        DataBank | _executesql |  2.0.0 |              | yes*         |  |  | many
+        DataBank | alter       | 2.0.0 |               |              |  |  | db.dbinit
+        DataBank | datainfo    | 2.0.0 |               | yes          |  |  | db.write
+        DataBank | dbinit      | 2.0.0 |               |              |  |  |
+        DataBank | delete      | 2.0.0 |               |              |  |  |
+        DataBank | dict_to_fields | 2.0.0 |            |              |  |  | unused?
+        DataBank | fields_to_dict | 2.0.0 |            | yes*         |  |  | db.read, db.get_lines
+        DataBank | get_float   | 2.0.0 |               | yes          |  |  |
+        DataBank | get_lines   | 2.0.0 |               | yes          |  |  |
+        DataBank | get_pier    |  2.0.0 |              | yes          |  |  |
+        DataBank | get_string  | 2.0.0 |               | yes          |  |  |
+        DataBank | info        |  2.0.0 |              | yes          |  |  |
+        DataBank | read        |  2.0.0 |              | yes          |  |  |
+        DataBank | sensorinfo  | 2.0.0 |               | yes          |  |  | db.write
+        DataBank | set_time_in_datainfo | 2.0.0 |      | yes*         |  |  | db.write
+        DataBank | update      | 2.0.0 |               |              |  |  |
         DataBank | write       | 2.0.0 |               | yes           |  |  |
 
             | mask_nan        | 2.0.0 |               | yes           |  |  |
@@ -1576,64 +1576,36 @@ class DataBank(object):
                 getdatasql = 'SELECT ' + ','.join(keys) + ' FROM ' + table + ' WHERE ' + whereclause
             else:
                 getdatasql = 'SELECT ' + ','.join(keys) + ' FROM ' + table
-            # print getdatasql
             cursor.execute(getdatasql)
-            rows = list(cursor.fetchall())
-            # print ("readDB: Read rows: {}".format(len(rows)))
+            rows = np.asarray(cursor.fetchall())
             ls = []
             for i in range(len(DataStream().KEYLIST)):
                 ls.append([])
 
-            if len(rows) > 0:
-                for ind, line in enumerate(rows):
-                    for i, elem in enumerate(line):
-                        index = DataStream().KEYLIST.index(keys[i])
-                        if keys[i][-4:] == 'time':
-                            try:
-                                ls[index].append(testtime(elem))
-                            except:
-                                if ind == 0:
-                                    print(
-                                        "readDB: could not identify time! Column {a} contains {b}, which cannot be interpreted as time by the testtime method".format(
-                                            a=keys[i], b=elem))
-                                pass
-                        else:
-                            if keys[i] in DataStream().NUMKEYLIST:
-                                if elem == None or elem == 'null':
-                                    elem = np.nan
-                                ls[index].append(float(elem))
-                            else:
-                                if elem == None or elem == 'null':
-                                    elem = ''
-                                ls[index].append(elem)
-
-                for idx, elem in enumerate(ls):
-                    ls[idx] = np.asarray(elem)
-
-                for key in keys:
-                    # print "Reformating key", key
-                    index = DataStream().KEYLIST.index(key)
-                    col = np.asarray(ls[index])
-                    if not False in checkEqual3(col):
-                        print("readDB: Found identical values only:{}".format(key))
-                        # try:
-                        if len(col) < 1 or str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find(
+            columns = rows.T
+            array = [[] for el in stream.KEYLIST]
+            for idx,key in enumerate(keys):
+                if not False in checkEqual3(columns[idx]):
+                    print("readDB: Found identical values only:{}".format(key))
+                    col = columns[idx]
+                    if len(col) < 1 or str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find(
                                 '0000000000000000') or str(col[0]).find('xyz'):
-                            ls[index] = np.asarray([])
-                        else:
-                            ls[index] = col[:1]
-                    if key in DataStream().NUMKEYLIST:
-                        ls[index] = np.asarray(col).astype('<f8')
+                        array[idx] = np.asarray([])
+                    else:
+                        array[idx] = col[:1]
+                elif key in stream.NUMKEYLIST:
+                    array[idx] = np.asarray(columns[idx], dtype=np.float64)
+                elif key.endswith('time'):
+                    array[idx] = np.asarray(columns[idx], dtype=datetime)
+                else:
+                    array[idx] = np.asarray(columns[idx], dtype=object)
+                # consider nan elemenets - done
 
-                stream.header = self.fields_to_dict(table)
-            else:
-                print("No data found")
-                pass
-
-        stream.ndarray = np.asarray(ls, dtype=object)
+            stream.ndarray = np.asarray(array, dtype=object)
+            stream.header = self.fields_to_dict(table)
 
         cursor.close()
-        return DataStream(header=stream.header, ndarray=stream.ndarray)
+        return stream
 
 
     def sensorinfo(self, sensorid, sensorkeydict=None, sensorrevision='0001'):
@@ -2165,7 +2137,8 @@ if __name__ == '__main__':
         teststream.header['col-var1'] = 'Switch'
         return teststream
 
-    teststream = create_teststream(startdate=datetime(2022, 11, 22))
+    teststream1 = create_teststream(startdate=datetime(2022, 11, 22))
+    teststream2 = create_teststream(startdate=datetime(2022, 11, 23))
 
     ok = True
     errors = {}
@@ -2184,12 +2157,66 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR with __init__.")
             try:
                 ts = datetime.utcnow()
+                db.write(teststream1)
+                db.write(teststream2)
+                te = datetime.utcnow()
+                successes['write'] = ("Version: {}, write: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['write'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with write.")
+            try:
+                ts = datetime.utcnow()
                 db.info('stdout')
                 te = datetime.utcnow()
                 successes['info'] = ("Version: {}, info: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['info'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with info.")
+            try:
+                ts = datetime.utcnow()
+                db.sensorinfo('Test_0001_0001', {'SensorName': 'BestSensorontheGlobe'})
+                te = datetime.utcnow()
+                successes['sensorinfo'] = ("Version: {}, sensorinfo: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['sensorinfo'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with sensorinfo.")
+            try:
+                ts = datetime.utcnow()
+                stationid = db.get_string('DATAINFO', 'Test_0001_0001', 'StationID')
+                print(stationid)
+                te = datetime.utcnow()
+                successes['get_string'] = ("Version: {}, get_string: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['get_string'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with get_string.")
+            try:
+                ts = datetime.utcnow()
+                tablename = db.datainfo(teststream1.header.get('SensorID'), {'DataComment': 'Add something'}, None,
+                                        stationid)
+                print(tablename)
+                te = datetime.utcnow()
+                successes['datainfo'] = ("Version: {}, datainfo: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['datainfo'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with datainfo.")
+            try:
+                ts = datetime.utcnow()
+                data = db.get_lines(tablename, 1000)
+                print(len(data))
+                te = datetime.utcnow()
+                successes['get_lines'] = ("Version: {}, get_lines: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['get_lines'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with get_lines.")
+            try:
+                ts = datetime.utcnow()
+                sr = db.get_float('DATAINFO', teststream1.header.get('SensorID'), 'DataSamplingRate')
+                print (sr)
+                te = datetime.utcnow()
+                successes['get_float'] = ("Version: {}, get_float: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['get_float'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with get_float.")
 
             # If end of routine is reached... break.
             break
