@@ -6,7 +6,7 @@ from magpy.stream import loggerdatabase, magpyversion, basestring, DataStream
 import pymysql as mysql
 import numpy as np
 from datetime import datetime, timedelta
-from magpy.core.methods import testtime, is_number
+from magpy.core.methods import testtime
 
 mysql.install_as_MySQLdb()
 
@@ -23,53 +23,54 @@ class DataBank(object):
         If a flag should be applied to other sensors, you should use the group item, which contains a list
         of sensors or general groups. Groups is a list of dictionaries
 
+    MagPy 2.0:
+        db.read is ~15 times faster then readDB in MagPy1.x
+
     AVAILABLE METHODS:
 
-        dbupload(db, path,stationid,**kwargs):
-        dbupadteDataInfo(db, "MyTable_12345_0001", myheader)
-        dbselect(db, element, table, condition=None, expert=None):
-        dbcoordinates(db, pier, epsgcode='epsg:4326')
-        dbtableexists(db,tablename)
         diline2db(db, dilinestruct, mode=None, **kwargs):
         db2diline(db,**kwargs):
         getBaselineProperties(db,datastream,pier=None,distream=None):
+
         flaglist2db(db,flaglist,mode=None,sensorid=None,modificationdate=None):
         db2flaglist(db,sensorid, begin=None, end=None):
+
         string2dict(string, typ='oldlist'):
 
-        readDB(db, table, starttime=None, endtime=None, sql=None):
-        dbdict2fields(db,header_dict,**kwargs):
-        dbfields2dict(db,datainfoid):
 
         the following methods are contained:
         - _executesql(sqlcommand)  :  execute a sql command
-        - info(destination,level)  :  database information
-        - get_pier(pierid, rp, value)  :  Gets values from DeltaDictionary of the PIERS table
-        - get_float(tablename,sensorid,columnid)  :  Perform a select search and return floats
-        - get_lines()  : Get the last x lines from the selected table
-        - get_string(tablename,sensorid,columnid)  :   Perform a select search and return strings
-        - update(table, [key], [value], condition)  :  perfomr an update call
+        - alter()  :  Use KEYLISTS and changes the columns of standard tables
+        - coordinate(pier, epsgcode)  :  returns tuple with long lat in selected coordinates
+        - datainfo()   :  datainfo already contained - return a valid data id
         - dbinit()  :  Initialize a mysql database and set up standard tables of magpy
         - delete(datainfoid)  :  Delete contents of the database
-        - alter()  :  Use KEYLISTS and changes the columns of standard tables
-        - set_time_in_datainfo()  :  update timerange in datainfo
-        - write()  :    read function parameters (NOT the function) to file
-        - datainfo()   :  datainfo already contained - return a valid data id
-        - sensorinfo(sensorid, sensorkeydict, sensorrevision) :  sensorid already contained
-        - read(tablename,sql,starttime,endtime)  :  read data from db table and return datastream
-        - fields_to_dict(datainfoid) :    extract header from database
         - dict_to_fields(header_dict,mode)  :  save header information in database
+        - fields_to_dict(datainfoid) :    extract header from database
+        - get_float(tablename,sensorid,columnid)  :  Perform a select search and return floats
+        - get_lines()  : Get the last x lines from the selected table
+        - get_pier(pierid, rp, value)  :  Gets values from DeltaDictionary of the PIERS table
+        - get_string(tablename,sensorid,columnid)  :   Perform a select search and return strings
+        - info(destination,level)  :  database information
+        - read(tablename,sql,starttime,endtime)  :  read data from db table and return datastream
+        - select(element, table, condition, expert) : select information from table
+        - sensorinfo(sensorid, sensorkeydict, sensorrevision) :  sensorid already contained
+        - set_time_in_datainfo()  :  update timerange in datainfo
+        - tableexists(dataid)  : returns True if such tables are existing
+        - update(table, [key], [value], condition)  :  perfomr an update call
+        - update_datainfo(tablename, header)  :  update DATAINFO with header information
+        - write()  :    read function parameters (NOT the function) to file
 
-        - nearestpow2
-        - normalize
-        - testtime(variable)     :    returns datetime object if variable can be converted to it
-        - test_timestring(variable)     :
+
+        NOT INCLUDED FROM 1.x database
+        - dbupload  (create archive based on stream2db) - did not find any usages in MagPy and cobsanalysis
 
         class | method | since version | until version | runtime test | result verification | manual | *tested by
         ----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
         **core.database** |  |          |              |              |  |  |
         DataBank | _executesql |  2.0.0 |              | yes*         |  |  | many
         DataBank | alter       | 2.0.0 |               |              |  |  | db.dbinit
+        DataBank | coordinate  | 2.0.0 |               |              |  |  | unused?
         DataBank | datainfo    | 2.0.0 |               | yes          |  |  | db.write
         DataBank | dbinit      | 2.0.0 |               |              |  |  |
         DataBank | delete      | 2.0.0 |               |              |  |  |
@@ -81,18 +82,14 @@ class DataBank(object):
         DataBank | get_string  | 2.0.0 |               | yes          |  |  |
         DataBank | info        |  2.0.0 |              | yes          |  |  |
         DataBank | read        |  2.0.0 |              | yes          |  |  |
+        DataBank | select      | 2.0.0 |               |              |  |  |
         DataBank | sensorinfo  | 2.0.0 |               | yes          |  |  | db.write
         DataBank | set_time_in_datainfo | 2.0.0 |      | yes*         |  |  | db.write
         DataBank | update      | 2.0.0 |               |              |  |  |
+        DataBank | update_datainfo | 2.0.0 |           |              |  |  | unused?
+        DataBank | tableexists | 2.0.0 |               |              |  |  |
         DataBank | write       | 2.0.0 |               | yes           |  |  |
 
-            | mask_nan        | 2.0.0 |               | yes           |  |  |
-            | missingvalue    | 2.0.0 |               | yes           |  |  |
-            | nan_helper      | 2.0.0 |               | yes           |  |  |
-            | nearestpow2     | 2.0.0 |               | yes           |  |  |
-            | normalize       | 2.0.0 |               | yes           |  |  |
-            | testtime        | 2.0.0 |               | yes           |  |  |
-            | test_timestring | 2.0.0 |               | yes           |  |  |
 
     DATABASE FIELDS:
 
@@ -387,6 +384,48 @@ class DataBank(object):
 
         self.db.commit()
         cursor.close()
+
+
+    def coordinates(self, pier="A2", epsgcode='epsg:4326'):
+        """
+        DEFINITION:
+            Extracts coordinate data from piers table
+            and converts the coordinates into a desired
+            coordinate system based on pyproj
+        REQUIREMENTS:
+            pyproj
+            uses db.select
+        PARAMETERS:
+            - pier:        (string) existing pier in PIERS
+            - epsgcode:    (string) code in which the coordinates are transformed to
+                                    default is 4326
+        USED BY:
+            unkown
+        APPLICATION:
+            (long, lat) = db.coordinates("A2")
+        """
+
+        try:
+            from pyproj import Proj, transform
+        except ImportError:
+            print("dbcoordinates: You need to install pyproj to use this method")
+            return (0.0, 0.0)
+
+        startlong = self.select('PierLong', 'PIERS', 'PierID = "{}}"'.format(pier))
+        startlat = self.select('PierLat', 'PIERS', 'PierID = "{}}"'.format(pier))
+        coordsys = self.select('PierCoordinateSystem', 'PIERS', 'PierID = "{}}"'.format(pier))
+        startlong = float(startlong[0].replace(',', '.'))
+        startlat = float(startlat[0].replace(',', '.'))
+        coordsys = coordsys[0].split(',')[1].lower().replace(' ', '')
+
+        # projection 1: GK M34
+        p1 = Proj(init=coordsys)
+        # projection 2: WGS 84
+        p2 = Proj(init=epsgcode)
+        # transform this point to projection 2 coordinates.
+        lon1, lat1 = transform(p1, p2, startlong, startlat)
+
+        return (lon1, lat1)
 
 
     def datainfo(self, sensorid, datakeydict=None, tablenum=None, defaultstation='WIC', updatedb=True):
@@ -1149,7 +1188,7 @@ class DataBank(object):
         cursor.close()
 
 
-    def fields_to_dict(self, datainfoid):
+    def fields_to_dict(self, datainfoid, debug=False):
         """
         DEFINITION:
             Provide datainfoid to get all informations from tables STATION, SENSORS and DATAINFO
@@ -1173,10 +1212,15 @@ class DataBank(object):
             db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysql")
         """
         metadatadict = {}
+        colsstr = ''
+        colselstr = ''
+        cols, colsel = [], []
         cursor = self.db.cursor()
 
         getids = 'SELECT sensorid,stationid FROM DATAINFO WHERE DataID = "' + datainfoid + '"'
-        cursor.execute(getids)
+        msg = self._executesql(cursor, getids)
+        if debug:
+            print (msg)
         ids = cursor.fetchone()
         if not ids:
             return {}
@@ -1608,6 +1652,52 @@ class DataBank(object):
         return stream
 
 
+    def select(self, element, table, condition=None, expert=None, debug=False):
+        """
+        DESCRIPTION:
+            Function to select elements from a table.
+        PARAMETERS:
+            element         (string)
+            table           (string) name of the table
+            condition       (string) Where clause
+            expert          (String) replaces the complete "Where"
+        RETURNS:
+            A list containing the matching elements
+        EXAMPLE:
+            magsenslist = dbselect(db, 'SensorID', 'SENSORS', 'SensorGroup = "Magnetism"')
+            tempsenslist = dbselect(db, 'SensorID', 'SENSORS','SensorElements LIKE "%T%"')
+            lasttime = dbselect(db,'time','DATATABLE',expert="ORDER BY time DESC LIMIT 1")
+
+        """
+        returnlist = []
+        if expert:
+            sql = "SELECT " + element + " from " + table + " " + expert
+        elif not condition:
+            sql = "SELECT " + element + " from " + table
+        else:
+            sql = "SELECT " + element + " from " + table + " WHERE " + condition
+        if debug:
+            print("dbselect SQL:", sql)
+        cursor = self.db.cursor()
+        try:
+            msg = self._executesql(cursor, sql)
+            rows = cursor.fetchall()
+            if debug:
+                print("select rows:", rows)
+                print("select sql call error msg:", msg)
+            for el in rows:
+                if len(el) < 2:
+                    returnlist.append(el[0])
+                else:
+                    returnlist.append(el)
+        except:
+            pass
+
+        self.db.commit()
+        cursor.close()
+        return returnlist
+
+
     def sensorinfo(self, sensorid, sensorkeydict=None, sensorrevision='0001'):
         """
         DEFINITION:
@@ -1837,6 +1927,83 @@ class DataBank(object):
         return 'success'
 
 
+    def update_datainfo(self, tablename, header):
+        """
+        DEFINITION:
+            Method to update DATAINFO table with header information
+            using data from table tablename
+            makes use of the update method
+
+        PARAMETERS:
+            - db:           (mysql database) defined by mysql.connect().
+            - tablename:    (string) name of the table
+        USED BY:
+            unkown
+        APPLICATION:
+            db.update_datainfo("MyTable_12345_0001", myheader)
+        """
+        cursor = self.db.cursor()
+
+        # 1. Select all tables matching table name
+        searchtables = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE '%{}%'".format(tablename)
+        msg = self._executesql(cursor, searchtables)
+        try:
+            rows = list(cursor.fetchall()[0])
+        except:
+            print("dbupdateDataInfo: failed", msg)
+            return
+        for tab in rows:
+            # 2. check whether tab exists
+            searchdatainfo = "SELECT DataID FROM DATAINFO WHERE DataID LIKE '%{}%'".format(tab)
+            msg = self._executesql(cursor, searchdatainfo)
+            try:
+                res = list(cursor.fetchall()[0])
+                exist = True
+            except:
+                print (msg)
+                exist = False
+
+            if exist:
+                updatelst = []
+                for key in header:
+                    if key in self.DATAINFOKEYLIST and not key.startswith('Column'):
+                        self.update('DATAINFO', [key], [header[key]], condition='DataID="{}"'.format(tab))
+            else:
+                print("update_datainfo: insert for non existing table not yet written - TODO")
+
+
+    def tableexists(self, tablename, debug=False):
+        """
+        DESCRIPTION
+            check whether a table existis or not
+        VARIABLES:
+            db   :    a link to a mysql database
+            tablename  :  the table to be searched (%tablename%)
+                          e.g.  MyTable  wil find MyTable, NOTMyTable, OhItsMyTableIndeed
+        USED BY:
+            cobsanalysis - weather_products
+        RETURNS
+            True : if one or more table with %tablename% are existing
+            False : if tablename is NOT found in database db
+        APPLICATION
+            db = DataBank(...)
+            return db.tableexists('MyTable')
+
+        -- added before 1.0.2 --
+        """
+        n = 0
+        sql = "SHOW TABLES LIKE '%{}%'".format(tablename)
+
+        cursor = self.db.cursor()
+        msg = self._executesql(cursor, sql)
+        n = cursor.fetchall()
+        if msg and debug:
+            print (msg)
+        if n > 0:
+            return True
+        else:
+            return False
+
     def write(self, datastream, tablename=None, StationID=None, mode='replace', revision=None, roundtime=0, keepempty=False, debug=False, **kwargs):
 
         """
@@ -2011,8 +2178,8 @@ class DataBank(object):
                     elif key == hkey.replace('unit-col-',''):
                         unitstr = datastream.header[hkey]
 
+                sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
                 try:
-                    sql = "SELECT " + key + " FROM " + tablename + " ORDER BY time DESC LIMIT 1"
                     cursor.execute(sql)
                     count +=1
                 except mysql.Error as e:
