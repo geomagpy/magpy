@@ -71,24 +71,24 @@ class DataBank(object):
         DataBank | _executesql |  2.0.0 |              | yes*         |  |  | many
         DataBank | alter       | 2.0.0 |               | yes          |  |  | db.dbinit
         DataBank | coordinate  | 2.0.0 |               | yes          |  |  | unused?
-        DataBank | datainfo    | 2.0.0 |               | yes          |  |  | db.write
+        DataBank | datainfo    | 2.0.0 |               | yes          | yes* |  | db.write
         DataBank | dbinit      | 2.0.0 |               | yes          |  |  |
         DataBank | delete      | 2.0.0 |               | yes          |  |  |
         DataBank | dict_to_fields | 2.0.0 |            |              |  |  | unused?
-        DataBank | fields_to_dict | 2.0.0 |            | yes*         |  |  | db.read, db.get_lines
-        DataBank | get_float   | 2.0.0 |               | yes          |  |  |
-        DataBank | get_lines   | 2.0.0 |               | yes          |  |  |
+        DataBank | fields_to_dict | 2.0.0 |            | yes*         | yes* |  | db.read, db.get_lines
+        DataBank | get_float   | 2.0.0 |               | yes          | yes |  |
+        DataBank | get_lines   | 2.0.0 |               | yes          | yes |  |
         DataBank | get_pier    |  2.0.0 |              | yes          |  |  |
-        DataBank | get_string  | 2.0.0 |               | yes          |  |  |
+        DataBank | get_string  | 2.0.0 |               | yes          | yes |  |
         DataBank | info        |  2.0.0 |              | yes          |  |  |
-        DataBank | read        |  2.0.0 |              | yes          |  |  |
-        DataBank | select      | 2.0.0 |               | yes          |  |  |
-        DataBank | sensorinfo  | 2.0.0 |               | yes          |  |  | db.write
-        DataBank | set_time_in_datainfo | 2.0.0 |      | yes*         |  |  | db.write
-        DataBank | update      | 2.0.0 |               | yes          |  |  |
+        DataBank | read        |  2.0.0 |              | yes          | yes |  |
+        DataBank | select      | 2.0.0 |               | yes          | yes |  |
+        DataBank | sensorinfo  | 2.0.0 |               | yes          | yes* |  | db.write
+        DataBank | set_time_in_datainfo | 2.0.0 |      | yes*         | yes* |  | db.write
+        DataBank | update      | 2.0.0 |               | yes          | yes |  |
         DataBank | update_datainfo | 2.0.0 |           | yes          |  |  | unused?
-        DataBank | tableexists | 2.0.0 |               | yes          |  |  |
-        DataBank | write       | 2.0.0 |               | yes           |  |  |
+        DataBank | tableexists | 2.0.0 |               | yes          | yes |  |
+        DataBank | write       | 2.0.0 |               | yes          | yes |  |
 
 
     DATABASE FIELDS:

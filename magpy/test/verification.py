@@ -3,6 +3,7 @@ import sys
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 from magpy.stream import *
 from magpy.core.flagging import *
+from magpy.core import database
 
 
 def create_verificationstream(startdate=datetime(2022, 11, 22)):
@@ -564,6 +565,47 @@ class TestFlagging(unittest.TestCase):
         label = results.flagdict.get('233844116124').get('label')
         self.assertEqual(label, 'lightning strike')
 
+class TestDatabase(unittest.TestCase):
+    def test_write(self):
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        db.write(teststream, StationID = 'TST')
+        self.assertTrue(db.tableexists('Test_0002_0001_0001'), "did not find data table")
+
+    def test_get(self):
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        stationid = db.get_string('DATAINFO', 'Test_0002_0001', 'StationID')
+        tablename = db.datainfo(teststream.header.get('SensorID'), {'DataComment' : 'Add something'}, None, stationid)
+        data = db.get_lines(tablename, 1000)
+        sr =  db.get_float('DATAINFO', teststream.header.get('SensorID'), 'DataSamplingRate')
+        self.assertEqual(stationid, 'TST')
+        self.assertEqual(tablename, 'Test_0002_0001_0001')
+        self.assertEqual(len(data), 1000)
+        self.assertEqual(sr, 60)
+
+    def test_updateselect(self):
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        db.update('SENSORS', ['SensorGroup'], ['magnetism'], condition='SensorID="Test_0002_0001"')
+        magsenslist = db.select('SensorID', 'SENSORS', 'SensorGroup = "magnetism"')
+        self.assertEqual(magsenslist[0], 'Test_0002_0001')
+
+    def test_read(self):
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        data = db.read('Test_0002_0001_0001')
+        print (len(data)) # should be 172800
+        self.assertEqual(len(data), 1440)
+
+    """
+    def test_piers(self):
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        pierkeys = ['PierID', 'PierName', 'PierType', 'StationID', 'PierLong', 'PierLat', 'PierAltitude', 'PierCoordinateSystem', 'DeltaDictionary']
+        piervalues1 = ['P1','Karl-Heinzens-Supersockel', 'DI', 'TST', 461344.00, 5481745.00,100, 'EPSG:25832', '']
+        piervalues2 = ['P2','Hans-Rüdigers-Megasockel', 'DI', 'TST', 461348.00, 5481741.00,101, 'EPSG:25832', '']
+        db.update('PIERS', pierkeys, piervalues1)
+        db.update('PIERS', pierkeys, piervalues2)
+        value = db.get_pier('P2','P1','deltaF')
+        (long, lat) = db.coordinates('P1')
+        self.assertEqual(value, 86400)
+    """
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
