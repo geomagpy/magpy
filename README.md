@@ -1865,9 +1865,150 @@ Full application of the joint Sq technique in MagPy works as follows:
         sqcurce = act.sqbase(data, components=['x','y'], baseline_type='joint')
 
 
-## 9. Additional methods and functions
+## 9. MySQL Databases
 
-### 9.1 Testing data validity before submissions to IM and IAGA
+
+### 9.1 Database support
+
+MagPy supports database access and many methods for optimizing data treatment in connection with databases. 
+Among many other benefits, using a database simplifies many typical procedures related to meta-information. 
+Currently, MagPy supports [MySQL] databases. To use these features, you need to have MySQL installed on your system. 
+In the following we provide a brief outline of how to set up and use this optional addition. Please note that a 
+proper usage of the database requires sensor-specific information. In geomagnetism, it is common to combine data 
+from different sensors into one file structure. In this case, such data needs to remain separate for database 
+usage and is only combined when producing [IAGA]/[INTERMAGNET] definitive data. Furthermore, unique sensor 
+information such as type and serial number is required.
+
+        from magpy.core import database
+
+
+### 9.2 Setting up a MagPy database (using MySQL)
+
+Open mysql (e.g. Linux: `mysql -u root -p mysql`) and create a new database. Replace `#DB-NAME` with your database 
+name (e.g. `MyDB`). After creation, you will need to grant privileges to this database to a user of your choice. 
+Please refer to official MySQL documentations for details and further commands.
+
+         mysql> CREATE DATABASE #DB-NAME;
+         mysql> GRANT ALL PRIVILEGES ON #DB-NAME.* TO '#USERNAME'@'%' IDENTIFIED BY '#PASSWORD';
+
+
+### 9.3 Basic usage of a MagPy database
+
+Connect to the data base
+
+         db = database.DataBank("localhost","cobs","8ung2rad","cobsdb")
+
+You access the database the first time you need to initialize a new database
+
+         db.dbinit()
+
+This will set up a predefined table structure to be ready for MagPy interaction 
+MagPy is a dynamic project - if contents are and internal structure is changing you
+can use the `alter` method to updated the table structure to any future version of MagPy
+
+         db.alter()
+
+Add some datastream to the database
+
+         db.write(teststream1)
+
+Add some additional data
+
+         db.write(teststream2)
+
+Get some basic information on the current state of the database
+
+         db.info('stdout')
+
+Check if sensorid is already existining - if not create it and fill with header info
+
+         db.sensorinfo('Test_0001_0001', {'SensorName' : 'BestSensorontheGlobe'})
+
+Get some single string from tables
+
+         stationid = db.get_string('DATAINFO', 'Test_0001_0001', 'StationID')
+         print (stationid)
+
+Get tablename of sensor
+
+         tablename = db.datainfo(teststream1.header.get('SensorID'), {'DataComment' : 'Add something'}, None, stationid)
+         print (tablename)
+
+Generally check if a specific table/data set is existing 
+
+         if db.tableexists('Test_0001_0001_0001'):
+             print (" Yes, this table exists")
+
+Get some recent data lines from this table
+
+         data = db.get_lines(tablename, 1000)
+         print (len(data))
+
+Get some single numerical data from tables
+
+         sr =  db.get_float('DATAINFO', teststream1.header.get('SensorID'), 'DataSamplingRate')
+         print (sr)
+
+Lets put some values into the predefined PIERS table which can be used to store information on all piers of your observatories
+
+         pierkeys = ['PierID', 'PierName', 'PierType', 'StationID', 'PierLong', 'PierLat', 'PierAltitude', 'PierCoordinateSystem', 'DeltaDictionary']
+         piervalues1 = ['P1','Karl-Heinzens-Supersockel', 'DI', 'TST', 461344.00, 5481745.00,100, 'EPSG:25832', '']
+         piervalues2 = ['P2','Hans-Rüdigers-Megasockel', 'DI', 'TST', 461348.00, 5481741.00,101, 'EPSG:25832', '']
+         db.update('PIERS', pierkeys, piervalues1)
+         db.update('PIERS', pierkeys, piervalues2)
+
+The update method can also be used to update basically any information in all other predefined tables
+
+         db.update('SENSORS', ['SensorGroup'], ['magnetism'], condition='SensorID="Test_0001_0001"')
+
+Using select to  generally extract information from any table based on the mysql select command 
+db.select(field_of_interest, table, search_criteria
+
+         magsenslist = db.select('SensorID', 'SENSORS', 'SensorGroup = "magnetism"')
+         print ("Mag sens", magsenslist)
+         tempsenslist = db.select('SensorID', 'SENSORS','SensorElements LIKE "%T%"')
+         print ("Temp sens", tempsenslist)
+         lasttime = db.select('time', 'Test_0001_0001_0001', expert="ORDER BY time DESC LIMIT 1")
+         print ("Last time", lasttime)
+
+There are a few further methods to extract very specific information out of some tables. You can use `get_pier` to 
+obtain delta values with respect to other pillars
+
+         value = db.get_pier('P2','P1','deltaF')
+
+The coordinate method is useful to extract coordinates and convert them into any desired new coordinate-system 
+
+         (long, lat) = db.coordinates('P1')
+
+Reading data is also very simple
+
+         data = db.read('Test_0001_0001_0001') # test with all options sql, starttime, endtime
+
+Please note: MagPy2.0 is approximately 14 times faster then MagPy1.x for such operations.
+
+         data.header['DataSensorOrientation'] = 'HEZ'
+
+Let us change the header information of the data set and then update only the database's header information by the new data header
+
+         db.update_datainfo('Test_0001_0001_0001', data.header)
+
+Delete contents - the following call delete everything except the last day of data. The option samplingrateratio can 
+be used to delete  data in dependency of the sampling rate i.e. samplingrateratio=12 will delete everything older 
+then 12 days with sampling period 1 sec and everything older the 60*12 = 720 days for sampling periods 60 sec. 
+Together with archive functions and optimze sql routines this method is useful to keep the database slim and quick for 
+recent data
+
+         db.delete('Test_0001_0001_0001', timerange=1)
+
+If you want to delete the data base completely use mysql commands
+
+### 9.4 Flagging and databases
+
+text
+
+## 10. Additional methods and functions
+
+### 10.1 Testing data validity before submissions to IM and IAGA
 
 A common and important application used in the geomagnetism community is a general validity check of geomagnetic data to be submitted to the official data repositories [IAGA], WDC, or [INTERMAGNET]. Please note: this is currently under development and will be extended in the near future. A 'one-click' test method will be included in xmagpy in the future, checking:
 
@@ -2020,62 +2161,6 @@ Extracting passwd information within your data transfer scripts:
 
 To be added
 
-
-### 2.12 Database support
-
-MagPy supports database access and many methods for optimizing data treatment in connection with databases. Among many other benefits, using a database simplifies many typical procedures related to meta-information. Currently, MagPy supports [MySQL] databases. To use these features, you need to have MySQL installed on your system. In the following we provide a brief outline of how to set up and use this optional addition. Please note that a proper usage of the database requires sensor-specific information. In geomagnetism, it is common to combine data from different sensors into one file structure. In this case, such data needs to remain separate for database usage and is only combined when producing [IAGA]/[INTERMAGNET] definitive data. Furthermore, unique sensor information such as type and serial number is required.
-
-        import magpy import database as mdb
-
-
-#### 2.12.1 Setting up a MagPy database (using MySQL)
-
-Open mysql (e.g. Linux: `mysql -u root -p mysql`) and create a new database. Replace `#DB-NAME` with your database name (e.g. `MyDB`). After creation, you will need to grant priviledges to this database to a user of your choice. Please refer to official MySQL documentations for details and further commands.
-
-         mysql> CREATE DATABASE #DB-NAME;
-         mysql> GRANT ALL PRIVILEGES ON #DB-NAME.* TO '#USERNAME'@'%' IDENTIFIED BY '#PASSWORD';
-
-
-#### 2.12.2 Initializing a MagPy database
-
-Connecting to a database using MagPy is done using following command:
-
-        db = mdb.mysql.connect(host="localhost",user="#USERNAME",passwd="#PASSWORD",db="#DB-NAME")
-        mdb.dbinit(db)
-
-#### 2.12.3 Adding data to the database
-
-Examples of useful meta-information:
-
-        iagacode = 'WIC'
-        data = read(example1)
-        gsm = data.selectkeys(['f'])
-        fge = data.selectkeys(['x','y','z'])
-        gsm.header['SensorID'] = 'GSM90_12345_0002'
-        gsm.header['StationID'] = iagacode
-        fge.header['SensorID'] = 'FGE_22222_0001'
-        fge.header['StationID'] = iagacode
-        mdb.writeDB(db,gsm)
-        mdb.writeDB(db,fge)
-
-All available meta-information will be added automatically to the relevant database tables. The SensorID scheme consists of three parts: instrument (GSM90), serial number (12345), and a revision number (0002) which might change in dependency of maintenance, calibration, etc. As you can see in the example above, we separate data from different instruments, which we recommend particularly for high resolution data, as frequency and noise characteristics of sensor types will differ.
-
-
-#### 2.12.4 Reading data
-
-To read data from an established database:
-
-        data = mdb.readDB(db,'GSM90_12345_0002')
-
-Options e.g. starttime='' and endtime='' are similar as for normal `read`.
-
-#### 2.12.5 Meta data
-
-An often used application of database connectivity with MagPy will be to apply meta-information stored in the database to data files before submission. The following command demostrates how to extract all missing meta-information from the database for the selected sensor and add it to the header dictionary of the data object.
-
-        rawdata = read('/path/to/rawdata.bin')
-        rawdata.header = mdb.dbfields2dict(db,'FGE_22222_0001')
-        rawdata.write(..., format_type='IMAGCDF')
 
 
 ### 2.13 Monitoring scheduled scripts

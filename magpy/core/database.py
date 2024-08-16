@@ -411,9 +411,9 @@ class DataBank(object):
             print("dbcoordinates: You need to install pyproj to use this method")
             return (0.0, 0.0)
 
-        startlong = self.select('PierLong', 'PIERS', 'PierID = "{}}"'.format(pier))
-        startlat = self.select('PierLat', 'PIERS', 'PierID = "{}}"'.format(pier))
-        coordsys = self.select('PierCoordinateSystem', 'PIERS', 'PierID = "{}}"'.format(pier))
+        startlong = self.select('PierLong', 'PIERS', 'PierID = "{}"'.format(pier))
+        startlat = self.select('PierLat', 'PIERS', 'PierID = "{}"'.format(pier))
+        coordsys = self.select('PierCoordinateSystem', 'PIERS', 'PierID = "{}"'.format(pier))
         startlong = float(startlong[0].replace(',', '.'))
         startlat = float(startlat[0].replace(',', '.'))
         coordsys = coordsys[0].split(',')[1].lower().replace(' ', '')
@@ -1430,7 +1430,7 @@ class DataBank(object):
 
         return stream.sorting()
 
-    def get_pier(self, pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary'):
+    def get_pier(self, pierid, rp, value='deltaF', maxdate=None, l=False, dic='DeltaDictionary'):
         """
         DEFINITION:
             Gets values from DeltaDictionary of the PIERS table
@@ -1913,18 +1913,13 @@ class DataBank(object):
             setstring = setlist[0]
         updatesql = 'UPDATE %s SET %s %s' % (tablename, setstring, condition)
         cursor = self.db.cursor()
-        print(updatesql)
-        try:
-            cursor.execute(updatesql)
-        except mysql.IntegrityError as message:
-            return message
-        except mysql.Error as message:
-            return message
-        except:
-            return 'dbupdate: unkown error'
+        msg = self._executesql(cursor, updatesql)
         self.db.commit()
         cursor.close()
-        return 'success'
+        if msg:
+            print ("update error:", msg)
+            return False
+        return True
 
 
     def update_datainfo(self, tablename, header):
@@ -1991,7 +1986,7 @@ class DataBank(object):
 
         -- added before 1.0.2 --
         """
-        n = 0
+        n = []
         sql = "SHOW TABLES LIKE '%{}%'".format(tablename)
 
         cursor = self.db.cursor()
@@ -1999,7 +1994,7 @@ class DataBank(object):
         n = cursor.fetchall()
         if msg and debug:
             print (msg)
-        if n > 0:
+        if n and len(n) > 0:
             return True
         else:
             return False
@@ -2302,6 +2297,7 @@ if __name__ == '__main__':
         teststream.header['unit-col-z'] = 'nT'
         teststream.header['unit-col-f'] = 'nT'
         teststream.header['col-var1'] = 'Switch'
+        teststream.header['StationID'] = 'TST'
         return teststream
 
     teststream1 = create_teststream(startdate=datetime(2022, 11, 22))
