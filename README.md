@@ -1894,9 +1894,10 @@ Please refer to official MySQL documentations for details and further commands.
 
 ### 9.3 Basic usage of a MagPy database
 
-Connect to the data base
+Let us assume you have created a database called "mydatabase" and granted access to a user "maxmustermann" with 
+password "geheim" on your computer. Connect to the data base:
 
-         db = database.DataBank("localhost","cobs","8ung2rad","cobsdb")
+         db = database.DataBank("localhost","maxmustermann","geheim","mydatabase")
 
 You access the database the first time you need to initialize a new database
 

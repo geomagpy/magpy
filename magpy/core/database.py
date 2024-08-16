@@ -69,11 +69,11 @@ class DataBank(object):
         ----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
         **core.database** |  |          |              |              |  |  |
         DataBank | _executesql |  2.0.0 |              | yes*         |  |  | many
-        DataBank | alter       | 2.0.0 |               |              |  |  | db.dbinit
-        DataBank | coordinate  | 2.0.0 |               |              |  |  | unused?
+        DataBank | alter       | 2.0.0 |               | yes          |  |  | db.dbinit
+        DataBank | coordinate  | 2.0.0 |               | yes          |  |  | unused?
         DataBank | datainfo    | 2.0.0 |               | yes          |  |  | db.write
-        DataBank | dbinit      | 2.0.0 |               |              |  |  |
-        DataBank | delete      | 2.0.0 |               |              |  |  |
+        DataBank | dbinit      | 2.0.0 |               | yes          |  |  |
+        DataBank | delete      | 2.0.0 |               | yes          |  |  |
         DataBank | dict_to_fields | 2.0.0 |            |              |  |  | unused?
         DataBank | fields_to_dict | 2.0.0 |            | yes*         |  |  | db.read, db.get_lines
         DataBank | get_float   | 2.0.0 |               | yes          |  |  |
@@ -82,12 +82,12 @@ class DataBank(object):
         DataBank | get_string  | 2.0.0 |               | yes          |  |  |
         DataBank | info        |  2.0.0 |              | yes          |  |  |
         DataBank | read        |  2.0.0 |              | yes          |  |  |
-        DataBank | select      | 2.0.0 |               |              |  |  |
+        DataBank | select      | 2.0.0 |               | yes          |  |  |
         DataBank | sensorinfo  | 2.0.0 |               | yes          |  |  | db.write
         DataBank | set_time_in_datainfo | 2.0.0 |      | yes*         |  |  | db.write
-        DataBank | update      | 2.0.0 |               |              |  |  |
-        DataBank | update_datainfo | 2.0.0 |           |              |  |  | unused?
-        DataBank | tableexists | 2.0.0 |               |              |  |  |
+        DataBank | update      | 2.0.0 |               | yes          |  |  |
+        DataBank | update_datainfo | 2.0.0 |           | yes          |  |  | unused?
+        DataBank | tableexists | 2.0.0 |               | yes          |  |  |
         DataBank | write       | 2.0.0 |               | yes           |  |  |
 
 
@@ -414,9 +414,13 @@ class DataBank(object):
         startlong = self.select('PierLong', 'PIERS', 'PierID = "{}"'.format(pier))
         startlat = self.select('PierLat', 'PIERS', 'PierID = "{}"'.format(pier))
         coordsys = self.select('PierCoordinateSystem', 'PIERS', 'PierID = "{}"'.format(pier))
-        startlong = float(startlong[0].replace(',', '.'))
-        startlat = float(startlat[0].replace(',', '.'))
-        coordsys = coordsys[0].split(',')[1].lower().replace(' ', '')
+        if len(startlong) > 0 and len(startlat) > 0 and len(coordsys) > 0:
+            startlong = float(startlong[0].replace(',', '.'))
+            startlat = float(startlat[0].replace(',', '.'))
+            coordsys = coordsys[0].split(',')[1].lower().replace(' ', '')
+        else:
+            print ("coordinates: ne data available for this pier")
+            return (0.0, 0.0)
 
         # projection 1: GK M34
         p1 = Proj(init=coordsys)
@@ -2312,12 +2316,28 @@ if __name__ == '__main__':
         while True:
             try:
                 ts = datetime.utcnow()
-                db = DataBank("localhost","cobs","8ung2rad","cobsdb")
+                db = DataBank("localhost","maxmustermann","geheim","testdb")
                 te = datetime.utcnow()
                 successes['__init__'] = ("Version: {}: __init__ {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['__init__'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with __init__.")
+            try:
+                ts = datetime.utcnow()
+                db.dbinit()
+                te = datetime.utcnow()
+                successes['dbinit'] = ("Version: {}: dbinit {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['dbinit'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with dbinit.")
+            try:
+                ts = datetime.utcnow()
+                db.alter()
+                te = datetime.utcnow()
+                successes['alter'] = ("Version: {}: alter {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['alter'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with alter.")
             try:
                 ts = datetime.utcnow()
                 db.write(teststream1)
@@ -2380,6 +2400,73 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['get_float'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with get_float.")
+            try:
+                ts = datetime.utcnow()
+                if db.tableexists('Test_0001_0001_0001'):
+                    print (" Yes, this table exists")
+                te = datetime.utcnow()
+                successes['tableexists'] = ("Version: {}, tableexists: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['tableexists'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with tableexists.")
+            try:
+                ts = datetime.utcnow()
+                db.update('SENSORS', ['SensorGroup'], ['magnetism'], condition='SensorID="Test_0001_0001"')
+                te = datetime.utcnow()
+                successes['update'] = ("Version: {}, updatet: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['update'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with update.")
+            try:
+                ts = datetime.utcnow()
+                magsenslist = db.select('SensorID', 'SENSORS', 'SensorGroup = "magnetism"')
+                te = datetime.utcnow()
+                successes['select'] = ("Version: {}, select: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['select'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with select.")
+            try:
+                ts = datetime.utcnow()
+                value = db.get_pier('P2','P1','deltaF')
+                te = datetime.utcnow()
+                successes['get_pier'] = ("Version: {}, get_pier: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['get_pier'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with get_pier.")
+            try:
+                ts = datetime.utcnow()
+                (long, lat) = db.coordinates('P1')
+                te = datetime.utcnow()
+                successes['coordinates'] = ("Version: {}, coordinates: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['coordinates'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with coordinates.")
+            try:
+                ts = datetime.utcnow()
+                data = db.read('Test_0001_0001_0001')
+                data = db.read('Test_0001_0001_0001', starttime='2022-11-22T08:00:00', endtime='2022-11-22T10:00:00')
+                # test with all options sql, starttime, endtime
+                te = datetime.utcnow()
+                successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['read'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with read.")
+            try:
+                ts = datetime.utcnow()
+                db.update_datainfo('Test_0001_0001_0001', data.header)
+                te = datetime.utcnow()
+                successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['read'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with read.")
+            try:
+                ts = datetime.utcnow()
+                db.delete('Test_0001_0001_0001', timerange=1)
+                te = datetime.utcnow()
+                successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['read'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with read.")
 
             # If end of routine is reached... break.
             break
