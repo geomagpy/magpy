@@ -77,6 +77,9 @@ class DataBank(object):
         DataBank | delete      | 2.0.0 |               | yes          |  |  |
         DataBank | dict_to_fields | 2.0.0 |            |              |  |  | unused?
         DataBank | fields_to_dict | 2.0.0 |            | yes*         | yes* |  | db.read, db.get_lines
+        DataBank | flags_from_db | 2.0.0 |             | yes          | yes |  |
+        DataBank | flags_to_db | 2.0.0 |               | yes          | yes |  |
+        DataBank | flags_to_delete | 2.0.0 |           | yes          | yes |  |
         DataBank | get_float   | 2.0.0 |               | yes          | yes |  |
         DataBank | get_lines   | 2.0.0 |               | yes          | yes |  |
         DataBank | get_pier    |  2.0.0 |              | yes          |  |  |
@@ -1597,7 +1600,11 @@ class DataBank(object):
                 cont = {}
                 for idx, el in enumerate(fl.FLAGKEYS[1:]):
                     if el in ['components', 'groups', 'probabilities']:
-                        cont[el] = json.loads(line[idx+1])
+                        if line[idx+1]:
+                            co = json.loads(line[idx + 1])
+                        else:
+                            co = line[idx+1]
+                        cont[el] = co
                     else:
                         cont[el] = line[idx+1]
                 res[line[0]] = cont
@@ -2810,6 +2817,35 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['read'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with read.")
+            try:
+                ts = datetime.utcnow()
+                from magpy.core import flagging
+                fl = flagging.Flags()
+                fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],operator='RL',debug=False)
+                fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+                fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T19:56:12.654362",endtime="2022-11-22T19:59:12.654362",components=['x','y','z'],groups={'magnetism':['x','y','z','f'],'LEMI':['x','y','z']}, debug=False)
+                db.flags_to_db(fl)
+                te = datetime.utcnow()
+                successes['flags_to_db'] = ("Version: {}, flags_to_db: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['flags_to_db'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with flags_to_db.")
+            try:
+                ts = datetime.utcnow()
+                db.flags_to_delete(parameter="operator", value="RL")
+                te = datetime.utcnow()
+                successes['flags_to_delete'] = ("Version: {}, flags_to_delete: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['flags_to_delete'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with flags_to_delete.")
+            try:
+                ts = datetime.utcnow()
+                fl = db.flags_from_db()
+                te = datetime.utcnow()
+                successes['flags_from_db'] = ("Version: {}, flags_from_db: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['flags_from_db'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with flags_from_db.")
 
             # If end of routine is reached... break.
             break

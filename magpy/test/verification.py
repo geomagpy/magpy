@@ -607,5 +607,18 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(value, 86400)
     """
 
+    def test_piers(self):
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        self.assertTrue(db.flags_to_delete(parameter="all"))
+        fl = flagging.Flags()
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],operator='RL',debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
+        fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T19:56:12.654362",endtime="2022-11-22T19:59:12.654362",components=['x','y','z'],groups={'magnetism':['x','y','z','f'],'LEMI':['x','y','z']}, debug=False)
+        self.assertTrue(db.flags_to_db(fl))
+        fl1 = db.flags_from_db()
+        self.assertTrue(db.flags_to_delete(parameter="operator", value="RL"))
+        fl2 = db.flags_from_db()
+        self.assertEqual(len(fl1), len(fl2)+1)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

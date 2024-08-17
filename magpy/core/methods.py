@@ -8,6 +8,8 @@ the following methods are contained:
 - convert_geo_coordinate(lon,lat,pro1,pro2)  :  converts geographic coordinates based on EPSG codes
 - deprecated(reason)  :   create decrepated messages
 - denormalize - to be removed
+- dictgetlast()  : get last value of typical old dict structure
+- dict2string()  : convert a dict to string for storage in db table for faster access
 - evaluate_function(component, function, samplingrate, starttime=None, endtime=None, debug=False)
 - extract_date_from_string(datestring)
 - find_nearby(array, value)
@@ -20,6 +22,7 @@ the following methods are contained:
 - nan_helper(y)
 - nearestpow2
 - normalize
+- string2dict()  : convert a string to dict for storage in db table for faster access
 - testtime(variable)     :    returns datetime object if variable can be converted to it
 - test_timestring(variable)     :
 
@@ -30,6 +33,8 @@ class | method | since version | until version | runtime test | result verificat
     | convert_geo_coordinate | 2.0.0 |        | yes           |  |  |
     | deprecated      | 2.0.0 |               | yes           |  |  |
  d  | denoralize      | 2.0.0 |     2.1.0     | no            |  |  |
+    | dictgetlast     | 2.0.0 |               | yes           |  |  |
+    | dict2string     | 2.0.0 |               | yes           |  |  |
     | evaluate_function | 2.0.0 |             | yes           |  |  |
     | extract_date_from_string | 2.0.0 |      | yes           |  |  |
     | find_nearby     | 2.0.0 |               | yes           |  |  |
@@ -43,6 +48,7 @@ class | method | since version | until version | runtime test | result verificat
     | nan_helper      | 2.0.0 |               | yes           |  |  |
     | nearestpow2     | 2.0.0 |               | yes           |  |  |
     | normalize       | 2.0.0 |               | yes           |  |  |
+    | string2dict     | 2.0.0 |               | yes           |  |  |
     | testtime        | 2.0.0 |               | yes           |  |  |
     | test_timestring | 2.0.0 |               | yes           |  |  |
 
@@ -244,6 +250,60 @@ def denormalize(column, startvalue, endvalue):
         raise ValueError("start and endval must be given as absolute times")
 
     return normcol
+
+
+def dict2string(dictionary, typ='dictionary'):
+        """
+        DEFINITION:
+            converts strings (as taken from a database) to a dictionary or a list of dictionaries
+
+        VARIABLES:
+            dictionary    :    dictionary
+            typ           :    dictionary, listofdict, array
+        """
+        string = "{}".format(dictionary).replace("u'", "'")
+        if typ == 'dictionary':
+            string1 = string.replace(' ', '').replace("':'", "_").replace("{", "(").replace("}", ")")
+            string2 = string1.replace("':('", "_(").replace("'),'", ");").replace("','", ";").replace("')),'",
+                                                                                                      "));").replace(
+                "'", "")[1:-1]
+            return string2
+        elif typ == 'listofdict':
+            string1 = string.replace(' ', '').replace("':'", "_").replace("{", "(").replace("}", ")")
+            string2 = string1.replace("'", "")[1:-1]
+            return string2
+
+
+def dicgetlast(dictionary, pier=None, element=None):
+    """
+    DEFINITION:
+        get last delta value inputs from a dictionary with year keys
+    RETURN:
+        Returns a value dictionary
+    APPLICTAION:
+        result = dicgetlast(dictionary,pier='A2',element='deltaD,deltaI,deltaF')
+    EXAMPLE:
+    """
+    returndic = {}
+    if pier:
+        testdic = dictionary[pier]  # append new values here (a2dic[year] = newvaluedict; dic['A2'] = a2dic)
+    else:
+        testdic = dictionary  # append new values here (a2dic[year] = newvaluedict; dic['A2'] = a2dic)
+    if not element:
+        years = [int(ye) for ye in testdic]
+        value = testdic.get(str(max(years)))
+        returndic[str(max(years))] = value
+    else:
+        # get last year for each value
+        listelement = element.split(',')
+        existdelta = []
+        for elem in ['deltaD', 'deltaI', 'deltaF']:
+            # get years when elem was determined
+            years = [int(ye) for ye in testdic if not testdic[ye].get(elem, '') == '']
+            if len(years) > 0:
+                value = testdic.get(str(max(years))).get(elem, '')
+                returndic[elem] = value
+    return returndic
 
 
 def extract_date_from_string(datestring):
@@ -727,6 +787,123 @@ def normalize(column):
     return normcol, minval, maxval
 
 
+
+def string2dict(string, typ='dictionary'):
+    """
+    DEFINITION:
+        converts strings (as taken from a database) to a dictionary or a list of dictionaries
+
+    VARIABLES:
+        string    :    a string like:
+        typ       :    dictionary, listofdict, array
+    # The following convention should apply:
+    # ',' separates list element belonging to a certain key -> []
+    # ';' splits dictionary inputs like {x:y,z:w} -> ','
+    # '_' separtes key and value -> :
+    # '(' defines dictionary input -> { (})
+
+    EXAMPLES:
+        A) dictionary
+         string2dict('A2_(2017_(deltaD_0.00;deltaI_0.201;deltaF_1.12);2018_(deltaF_1.11))')
+         string2dict('data_(x_[1,2,3,4,5];y_[3,2,1,4,5];z_[4,5,6,7,6])')
+         string2dict('2018_0.532')
+         string2dict('2016_0.532;2017_0.231;2018_0.123')
+        B) listofdict
+         string2dict('2016_0.532,2017_0.231,2018_0.123',typ='listofdict')
+         string2dict('st_736677.0,time_timedelta(seconds=-2.3),et_736846.0',typ='listofdict'))
+         string2dict('st_719853.0,f_-1.48,time_timedelta(seconds=-3.0),et_736695.0;st_736695.0,f_-1.57,
+         time_timedelta(seconds=-3.0), et_736951.5;st_736951.5,f_-1.57,time_timedelta(seconds=1.50),et_737060.0;
+         st_737060.0,f_-1.57,time_timedelta(seconds=-0.55)',typ='listofdict')
+        C) array
+         string2dict('2,3,4,5,8;1,2,3,4,5;8,5,6,7,8',typ='array')
+        D) olddeltadict (too be removed)
+         string2dict('A2_2015_0.00_0.00_201510_-0.13,A2_2016_0.00_0.00_201610_-0.06,A2_2017_0.00_0.00_201707_-0.03',
+         typ='olddeltadict')
+
+    APPLICTAION:
+         st = 'A2_(2017_(deltaD_0.00;deltaI_0.201;deltaF_1.12);2018_(deltaF_1.11));A3_(2018_(deltaF_3.43))'
+         dic = string2dict(st)
+         print (dic['A2']['2018'])
+
+    """
+    string = string.replace("\r", "").replace("\n", "").replace(" ", "")
+
+    if typ == 'dictionary':
+        dic = "{}".format(
+            string.replace("(", "{\"").replace(")", "\"}").replace("_", "\":\"").replace(";", "\",\""))
+        dic2 = "{\"" + "{}".format(
+            dic.replace(":\"{", ":{").replace("}\"", "}").replace("\"[", "[").replace("]\"", "]"))
+        if dic2.endswith("}") or dic2.endswith("]"):
+            dic3 = dic2 + "}"
+        else:
+            dic3 = dic2 + "\"}"
+        return eval(dic3)
+    elif typ == 'listofdict':
+        array = []
+        liste = string.split(';')
+        for el in liste:
+            line = el.split(',')
+            dic = {}
+            for elem in line:
+                if not elem.find('_') > 0:
+                    print("Wrong type")
+                dic[elem.split('_')[0].strip()] = elem.split('_')[1].strip()
+            array.append(dic)
+        return array
+    elif typ == 'oldlist':
+        mydict = {}
+        try:
+            if not string == '':
+                try:
+                    elements = string.split(',')
+                except:
+                    return {}
+                for el in elements:
+                    dat = el.split('_')
+                    mydict[dat[0]] = dat[1]
+        except:
+            return mydict
+        return mydict
+    elif typ == 'olddeltadict':  # remove when all inputs are converted
+        # Delta Dictionary looks like
+        # A2_2015_0.00_0.00_201510_-0.13,A2_2016_0.00_0.00_201610_-0.06,A2_2017_0.00_0.00_201707_-0.03
+        pierdic = {}
+        liste = string.strip().split(',')
+        # Extract piers:
+        pierlist = []
+        for el in liste:
+            pier = el.split('_')[0].strip()
+            pierlist.append(pier)
+        pierlist = list(set(pierlist))
+        for pier in pierlist:
+            yeardic = {}
+            for el in liste:
+                valdic = {}
+                vals = el.split('_')
+                if len(vals) == 6 and vals[0] == pier:
+                    if not vals[2] == '0.00':  # not determined
+                        valdic['deltaD'] = vals[2]
+                    if not vals[3] == '0.00':  # not determined
+                        valdic['deltaI'] = vals[3]
+                    if vals[4][:4] == vals[1]:  # only add year
+                        valdic['deltaF'] = vals[5]
+                    yeardic[vals[1]] = valdic
+                    # Eventually add f year
+                    if yeardic.get(vals[4][:4], '') == '':
+                        valdic = {}
+                        valdic['deltaF'] = vals[5]
+                        yeardic[vals[4][:4]] = valdic
+            pierdic[pier] = yeardic
+        return pierdic
+    else:
+        array = []
+        liste = string.split(';')
+        for el in liste:
+            line = el.split(',')
+            array.append(line)
+        return array
+
+
 def testtime(time):
         """
         Check the date/time input and returns a datetime object if valid:
@@ -941,7 +1118,6 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['group_indices'] = str(excep)
         print(datetime.utcnow(), "--- ERROR group_indices.")
-
     try:
         a = test_timestring(testdate)
     except Exception as excep:
@@ -953,6 +1129,25 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['mask_nan'] = str(excep)
         print(datetime.utcnow(), "--- ERROR maskNAN.")
+    try:
+        d1 = string2dict('A2_(2017_(deltaD_0.00;deltaI_0.201;deltaF_1.12);2018_(deltaF_1.11))')
+        d2 = string2dict('st_736677.0,time_timedelta(seconds=-2.3),et_736846.0', typ='listofdict')
+    except Exception as excep:
+        errors['string2dict'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR string2dict.")
+    try:
+        t1 = dict2string(d1)
+        t2 = dict2string(d2, typ='listofdict')
+    except Exception as excep:
+        errors['dict2string'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR dict2string.")
+    try:
+        result = dicgetlast(d1, pier='A2', element='deltaD,deltaI,deltaF')
+        print (result)
+    except Exception as excep:
+        errors['dictgetlast'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR dictgetlast.")
+
     print()
     print("----------------------------------------------------------")
     if errors == {}:
