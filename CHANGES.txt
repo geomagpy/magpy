@@ -10,6 +10,7 @@ Installation instructions can be found on the main download page.
     - removed python 2.x support, cleanup of import and dependencies
     - changed many method with main focus on speed and memory efficiency
     - completely new plotting routines
+    - database methods updated and speeded up (i.e. read is 15times faster than in MagPy1.x)
     - README completely reorganized, updated and partly rewritten
     - jupyter-notebook examples for backend functionality
 
@@ -17,8 +18,8 @@ Installation instructions can be found on the main download page.
     compatible with all datas structures and DB contents created with MagPy1.x
 
 2.0.0 important removals/modifications affecting definitive data production:
-    - internal K_fmi code was replaced by the generally used routine as provided
-      by IAGA
+    - internal geomagnetic activity K code was replaced by the generally used routine as provided
+      by IAGA.
 
 2.0.0 new packages:
     plotting:
@@ -48,6 +49,7 @@ Installation instructions can be found on the main download page.
      - fixed sign error in calculation of F from vector data including provided deltaF values
      - fixed nan error in integration
      - DKA export with missing data
+     - fixed K (FMI) calculation
      - interpreting missing data and adopted baseline corrections when reading BLV
 
 2.0.0 removed items:
