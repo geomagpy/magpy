@@ -5,6 +5,7 @@ sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 from magpy.stream import loggerdatabase, magpyversion, basestring, DataStream
 import pymysql as mysql
 import numpy as np
+import json  # used for storing dictionaries and list in text fields
 from datetime import datetime, timedelta
 from magpy.core.methods import testtime, convert_geo_coordinate
 
@@ -1429,13 +1430,9 @@ class DataBank(object):
             contdict = flagobject.flagdict[d]
             vallist = [flagid]
             for el in contlist:
-                if el in ['components', 'probabilities']:
+                if el in ['components', 'groups', 'probabilities']:
                     # convert lists to string
-                    convstr = ''  # use dict2string
-                    vallist.append(convstr)
-                elif el in ['groups']:
-                    # convert dict to string
-                    convstr = ''  # use dict2string
+                    convstr = json.dumps(contdict.get(el))  # use dict2string
                     vallist.append(convstr)
                 else:
                     vallist.append(contdict.get(el))
@@ -1599,7 +1596,10 @@ class DataBank(object):
             else:
                 cont = {}
                 for idx, el in enumerate(fl.FLAGKEYS[1:]):
-                    cont[el] = line[idx+1]
+                    if el in ['components', 'groups', 'probabilities']:
+                        cont[el] = json.loads(line[idx+1])
+                    else:
+                        cont[el] = line[idx+1]
                 res[line[0]] = cont
         fl = flagging.Flags(res)
         fl = fl._check_version()

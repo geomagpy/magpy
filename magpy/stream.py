@@ -2781,7 +2781,7 @@ CALLED BY:
         DESCRIPTION
             extract values from specific time-list header information
             i.e. alpha and beta values
-            Each haders list structure is transferred into a list
+            Each headers list structure is transferred into a list
             2022_3.23_1.23,2023_21.43_12.2 -> [[2022,2023],[3.23,21.43],[1.23,12.2]]
         OPTIONS
             element (header element) : the header element containing the list type

@@ -7,7 +7,7 @@ the following methods are contained:
 - ceil_dt(datetime,seconds)  :  will round datetime towards the next time step defined by seconds
 - convert_geo_coordinate(lon,lat,pro1,pro2)  :  converts geographic coordinates based on EPSG codes
 - deprecated(reason)  :   create decrepated messages
-- denoralize - to be removed
+- denormalize - to be removed
 - evaluate_function(component, function, samplingrate, starttime=None, endtime=None, debug=False)
 - extract_date_from_string(datestring)
 - find_nearby(array, value)
