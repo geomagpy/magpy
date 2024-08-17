@@ -1917,6 +1917,10 @@ Add some additional data
 
          db.write(teststream2)
 
+Reading data is also very simple. Like for standard streams you can also specify *starttime* and *endtime*: 
+
+         data = db.read('Test_0001_0001_0001')
+
 Get some basic information on the current state of the database
 
          db.info('stdout')
@@ -1981,7 +1985,7 @@ The coordinate method is useful to extract coordinates and convert them into any
 
          (long, lat) = db.coordinates('P1')
 
-Reading data is also very simple
+Lets read again some data:
 
          data = db.read('Test_0001_0001_0001') # test with all options sql, starttime, endtime
 
@@ -2005,7 +2009,25 @@ If you want to delete the data base completely use mysql commands
 
 ### 9.4 Flagging and databases
 
-text
+Working with flagging information is also supported by the database class. There are three methods which can be
+used to store and read flags from databases. An existing flagging object can be stored in the database using the
+following command assuming you flags are contained in variable *fl*
+
+        db.flags_to_db(fl)
+
+Reading flags from the database is done similar. Possible options are starttime, endtime, sensorid, comment, key and
+flagtype:
+
+        flnew = db.flags_from_db()
+
+If you want to delete specific flags from the data base use the `flag_to_delete` command and define a parameter and 
+associated value. Parameter "all" will delete all existing flags in the database
+
+        db.flags_to_delete(parameter="operator", value="RL")
+
+### 9.5 Absolutes and databases
+
+Text
 
 ## 10. Additional methods and functions
 
@@ -2026,7 +2048,7 @@ D) Internal consistency of data
 E) Optional: regional consistency
 
 
-#### 2.7.5 Spectral Analysis and Noise
+### 10.2 Spectral Analysis and Noise
 
 For analysis of the spectral content of data, MagPy provides two basic plotting methods. `plotPS` will calculate and display a power spectrum of the selected component. `plotSpectrogram` will plot a spectrogram of the time series. As usual, there are many options for plot window and processing parameters that can be accessed using the help method.
 
@@ -2037,7 +2059,7 @@ For analysis of the spectral content of data, MagPy provides two basic plotting 
 
 
 
-### 2.9 The art of meta-information
+### 10.3 The art of meta-information
 
 Each data set is accompanied by a dictionary containing meta-information for this data. This dictionary is completely dynamic and can be filled freely, but there are a number of predefined fields that help the user provide essential meta-information as requested by [IAGA], [INTERMAGNET] and other data providers. All meta information is saved only to MagPy-specific archive formats PYCDF and PYSTR. All other export formats save only specific information as required by the projected format.
 
@@ -2060,7 +2082,7 @@ If you want to have a more readable list of the header information, do:
             print ("Key: {} \t Content: {}".format(key,data.header.get(key)))
 
 
-#### 2.9.1 Conversion to ImagCDF - Adding meta-information
+#### 10.4.1 Conversion to ImagCDF - Adding meta-information
 
 To convert data from [IAGA] or IAF formats to the new [INTERMAGNET] CDF format, you will usually need to add additional meta-information required for the new format. MagPy can assist you here, firstly by extracting and correctly adding already existing meta-information into newly defined fields, and secondly by informing you of which information needs to be added for producing the correct output format.
 
@@ -2091,7 +2113,7 @@ Similar reminders to fill out complete header information will be shown for othe
         mydata.write('/tmp',format_type='WDC')
 
 
-#### 2.9.2 Providing location data
+#### 10.4.2 Providing location data
 
 Providing location data usually requires information on the reference system (ellipsoid,...). By default MagPy assumes that these values are provided in WGS84/WGS84 reference system. In order to facilitate most easy referencing and conversions, MagPy supports [EPSG] codes for coordinates. If you provide the geodetic references as follows, and provided that the [proj4] Python package is available, MagPy will automatically convert location data to the requested output format (currently WGS84).
 
@@ -2103,7 +2125,7 @@ Providing location data usually requires information on the reference system (el
         >>>writeIMAGCDF: converting coordinates to epsg 4326
         >>>...
 
-#### 2.9.3 Special meta-information fields
+#### 10.4.3 Special meta-information fields
 
 The meta-information fields can hold much more information than required by most output formats. This includes basevalue and baseline parameters, flagging details, detailed sensor information, serial numbers and much more. MagPy makes use of these possibilities. In order to save this meta-information along with your data set you can use MagPy internal archiving format, `PYCDF`, which can later be converted to any of the aforementioned output formats. You can even reconstruct a full data base. Any upcoming meta-information or output request can be easily added/modified without disrupting already existing data sets and the ability to read and analyse old data. This data format is also based on Nasa CDF. ASCII outputs are also supported by MagPy, of which the `PYSTR` format also contains all meta information and `PYASCII` is the most compact. Please consider that ASCII formats require a lot of memory, especially for one second and higher resolution data.
 
@@ -2112,17 +2134,17 @@ The meta-information fields can hold much more information than required by most
 
 
 
-### 2.10 Data transfer
+### 11 Data transfer
 
 MagPy contains a number of methods to simplify data transfer for observatory applications. Methods within the basic Python functionality can also be very useful. Using the implemented methods requires:
 
         from magpy import transfer as mt
 
-#### 2.10.1 Downloads
+#### 11.10.1 Downloads
 
 Use the `read` method as outlined above. No additional imports are required.
 
-#### 2.10.2 FTP upload
+#### 11.10.2 FTP upload
 
 Files can also be uploaded to an FTP server:
 
@@ -2130,19 +2152,19 @@ Files can also be uploaded to an FTP server:
 
 The upload methods using FTP, SCP and GIN support logging. If the data file failed to upload correctly, the path is added to a log file and, when called again, upload of the file is retried. This option is useful for remote locations with unstable network connections.
 
-#### 2.10.3 Secure communication protocol (SCP)
+#### 11.10.3 Secure communication protocol (SCP)
 
 To transfer via SCP:
 
         mt.scptransfer('user@address:/remote/directory/','/path/to/data.cdf',passwd,timeout=60)
 
-#### 2.10.4 Upload data to GIN
+#### 11.10.4 Upload data to GIN
 
 Use the following command:
 
         mt.ginupload('/path/to/data.cdf', ginuser, ginpasswd, ginaddress, faillog=True, stdout=True)
 
-#### 2.10.5 Avoiding real-text passwords in scripts
+#### 11.10.5 Avoiding real-text passwords in scripts
 
 In order to avoid using real-text password in scripts, MagPy comes along with a simple encryption routine.
 
@@ -2164,7 +2186,7 @@ To be added
 
 
 
-### 2.13 Monitoring scheduled scripts
+### 12.13 Monitoring scheduled scripts
 
 Automated analysis can e easily accomplished by adding a series of MagPy commands into a script. A typical script could be:
 
@@ -2181,20 +2203,20 @@ Automated analysis can e easily accomplished by adding a series of MagPy command
 
 If provided criteria are invalid, then the logfile is changed accordingly. This method can assist you particularly in checking data actuality, data contents, data validity, upload success, etc. In combination with an independent monitoring tool like [Nagios], you can easily create mail/SMS notfications of such changes, in addition to monitoring processes, live times, disks etc. [MARCOS] comes along with some instructions on how to use Nagios/MagPy for data acquisition monitoring.
 
-### 2.14 Data acquisition support
+### 12.14 Data acquisition support
 
 MagPy contains a couple of packages which can be used for data acquisition, collection and organization. These methods are primarily contained in two applications: [MARTAS] and [MARCOS]. MARTAS (Magpy Automated Realtime Acquisition System) supports communication with many common instruments (e.g. GSM, LEMI, POS1, FGE, and many non-magnetic instruments) and transfers serial port signals to [WAMP] (Web Application Messaging Protocol), which allows for real-time data access using e.g. WebSocket communication through the internet. MARCOS (Magpy's Automated Realtime Collection and Organistaion System) can access such real-time streams and also data from many other sources and supports the observer by storing, analyzing, archiving data, as well as monitoring all processes. Details on these two applications can be found elsewhere.
 
 
-### 2.15 Graphical user interface
+### 12.15 Graphical user interface
 
 Many of the above mentioned methods are also available within the graphical user interface of MagPy.
 To use this check the installation instructions for your operating system. You will find Video Tutorials online (to be added) describing its usage for specific analyses.
 
 
-### 2.16 Current developments
+### 12.16 Current developments
 
-#### 2.16.1 Exchange data objects with [ObsPy]
+#### 12.16.1 Exchange data objects with [ObsPy]
 
 MagPy supports the exchange of data with ObsPy, the seismological toolbox. Data objects of both python packages are very similar. Note: ObsPy assumes regular spaced time intervals. Please be careful if this is not the case with your data. The example below shows a simple import routine, on how to read a seed file and plot a spectrogram (which you can identically obtain from ObsPy as well). Conversions to MagPy allow for vectorial analyses, and geomagnetic applications. Conversions to ObsPy are useful for effective high frequency analysis, requiring evenly spaced time intervals, and for exporting to seismological data formats.
 
@@ -2214,7 +2236,7 @@ Using essential python3 packages from apt is also useful, if dependency problems
         sudo apt install python3-scipy, python3-matplotlib, python3-numpy
 
 
-#### 2.16.2 Flagging in ImagCDF
+#### 12.16.2 Flagging in ImagCDF
 
         datawithspikes = read(example1)
         flaggeddata = datawithspikes.flag_outlier(keys=['f'],timerange=timedelta(minutes=1),threshold=3)
@@ -2227,20 +2249,20 @@ The `addflags` option denotes that flagging information will be added to the Ima
         mp.plot(new,['f'],annotate=True)
 
 
-## 3. Predefined scripts
+## 13. Predefined scripts
 
 MagPy comes with a steadily increasing number of applications for various purposes. These applications can be run from some command prompt and allow to simplify/automize some commonly used applications of MagPy. All applications have the same syntax, consisting of the name of application and options. The option -h is available for all applications and provides an overview about purpose and options of the application:
 
         $> application -h
 
 
-### 3.1 Running applications in Linux/MacOs
+### 13.1 Running applications in Linux/MacOs
 
 On Linux Systems all applications are added the bin directory and can be run directly from any command interface/terminal after installation of MagPy:
 
         $> application -h
 
-### 3.2 Running applications in Windows
+### 13.2 Running applications in Windows
 
 After installing MagPy/GeomagPy on Windows, three executables are found in the MagPy program folder. For running applications you have to start the MagPy "command prompt". In this terminal you will have to go to the Scripts directory:
 
@@ -2251,11 +2273,11 @@ And here you now can run the application of your choice using the python environ
         .../Scripts>python application -h
 
 
-### 3.3 Applications
+### 13.3 Applications
 
 The available applications are briefly intruduced in the following. Please refer to "application -h" for all available options for each application.
 
-#### 3.3.1 mpconvert
+#### 13.3.1 mpconvert
 
 mpconvert converts bewteen data formats based on MagPy.
 Typical applications are the conversion of binary data formats
@@ -2275,7 +2297,7 @@ b) Convert IMAGCDF seconds to IAF minute (using IAGA/IM filtering procedures):
 
 mpconvert -r "/srv/products/data/magnetism/definitive/wic2017/ImagCDF/wic_201708_000000_PT1S_4.cdf" -f IAF -i -w "/tmp"
 
-#### 3.3.2 addcred
+#### 13.3.2 addcred
 
 Used to store encrypted credential information for automatic data transfer. So that sensitive information has not to be written in plain text in scripts or cron jobs.
 
@@ -2285,7 +2307,7 @@ a) Add information for ftp data transfer. This information is encrypted and can 
         addcred -t transfer -c zamg -u max -p geheim
                   -a "ftp://ftp.remote.ac.at" -l 21
 
-## 4. List of all MagPy methods
+## 14. List of all MagPy methods
 
 Please use the help method (section 2.3) for descriptions and return values.
 
@@ -2502,36 +2524,13 @@ Please use the help method (section 2.3) for descriptions and return values.
 | tranfer | **ftpget** | ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier,port=None,**kwargs |
 
 
-## 5. Appendix
+## 15. Appendix
 
 
-### 5.1 Installation instructions for Python 2.7
+### 15.1 Extended installation instructions
 
-The current version of magpy is still supporting python 2.7, although it is highly recommended to switch to python >= 3.6. Installation on python 2.7 is more complex, as some packages for graphical user interface and CDF support not as well supported. Please note: None of the addtional steps is necessary for python 3.x.
-
-#### 1.4.1 Pre-installation work
-
-Get a recent version of NasaCDF for your platform, enables CDF support for formats like ImagCDF.
-Package details and files can be found at http://cdf.gsfc.nasa.gov/
-
-On Linux such installation will look like (http://cdf.gsfc.nasa.gov/html/sw_and_docs.html)
-
-        $ tar -zxvf cdf37_0-dist-all.tar.gz
-        $ cd cdf37...
-        $ make OS=linux ENV=gnu CURSES=yes FORTRAN=no UCOPTIONS=-O2 SHARED=yes all
-        $ sudo make INSTALLDIR=/usr/local/cdf install
-
-
-Install the following additional compilers before continuing (required for spacepy):
-     Linux: install gcc
-     MacOs: install gcc and gfortran
-
-Install coordinate system transformation support:
 
         $ sudo apt-get install libproj-dev proj-data proj-bin
-
-
-#### 1.4.2 Install MagPy and dependencies
 
 On Linux this will look like:
 

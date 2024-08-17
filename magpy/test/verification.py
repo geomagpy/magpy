@@ -607,7 +607,7 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(value, 86400)
     """
 
-    def test_piers(self):
+    def test_dbflagging(self):
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
         self.assertTrue(db.flags_to_delete(parameter="all"))
         fl = flagging.Flags()
