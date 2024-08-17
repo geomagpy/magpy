@@ -6,7 +6,7 @@ from magpy.stream import loggerdatabase, magpyversion, basestring, DataStream
 import pymysql as mysql
 import numpy as np
 from datetime import datetime, timedelta
-from magpy.core.methods import testtime
+from magpy.core.methods import testtime, convert_geo_coordinate
 
 mysql.install_as_MySQLdb()
 
@@ -245,9 +245,6 @@ class DataBank(object):
                                 'StationLatitude', 'StationLocationReference', 'StationElevation',
                                 'StationElevationRef', 'StationType', 'StationSince', 'StationUntil', 'StationPicture']
 
-        self.FLAGSKEYLIST = ['FlagID', 'SensorID', 'FlagBeginTime', 'FlagEndTime', 'FlagComponents', 'FlagNum',
-                             'FlagReason', 'ModificationDate']
-
         self.BASELINEKEYLIST = ['SensorID', 'MinTime', 'MaxTime', 'TmpMaxTime', 'BaseFunction', 'BaseDegree',
                                 'BaseKnots', 'BaseComment']
 
@@ -259,6 +256,26 @@ class DataBank(object):
         self.PIERLIST = ['PierID', 'PierName', 'PierAlternativeName', 'PierType', 'PierConstruction', 'StationID',
                          'PierLong', 'PierLat', 'PierAltitude', 'PierCoordinateSystem', 'PierReference',
                          'DeltaDictionary', 'AzimuthDictionary', 'DeltaComment']
+
+        self.FLAGTABLESTRUCT = ['FlagID CHAR(50) NOT NULL PRIMARY KEY',
+                           'SensorID CHAR(50)',
+                           'StartTime DATETIME',
+                           'EndTime DATETIME',
+                           'Components CHAR(100)',  # list
+                           'FlagType INT',
+                           'LabelID CHAR(10)',
+                           'Label CHAR(100)',
+                           'Comment TEXT',
+                           'Groups TEXT',  # dict
+                           'Probabilities CHAR(100)',  # list
+                           'StationID CHAR(10)',
+                           'Validity CHAR(10)',
+                           'Operator CHAR(50)',
+                           'Color CHAR(50)',
+                           'ModificationTime DATETIME',
+                           'FlagVersion CHAR(10)'
+                           ]
+        self.FLAGSKEYLIST = [el.split(" ")[0] for el in self.FLAGTABLESTRUCT]
 
     def _executesql(self, cursor, sqlcommand):
         """
@@ -404,32 +421,26 @@ class DataBank(object):
         APPLICATION:
             (long, lat) = db.coordinates("A2")
         """
+        lon, lat = 0.0, 0.0
 
         try:
             from pyproj import Proj, transform
         except ImportError:
             print("dbcoordinates: You need to install pyproj to use this method")
-            return (0.0, 0.0)
+            return (lon, lat)
 
-        startlong = self.select('PierLong', 'PIERS', 'PierID = "{}"'.format(pier))
-        startlat = self.select('PierLat', 'PIERS', 'PierID = "{}"'.format(pier))
-        coordsys = self.select('PierCoordinateSystem', 'PIERS', 'PierID = "{}"'.format(pier))
+        startlong = self.select('PierLong', 'PIERS', 'PierID LIKE "{}"'.format(pier))
+        startlat = self.select('PierLat', 'PIERS', 'PierID LIKE "{}"'.format(pier))
+        coordsys = self.select('PierCoordinateSystem', 'PIERS', 'PierID LIKE "{}"'.format(pier))
         if len(startlong) > 0 and len(startlat) > 0 and len(coordsys) > 0:
             startlong = float(startlong[0].replace(',', '.'))
             startlat = float(startlat[0].replace(',', '.'))
-            coordsys = coordsys[0].split(',')[1].lower().replace(' ', '')
+            coordsys = coordsys[0].lower().replace(' ', '')
+            lon, lat = convert_geo_coordinate(float(startlong),float(startlat),coordsys,epsgcode)
         else:
-            print ("coordinates: ne data available for this pier")
-            return (0.0, 0.0)
+            print ("coordinates: no data available for this pier")
 
-        # projection 1: GK M34
-        p1 = Proj(init=coordsys)
-        # projection 2: WGS 84
-        p2 = Proj(init=epsgcode)
-        # transform this point to projection 2 coordinates.
-        lon1, lat1 = transform(p1, p2, startlong, startlat)
-
-        return (lon1, lat1)
+        return (lon, lat)
 
 
     def datainfo(self, sensorid, datakeydict=None, tablenum=None, defaultstation='WIC', updatedb=True):
@@ -439,10 +450,8 @@ class DataBank(object):
             returns the full datainfoid
 
         PARAMETERS:
-        Variables:
             - db:             (mysql database) defined by mysql.connect().
             - sensorid:       (string) code for sensor if.
-        Optional variables:
             - datakeydict:    (dict) provide a dictionary with data table information (see DATAINFO) .
             - tablenum:       (string) provide a table number in format '0001' .
                    If tablenum is specified, the corresponding table is selected and DATAINFO is updated with the provided datakeydictdbdatainfo
@@ -827,10 +836,7 @@ class DataBank(object):
 
         # FLAGS TABLE
         # Create flagging table
-        flagstr = ' CHAR(100), '.join(self.FLAGSKEYLIST) + ' CHAR(100)'
-        flagstr = flagstr.replace('FlagID CHAR(100)', 'FlagID CHAR(50) NOT NULL PRIMARY KEY')
-        flagstr = flagstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL')
-        createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS (%s)" % flagstr
+        createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS ({})".format(", ".join(self.FLAGTABLESTRUCT))
 
         # BASELINE TABLE
         # Create baseline table
@@ -841,7 +847,7 @@ class DataBank(object):
         # IP TABLE
         # Create ip addresses table
         ipstr = ' CHAR(100), '.join(self.IPKEYLIST) + ' CHAR(100)'
-        ipstr = ipstr.replace('IP CHAR(100)', 'IP CHAR(50) NOT NULL')
+        ipstr = ipstr.replace('IP CHAR(100)', 'IP CHAR(50) NOT NULL PRIMARY KEY')
         ipstr = ipstr.replace('IpComment CHAR(100)', 'IpComment TEXT')
         ipstr = ipstr.replace('IpSensors CHAR(100)', 'IpSensors TEXT')
         createiptablesql = "CREATE TABLE IF NOT EXISTS IPS (%s)" % ipstr
@@ -849,7 +855,7 @@ class DataBank(object):
         # Pier TABLE
         # Create Pier overview table
         pierstr = ' CHAR(100), '.join(self.PIERLIST) + ' CHAR(100)'
-        pierstr = pierstr.replace('PierID CHAR(100)', 'PierID CHAR(50) NOT NULL')
+        pierstr = pierstr.replace('PierID CHAR(100)', 'PierID CHAR(50) NOT NULL PRIMARY KEY')
         pierstr = pierstr.replace('PierComment CHAR(100)', 'PierComment TEXT')
         pierstr = pierstr.replace('DeltaComment CHAR(100)', 'DeltaComment TEXT')
         pierstr = pierstr.replace('DeltaDictionary CHAR(100)', 'DeltaDictionary TEXT')
@@ -1317,6 +1323,340 @@ class DataBank(object):
 
         return metadatadict
 
+
+    def flags_to_db(self, flagobject, mode='replace', debug=False):
+        """
+        DESCRIPTION:
+           Function to converts a flagging object to a data base table
+           This method is replacing flaglist2db from MagPy 2.0 onwards
+
+        PARAMETER:
+           flagobject: a flagging dictionary based on MagPy 2.0 and later
+
+        OPTIONAL:
+           mode: 'replace': default - replaces information
+                 'insert' : adds if not existing
+
+        APPLICATION:
+           # 1. Upload all flagging data and append to existing sensor info
+           db.flags_to_db(flagobject)
+           # 2. Upload flaglist data for a specific sensor
+           selobj = flagobject.select('sensorid',['list of sensors'])
+           db.flags_to_db(selobj)
+           # 3. Firstly delete all contents for existing sensors in flaglist (or the provided sensorid)
+           #    and then upload flaglist data
+           flaglist2db(db, flaglist, mode='delete')# (, sensorid='MySensor')
+           # 4. Delete all data for a specific sensor
+           flaglist2db(db, [], sensorid='MySensor', mode='delete')
+
+           flaglist2db(db, [], mode='delete') is not supported - use TRUNCATE command in database
+
+        """
+
+        # Flag table old contents
+        oldflaghead = 'FlagID, FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate'
+        vallist = []
+
+        # Flag table new structure and contents
+        flagtablestruct = self.FLAGTABLESTRUCT
+        flaghead = self.FLAGSKEYLIST
+        contlist = flagobject.FLAGKEYS[1:]
+
+        if not self:
+            loggerdatabase.info("flags_to_db: No database connected - aborting")
+            return False
+        if not mode:
+            mode = 'replace'
+        if not flagobject and not len(flagobject) > 1:
+            loggerdatabase.info("flags_to_db: Nothing to do - aborting")
+            return False
+
+        cursor = self.db.cursor()
+
+        loggerdatabase.info("flaglist2db: Running flaglist2db ...")
+
+        # 0. Check whether type of eventually existing flagging table
+        createtab = False
+        oldtab = False
+        msg = self._executesql(cursor, "SHOW COLUMNS FROM FLAGS")
+        if msg:
+            print("flags_to_db error with existing table checks:", msg)
+            print(" Table not yet existing?")
+            createtab = True
+        else:
+            flagids = self.select('FlagID', 'FLAGS')
+            if debug:
+                print("Existing inputs", flagids)
+            rows = cursor.fetchall()
+            colnames = [el[0] for el in rows]
+            if debug:
+                print(" Table existing - found the following column headers", colnames)
+            if 'FlagBeginTime' in colnames and len(flagids) > 0:
+                if debug:
+                    print ("Found old table structure with contents")
+                oldtab = True
+                oldflags = self.flags_from_db(mode='old')
+                if not oldflags and not isinstance(oldflags.flagdict, dict):
+                    return False
+                # Now combine all old flags with the new flags
+                flagobject.join(oldflags)
+            elif 'FlagBeginTime' in colnames:
+                if debug:
+                    print ("Found old table structure without contents")
+                oldtab = True
+
+        if createtab:
+            # Table not yet existing - create a new MagPy>2.x flagging table
+            createflagtablesql = "CREATE TABLE IF NOT EXISTS FLAGS ({})".format(",".join(flagtablestruct))
+            msg = self._executesql(cursor, createflagtablesql)
+            if msg:
+                print("flags_to_db error when creating new flagging table:", msg)
+                return False
+        elif oldtab:
+            createflagtablesql = "CREATE OR REPLACE TABLE FLAGS ({})".format(",".join(flagtablestruct))
+            msg = self._executesql(cursor, createflagtablesql)
+            if msg:
+                print("flags_to_db error when creating new flagging table:", msg)
+                return False
+
+        # 1. Format flagging object to be ready for db upload
+        if mode in ['insert', 'append']:
+            command = "INSERT IGNORE INTO FLAGS"  # do nothing if already present
+        else:
+            command = "REPLACE INTO FLAGS"  # replace if already present
+        for d in flagobject.flagdict:
+            flagid = d
+            contdict = flagobject.flagdict[d]
+            vallist = [flagid]
+            for el in contlist:
+                if el in ['components', 'probabilities']:
+                    # convert lists to string
+                    convstr = ''  # use dict2string
+                    vallist.append(convstr)
+                elif el in ['groups']:
+                    # convert dict to string
+                    convstr = ''  # use dict2string
+                    vallist.append(convstr)
+                else:
+                    vallist.append(contdict.get(el))
+            if debug:
+                print(len(flaghead), len(vallist))
+                print(" Contents of flags to add", vallist)
+                print(" Flagtable heads:", flaghead)
+
+            headstr = ", ".join(flaghead)
+            valflist = []
+            for el in vallist:
+                if isinstance(el, int):
+                    vstr = "{}".format(el)
+                else:
+                    vstr = "'{}'".format(el)
+                valflist.append(vstr)
+            valstr = ", ".join(valflist)
+            flagsql = "{}({}) VALUES ({})".format(command, headstr, valstr)
+
+            if debug:
+                print(flagsql)
+
+            msg = self._executesql(cursor, flagsql)
+            if msg:
+                print("flags_to_db error when inserting/replacing data:", msg)
+                pass
+
+        loggerdatabase.info("flags_to_db: Done")
+        self.db.commit()
+        cursor.close()
+        return True
+
+    def flags_from_db(self, sensorid=None, starttime=None, endtime=None, comment=None, flagtype=-1, labelid=None, key=None,
+                      debug=False, **kwargs):
+        """
+        DEFINITION:
+            Read flagging information from data base and return a flagging objectt
+        PARAMETERS:
+            sensorid:	       (string) provide the requested sensorid or 'all'
+            starttime:	       (string) extract flags which end after this starttime
+            endtime:	       (string) extract flags which begine before this endtime
+            comment
+            flagtpye
+            key
+        RETURNS:
+            flagobject
+        EXAMPLE:
+           fl = db.flag_from_db("MySensorID")
+        """
+        removeduplicates = kwargs.get('removeduplicates')
+        begin = kwargs.get('begin')
+        end = kwargs.get('end')
+        flagnumber = kwargs.get('flagnumber')
+        tabletype = '2.0'  # might be used in the future
+        selecttype = 'SELECT {} FROM FLAGS'.format(", ".join(self.FLAGSKEYLIST))
+
+        if removeduplicates:
+            print(" removeduplicates in flags_from_db decrepated since MagPy 2.0")
+        if starttime:
+            starttime = testtime(starttime)
+        elif begin:
+            print(" begin replaced by starttime in flags_from_db since MagPy 2.0")
+            starttime = testtime(begin)
+        if endtime:
+            endtime = testtime(endtime)
+        elif end and not endtime:
+            print(" end replaced by endtime in flags_from_db since MagPy 2.0")
+            endtime = testtime(end)
+        if flagnumber in [0, 1, 2, 3, 4] and not flagtype == -1:
+            flagtype = flagnumber
+        if sensorid in ['all', 'All', 'ALL']:
+            print(" sensorid 'all' deprecated since MagPy 2.0 - use sensorid=None")
+            sensorid = None
+
+        from magpy.core import flagging
+        fl = flagging.Flags()
+
+        if not self:
+            print(" flags_from_db: No database connected - aborting")
+            return flagging.Flags()
+
+        cursor = self.db.cursor()
+
+        # check type of existing table
+        msg = self._executesql(cursor, "SHOW COLUMNS FROM FLAGS")
+        if msg:
+            print(" flags_from_db: No flagging table existing?")
+            return flagging.Flags()
+        else:
+            flagids = self.select('FlagID', 'FLAGS')
+            if debug:
+                print("Existing amount of inputs:", len(flagids))
+            if not len(flagids) > 0:
+                print(" flags_from_db: No flagging data in table")
+                return flagging.Flags()
+            rows = cursor.fetchall()
+            colnames = [el[0] for el in rows]
+            if debug:
+                print(" Flagging Table with inputs existing - found the following column headers", colnames)
+            if 'FlagBeginTime' in colnames:
+                if debug:
+                    print("Found old table structure with contents")
+                tabletype = '1.0'
+                selecttype = 'SELECT FlagBeginTime, FlagEndTime, FlagComponents, FlagNum, FlagReason, SensorID, ModificationDate FROM FLAGS'
+
+        # now construct WHERE clause
+        serachsql = ''
+        if starttime or endtime or sensorid or labelid or flagnumber or comment:
+            searchsql = 'WHERE'
+            searchlist = []
+            if sensorid:
+                searchlist.append('SensorID = "{}"'.format(sensorid))
+            if starttime:
+                if tabletype == '1.0':
+                    searchlist.append('FlagEndTime >= "{}"'.format(starttime))
+                else:
+                    searchlist.append('EndTime >= "{}"'.format(starttime))
+            if endtime:
+                if tabletype == '1.0':
+                    searchlist.append('FlagBeginTime <= "{}"'.format(endtime))
+                else:
+                    searchlist.append('StartTime <= "{}"'.format(endtime))
+            if comment:
+                if tabletype == '1.0':
+                    searchlist.append('FlagReason LIKE "%{}%"'.format(comment))
+                else:
+                    searchlist.append('Comment LIKE "%{}%"'.format(comment))
+            if labelid:
+                if not tabletype == '1.0':
+                    searchlist.append('LabelID LIKE "{}"'.format(labelid))
+            if flagtype in [0, 1, 2, 3, 4]:
+                if tabletype == '1.0':
+                    searchlist.append('FlagNum LIKE {}'.format(flagtype))
+                else:
+                    searchlist.append('Flagtype LIKE {}'.format(flagtype))
+            if key in DataStream().KEYLIST:
+                if tabletype == '1.0':
+                    searchlist.append('FlagComponents LIKE "%{}%"'.format(key))
+                else:
+                    searchlist.append('Components LIKE "%{}%"'.format(flagtype))
+            serachsql = "{} {}".format(searchsql, " AND ".join(searchlist))
+
+        sqlcommand = "{} {}".format(selecttype, serachsql)
+        msg = self._executesql(cursor, sqlcommand)
+        rows = cursor.fetchall()
+        if debug:
+            print("Obtained {} rows".format(len(rows)))
+        # now construct either old structure
+        # and the run fl = fl._check_version()
+        # {'WIC_1_0001': [['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'x', 3, 'lightning RL', '2023-02-02 10:22:28.888995'], ['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'y', 3, 'lightning RL', '2023-02-02 10:22:28.888995']]}
+        # or extract new type
+        res = {}
+        for line in rows:
+            if tabletype == '1.0':
+                sensid = line[5]
+                itemlist = res.get(sensid, [])
+                comps = line[2].split('_')
+                for elem in comps:
+                    itemlist.append(
+                        [testtime(line[0]), testtime(line[1]), elem, int(line[3]), line[4], line[5], testtime(line[6])])
+            else:
+                cont = {}
+                for idx, el in enumerate(fl.FLAGKEYS[1:]):
+                    cont[el] = line[idx+1]
+                res[line[0]] = cont
+        fl = flagging.Flags(res)
+        fl = fl._check_version()
+
+        self.db.commit()
+        cursor.close()
+        return fl
+
+    def flags_to_delete(self, parameter='sensorid', value=None, debug=False):
+        """
+        DESCRIPTION:
+           Delete specific contents in flagging table as defined by parameter and value
+           This method makes use of flagging.select
+
+        PARAMETER:
+           parameter: a flagging dictionary based on MagPy 2.0 and later
+           value:   a single  value associated with the parameter
+
+           if you chooes parameter="all" then the complete flagging database will be deleted
+           (TRUNCATE FLAGS)
+        EXAMPLE:
+           db.flags_to_delete(parameter="operator", values=["RL"])
+        """
+
+        if parameter == 'sensorid':
+            fl = self.flags_from_db(sensorid=value)
+        elif parameter == 'comment':
+            fl = self.flags_from_db(comment=value)
+        elif parameter == 'labelid':
+            fl = self.flags_from_db(labelid=value)
+        elif parameter == 'flagtype':
+            fl = self.flags_from_db(flagtype=value)
+        else:
+            fl = self.flags_from_db()
+        cursor = self.db.cursor()
+
+        if parameter == 'all':
+            msg = self._executesql(cursor, "TRUNCATE FLAGS")
+            if msg:
+                print(msg)
+        else:
+            fl = fl.select(parameter=parameter, values=[value], debug=debug)
+            flagids = [d for d in fl.flagdict]
+            if debug:
+                print(flagids)
+            for flagid in flagids:
+                delsql = "DELETE FROM FLAGS WHERE FlagID LIKE '{}'".format(flagid)
+                if debug:
+                    print ("Executing: ", delsql)
+                msg = self._executesql(cursor, delsql)
+                if msg:
+                    print(msg)
+        self.db.commit()
+        cursor.close()
+
+        loggerdatabase.info("flags_to_delete: Done")
+        return True
 
     def info(self, destination='log', level='full'):
         """
@@ -1880,13 +2220,13 @@ class DataBank(object):
         """
         DEFINITION:
             Perform an update call to add values into specific keys of the selected table
+            If no condition is provided, then an insert call will be created
         PARAMETERS:
         Variables:
             - db:           (mysql database) defined by mysql.connect().
             - tablename:    name of the table
             - keys:         (list) list of keys to modify
             - values:       (list) list of values for the keys
-        Kwargs:
             - condition:     (string) put in an optional where condition
         APPLICATION:
             dbupdate(db, 'DATAINFO', [], [], condition='SensorID="MySensor"')
@@ -1894,12 +2234,12 @@ class DataBank(object):
         """
         try:
             if not len(keys) == len(values):
-                print("dbupdate: amount of keys does not fit provided values")
+                print("update: amount of keys does not fit provided values")
                 return False
         except:
-            print("dbupdate: keys and values must be provided as list e.g. [key1,key2,...]")
+            print("update: keys and values must be provided as list e.g. [key1,key2,...]")
         if not len(keys) > 0:
-            print("dbupdate: provide at least on key/value pair")
+            print("update: provide at least on key/value pair")
             return False
 
         if not condition:
@@ -1915,7 +2255,10 @@ class DataBank(object):
             setstring = ','.join(setlist)
         else:
             setstring = setlist[0]
-        updatesql = 'UPDATE %s SET %s %s' % (tablename, setstring, condition)
+        if condition:
+            updatesql = 'UPDATE %s SET %s %s' % (tablename, setstring, condition)
+        else:
+            updatesql = "INSERT INTO {} ({}) VALUES ({})".format(tablename, ",".join(keys), ",".join(['"{}"'.format(el) for el in values]))
         cursor = self.db.cursor()
         msg = self._executesql(cursor, updatesql)
         self.db.commit()
