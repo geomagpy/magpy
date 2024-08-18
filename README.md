@@ -1954,11 +1954,17 @@ Get some single numerical data from tables
          sr =  db.get_float('DATAINFO', teststream1.header.get('SensorID'), 'DataSamplingRate')
          print (sr)
 
-Lets put some values into the predefined PIERS table which can be used to store information on all piers of your observatories
+Lets put some values into the predefined PIERS table which can be used to store information on all piers of your 
+observatories
 
          pierkeys = ['PierID', 'PierName', 'PierType', 'StationID', 'PierLong', 'PierLat', 'PierAltitude', 'PierCoordinateSystem', 'DeltaDictionary']
          piervalues1 = ['P1','Karl-Heinzens-Supersockel', 'DI', 'TST', 461344.00, 5481745.00,100, 'EPSG:25832', '']
          piervalues2 = ['P2','Hans-Rüdigers-Megasockel', 'DI', 'TST', 461348.00, 5481741.00,101, 'EPSG:25832', '']
+
+We are using the `update` command to insert above defined data into the table PIERS. Please note that the update command
+will call an "INSERT INTO" mysql command if no *condition* is given. Thus the command will fail in case of already 
+existing inputs. If pier data is already existing add something like *condition="PierID LIKE 'P1'"*.
+
          db.update('PIERS', pierkeys, piervalues1)
          db.update('PIERS', pierkeys, piervalues2)
 

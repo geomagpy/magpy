@@ -7,7 +7,7 @@ import pymysql as mysql
 import numpy as np
 import json  # used for storing dictionaries and list in text fields
 from datetime import datetime, timedelta
-from magpy.core.methods import testtime, convert_geo_coordinate
+from magpy.core.methods import testtime, convert_geo_coordinate, string2dict
 
 mysql.install_as_MySQLdb()
 
@@ -439,7 +439,12 @@ class DataBank(object):
         if len(startlong) > 0 and len(startlat) > 0 and len(coordsys) > 0:
             startlong = float(startlong[0].replace(',', '.'))
             startlat = float(startlat[0].replace(',', '.'))
-            coordsys = coordsys[0].lower().replace(' ', '')
+            try:
+                #coordsys needs to contain somthing like xxx, EPSG : 12345
+                coordsystmp = coordsys[0].split(':')[1].replace(' ', '')
+            except:
+                return (lon, lat)
+            coordsys = "epsg:{}".format(coordsystmp)
             lon, lat = convert_geo_coordinate(float(startlong),float(startlat),coordsys,epsgcode)
         else:
             print ("coordinates: no data available for this pier")
@@ -1781,7 +1786,8 @@ class DataBank(object):
 
         return stream.sorting()
 
-    def get_pier(self, pierid, rp, value='deltaF', maxdate=None, l=False, dic='DeltaDictionary'):
+
+    def get_pier(self, pierid, rp, value='deltaF', maxdate=None, dic='DeltaDictionary'):
         """
         DEFINITION:
             Gets values from DeltaDictionary of the PIERS table
@@ -1792,53 +1798,37 @@ class DataBank(object):
             - RP:           (string) ReferencePier
             - value:        (string) one of 'deltaD', 'deltaI' and 'deltaF' - default is 'deltaF'
             - maxdate:      (string) get last value before maxdate
-            - l:            (bool) if true return a list of all inputs
-            - dic:          (string) dictionary to look at, default is 'DeltaDictionary'
+            - dic:          (string) dictionary to look at, default and currently only usable is 'DeltaDictionary'
         APPLICATION:
-            deltaD =  dbgetPier(db, 'A7','A2','deltaD')
+            deltaD =  db.get_pier('A7','A2','deltaD')
 
             returns deltaD of A7 relative to A2
         """
         sql = 'SELECT '+ dic +' FROM PIERS WHERE PierID = "' + pierid + '"'
         cursor = self.db.cursor()
         cursor.execute(sql)
-        row = cursor.fetchone()
+        row, = cursor.fetchone()
 
         if not row:
-            print("dbgetPier: No data found for your selection")
+            print(" get_pier: No data found for your selection")
             return 0.0
 
-        key = ['pier', 'epochDir', 'deltaD', 'deltaI', 'epochF', 'deltaF']
-        ind = key.index(value)
-        indtdir = key.index('epochDir')
-        indtf = key.index('epochF')
-
-        if not row[0] == None:
-            try:
-                pl1 = row[0].split(',')
-                pierlist = [elem.strip().split('_') for elem in pl1 if elem.split('_')[0] == rp]
-                if l:
-                    return pierlist
-                else:
-                    if not value in ['deltaD','deltaI','deltaF']:
-                        print("dbgetPier: Select a valid value paramater - check help")
-                        return 0.0
-                    if value in ['deltaD','deltaI']:
-                        valuetimes = [t[indtdir] for t in pierlist]
-                    else:
-                        valuetimes = [t[indtf] for t in pierlist]
-                    if not maxdate:
-                        indlv = valuetimes.index(max(valuetimes))
-                        return float(pierlist[indlv][ind])
-                    else:
-                        # reformat maxdate to yearmonth
-                        valuetimes = [el for el in valuetimes if el <= maxdate]
-                        indlv = valuetimes.index(max(valuetimes))
-                        return float(pierlist[indlv][ind])
-            except:
-                print("no deltas found")
-                #return row[0]
+        # Identify version (MagPy1.x - sting, MagPy2.x json)
+        if row.find("_") > 0:
+            print (" get_pier: found old dictionary string - updated elsewhere - where this data is filled in")
+            d = string2dict(row)
         else:
+            d = json.loads(row)
+
+        deltadir = d.get(rp,{})
+        if deltadir:
+            yearlist = [int(year) for year in deltadir]
+            maxyear = max(yearlist)
+            valdir = deltadir.get(str(maxyear))
+            res = valdir.get(value, 0.0)
+            return float(res)
+        else:
+            print ("no deltas found")
             return 0.0
 
 
@@ -2262,7 +2252,7 @@ class DataBank(object):
             setstring = ','.join(setlist)
         else:
             setstring = setlist[0]
-        if condition:
+        if condition:  # might be replaced by INSERT INTO ... ON DUPLICATE UPDATE ...
             updatesql = 'UPDATE %s SET %s %s' % (tablename, setstring, condition)
         else:
             updatesql = "INSERT INTO {} ({}) VALUES ({})".format(tablename, ",".join(keys), ",".join(['"{}"'.format(el) for el in values]))

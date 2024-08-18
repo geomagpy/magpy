@@ -586,7 +586,7 @@ class TestDatabase(unittest.TestCase):
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
         db.update('SENSORS', ['SensorGroup'], ['magnetism'], condition='SensorID="Test_0002_0001"')
         magsenslist = db.select('SensorID', 'SENSORS', 'SensorGroup = "magnetism"')
-        self.assertEqual(magsenslist[0], 'Test_0002_0001')
+        self.assertIn('Test_0002_0001', magsenslist)
 
     def test_read(self):
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
@@ -594,18 +594,17 @@ class TestDatabase(unittest.TestCase):
         print (len(data)) # should be 172800
         self.assertEqual(len(data), 1440)
 
-    """
     def test_piers(self):
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
-        pierkeys = ['PierID', 'PierName', 'PierType', 'StationID', 'PierLong', 'PierLat', 'PierAltitude', 'PierCoordinateSystem', 'DeltaDictionary']
-        piervalues1 = ['P1','Karl-Heinzens-Supersockel', 'DI', 'TST', 461344.00, 5481745.00,100, 'EPSG:25832', '']
-        piervalues2 = ['P2','Hans-Rüdigers-Megasockel', 'DI', 'TST', 461348.00, 5481741.00,101, 'EPSG:25832', '']
-        db.update('PIERS', pierkeys, piervalues1)
-        db.update('PIERS', pierkeys, piervalues2)
-        value = db.get_pier('P2','P1','deltaF')
+        pierkeys = ['PierID', 'PierName', 'PierType', 'StationID', 'PierLong', 'PierLat', 'PierAltitude', 'PierCoordinateSystem', 'DeltaDictionary','AzimuthDictionary']
+        piervalues1 = ['P1','Karl-Heinzens-Supersockel', 'DI', 'TST', '-34894,584', '310264,811','1088,1366', 'GK M34, EPSG: 31253', 'P2_(2015_(deltaF_-0.13);2017_(deltaF_-0.03);2016_(deltaF_-0.06);2018_(deltaF_-0.09);2019_(deltaF_-0.18);2020_(deltaF_-0.19);2021_(deltaF_-0.17);2022_(deltaF_-0.07);2023_(deltaF_-0.23))','Z64351_180.1559161807, T360-075M1_359.25277, Z64388_272.49390, Z64390_87.46448']
+        piervalues2 = ['P2','Hans-Rüdigers-Megasockel', 'DI', 'TST', 461348.00, 5481741.00,101, 'EPSG:25832', 'P2_(2017_(deltaF_-0.85);2016_(deltaI_-0.00019;deltaD_-0.00729;deltaF_-1.33);2019_(deltaF_-0.41);2020_(deltaF_-0.50);2021_(deltaF_-0.77);2022_(deltaF_-0.86);2023_(deltaF_-0.92))','Z64388_268.99712, Z64390_91.41396']
+        db.update('PIERS', pierkeys, piervalues1, condition="PierID LIKE 'P1'")
+        db.update('PIERS', pierkeys, piervalues2, condition="PierID LIKE 'P2'")
+        value = db.get_pier('P1','P2','deltaF')
+        self.assertEqual(value, -0.23)
         (long, lat) = db.coordinates('P1')
-        self.assertEqual(value, 86400)
-    """
+        self.assertEqual(np.round(long,3), 15.865)
 
     def test_dbflagging(self):
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
