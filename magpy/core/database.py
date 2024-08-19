@@ -1603,6 +1603,7 @@ class DataBank(object):
                     print (line)
                 labelid = '000'
                 operator = 'unknown'
+                groups = None
                 comps = line[2].split('_')
                 # round endtime to the next second
                 key = line[5]
@@ -1624,7 +1625,7 @@ class DataBank(object):
                 fl.add(sensorid=key, starttime=st, endtime=et,
                                       components=comps, flagtype=ft, labelid=labelid,
                                       comment=line[4], modificationtime=line[6],
-                                      operator=operator,
+                                      operator=operator, groups=groups,
                                       flagversion='2.0')
             else:
                 cont = {}
