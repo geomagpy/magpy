@@ -287,11 +287,6 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                 {'WIC_1_0001': [['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'x', 3, 'lightning RL', '2023-02-02 10:22:28.888995'], ['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'y', 3, 'lightning RL', '2023-02-02 10:22:28.888995']]}
         """
 
-        def _round_second(obj: datetime) -> datetime:
-            if obj.microsecond >= 500_000:
-                obj += timedelta(seconds=1)
-            return obj.replace(microsecond=0)
-
         newfl = Flags()
         fd = self.flagdict
         converted = False
@@ -311,7 +306,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                 if len(value) > 0:
                     newlist = []
                     for line in value:
-                        # extract all line with indetical infoprmation except components
+                        # extract all line with identical information except components
                         newlist.append(line[:2] + line[3:])
                     # print (newlist)
                     newlist = [i for n, i in enumerate(newlist) if i not in newlist[:n]]
@@ -326,9 +321,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                             ft = 4
                         # round endtime to the next second
                         st = testtime(line[0])
-                        et = _round_second(testtime(line[1]))
+                        et = round_second(testtime(line[1]))
                         if not st <= et:
-                            st = _round_second(testtime(line[0]))
+                            st = round_second(testtime(line[0]))
                             et = testtime(line[1])
                         if commentconversion == 'cobs':
                             labelid, operator = newfl._import_conradosb(line[3])
@@ -346,6 +341,22 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             # if no conversion is necessary
             newfl = self.copy()
             return newfl
+
+
+    def _get_cobs_groups(self, sensorid, comment):
+        """
+        DESCRIPTION
+            Specific method of the Conrad Observatory to obtain some groups from old input
+        """
+        groups = {}
+        if comment.lower().find('ssc') or comment.lower().find('pulsation'):
+            groups['magnetism'] = ['x','y','z','f']
+        if comment.lower().find('earthquake'):
+            if not groups.get('magnetism'):
+                groups['magnetism'] = ['x','y','z']
+        if sensorid.startswith('BLV'):
+            groups['absolutes'] = ['x', 'y', 'z', 'dx', 'dy', 'dz','df']
+        return groups
 
 
     def _import_conradosb(self, comment):

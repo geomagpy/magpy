@@ -7,7 +7,7 @@ import pymysql as mysql
 import numpy as np
 import json  # used for storing dictionaries and list in text fields
 from datetime import datetime, timedelta
-from magpy.core.methods import testtime, convert_geo_coordinate, string2dict
+from magpy.core.methods import testtime, convert_geo_coordinate, string2dict, round_second
 
 mysql.install_as_MySQLdb()
 
@@ -1474,7 +1474,7 @@ class DataBank(object):
         return True
 
     def flags_from_db(self, sensorid=None, starttime=None, endtime=None, comment=None, flagtype=-1, labelid=None, key=None,
-                      debug=False, **kwargs):
+                      debug=False, commentconversion='cobs', **kwargs):
         """
         DEFINITION:
             Read flagging information from data base and return a flagging objectt
@@ -1593,21 +1593,38 @@ class DataBank(object):
         # {'WIC_1_0001': [['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'x', 3, 'lightning RL', '2023-02-02 10:22:28.888995'], ['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'y', 3, 'lightning RL', '2023-02-02 10:22:28.888995']]}
         # or extract new type
         res = {}
-        uniquesens = []
-        if tabletype == '1.0':
-            uniquesens = list(set([line[5] for line in row]))
-            if debug:
-                print (" old type import: {} unique sensors in table".format(len(uniquesens)))
-
-        for line in rows:
+        div = 10000
+        for idx, line in enumerate(rows):
             if tabletype == '1.0':
-                sensid = line[5]
-                itemlist = res.get(sensid, [])
+                # convert it directly to new flagging structure here as I do not need to sort for sensors and split
+                # up components
+                if debug and idx == 0:
+                    print (" old type import")
+                    print (line)
+                labelid = '000'
+                operator = 'unknown'
                 comps = line[2].split('_')
-                for elem in comps:
-                    itemlist.append(
-                        [testtime(line[0]), testtime(line[1]), elem, int(line[3]), line[4], line[5], testtime(line[6])])
-                res[sensid] = itemlist
+                # round endtime to the next second
+                key = line[5]
+                st = testtime(line[0])
+                et = round_second(testtime(line[1]))
+                ft = line[3]
+                if ft == 2:
+                    ft = 4
+                if not st <= et:
+                    st = round_second(testtime(line[0]))
+                    et = testtime(line[1])
+                if commentconversion == 'cobs':
+                    labelid, operator = fl._import_conradosb(line[4])
+                    groups = fl._get_cobs_groups(key,line[4])
+                if idx/div > 1:
+                    div = div + 10000
+                    print (" import reached {}".format(idx))
+                fl.add(sensorid=key, starttime=st, endtime=et,
+                                      components=comps, flagtype=ft, labelid=labelid,
+                                      comment=line[4], modificationtime=line[6],
+                                      operator=operator,
+                                      flagversion='2.0')
             else:
                 cont = {}
                 for idx, el in enumerate(fl.FLAGKEYS[1:]):
@@ -1620,8 +1637,7 @@ class DataBank(object):
                     else:
                         cont[el] = line[idx+1]
                 res[line[0]] = cont
-        fl = flagging.Flags(res)
-        fl = fl._check_version()
+                fl = flagging.Flags(res)
 
         self.db.commit()
         cursor.close()

@@ -22,6 +22,7 @@ the following methods are contained:
 - nan_helper(y)
 - nearestpow2
 - normalize
+- round_second(datettime) :  rounds the given datetime to its next second
 - string2dict()  : convert a string to dict for storage in db table for faster access
 - testtime(variable)     :    returns datetime object if variable can be converted to it
 - test_timestring(variable)     :
@@ -48,6 +49,7 @@ class | method | since version | until version | runtime test | result verificat
     | nan_helper      | 2.0.0 |               | yes           |  |  |
     | nearestpow2     | 2.0.0 |               | yes           |  |  |
     | normalize       | 2.0.0 |               | yes           |  |  |
+    | round_seconds   | 2.0.0 |               | yes           |  |  |
     | string2dict     | 2.0.0 |               | yes           |  |  |
     | testtime        | 2.0.0 |               | yes           |  |  |
     | test_timestring | 2.0.0 |               | yes           |  |  |
@@ -787,6 +789,11 @@ def normalize(column):
     return normcol, minval, maxval
 
 
+def round_second(obj: datetime) -> datetime:
+    if obj.microsecond >= 500_000:
+        obj += timedelta(seconds=1)
+    return obj.replace(microsecond=0)
+
 
 def string2dict(string, typ='dictionary'):
     """
@@ -1129,6 +1136,11 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['mask_nan'] = str(excep)
         print(datetime.utcnow(), "--- ERROR maskNAN.")
+    try:
+        dround = round_second(datetime.utcnow())
+    except Exception as excep:
+        errors['round_second'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR round_second.")
     try:
         d1 = string2dict('A2_(2017_(deltaD_0.00;deltaI_0.201;deltaF_1.12);2018_(deltaF_1.11))')
         d2 = string2dict('st_736677.0,time_timedelta(seconds=-2.3),et_736846.0', typ='listofdict')
