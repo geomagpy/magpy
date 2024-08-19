@@ -1619,7 +1619,8 @@ class DataBank(object):
                     groups = fl._get_cobs_groups(key,line[4])
                 if idx/div > 1:
                     div = div + 10000
-                    print (" import reached {}".format(idx))
+                    if debug:
+                        print (" import reached {}".format(idx))
                 fl.add(sensorid=key, starttime=st, endtime=et,
                                       components=comps, flagtype=ft, labelid=labelid,
                                       comment=line[4], modificationtime=line[6],

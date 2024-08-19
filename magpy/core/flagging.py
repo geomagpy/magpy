@@ -1026,7 +1026,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         return mintime, maxtime
 
 
-    def trim(self, starttime=None, endtime=None, debug=False):
+    def trim(self, starttime="1769-09-14", endtime=datetime.utcnow(), debug=False):
         """
         DESCRIPTION
             trim flag dictionary by given starttime and endtime.
@@ -1063,7 +1063,11 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
     def union(self, samplingrate=0, level=0, typeforce=True, debug=False):
         """
         DESCRIPTION:
-            Method to inspect a flaglist and check for consecutive/overlapping time ranges with identical or similar contents.
+            Method to inspect a flagging object and check for consecutive/overlapping time ranges with identical or
+            similar contents. This method is currently pretty slow if lots of similar data is checked. I.e.
+            200000 similar data points need approximately 3h to be analysed. As such large amounts are unlikely I
+            did not spend much time in more effectivity. Typically less the 1000 points are investigated in fractions
+            of a second.
             Three levels of union are available:
             0 : combine consecutive and overlapping time ranges with identical sensor, flagtype, label, components
             1 : combine consecutive and overlapping time ranges with identical sensor, flagtype, label even if
@@ -1133,7 +1137,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                 # flsens is used for combination
                 idlist = [sensflaglist[0]]
                 if debug:
-                    print("Level 3: ", idlist)
+                    print("Level 3: ", len(idlist))
             if level < 3:
                 idlist = []
                 typs = [[el] for el in typs]
@@ -1144,7 +1148,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                     subidlist = [id for i, id in enumerate(sensflaglist[0]) if sensflaglist[3][i] in typ]
                     idlist.append(subidlist)
                 if debug:
-                    print("Level 2: ", idlist)
+                    print("Level 2: ", len(idlist))
             if level < 2:
                 newidlist = []
                 for lab in labs:
@@ -1158,7 +1162,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                             newidlist.append(labidlst)
                 idlist = newidlist
                 if debug:
-                    print("Level 1: ", idlist)
+                    print("Level 1: ", len(idlist))
             if level < 1:
                 newidlist = []
                 for comp in comps:
@@ -1173,36 +1177,45 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                             newidlist.append(compidlst)
                 idlist = newidlist
                 if debug:
-                    print("Level 0: ", idlist)
+                    print("Level 0: ", len(idlist))
+            ts = datetime.utcnow()
+            div = 1000
             for subids in idlist:  # speed this up
-                for flagid in subids:
+                print ("Aumout of subids", len(subids))
+                for ik, flagid in enumerate(subids):
                     # get start and endtime for all ids and select ids with overlapping/consecutive time ranges
                     # remember combined ids to remove them at the end
+                    if debug:
+                        if ik/div > 1:
+                            div = div+1000
+                            te = datetime.utcnow()
+                            totsec = (te-ts).total_seconds()
+                            print (" finished checking of {} IDs in {} seconds - finishing will need {} sec".format(ik, totsec, totsec*((len(subids)-div)/div)))
                     val = flsens.flagdict.get(flagid)
-                    mod = val.get('modificationtime')
-                    typ = val.get('flagtype')
-                    comps = val.get('components')
                     st = val.get('starttime') - timedelta(seconds=samplingrate)
                     et = val.get('endtime') + timedelta(seconds=samplingrate)
-                    for id2 in subids:
+                    for ij, id2 in enumerate(subids):
                         if not flagid == id2 and not id2 in ids_to_remember:
                             val2 = flsens.flagdict.get(id2)
-                            mod2 = val2.get('modificationtime')
-                            typ2 = val2.get('flagtype')
-                            comps2 = val2.get('components')
                             st2 = val2.get('starttime')
                             et2 = val2.get('endtime')
                             if st <= st2 <= et or st <= et2 <= et:
                                 # overlap found
+                                mod = val.get('modificationtime')
+                                typ = val.get('flagtype')
+                                comps = val.get('components')
+                                mod2 = val2.get('modificationtime')
+                                typ2 = val2.get('flagtype')
+                                comps2 = val2.get('components')
                                 ids_to_remember.append(flagid)
                                 ids_to_remember.append(id2)
                                 if debug:
-                                    print("Found overlapp for {} and {}".format(flagid, id2))
+                                    print("Found overlap for {} and {}".format(flagid, id2))
                                 newst = np.min([val.get('starttime'), st2])
                                 newet = np.max([val.get('endtime'), et2])
                                 newcomps = list(set(comps + comps2))
                                 primval = val
-                                # select the dictionary with higest flagtype (observers decision, or latest modificationtime)
+                                # select the dictionary with highest flagtype (observers decision, or latest modificationtime)
                                 if typ2 > typ:
                                     primval = val2
                                 if mod2 > mod:

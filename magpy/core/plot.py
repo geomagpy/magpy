@@ -44,10 +44,11 @@ logger.info("Using backend: {}".format(matplotlib.get_backend()))
 #from matplotlib.colors import Normalize
 #from matplotlib.widgets import RectangleSelector, RadioButtons
 #from matplotlib import mlab
-from matplotlib.dates import date2num, num2date
+from matplotlib.dates import date2num, num2date, DateFormatter
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
 
 edgecolor = [0.8, 0.8, 0.8]
 
@@ -69,7 +70,8 @@ def fill_list(mylist, target_len, value):
 def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=None, yranges=None, padding=None,
            symbols=None, symbolcolor=[[0.8, 0.8, 0.8]], title=None, xinds=[None], legend={}, grid={}, patch={},
            fill=None, showpatch=[True], errorbars=None, functions=None, functionfmt="r-", xlabelposition=None,
-           ylabelposition=None, yscale=None, dateformatter=None, width=10, height=4, alpha=0.5, debug=False):
+           ylabelposition=None, yscale=None, dateformatter=None, force=False, width=10, height=4, alpha=0.5,
+           debug=False):
     """
     DESCRIPTION:
         tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a shared x axis based on the first plot.
@@ -115,6 +117,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         ysacle (string)     :    'linear' (default), 'log'
         dateformatter (string) : if provided then autoformat x is activated and the choosen format is used for the datecolumn
                                  i.e. dateformatter="%Y-%m-%d %H"
+        force (bool)        :    plot even with empty DataStream - can be used to plot flag patches without data
         height (float)      :    default 4 - default height of each individual plot
                                  EXAMPLE: height=2
         width (float)       :    default 10 - default width of all plots
@@ -220,7 +223,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
 
         for i, component in enumerate(keys[idx]):
             comp = dat._get_column(component)
-            if len(comp) > 0:
+            if len(comp) > 0 or force:
                 if separate:
                     subplot = int("{}1{}".format(total_keys, total_pos + 1))
                 else:
@@ -281,18 +284,23 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                                          capsize=capsize, ecolor=errorcolor)
                 # Plot the main graph
                 # ------------------
-                plt.plot(t, comp, symbol, color=symbolcolor[idx])
+                if force and not len(comp) > 0 and patch:
+                    # need the time range covered by patches
+                    plt.plot(t, [0.5] * len(t), 'w-', alpha=0.0)
+                    mincomp = 0
+                    maxcomp = 1
+                else:
+                    plt.plot(t, comp, symbol, color=symbolcolor[idx])
+                    mincomp = np.nanmin(comp)
+                    maxcomp = np.nanmax(comp)
                 # plt.hlines(0,t[0],t[-1])
                 plt.yscale(yscale[idx][i])
                 if dateformatter:
-                    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter(dateformatter))
+                    plt.gca().xaxis.set_major_formatter(DateFormatter(dateformatter))
                     # plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=5))
                     plt.gcf().autofmt_xdate()
                 # Padding and y ranges
                 # ------------------
-                mincomp = np.nanmin(comp)
-                maxcomp = np.nanmax(comp)
-
                 adjustrange = False
                 if yranges:
                     adjustrange = False
@@ -319,8 +327,10 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                         l = pat.get(line)
                         patchcomps = l.get('components')
                         if component in patchcomps:
-                            winmin = date2num(l.get('start'))
-                            winmax = date2num(l.get('end'))
+                            # winmin = date2num(l.get('start'))
+                            # winmax = date2num(l.get('end'))
+                            winmin = l.get('start')
+                            winmax = l.get('end')
                             edgecolor = l.get('color')
                             if not edgecolor:
                                 if l.get('flag', 0) in [1, 3]:
