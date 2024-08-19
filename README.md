@@ -1879,11 +1879,6 @@ from different sensors into one file structure. In this case, such data needs to
 usage and is only combined when producing [IAGA]/[INTERMAGNET] definitive data. Furthermore, unique sensor 
 information such as type and serial number is required.
 
-        from magpy.core import database
-
-
-### 9.2 Setting up a MagPy database (using MySQL)
-
 Open mysql (e.g. Linux: `mysql -u root -p mysql`) and create a new database. Replace `#DB-NAME` with your database 
 name (e.g. `MyDB`). After creation, you will need to grant privileges to this database to a user of your choice. 
 Please refer to official MySQL documentations for details and further commands.
@@ -1891,8 +1886,13 @@ Please refer to official MySQL documentations for details and further commands.
          mysql> CREATE DATABASE #DB-NAME;
          mysql> GRANT ALL PRIVILEGES ON #DB-NAME.* TO '#USERNAME'@'%' IDENTIFIED BY '#PASSWORD';
 
+Thats it! Everything else can now be done using MagPy's database support class, which is based on the pymysql 
+package. To enable database support import the following package 
 
-### 9.3 Basic usage of a MagPy database
+        from magpy.core import database
+
+
+### 9.2 Basic usage of a MagPy database
 
 Let us assume you have created a database called "mydatabase" and granted access to a user "maxmustermann" with 
 password "geheim" on your computer. Connect to the data base:
@@ -2013,7 +2013,7 @@ recent data
 
 If you want to delete the data base completely use mysql commands
 
-### 9.4 Flagging and databases
+### 9.3 Flagging and databases
 
 Working with flagging information is also supported by the database class. There are three methods which can be
 used to store and read flags from databases. An existing flagging object can be stored in the database using the
@@ -2031,7 +2031,7 @@ associated value. Parameter "all" will delete all existing flags in the database
 
         db.flags_to_delete(parameter="operator", value="RL")
 
-### 9.5 Absolutes and databases
+### 9.4 Absolutes and databases
 
 Text
 

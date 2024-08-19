@@ -1593,6 +1593,12 @@ class DataBank(object):
         # {'WIC_1_0001': [['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'x', 3, 'lightning RL', '2023-02-02 10:22:28.888995'], ['2018-08-02 14:51:33.999992', '2018-08-02 14:51:33.999992', 'y', 3, 'lightning RL', '2023-02-02 10:22:28.888995']]}
         # or extract new type
         res = {}
+        uniquesens = []
+        if tabletype == '1.0':
+            uniquesens = list(set([line[5] for line in row]))
+            if debug:
+                print (" old type import: {} unique sensors in table".format(len(uniquesens)))
+
         for line in rows:
             if tabletype == '1.0':
                 sensid = line[5]
@@ -1601,6 +1607,7 @@ class DataBank(object):
                 for elem in comps:
                     itemlist.append(
                         [testtime(line[0]), testtime(line[1]), elem, int(line[3]), line[4], line[5], testtime(line[6])])
+                res[sensid] = itemlist
             else:
                 cont = {}
                 for idx, el in enumerate(fl.FLAGKEYS[1:]):
