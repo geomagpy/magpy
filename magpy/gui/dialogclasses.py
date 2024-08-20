@@ -3561,7 +3561,7 @@ class LoadDIDialog(wx.Dialog):
             else:
                 pier = None
                 stationid = None
-                absst = absRead(elem,output='DIListStruct')
+                absst = abs_read(elem,output='DIListStruct')
 
             try:
 

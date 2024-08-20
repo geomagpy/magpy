@@ -1062,6 +1062,8 @@ if __name__ == '__main__':
     testarray3 = np.array([datetime(2024, 11, 22, 5), datetime(2024, 11, 22, 6), datetime(2024, 11, 22, 9), datetime(2024, 11, 22, 11)])
     v = np.array([1, 2, 3, 4, 5, np.nan, 7, 8, 9, 10, 11, 12, 13, 14])
     indlist = [0,2,3,2000,2005,2006,2007,2008,2034,2037,2040,2041,2042,2050]
+    d1 = {}
+    d2 = {}
     try:
         var1 = is_number(teststring)
         var2 = is_number(testnumber)

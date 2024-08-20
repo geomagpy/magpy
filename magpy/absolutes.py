@@ -3,7 +3,10 @@
 import sys
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
+from magpy.stream import loggerabs, magpyversion, basestring, DataStream
 from magpy.core.methods import *
+from urllib.request import urlopen
+import shutil
 
 
 """
@@ -41,19 +44,31 @@ CONTENTS
          - _z(self, f, inc) :  calculate Z from F and inc
          - calcabsolutes(self, **kwargs)  :  Calculates ansolutes using calcdec and calcinc
 
+    Main methods:
+    - _logfile_len(fname, logfilter):
+    - deg2degminsec(value): Function to convert deg.decimals to a string with deg min and seconds.decimals
+    - abs_read(path_or_url=None, dataformat=None, headonly=False, **kwargs)
+    - _abs_read(path_or_url=None, dataformat=None, headonly=False, **kwargs)
+    - absolute_analysis()
+    
+    Removed methods in 2.0.0:
+    - removeAbsFilesFTP(**kwargs):
+    - getAbsFilesFTP(**kwargs):
+
+    
     METHODS OVERVIEW:
     ----------------------------
 
     class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
 ---------  |  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ----------
-**core.absolutes** |   |                 |                 |                |                  |          |
-AbsoluteDIStrcut  |  _match_groups |  2.0.0   |                 |             |           |    | 
-DILineStruct  |  get_data_list   |  2.0.0     |                 |             |               |         |
-DILineStruct  |  get_abs_distruct |  2.0.0    |                 |                |                  |         | 
+**core.absolutes** |    |                 |                 |                |                |          |
+AbsoluteDIStrcut  |              |  2.0.0     |                 |             |               |      | 
+DILineStruct  |  get_data_list   |  2.0.0     |                 |             |               |      |
+DILineStruct  |  get_abs_distruct |  2.0.0    |                 |             |               |      | 
 AbsoluteAnalysis  |  add         |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  extend      |  2.0.0     |                 |             |                 |      |
-AbsoluteAnalysis  |  sorting     |  2.0.0     |                 |            |               |      |
-AbsoluteAnalysis  |  _corrangle  |  2.0.0     |                 |                |             |      |
+AbsoluteAnalysis  |  extend      |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  sorting     |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  _corrangle  |  2.0.0     |                 |             |               |      |
 AbsoluteAnalysis  |  _get_max    |  2.0.0     |                 |             |               |      |
 AbsoluteAnalysis  |  _get_min    |  2.0.0     |                 |             |               |      |
 AbsoluteAnalysis  |  _get_column |  2.0.0     |                 |             |               |      |
@@ -64,7 +79,13 @@ AbsoluteAnalysis  |  _calcinc    |  2.0.0     |                 |             | 
 AbsoluteAnalysis  |  _h          |  2.0.0     |                 |             |               |      |
 AbsoluteAnalysis  |  _z          |  2.0.0     |                 |             |               |      |
 AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |                 |             |               |      |
-       |  _dateparser |  2.0.0          |                 |                |                  |         | 
+           | _logfile_len        |  2.0.0     |                 |             |               |      | 
+           | deg2degminsec       |  2.0.0     |                 |             |               |      | 
+    d      | absRead             |  2.0.0     |  2.1.0          |             |               |      | 
+           | abs_read            |  2.0.0     |                 |             |               |      | 
+           | _abs_read           |  2.0.0     |                 |             |               |      | 
+    d      | absoluteAnalysis    |  2.0.0     |  2.1.0          |             |               |      | 
+           | absolute_analysis   |  2.0.0     |                 |             |               |      | 
          
 """
 
@@ -344,7 +365,6 @@ class AbsoluteData(object):
         self.header = header
         self.MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','JSONABS','AUTODIFABS','AUTODIF','UNKNOWN']
         self.ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
-
 
 
     # ----------------
@@ -1424,7 +1444,7 @@ class AbsoluteData(object):
             stream.calcabsolutes(usestep=2,annualmeans=[20000,1200,43000],printresults=True)
 
         APPLICATION:
-            absst = absRead(path_or_url=abspath,azimuth=azimuth,output='DIListStruct')
+            absst = abs_read(path_or_url=abspath,azimuth=azimuth,output='DIListStruct')
             stream = elem.get_abs_distruct()
             variostr = read(variopath)
             variostr =variostr.rotation(alpha=varioorientation_alpha, beta=varioorientation_beta)
@@ -1609,17 +1629,17 @@ def deg2degminsec(value):
     return str(degree)+":"+str(minutes)+":"+str(seconds)
 
 
+@deprecated("absRead renamed to abs_read")
 def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
+    return abs_read(path_or_url=None, dataformat=None, headonly=False, **kwargs)
+
+
+def abs_read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     """
-    optional keywords:
-    username: for authentication in ftp and ssh access
-    password: for authentication (following the example of http://www.voidspace.org.uk/python/articles/authentication.shtml
+    DESCRIPTION
+        Read DI from file or url for analysis
+        Data is stored in an AbsoluteData() container
     """
-    # Not used so far - maybe for simplifying ftp or ssh
-    username = kwargs.get('username')
-    password = kwargs.get('password')
-    archivepath = kwargs.get('archivepath')
-    output = kwargs.get('output')
 
     # -- No path
     if not path_or_url:
@@ -1633,42 +1653,31 @@ def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         pass
     elif "://" in path_or_url:
         # some URL
-        #proxy_handler = urllib2.ProxyHandler( {'http': '138.22.156.44:8080', 'https' : '138.22.156.44:443', 'ftp' : '138.22.156.44:8021' } )
-        #opener = urllib2.build_opener(proxy_handler,urllib2.HTTPBasicAuthHandler(),urllib2.HTTPHandler, urllib2.HTTPSHandler,urllib2.FTPHandler)
-        # install this opener
-        #urllib2.install_opener(opener)
-
         # extract extension if any
         suffix = '.'+os.path.basename(path_or_url).partition('.')[2] or '.tmp'
         name = os.path.basename(path_or_url).partition('.')[0] # append the full filename to the temporary file
         fh = NamedTemporaryFile(suffix=name+suffix,delete=False)
-        fh.write(urllib2.urlopen(path_or_url).read())
+        fh.write(urlopen(path_or_url).read())
         fh.close()
-        stream = _absRead(fh.name, dataformat, headonly, **kwargs)
+        stream = _abs_read(fh.name, dataformat, headonly, **kwargs)
         os.remove(fh.name)
     else:
         # some file name
         pathname = path_or_url
-        stream = _absRead(pathname, dataformat, headonly, **kwargs)
+        stream = _abs_read(pathname, dataformat, headonly, **kwargs)
         if len(stream) == 0:
             # try to give more specific information why the stream is empty
             if has_magic(pathname) and not glob(pathname):
                 raise Exception("No file matching file pattern: %s" % pathname)
             elif not has_magic(pathname) and not os.path.isfile(pathname):
                 raise IOError(2, "No such file or directory", pathname)
-            # Only raise error if no starttime/endtime has been set. This
-            # will return an empty stream if the user chose a time window with
-            # no data in it.
-            # XXX: Might cause problems if the data is faulty and the user
-            # set starttime/endtime. Not sure what to do in this case.
-            #elif not 'starttime' in kwargs and not 'endtime' in kwargs:
-            #    raise Exception("Cannot open file/files: %s" % pathname)
-
     return stream
 
-def _absRead(filename, dataformat=None, headonly=False, **kwargs):
+
+def _abs_read(filename, dataformat=None, headonly=False, **kwargs):
     """
-    Reads a single file into a ObsPy Stream object.
+    DESCRIPTION
+        Reads a single file and returns an AbsoluteData structure
     """
 
     output = kwargs.get('output')
@@ -1676,7 +1685,7 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
     format_type = None
     if not dataformat:
         # auto detect format - go through all known formats in given sort order
-        for format_type in stream.MAGPY_SUPPORTED_ABSOLUTES_FORMATS:
+        for format_type in AbsoluteData().MAGPY_SUPPORTED_ABSOLUTES_FORMATS:
             # check format
             if isAbsFormat(filename, format_type):
                 break
@@ -1684,26 +1693,31 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
         # format given via argument
         dataformat = dataformat.upper()
         try:
-            formats = [el for el in stream.MAGPY_SUPPORTED_ABSOLUTES_FORMATS if el == dataformat]
+            formats = [el for el in AbsoluteData().MAGPY_SUPPORTED_ABSOLUTES_FORMATS if el == dataformat]
             format_type = formats[0]
         except IndexError:
             msg = "Format \"%s\" is not supported. Supported types: %s"
-            raise TypeError(msg % (dataformat, ', '.join(stream.MAGPY_SUPPORTED_ABSOLUTES_FORMATS)))
+            raise TypeError(msg % (dataformat, ', '.join(AbsoluteData().MAGPY_SUPPORTED_ABSOLUTES_FORMATS)))
     # file format should be known by now
     print("DI format:", format_type)
 
     stream = readAbsFormat(filename, format_type, headonly=headonly, **kwargs)
 
     # If stream could not be read return an empty datastream object
-    try:
+    try:  # check this and replace by something smart
         xxx = len(stream)
     except:
-        stream = DataStream()
+        stream = AbsoluteData()
 
     return stream
 
 
+@deprecated("please use absolute_analysis in the future")
 def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
+    return absolute_analysis(absdata, variodata, scalardata, **kwargs)
+
+
+def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     """
     DEFINITION:
         Analyze absolute data from files or database and create datastream
@@ -1837,7 +1851,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     KEYLIST = DataStream().KEYLIST
     NUMKEYLIST = DataStream().NUMKEYLIST
     if db:
-        import magpy.database as dbase
+        import magpy.core.database as dbase
 
     if db and not absstruct:
         #print("absoluteAnalysis:  You selected a DB. Tyring to import database methods")
@@ -2269,7 +2283,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 for elem in difiles:
                     #if not deltaF:
                     #    deltaF = 0.0
-                    absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
+                    absst = abs_read(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     try:
                         if not len(absst) > 1: # Manual
                             stream = absst[0].get_abs_distruct()
@@ -2588,25 +2602,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     dst = os.path.join(movetoarchive,fname)
                     shutil.move(src,dst)
                 else:
-                    fname = fi.split('/')[-1]
-                    suffix = fname.split('.')[-1]
-                    passwdtyp = fi.split(':')
-                    typus = passwdtyp[0]
-                    port = 21
-                    passwd = passwdtyp[2].split('@')[0]
-                    restpath = passwdtyp[2].split('@')[1]
-                    myproxy = restpath.split('/')[0]
-                    ftppath = restpath.split('/')[1]
-                    login = passwdtyp[1].split('//')[1]
-                    dst = os.path.join(archivepath,fname)
-                    fh = NamedTemporaryFile(suffix=suffix,delete=False)
-                    if debug:
-                        print("Fi: ", fi)
-                    fh.write(urllib2.urlopen(fi).read())
-                    fh.close()
-                    shutil.move(fh.name,dst)
-                    if (typus == 'ftp'):
-                        ftpremove (ftppath=ftppath, filestr=fname, myproxy=myproxy, port=port, login=login, passwd=passwd)
+                    print ("Archiving to FTP deprecated - mount the file system and archive then")
 
     resultstream = resultstream.sorting()
 
@@ -2624,101 +2620,6 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
     return resultstream
 
 
-def getAbsFilesFTP(**kwargs):
-    """
-    Obtain files from the selected directory
-    Requires an analysis and an archive directory for treatment of downloaded absolute files
-    Analysis directory:
-    - contains the newly downloaded files. These files are then analyzed in in case of success transfered to the Archive directory.
-    Archive directory:
-    - contains successfully analyzed data (requires on errors and variometer correction)
-    - downloaded data is checked, whether files are already exist in the archive directory. If true, they are deleted from the ftp server
-    Keywords:
-    localpath
-    ftppath
-    filestr(ing)
-    myproxy
-    port
-    login
-    passwd
-    logfile
-    archivepath
-    """
-    localpath = kwargs.get('localpath')
-    ftppath = kwargs.get('ftppath')
-    filestr = kwargs.get('filestr')
-    myproxy = kwargs.get('myproxy')
-    port = kwargs.get('port')
-    login = kwargs.get('login')
-    passwd = kwargs.get('passwd')
-    logfile = kwargs.get('logfile')
-    analysispath = kwargs.get('analysispath')
-    archivepath = kwargs.get('archivepath')
-    absidentifier = kwargs.get('absidentifier') # Part of filename, which defines absolute files
-
-    if not absidentifier:
-        absidentifier = '*AbsoluteMeas.txt'
-
-    filelist = []
-
-    loggerabs.info(" -- Starting downloading Absolute files from %s" % ftppath)
-
-    # -- Checking whether new data is available
-    ftplist = ftpdirlist (localpath=localpath, ftppath=ftppath, filestr=filestr, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile)
-    if len(ftplist) == 0:
-        loggerabs.info(" ---- AbsDownload: no new data on ftp directory")
-    # -- get local list
-    for infile in iglob(os.path.join(archivepath,absidentifier)):
-        filelist.append(infile)
-
-    # -- Download files to Analysis folder
-    for f in ftplist:
-        loggerabs.info(" ---- Now getting %s" % f)
-        ftpget (localpath=analysispath, ftppath=ftppath, filestr=f, myproxy=myproxy, port=port, login=login, passwd=passwd, logfile=logfile)
-
-    loggerabs.info(" -- Download procedure finished at %s" % ftppath)
-
-    return ftpfilelist, localfilelist
-
-def removeAbsFilesFTP(**kwargs):
-    """
-    Remove files from the selected directory
-    Requires an analysis and an archive directory for treatment of downloaded absolute files
-    Analysis directory:
-    - contains the newly downloaded files. These files are then analyzed in in case of success transfered to the Archive directory.
-    Archive directory:
-    - contains successfully analyzed data (requires on errors and variometer correction)
-    - downloaded data is checked, whether files are already exist in the archive directory. If true, they are deleted from the ftp server
-    Keywords:
-    ftppath
-    filestr(ing)
-    myproxy
-    port
-    login
-    passwd
-    ftpfilelist
-    localfilelist
-    """
-    ftppath = kwargs.get('ftppath')
-    filestr = kwargs.get('filestr')
-    myproxy = kwargs.get('myproxy')
-    port = kwargs.get('port')
-    login = kwargs.get('login')
-    passwd = kwargs.get('passwd')
-    ftpfilelist = kwargs.get('ftpfilelist')
-    localfilelist = kwargs.get('localfilelist')
-
-    loggerabs.info(" -- Starting removing already successfully analyzed files from %s" % ftppath)
-
-    doubles = list(set(ftpfilelist) & set(localfilelist))
-    print(doubles)
-
-    for f in doubles:
-        ftpremove (ftppath=ftppath, filestr=f, myproxy=myproxy, port=port, login=login, passwd=passwd)
-
-    loggerabs.info(" -- Removing procedure finished at %s" % ftppath)
-
-
 # ##################
 # ------------------
 # Main program
@@ -2727,6 +2628,99 @@ def removeAbsFilesFTP(**kwargs):
 
 
 if __name__ == '__main__':
-    print("Starting a test of the Absolutes program:")
-    #msg = PyMagLog()
-    ### TODO: To be implemented
+
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: Absolutes PACKAGE")
+    print("THIS IS A TEST RUN OF THE MAGPY ABSOLUTES PACKAGE.")
+    print("All main methods will be tested. This may take a while.")
+    print("If errors are encountered they will be listed at the end.")
+    print("Otherwise True will be returned")
+    print("----------------------------------------------------------")
+    print()
+
+    #import subprocess
+    # #######################################################
+    #                     Runtime testing
+    # #######################################################
+
+    def create_teststream(startdate=datetime(2022, 11, 21), coverage=86400):
+        # Create a random data signal with some nan values in x and z
+        c = 1000  # 1000 nan values are filled at random places
+        l = coverage
+        array = [[] for el in DataStream().KEYLIST]
+        import scipy
+        win = scipy.signal.windows.hann(60)
+        a = np.random.uniform(20950, 21000, size=int((l + 2880) / 2))
+        b = np.random.uniform(20950, 21050, size=int((l + 2880) / 2))
+        x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        array[1] = np.asarray(x[1440:-1440])
+        a = np.random.uniform(1950, 2000, size=int((l + 2880) / 2))
+        b = np.random.uniform(1900, 2050, size=int((l + 2880) / 2))
+        y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+        array[2] = np.asarray(y[1440:-1440])
+        a = np.random.uniform(44300, 44400, size=(l + 2880))
+        z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+        array[3] = np.asarray(z[1440:-1440])
+        array[4] = np.asarray(np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440])
+        var1 = [0] * l
+        var1[43200:50400] = [1] * 7200
+        varind = DataStream().KEYLIST.index('var1')
+        array[varind] = np.asarray(var1)
+        array[0] = np.asarray([startdate + timedelta(seconds=i) for i in range(0, l)])
+        teststream = DataStream(header={'SensorID': 'Test_0001_0001'}, ndarray=np.asarray(array, dtype=object))
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['col-f'] = 'F'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        teststream.header['unit-col-f'] = 'nT'
+        teststream.header['col-var1'] = 'Switch'
+        teststream.header['StationID'] = 'TST'
+        return teststream
+
+    teststream1 = create_teststream(startdate=datetime(2022, 11, 22))
+    teststream2 = create_teststream(startdate=datetime(2022, 11, 23))
+
+    ok = True
+    errors = {}
+    successes = {}
+    if ok:
+        #testrun = './testflagfile.json' # define a test file later on
+        t_start_test = datetime.utcnow()
+        while True:
+            try:
+                ts = datetime.utcnow()
+                # abs - run calcabsolutes
+                te = datetime.utcnow()
+                successes['__init__'] = ("Version: {}: __init__ {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['__init__'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with __init__.")
+
+            # If end of routine is reached... break.
+            break
+
+        t_end_test = datetime.utcnow()
+        time_taken = t_end_test - t_start_test
+        print(datetime.utcnow(), "- Database runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+        print()
+        print("----------------------------------------------------------")
+        #del_test_files = 'rm {}*'.format(testrun)
+        #subprocess.call(del_test_files,shell=True)
+        if errors == {}:
+            print("0 errors! Great! :)")
+        else:
+            print(len(errors), "errors were found in the following functions:")
+            print(" {}".format(errors.keys()))
+            print()
+            for item in errors:
+                    print(item + " error string:")
+                    print("    " + errors.get(item))
+        print()
+        print("Good-bye!")
+        print("----------------------------------------------------------")

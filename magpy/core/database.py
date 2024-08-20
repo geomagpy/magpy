@@ -2615,6 +2615,7 @@ class DataBank(object):
         cursor.close()
 
 
+
 if __name__ == '__main__':
 
     print()
@@ -2627,7 +2628,6 @@ if __name__ == '__main__':
     print("----------------------------------------------------------")
     print()
 
-    import subprocess
     # #######################################################
     #                     Runtime testing
     # #######################################################
@@ -2872,8 +2872,6 @@ if __name__ == '__main__':
 
         print()
         print("----------------------------------------------------------")
-        #del_test_files = 'rm {}*'.format(testrun)
-        #subprocess.call(del_test_files,shell=True)
         if errors == {}:
             print("0 errors! Great! :)")
         else:

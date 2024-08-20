@@ -1212,6 +1212,12 @@ Show flagged data in a plot:
 
         fig, ax = mp.tsplot(data,['x'],patch=p, height=2)
 
+It is also possible to plot flags without any linkage to a data file. For this purpose you need to supply an empty
+DataStream and then activate the force option of tsplot:
+
+        fig, ax = mp.tsplot(DataStream(), patch=p, height=2, force=True)
+
+
 TODO: add some words on annotation here
 Result: ![6.4.](./magpy/doc/fl_binary.png "Flagging binary data")
 
