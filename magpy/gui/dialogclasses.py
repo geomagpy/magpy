@@ -3566,7 +3566,7 @@ class LoadDIDialog(wx.Dialog):
             try:
 
                 for a in absst:
-                    stream =a.getAbsDIStruct()
+                    stream =a.get_abs_distruct()
                     abslist.append(a)
                     datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
                     pierlist.append(a.pier)
@@ -6358,7 +6358,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         if didict == {}:
             return
         for struc in didict.get('absdata'):
-            datalist = struc.getDataList()
+            datalist = struc.get_data_list()
             #try:
             positionsindex = datalist.index('Positions:\n')
             datadate = datalist[positionsindex+1].split()[0]

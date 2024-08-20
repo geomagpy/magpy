@@ -103,6 +103,8 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     - in comparison to the new format, azimuth data (Miren) is stored the other way round
     - before 2010-08, Miren were stored in two separate lines of length 4    
     """
+    # TODO eventually get the following from some config file
+    miredict = {'UA': 290.0, 'MireTower': 41.80333, 'MireChurch': 51.1831, 'MireCobenzl': 353.698}
 
     azimuth = kwargs.get('azimuth')
     output = kwargs.get('output')

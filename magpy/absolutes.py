@@ -1,61 +1,72 @@
-#!/usr/bin/env python
-"""
-MagPy-absolutes:
-Analysis of DI data.
-Uses mainly two classes
-- DILineStruct (can contain multiple DI measurements; used for storage, database com and autodif)
-- AbsStruct (contains a single measurement, is extended by variation and scalar data, used for calculation)
-Calculation returns a data stream with absolute and baseline values for any selected variometer
+# -*- coding: utf-8 -*-
 
-TEST REPORT in GERMAN/ENGLISH MIX:
-Systematische Tests:
-1.  (11/2013, OK) Laden von Raw-Datem
-2.  Laden von alten Raw-Daten
-3.  (11/2013, OK) Laden von AutoDIF Daten
-4.  (11/2013, OK) Auswertung von gon/deg Daten
-5.  (11/2013, OK) Richtigkeit von Gon-Auswertungen: Vergleich mit Juergens Excel
-6.  (11/2013, OK) Auswertung ohne Vario und/oder Scalardaten
-7.  (11/2013, OK) Systematischer Test - Einfluss der Variometerkorrektur (Korrektur mit basis und nicht basiskorr Variation - sollte identisch sein, korrektur mit unterschiedlichen Varios)
-8.  (11/2013, OK) Systematischer Test der Winkelabhaengigkeit (AutoDiff - Bestimme Tagesvariation in Abhaengigkeit von verschiedenen Winkeln)
-9.  (11/2013, not necessary: raw data is always available and the file wold not contain any additional info - use database if comments are required) Laden und Speichern von DIListStructs
-10. (11/2013, OK) Datenbankspeicherung
-11. Create a direct DataBase input formular in php (and magpy-gui?? -> better refer to php there)
-11. (12/2013, not necessary) Laden von mehreren Files gleichzeitig (mit DILineStruct) - not really necessary
-12. Basislinien-Stabilitaet (Berechnung der Zuverlaessigkeit der Basislinien-Extrapolation)
-13. Write the documentation with citations of the underlying procedures
-14. (12/2013, OK) Show Stereoplot
-15. Briefly descripe some related bin files
+import sys
+sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
-zu 8:
-look at bin_angulardependency.py
-
-Related bins:
-bin_absolute (analyse DI measurements)
-bin_angulardependency (test the influence of variometerorientation several DI measurements during a day (e.g. autodif))
-bin_baselinestability (too be written)
-
-
-Written by Roman Leonhardt 2011/2012/2013
-Version 1.0 (from the 23.02.2012)
-
-"""
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-
-
-from magpy.stream import *
 from magpy.core.methods import *
-from magpy.database import *
-from magpy.transfer import *
 
-import dateutil.parser as dparser
 
-MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','JSONABS','AUTODIFABS','AUTODIF','UNKNOWN']
-ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
+"""
+DESCRIPTION
+    The MagPy absolutes package is used to anaylse DI measurements as typically done in geomagnetic observatories
+    
+CONTENTS
+    class AbsoluteDIStrcut():  # original MagPy0.4
+         used to store data values of a single DI measurement
+         
+    class DILineStruct():      # implemented in MagPy1.x
+         can handle multiple data from DI measurements
+         
+         Methods:
+         - get_data_list(self)  :  convert the DILineStruct to a Datalist used for displaying and saving
+         - get_abs_distruct(self)  :  convert the DILineStruct to the AbsDataStruct used for calculations
+         
+    class AbsoluteAnalysis():      # implemented in MagPy1.x
+         Analyzing methods
+         
+         Methods:
+         - add(self) :
+         - extend(self,datlst,header) :
+         - sorting(self) :
+         - _corrangle(self,angle) :
+         - _get_max(self, key) :
+         - _get_min(self, key) :
+         - _get_column(self, key) :
+         - _check_coverage(self,datastream, keys=['x','y','z']) :
+         - _insert_function_values(self, function, funckeys=['x','y','z','f'], KEYLIST=None, offset=0.0, debug=False)  :
+                         Add a function-output to the selected values of the data stream -> e.g. get baseline
+         - _calcdec(self, **kwargs)  : Calculates declination values from input.
+         - _calcinc(self, **kwargs)  : Calculates inclination values from input.
+         - _h(self, f, inc) :  calculate H from F and inc
+         - _z(self, f, inc) :  calculate Z from F and inc
+         - calcabsolutes(self, **kwargs)  :  Calculates ansolutes using calcdec and calcinc
 
-miredict = {'UA': 290.0, 'MireTower':41.80333,'MireChurch':51.1831,'MireCobenzl':353.698}
+    METHODS OVERVIEW:
+    ----------------------------
+
+    class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
+---------  |  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ----------
+**core.absolutes** |   |                 |                 |                |                  |          |
+AbsoluteDIStrcut  |  _match_groups |  2.0.0   |                 |             |           |    | 
+DILineStruct  |  get_data_list   |  2.0.0     |                 |             |               |         |
+DILineStruct  |  get_abs_distruct |  2.0.0    |                 |                |                  |         | 
+AbsoluteAnalysis  |  add         |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  extend      |  2.0.0     |                 |             |                 |      |
+AbsoluteAnalysis  |  sorting     |  2.0.0     |                 |            |               |      |
+AbsoluteAnalysis  |  _corrangle  |  2.0.0     |                 |                |             |      |
+AbsoluteAnalysis  |  _get_max    |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  _get_min    |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  _get_column |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  _check_coverage |  2.0.0 |                 |             |               |      |
+AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |         |             |               |      |
+AbsoluteAnalysis  |  _calcdec    |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  _calcinc    |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  _h          |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  _z          |  2.0.0     |                 |             |               |      |
+AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |                 |             |               |      |
+       |  _dateparser |  2.0.0          |                 |                |                  |         | 
+         
+"""
 
 class AbsoluteDIStruct(object):
     def __init__(self, time=0, hc=float('nan'), vc=float('nan'), res=float('nan'), f=float('nan'), mu=float('nan'), md=float('nan'), expectedmire=float('nan'),varx=float('nan'), vary=float('nan'), varz=float('nan'), varf=float('nan'), var1=float('nan'), var2=float('nan'), temp=float('nan'), person='', di_inst='', f_inst=''):
@@ -109,7 +120,12 @@ class DILineStruct(object):
     def __repr__(self):
         return repr((self.time, self.hc, self.vc, self.res, self.laser, self.opt, self.ftime, self.f, self.scaleflux, self.scaleangle, self.t, self.azimuth, self.pier, self.person, self.di_inst, self.f_inst, self.fluxgatesensor, self.inputdate))
 
+
+    @deprecated("renamed")
     def getDataList(self):
+        return self.get_data_list()
+
+    def get_data_list(self):
         """
         DEFINITION:
             convert the DILineStruct to a Datalist used for displaying and saving
@@ -118,29 +134,29 @@ class DILineStruct(object):
             #['# MagPy Absolutes\n', '# Abs-Observer: Leichter\n', '# Abs-Theodolite: T10B_0619H154167_07-2011\n', '# Abs-TheoUnit: deg\n', '# Abs-FGSensor: MAG01H_SerialSensor_SerialElectronic_07-2011\n', '# Abs-AzimuthMark: 180.1044444\n', '# Abs-Pillar: A4\n', '# Abs-Scalar: /\n', '# Abs-Temperature: 6.7C\n', '# Abs-InputDate: 2016-01-26\n', 'Miren:\n', '0.099166666666667  0.098055555555556  180.09916666667  180.09916666667  0.098055555555556  0.096666666666667  180.09805555556  180.09805555556\n', 'Positions:\n', '2016-01-21_13:22:00  93.870555555556  90  1.1\n', '2016-01-21_13:22:30  93.870555555556  90  1.8\n', '2016-01-21_13:27:00  273.85666666667  90  0.1\n', '2016-01-21_13:27:30  273.85666666667  90  0.2\n', '2016-01-21_13:25:30  273.85666666667  270  0.3\n', '2016-01-21_13:26:00  273.85666666667  270  -0.6\n', '2016-01-21_13:24:00  93.845555555556  270  -0.2\n', '2016-01-21_13:24:30  93.845555555556  270  0.4\n', '2016-01-21_13:39:30  0  64.340555555556  -0.3\n', '2016-01-21_13:40:00  0  64.340555555556  0.1\n', '2016-01-21_13:38:00  0  244.34055555556  0\n', '2016-01-21_13:38:30  0  244.34055555556  -0.4\n', '2016-01-21_13:36:00  180  295.67055555556  1.1\n', '2016-01-21_13:36:30  180  295.67055555556  1.2\n', '2016-01-21_13:34:30  180  115.66916666667  0.3\n', '2016-01-21_13:35:00  180  115.66916666667  0.9\n', '2016-01-21_13:34:30  180  115.66916666667  0\n', 'PPM:\n', 'Result:\n']
 
         EXAMPLE:
-            >>> abslinestruct.getAbsDIStruct()
+            abslinestruct.get_abs_distruct()
         """
         try:
             mu1 = self.hc[0]-((self.hc[0]-self.hc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
-            if isnan(mu1):
+            if np.isnan(mu1):
                 mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
         except:
             mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
         try:
             md1 = self.hc[2]-((self.hc[2]-self.hc[3])/(self.laser[2]-self.laser[3]))*self.laser[2]
-            if isnan(md1):
+            if np.isnan(md1):
                 md1 = self.hc[2] # in case of laser(vc0-vc1) = 0
         except:
             md1 = self.hc[2]
         try:
             mu2 = self.hc[12]-((self.hc[12]-self.hc[13])/(self.laser[12]-self.laser[13]))*self.laser[12]
-            if isnan(mu2):
+            if np.isnan(mu2):
                 mu2 = self.hc[12] # in case of laser(vc0-vc1) = 0
         except:
             mu2 = self.hc[12]
         try:
             md2 = self.hc[14]-((self.hc[14]-self.hc[15])/(self.laser[14]-self.laser[15]))*self.laser[14]
-            if isnan(md2):
+            if np.isnan(md2):
                 md2 = self.hc[14] # in case of laser(vc0-vc1) = 0
         except:
             md2 = self.hc[14]
@@ -166,7 +182,7 @@ class DILineStruct(object):
         datalist.append('Miren:\n')
         datalist.append('{}  {}  {}  {}  {}  {}  {}  {}\n'.format(md1, md1, mu1, mu1, md2, md2, mu2, mu2))
         datalist.append('Positions:\n')
-        absst = self.getAbsDIStruct()
+        absst = self.get_abs_distruct()
         for row in absst:
             # modify if f treatment is added
             if not np.isnan(row.hc):
@@ -183,17 +199,22 @@ class DILineStruct(object):
         return datalist
 
 
+    @deprecated("renamed")
     def getAbsDIStruct(self):
+        return self.get_abs_distruct()
+
+
+    def get_abs_distruct(self):
         """
         DEFINITION:
             convert the DILineStruct to the AbsDataStruct used for calculations
 
         EXAMPLE:
-            >>> abslinestruct.getAbsDIStruct()
+            abslinestruct.get_abs_distruct()
         """
         try:
             mu1 = self.hc[0]-((self.hc[0]-self.hc[1])/(self.laser[0]-self.laser[1]))*self.laser[0]
-            if isnan(mu1):
+            if np.isnan(mu1):
                 mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
         except:
             mu1 = self.hc[0] # in case of laser(vc0-vc1) = 0
@@ -321,6 +342,10 @@ class AbsoluteData(object):
         if header is None:
             header = {}
         self.header = header
+        self.MAGPY_SUPPORTED_ABSOLUTES_FORMATS = ['MAGPYABS','MAGPYNEWABS','JSONABS','AUTODIFABS','AUTODIF','UNKNOWN']
+        self.ABSKEYLIST = ['time', 'hc', 'vc', 'res', 'f', 'mu', 'md', 'expectedmire', 'varx', 'vary', 'varz', 'varf', 'var1', 'var2']
+
+
 
     # ----------------
     # Standard functions and overrides for list like objects
@@ -365,14 +390,14 @@ class AbsoluteData(object):
     # ----------------
 
     def _get_max(self, key):
-        if not key in ABSKEYLIST:
+        if not key in self.ABSKEYLIST:
             raise ValueError("Column key not valid")
         elem = max(self, key=lambda tmp: eval('tmp.'+key))
         return eval('elem.'+key)
 
 
     def _get_min(self, key):
-        if not key in ABSKEYLIST:
+        if not key in self.ABSKEYLIST:
             raise ValueError("Column key not valid")
         elem = min(self, key=lambda tmp: eval('tmp.'+key))
         return eval('elem.'+key)
@@ -382,17 +407,19 @@ class AbsoluteData(object):
         """
         returns an numpy array of selected columns from Stream
         """
-        if not key in ABSKEYLIST:
+        if not key in self.ABSKEYLIST:
             raise ValueError("Column key not valid")
 
         return np.asarray([eval('elem.'+key) for elem in self])
 
-    def _check_coverage(self,datastream, keys=['x','y','z']):
+    def _check_coverage(self,datastream, keys=None):
         """
         DEFINITION:
             check whether variometer/scalar data is available for each time step
             of DI data (within 2* samplingrate diff)
         """
+        if not keys:
+            keys = ['x','y','z']
         # 1. Drop all data without value
         for key in keys:
             datastream = datastream._drop_nans(key)
@@ -414,7 +441,7 @@ class AbsoluteData(object):
 
         return True
 
-    def _insert_function_values(self, function, funckeys=['x','y','z','f'], KEYLIST=None, offset=0.0, debug=False):
+    def _insert_function_values(self, function, funckeys=None, KEYLIST=None, offset=0.0, debug=False):
         """
         DEFINITION:
             Add a function-output to the selected values of the data stream -> e.g. get baseline
@@ -432,6 +459,8 @@ class AbsoluteData(object):
         EXAMPLE:
             abstream._calcdec()
         """
+        if not funckeys:
+            funckeys = ['x', 'y', 'z', 'f']
 
         for elem in self:
             # check whether time step is in function range
@@ -488,7 +517,7 @@ class AbsoluteData(object):
                                         str1 = person, str2 = di_inst, str3 = f_inst
 
         EXAMPLE:
-            >>> abstream._calcdec()
+            absstream._calcdec()
         """
 
         xstart = kwargs.get('xstart')
@@ -685,7 +714,8 @@ class AbsoluteData(object):
                 try:
                     dl2mean = np.mean([dl1[k],dl1[k+1]])
                 except:
-                    loggerabs.error("_calcdec:  %s : Data missing: check whether all fields are filled"% num2date(poslst[0].time).replace(tzinfo=None))
+                    loggerabs.error("_calcdec:  {} : Data missing: check whether all fields are filled".format(poslst[0].time))
+                    dl2mean = 0
                     pass
             dl2tmp.append(dl2mean)
             loggerabs.debug("_calcdec: Selected Dec: %f" % (dl2mean*180/np.pi))
@@ -817,7 +847,7 @@ class AbsoluteData(object):
                                         dz = basez, df = deltaf, t2 = calcscaleval
 
         EXAMPLE:
-            >>> abstream._calcinc()
+            abstream._calcinc()
         """
 
         incstart = kwargs.get('incstart')
@@ -1391,11 +1421,11 @@ class AbsoluteData(object):
         RETURNS:
 
         EXAMPLE:
-            >>> stream.calcabsolutes(usestep=2,annualmeans=[20000,1200,43000],printresults=True)
+            stream.calcabsolutes(usestep=2,annualmeans=[20000,1200,43000],printresults=True)
 
         APPLICATION:
             absst = absRead(path_or_url=abspath,azimuth=azimuth,output='DIListStruct')
-            stream = elem.getAbsDIStruct()
+            stream = elem.get_abs_distruct()
             variostr = read(variopath)
             variostr =variostr.rotation(alpha=varioorientation_alpha, beta=varioorientation_beta)
             vafunc = variostr.interpol(['x','y','z'])
@@ -1490,7 +1520,7 @@ class AbsoluteData(object):
                 print("All results: " , outline)
 
         # Temporary cleanup for extraordinary high values (failed calculations) - replace by 999999.99
-        for key in FLAGKEYLIST:
+        for key in DataStream().FLAGKEYLIST:
              if not 'time' in key:
                  testval = eval('outline.'+key)
                  try:
@@ -1646,7 +1676,7 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
     format_type = None
     if not dataformat:
         # auto detect format - go through all known formats in given sort order
-        for format_type in MAGPY_SUPPORTED_ABSOLUTES_FORMATS:
+        for format_type in stream.MAGPY_SUPPORTED_ABSOLUTES_FORMATS:
             # check format
             if isAbsFormat(filename, format_type):
                 break
@@ -1654,11 +1684,11 @@ def _absRead(filename, dataformat=None, headonly=False, **kwargs):
         # format given via argument
         dataformat = dataformat.upper()
         try:
-            formats = [el for el in MAGPY_SUPPORTED_ABSOLUTES_FORMATS if el == dataformat]
+            formats = [el for el in stream.MAGPY_SUPPORTED_ABSOLUTES_FORMATS if el == dataformat]
             format_type = formats[0]
         except IndexError:
             msg = "Format \"%s\" is not supported. Supported types: %s"
-            raise TypeError(msg % (dataformat, ', '.join(MAGPY_SUPPORTED_ABSOLUTES_FORMATS)))
+            raise TypeError(msg % (dataformat, ', '.join(stream.MAGPY_SUPPORTED_ABSOLUTES_FORMATS)))
     # file format should be known by now
     print("DI format:", format_type)
 
@@ -1902,7 +1932,7 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                 if elem.endswith('.json'):
                     data = readJSONABS(elem)
                     for dat in data:
-                        stream = dat.getAbsDIStruct()
+                        stream = dat.get_abs_distruct()
                         datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
                 else:
                     # Drop pier and stationid from filename to simplify parser
@@ -2242,13 +2272,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
                     absst = absRead(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     try:
                         if not len(absst) > 1: # Manual
-                            stream = absst[0].getAbsDIStruct()
+                            stream = absst[0].get_abs_distruct()
                             abslist.append(absst)
                             if db and dbadd:
                                 dbase.diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
                         else: # AutoDIF
                             for a in absst:
-                                stream = a.getAbsDIStruct()
+                                stream = a.get_abs_distruct()
                                 abslist.append(a)
                             if db and dbadd:
                                 dbase.diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
@@ -2279,13 +2309,13 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
         for absst in abslist:
             print("-----------------")
             try:
-                stream = absst[0].getAbsDIStruct()
+                stream = absst[0].get_abs_distruct()
                 filepier = absst[0].pier
                 if not pier == filepier:
                     loggerabs.info(" -- piers in data file(s) and filenames are different - using file content")
                     pier = filepier
             except:
-                stream = absst.getAbsDIStruct()
+                stream = absst.get_abs_distruct()
 
             if stream[0].person == 'AutoDIF':
                 abstype = 'autodif'
