@@ -3,10 +3,12 @@
 import sys
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
-from magpy.stream import loggerabs, magpyversion, basestring, DataStream
+from magpy.stream import loggerabs, magpyversion, basestring, DataStream, example6a
 from magpy.core.methods import *
 from urllib.request import urlopen
 import shutil
+import string
+
 
 
 """
@@ -24,7 +26,7 @@ CONTENTS
          - get_data_list(self)  :  convert the DILineStruct to a Datalist used for displaying and saving
          - get_abs_distruct(self)  :  convert the DILineStruct to the AbsDataStruct used for calculations
          
-    class AbsoluteAnalysis():      # implemented in MagPy1.x
+    class AbsoluteData():      # implemented in MagPy1.x
          Analyzing methods
          
          Methods:
@@ -61,31 +63,31 @@ CONTENTS
 
     class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
 ---------  |  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ----------
-**core.absolutes** |    |                 |                 |                |                |          |
-AbsoluteDIStrcut  |              |  2.0.0     |                 |             |               |      | 
-DILineStruct  |  get_data_list   |  2.0.0     |                 |             |               |      |
-DILineStruct  |  get_abs_distruct |  2.0.0    |                 |             |               |      | 
-AbsoluteAnalysis  |  add         |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  extend      |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  sorting     |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  _corrangle  |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  _get_max    |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  _get_min    |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  _get_column |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  _check_coverage |  2.0.0 |                 |             |               |      |
-AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |         |             |               |      |
-AbsoluteAnalysis  |  _calcdec    |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  _calcinc    |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  _h          |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  _z          |  2.0.0     |                 |             |               |      |
-AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |                 |             |               |      |
-           | _logfile_len        |  2.0.0     |                 |             |               |      | 
-           | deg2degminsec       |  2.0.0     |                 |             |               |      | 
-    d      | absRead             |  2.0.0     |  2.1.0          |             |               |      | 
-           | abs_read            |  2.0.0     |                 |             |               |      | 
-           | _abs_read           |  2.0.0     |                 |             |               |      | 
-    d      | absoluteAnalysis    |  2.0.0     |  2.1.0          |             |               |      | 
-           | absolute_analysis   |  2.0.0     |                 |             |               |      | 
+**core.absolutes** |    |                 |               |                |                |          |
+AbsoluteDIStrcut  |              |  2.0.0     |           |  yes           |               |      | 
+DILineStruct  |  get_data_list   |  2.0.0     |           |  yes           |               |      |
+DILineStruct  |  get_abs_distruct |  2.0.0    |           |  yes           |               |      | 
+AbsoluteAnalysis  |  add         |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  extend      |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  sorting     |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  _corrangle  |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  _get_max    |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  _get_min    |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  _get_column |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  _check_coverage |  2.0.0 |           |             |               |      |
+AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |   |             |               |      |
+AbsoluteAnalysis  |  _calcdec    |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  _calcinc    |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  _h          |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  _z          |  2.0.0     |           |             |               |      |
+AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |               |      |
+           | _logfile_len        |  2.0.0     |           |             |               |      | 
+           | deg2degminsec       |  2.0.0     |           |  yes           |               |      | 
+    d      | absRead             |  2.0.0     |  2.1.0    |             |               |      | 
+           | abs_read            |  2.0.0     |           |  yes           |               |      | 
+           | _abs_read           |  2.0.0     |           |  yes           |               |      | 
+    d      | absoluteAnalysis    |  2.0.0     |  2.1.0    |             |               |      | 
+           | absolute_analysis   |  2.0.0     |           |             |               |      | 
          
 """
 
@@ -1634,18 +1636,27 @@ def absRead(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     return abs_read(path_or_url=None, dataformat=None, headonly=False, **kwargs)
 
 
-def abs_read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
+def abs_read(path_or_url=None, dataformat=None, headonly=False, output='DIListStruct', debug=False, **kwargs):
     """
     DESCRIPTION
         Read DI from file or url for analysis
         Data is stored in an AbsoluteData() container
+    VARIABLES
+        dataformat (string) : select the input format,  if none then autodetect
+        headonly (bool) : not supported so far
+        output(string) : select the output format. Default is 'DIListStruct' which will return a list containing
+                         individual DIListStuct's
+                         An alternative output format is the old 'AbsoluteDIStruct'
     """
 
+    if not output:
+        output = 'DIListStruct'
     # -- No path
     if not path_or_url:
         messagecont = "File not specified"
         return [],messagecont
     # -- Create Data Container
+    #stream = AbsoluteData()
     stream = AbsoluteData()
     # -- Check file
     if not isinstance(path_or_url, basestring):
@@ -1659,7 +1670,7 @@ def abs_read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
         fh = NamedTemporaryFile(suffix=name+suffix,delete=False)
         fh.write(urlopen(path_or_url).read())
         fh.close()
-        stream = _abs_read(fh.name, dataformat, headonly, **kwargs)
+        stream = _abs_read(fh.name, dataformat, headonly, output=output, debug=debug, **kwargs)
         os.remove(fh.name)
     else:
         # some file name
@@ -1674,13 +1685,18 @@ def abs_read(path_or_url=None, dataformat=None, headonly=False, **kwargs):
     return stream
 
 
-def _abs_read(filename, dataformat=None, headonly=False, **kwargs):
+def _abs_read(filename, dataformat=None, headonly=False, output='DIListStruct', debug=False, **kwargs):
     """
     DESCRIPTION
         Reads a single file and returns an AbsoluteData structure
+    VARIABLES
+        dataformat (string) : select the input format,  if none then autodetect
+        headonly (bool) : not supported so far
+        output(string) : select the output format. Default is 'DIListStruct' which will return a list containing
+                         individual DIListStuct's
+                         An alternative output format is the old 'AbsoluteDIStruct'
     """
 
-    output = kwargs.get('output')
     # get format type
     format_type = None
     if not dataformat:
@@ -1699,11 +1715,12 @@ def _abs_read(filename, dataformat=None, headonly=False, **kwargs):
             msg = "Format \"%s\" is not supported. Supported types: %s"
             raise TypeError(msg % (dataformat, ', '.join(AbsoluteData().MAGPY_SUPPORTED_ABSOLUTES_FORMATS)))
     # file format should be known by now
-    print("DI format:", format_type)
+    if debug:
+        print("DI format:", format_type)
 
-    stream = readAbsFormat(filename, format_type, headonly=headonly, **kwargs)
+    stream = readAbsFormat(filename, format_type, headonly=headonly, output=output, **kwargs)
 
-    # If stream could not be read return an empty datastream object
+    # TODO If stream could not be read return an empty datastream object
     try:  # check this and replace by something smart
         xxx = len(stream)
     except:
@@ -1981,16 +1998,6 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
         print("absoluteAnalysis: No matching dates found - aborting")
         return
 
-    def checkURL(url, starttime,debug=False):
-        if "://" in url:
-            if debug:
-                print (url)
-            ind = url.find('starttime')
-            if ind < 0:
-                st = datetime.strftime(starttime,"%Y-%m-%dT%H:%M:%SZ")
-                et = datetime.strftime(starttime+timedelta(days=1),"%Y-%m-%dT%H:%M:%SZ")
-                url = "{}&starttime={}&endtime={}".format(url,st, et)
-        return url
 
         # Please Note for pier information always the existing pier in the file is used
 
@@ -2025,7 +2032,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
                 import magpy.database as dbase
                 variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
-                variomod = checkURL(variodata, date, debug=debug)
+                variomod = _check_url(variodata, date, debug=debug)
                 variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
         try:
             print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
@@ -2183,6 +2190,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
         # 1.6 manually provided rotation and offsets applied, interpolated
         # ---------------------------------------
 
+        # TODO - move to a separate method - scalardata = _scalar_for_di(source, starttime, endtime, debug)
         # b) Load Scalardata
         print("-----------------")
         try:
@@ -2197,7 +2205,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
                 import magpy.database as dbase
                 scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
             else:
-                scalarmod = checkURL(scalardata, date)
+                scalarmod = _check_url(scalardata, date)
                 scalarstr = read(scalarmod,starttime=date,endtime=date+timedelta(days=1))
             if not scalarstr.header.get('SensorID') == '':
                  scalarid = scalarstr.header.get('SensorID')
@@ -2329,6 +2337,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
                     loggerabs.info(" -- piers in data file(s) and filenames are different - using file content")
                     pier = filepier
             except:
+                #TODO - rename stream to absdata
                 stream = absst.get_abs_distruct()
 
             if stream[0].person == 'AutoDIF':
@@ -2694,12 +2703,31 @@ if __name__ == '__main__':
         while True:
             try:
                 ts = datetime.utcnow()
-                # abs - run calcabsolutes
+                absdist = abs_read(example6a, output='AbsoluteDIStruct')  # should be the default
                 te = datetime.utcnow()
-                successes['__init__'] = ("Version: {}: __init__ {}".format(magpyversion,(te-ts).total_seconds()))
+                successes['AbsoluteDIStruct'] = ("Version: {}: AbsoluteDIStruct {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
-                errors['__init__'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with __init__.")
+                errors['AbsoluteDIStruct'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with AbsoluteDIStruct.")
+            try:
+                ts = datetime.utcnow()
+                absst = abs_read(example6a)  # should be the default
+                for ab in absst:
+                    l1 = ab.get_data_list()
+                    abdi = ab.get_abs_distruct()
+                te = datetime.utcnow()
+                successes['DILineStruct'] = ("Version: {}: DILineStruct {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['DILineStruct'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with DILineStruct.")
+            try:
+                ts = datetime.utcnow()
+                test = deg2degminsec(270.5)
+                te = datetime.utcnow()
+                successes['deg2degminsec'] = ("Version: {}: deg2degminsec {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['deg2degminsec'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with deg2degminsec.")
 
             # If end of routine is reached... break.
             break

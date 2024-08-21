@@ -2,9 +2,6 @@
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
-
-logger = logging.getLogger(__name__)
-
 import matplotlib
 
 gui_env = ['TKAgg', 'GTKAgg', 'Agg'] # remove WXAgg and add this activation to GUI
@@ -15,6 +12,7 @@ try:
 except:
     maversion = maversion.strip("rc")
     matplotlibversion = maversion
+logger = logging.getLogger(__name__)
 logger.info("Loaded Matplotlib - Version %s" % str(matplotlibversion))
 
 noterminal = False
@@ -49,9 +47,7 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-
 edgecolor = [0.8, 0.8, 0.8]
-
 
 def testtimestep(variable):
     try:

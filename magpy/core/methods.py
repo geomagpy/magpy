@@ -85,6 +85,37 @@ def is_number(s):
         return False
 
 
+def dates_to_url(url, starttime=None, endtime=None, starttimestring='starttime', endtimestring='endtime', debug=False):
+    """
+    DESCRIPTION
+        check if provided string is url and if yes  then eventually fill in starttime and endtime
+        into the url (if nor already contained)
+    :param url:
+    :param starttime:
+    :param endtime:
+    :param debug:
+    :return:
+    """
+    if "://" in url:
+        if debug:
+            print (" url before dates_to_url", url)
+        dformat = "%Y-%m-%dT%H:%M:%SZ"
+        if "Date" in starttimestring or "Date" in endtimestring:
+            dformat = "%Y-%m-%d"
+        if starttime:
+            indst = url.find(starttimestring)
+            if indst < 0:
+                st = datetime.strftime(starttime,dformat)
+                url = "{}&{}={}".format(url,starttimestring,st)
+        if endtime:
+            indet = url.find(endtimestring)
+            if indet < 0:
+                et = datetime.strftime(endtime, dformat)
+                url = "{}&{}={}".format(url, endtimestring, et)
+        if debug:
+            print(" url after dates_to_url", url)
+    return url
+
 def ceil_dt(dt, seconds):
     """
     DESCRIPTION:

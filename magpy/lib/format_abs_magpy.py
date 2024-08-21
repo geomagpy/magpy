@@ -5,6 +5,7 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 
+from magpy.core.methods import *
 from magpy.absolutes import *
 #import magpy.absolutes as di
 
@@ -39,7 +40,7 @@ def isMAGPYNEWABS(filename):
 
 
 
-@deprecate()
+@deprecated(" please use AUTODIFABS")
 # this format isn't supported by AUTODIF MK3 anymore
 def isAUTODIFRAW(filename):
     """
@@ -126,6 +127,8 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     headers = {}
     data,measurement,unit = [],[],[]
     person, f_inst, di_inst = '','',''
+    mirestr = []
+    mu, md = 0.0,0.0
     i = 0
     expectedmire,temp = 0.0,0.0
     key = None
@@ -286,18 +289,18 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
     dirow.hc.insert(13,float(mirestr[7])/ang_fac)
     dirow.hc.insert(14,float(mirestr[4])/ang_fac)
     dirow.hc.insert(15,float(mirestr[5])/ang_fac)
-    dirow.vc.insert(12,float(nan))
-    dirow.vc.insert(13,float(nan))
-    dirow.vc.insert(14,float(nan))
-    dirow.vc.insert(15,float(nan))
-    dirow.time.insert(12,float(nan))
-    dirow.time.insert(13,float(nan))
-    dirow.time.insert(14,float(nan))
-    dirow.time.insert(15,float(nan))
-    dirow.res.insert(12,float(nan))
-    dirow.res.insert(13,float(nan))
-    dirow.res.insert(14,float(nan))
-    dirow.res.insert(15,float(nan))
+    dirow.vc.insert(12,float(np.nan))
+    dirow.vc.insert(13,float(np.nan))
+    dirow.vc.insert(14,float(np.nan))
+    dirow.vc.insert(15,float(np.nan))
+    dirow.time.insert(12,float(np.nan))
+    dirow.time.insert(13,float(np.nan))
+    dirow.time.insert(14,float(np.nan))
+    dirow.time.insert(15,float(np.nan))
+    dirow.res.insert(12,float(np.nan))
+    dirow.res.insert(13,float(np.nan))
+    dirow.res.insert(14,float(np.nan))
+    dirow.res.insert(15,float(np.nan))
 
     if output == "DIListStruct":
         # -- Return single row list ---- Works !!!!!!   Further Checks necessary
@@ -342,9 +345,13 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     headers = {}
     data,measurement,unit = [],[],[]
     person, f_inst, di_inst = '','',''
+    fgsensor = ''
+    mirestr = []
+    mu, md = 0.0, 0.0
     i = 0
     expectedmire,temp = 0.0,0.0
     delf = 0.0
+    ang_fac = 1.
     key = None
     headfound = False
     dirow = DILineStruct(25)
@@ -411,7 +418,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                     ustr.encode('ascii','ignore')
                     temp = float(ustr.replace(',','.').strip(u"\u00B0").strip())
                 else:
-                    temp = float(nan)
+                    temp = float(np.nan)
                 dirow.t = temp
             if headline[0] == ('# Abs-InputDate'):
                 adate= datetime.strptime(headline[1].strip(),'%Y-%m-%d')
@@ -523,18 +530,18 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
     dirow.hc.insert(13,float(mirestr[7])/ang_fac)
     dirow.hc.insert(14,float(mirestr[4])/ang_fac)
     dirow.hc.insert(15,float(mirestr[5])/ang_fac)
-    dirow.vc.insert(12,float(nan))
-    dirow.vc.insert(13,float(nan))
-    dirow.vc.insert(14,float(nan))
-    dirow.vc.insert(15,float(nan))
-    dirow.time.insert(12,float(nan))
-    dirow.time.insert(13,float(nan))
-    dirow.time.insert(14,float(nan))
-    dirow.time.insert(15,float(nan))
-    dirow.res.insert(12,float(nan))
-    dirow.res.insert(13,float(nan))
-    dirow.res.insert(14,float(nan))
-    dirow.res.insert(15,float(nan))
+    dirow.vc.insert(12,float(np.nan))
+    dirow.vc.insert(13,float(np.nan))
+    dirow.vc.insert(14,float(np.nan))
+    dirow.vc.insert(15,float(np.nan))
+    dirow.time.insert(12,float(np.nan))
+    dirow.time.insert(13,float(np.nan))
+    dirow.time.insert(14,float(np.nan))
+    dirow.time.insert(15,float(np.nan))
+    dirow.res.insert(12,float(np.nan))
+    dirow.res.insert(13,float(np.nan))
+    dirow.res.insert(14,float(np.nan))
+    dirow.res.insert(15,float(np.nan))
 
     #print "Check output - dirow"
     #print "-----------------------------------------------------"
@@ -593,13 +600,13 @@ def readAUTODIF(filename, headonly=False, **kwargs):
     pier = kwargs.get('pier')
 
     if not azimuth:
-        azimuth = float(nan)
+        azimuth = float(np.nan)
     if not scaleflux:
         scaleflux = 0.098
     if not scaleangle:
         scaleangle = 0.00011
     if not temperature:
-        temperature = float(nan)
+        temperature = float(np.nan)
     if not pier:
         pier = ''
 
@@ -608,10 +615,11 @@ def readAUTODIF(filename, headonly=False, **kwargs):
     abslist = []
     # Check whether header infromation is already present
     headers = {}
-
+    di_inst  = ''
     count = 0
     inccount = 0
     lcount = 0
+    newcnt = 0
 
     newset = False  # To distinguish between different absolute sets within one file
 
@@ -744,6 +752,12 @@ def readJSONABS(filename, headonly=False, **kwargs):
     marksorting = ['FirstMarkUp','FirstMarkDown','SecondMarkUp','SecondMarkDown']
     measorder = ['FirstMarkUp','FirstMarkUp','FirstMarkDown','FirstMarkDown', 'EastUp','EastUp','WestUp','WestUp','EastDown','EastDown','WestDown','WestDown', 'SecondMarkUp','SecondMarkUp','SecondMarkDown','SecondMarkDown', 'SouthUp','SouthUp','NorthDown','NorthDown','SouthDown','SouthDown','NorthUp','NorthUp']
 
+    pier, di_inst = '', ''
+    fluxgatesensor = ''
+    inputdate = ''
+    azimuth = ''
+    person = ''
+    t = ''
     takef = True
     flist = []
     fcorr = 0.0

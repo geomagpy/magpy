@@ -6527,8 +6527,16 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headon
         """
     elif "://" in path_or_url:
         # some URL
+        # Use some predefined values for webservices
+        starttimestring = 'starttime'
+        endtimestring = 'endtime'
+        if path_or_url.find('bgs.ac.uk') > -1:
+            starttimestring = 'dataStartDate'
+            endtimestring = 'dataEndDate'
         # extract extension if any
         logger.info("read: Found URL to read at {}".format(path_or_url))
+        if starttime or endtime:  # and start or endtime not yet contained in url
+            path_or_url = dates_to_url(path_or_url, starttime, endtime, starttimestring = starttimestring, endtimestring = endtimestring, debug=debug)
         content = urlopen(path_or_url).read()
         content = content.decode('utf-8')
         if content.find('<pre>') > -1:
@@ -8171,6 +8179,20 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['determine_time_shift'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with determine_time_shift")
+            try:
+                ts = datetime.utcnow()
+                data1 = read("https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC")
+                data2 = read("https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC", starttime='2024-08-01',
+                            endtime='2024-08-02')
+                data3 = read(
+                    "https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?Request=GetData&observatoryIagaCode=WIC&publicationState=adjusted&samplesPerDay=minute&format=iaga2002",
+                    starttime='2024-08-01', endtime='2024-08-02', debug=True)
+                te = datetime.utcnow()
+                successes['webservice_read'] = (
+                    "Version: {}, webservice_read: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['webservice_read'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with webservice_read")
 
             """
             Unused or moved elswhere:
