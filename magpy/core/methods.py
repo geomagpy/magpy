@@ -284,10 +284,13 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
                 if debug:
                     print("  - variationdata as IDF -> converting to XYZ")
                 data = data._convertstream('idf2xyz')
+            elif variocomps.startswith("hez"):
+                if debug:
+                    print("  - variationdata as HEZ -> fine")
             else:
                 if not variocomps.startswith("xyz"):
                     print("  - variationdata has an orientation which MagPy cannot handle")
-                    print("  - continuing assuming xyz")
+                    print("  - continuing assuming HEZ")
         else:
             print('  - unknown datatype')
             datagood = False

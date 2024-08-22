@@ -77,8 +77,8 @@ AbsoluteAnalysis  |  _corrangle  |  2.0.0     |           |             |       
 AbsoluteAnalysis  |  _get_max    |  2.0.0     |           |             |               |      |
 AbsoluteAnalysis  |  _get_min    |  2.0.0     |           |             |               |      |
 AbsoluteAnalysis  |  _get_column |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _check_coverage |  2.0.0 |           |             |               |      |
-AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |   |             |               |      |
+AbsoluteAnalysis  |  _check_coverage |  2.0.0 |           |  yes        |               |      |
+AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |   |  yes        |               |      |
 AbsoluteAnalysis  |  _calcdec    |  2.0.0     |           |             |               |      |
 AbsoluteAnalysis  |  _calcinc    |  2.0.0     |           |             |               |      |
 AbsoluteAnalysis  |  _h          |  2.0.0     |           |             |               |      |

@@ -1378,21 +1378,160 @@ Show original data in red and cleand data in grey in a single plot:
 
 ## 7. DI-flux measurements, basevalues and baselines
 
-The first sections will give you a quick overview about the application of methods related to DI-Flux analysis, determination und usage of baseline values (basevalues), and adopted baselines. The theoretical background and details on these application are found in section 2.11.7. These procedures require an additional import:
+The first sections will give you a quick overview about the application of methods related to DI-Flux analysis, 
+determination und usage of baseline values (basevalues), and adopted baselines. The theoretical background and 
+details on these application are found in section 7.7. Methods and classes for basevalue DI analysis are
+contained in the `absolutes` package:
 
         from magpy import absolutes as di
 
-### 7.1 Data structure of DI measurements
+For the examples and instructions below we will import a few additional packages and methods:
 
-Please check `example3`, which is an example DI file. You can create these DI files by using the input sheet from xmagpy or the online input sheet provided by the Conrad Observatory. If you want to use this service, please contact the Observatory staff. Also supported are DI-files from the AUTODIF.
+        from magpy.stream import example6a, example5, DataStream, read
+        from magpy.core.methods import *
 
-### 7.2 Reading DI data
+Before continuing a few comments on wording as used in the following:
 
-Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field information needs to be provided as well. Checkout `help(di.absoluteAnalysis)` for all options. The analytical procedures are outlined in detail in section 2.11.7. A typical analysis looks like:
+DI measurement/absolute data : individual values of a typical 4-lagen declination (D) and inclination (I) measurement 
+using a non-magnetic theodolite. DI measurements will provide absolute values D(abs) and I(abs)
+
+reference pier (Pref) : the main pier in your observatory at which DI measurements are performed
+
+alternative pier (P(alt): any other pier where once in a while DI measurements are performed
+
+pier deltaD,deltaI and deltaF (pdD, pdI, pdF) : differences between P(ref) and P(alt) which can be applied to P(alt) data, so that 
+baseline corrected results using P(alt) data correspond to BCR of P(ref)
+
+deltaF (dF) : the difference in F between a continuously measuring scalar sensor and the reference pier (P(ref))
+
+F absolute F(abs) : the absolute F value measured directly at P(ref) at the same height as D And I 
+
+F continuous F(ext) :  F value from a continuous measurement. F(ext) + dF = F(abs)
+
+basevalues : delta values obtained fro each DI analysis which describe the momentary difference between a 
+continuously measuring systems and the DI determination. MagPy determines basevalues either in cylindrical 
+(dH, dD, dZ, dF, default, dH is delta of horizontal component) or carthesian (dX, dY, dZ, dF) coordinates.
+
+baseline/adopted baseline : a best fit of any kind (linear, spline, polynomial , step function) to multiple basevalues.
+
+baseline correction : applying baseline functions to continuously measured data so that this data describes "absolute"
+field variations
+
+
+### 7.1 Reading and analyzing DI data
+
+#### Data structure of DI measurements
+
+Please check `example6a` or  `example6b` , which are example DI files. You can create these DI files by using the 
+input sheet from xmagpy or the online input sheet provided by the Conrad Observatory. If you want to use this service, 
+please contact the Observatory staff. Also supported are DI-files from the AUTODIF. MagPy will automatically 
+recognize a number of DI data formats while loading. Use the the following method to load a single or multiple
+DI data sets:
+
+        abslist = di.abs_read(example6a)  # should be the default
+
+You might want to view the data in a formated way
+
+        for ab in abslist:
+            l1 = ab.get_data_list()
+            print (l1)
+
+For our analysis we will extract data from the loaded *abslist* and convert to into an DI analysis structure. 
+
+        absdata = ab.get_abs_distruct()
+
+
+#### Adding data from continuously measuring instruments 
+
+DI is used to calculate basevalues for specific instruments. The above defined DI-structure allows to add variometer
+and scalar information to it. Let us assume you have variometer data from an HEZ 
+oriented system (this is the expected default). You can just load this data using the magpy stream standard read 
+method. 
+
+        variodata = read(example5)
+
+You might want to drop flagged data and perform some conversions. Please check the appropriate sections for data 
+manipulation if necessary. If you do not know (actually you should) if the loaded variometer data (variodata) covers 
+the timerange of the DI measurement (absdata) then you can use the following helper method. 
+
+        vario_rangetest = absdata._check_coverage(variodata,keys=['x','y','z'])
+
+Please note: the variometers H E and Z data is stored at the data keys x, y, z. Do not mix up data keys
+used for naming predefined columns and data values asociated with these keys.
+As variometer data might not contain individual measurements exactly at the same time as DI measurements were performed
+i.e. in case of one-minute variometer data, the variometer data is linearly interpolated and variation data
+at times of DI  measurements are extracted at the DI timesteps. Please note: if variation data contains exactly the
+timesteps of DI data then exactly the truely measured variation signals are used as linear interpolation only affects
+time ranges inbetween variometer data points.  Variation data is then inserted into the absdata structure
+
+        if vario_rangetest:
+            func = variodata.interpol(['x','y','z'])
+            absdata = absdata._insert_function_values(func)
+
+The same procedure can also be performed for independently measured scalar (F) data. 
+
+        scalardata = read(example5)
+        scalar_rangetest = absdata._check_coverage(variodata,keys=['f'])
+        if scalar_rangetest:
+            func = scalardata.interpol(['f'])
+            absdata = absdata._insert_function_values(func)
+
+In case your F data is contained in exactly the same file as variometer data, as it is the case for our example you 
+just might add the 'f' key to interpolation and coverage test `func = variodata.interpol(['x','y','z','f'])`
+
+There is also a helper method included in MagPy2.x which is of particular interest if you are using meta information
+and database features of MagPy, particularly when it comes to flagging, pier differences in D, I and F as well
+as transformations (fluxgate compensation, rotations). The following method is included in the absolute_analysis main 
+method and will apply projected options. Source data from database and files is supported. Some details are discussed
+in section 7.2.
+
+       data = data_for_di({'file':example5}, starttime='2018-08-29',endtime='2018-08-30', datatype='both', debug=True)
+       valuetest = absdata._check_coverage(data,keys=['x','y','z','f'])
+       if valuetest:
+           func = data.header.get('DataFunctionObject')[0]
+           absdata = absdata._insert_function_values(func)
+
+
+#### Considering pier differences for non-reference pier measurements
+
+If you perform DI measurements on multiple piers you might want to consider the pier differences in respect
+respect to a reference pier. This pier  differences can either be provided directly or can be organized in 
+a MagPy data base on a yearly basis.
+You reference pier P1 is used for the majority of your DI measurements. Once in a while you perform measurements 
+on pier P2. From these measurements you determined an average difference of deltaD = 0.001 deg, deltaI = 0.002 deg 
+and deltaF = -0.23 nT for 2023. For your ongoing P2 analysis you consider these delta values by supplying them
+to the calcabsolute method. You can also organize these values in a MagPy database (PIERS table) and 
+
+       from magpy.core import database
+       from datetime import datetime
+
+       db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+       pdD = None
+       starttime = datetime.utcnow()
+       if not pdD:
+           pdI = db.get_pier('A7', 'A2', value='deltaI', year=starttime.year)
+
+#### Analyzing DI data
+
+After reading DI data and associating continuous measurements to its time steps it is now time to determine the 
+absolute values of D and I, and eventually F if not already measured at the main DI pier. DI analysis makes use of a 
+stepwise algorythm based on an excel sheet by J. Matzka and DTU Copenhagen (see section 7.7 for background information). 
+
+
+### 7.2 The absolute_analysis method - single command DI analysis 
+
+Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field 
+information needs to be provided as well. 
+
+Checkout `help(di.absoluteAnalysis)` for all options. The analytical procedures are outlined in detail in 
+section 7.7. A typical analysis looks like:
 
         diresult = di.absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
 
-Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific observatory/pillar. Using the examples provided along with MagPy, an analysis can be performed as follows. Firstly we copy the files to a temporary folder and we need to rename the basevalue file. Date and time need to be part of the filename. For the following commands to work you need to be within the examples directory.
+Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific 
+observatory/pillar. Using the examples provided along with MagPy, an analysis can be performed as follows. Firstly we 
+copy the files to a temporary folder and we need to rename the basevalue file. Date and time need to be part of the 
+filename. For the following commands to work you need to be within the examples directory.
 
         $ mkdir /tmp/DI
         $ cp example6a.txt /tmp/DI/2018-08-29_07-16-00_A2_WIC.txt
