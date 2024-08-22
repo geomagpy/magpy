@@ -64,33 +64,33 @@ CONTENTS
     METHODS OVERVIEW:
     ----------------------------
 
-    class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
----------  |  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ----------
-**core.absolutes** |    |                 |               |                |                |          |
-AbsoluteDIStrcut  |              |  2.0.0     |           |  yes           |               |      | 
-DILineStruct  |  get_data_list   |  2.0.0     |           |  yes           |               |      |
-DILineStruct  |  get_abs_distruct |  2.0.0    |           |  yes           |               |      | 
-AbsoluteAnalysis  |  add         |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  extend      |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  sorting     |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _corrangle  |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _get_max    |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _get_min    |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _get_column |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _check_coverage |  2.0.0 |           |  yes        |               |      |
-AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |   |  yes        |               |      |
-AbsoluteAnalysis  |  _calcdec    |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _calcinc    |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _h          |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  _z          |  2.0.0     |           |             |               |      |
-AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |               |      |
-           | _logfile_len        |  2.0.0     |           |             |               |      | 
-           | deg2degminsec       |  2.0.0     |           |  yes           |               |      | 
-    d      | absRead             |  2.0.0     |  2.1.0    |             |               |      | 
-           | abs_read            |  2.0.0     |           |  yes           |               |      | 
-           | _abs_read           |  2.0.0     |           |  yes           |               |      | 
-    d      | absoluteAnalysis    |  2.0.0     |  2.1.0    |             |               |      | 
-           | absolute_analysis   |  2.0.0     |           |             |               |      | 
+    class | method  | since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
+--------- | ------  | -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ----------
+**core.absolutes** |    |                 |               |             |               |         |
+AbsoluteDIStrcut  |              |  2.0.0     |           |  yes        |  yes          |  7.1    | 
+DILineStruct  |  get_data_list   |  2.0.0     |           |  yes        |  yes          |  7.1    |
+DILineStruct  |  get_abs_distruct |  2.0.0    |           |  yes        |  yes          |  7.1    | 
+AbsoluteAnalysis  |  add         |  2.0.0     |           |             |               |       | unused?
+AbsoluteAnalysis  |  extend      |  2.0.0     |           |             |               |       | unused?
+AbsoluteAnalysis  |  sorting     |  2.0.0     |           |             |               |       | unused?
+AbsoluteAnalysis  |  _corrangle  |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcdec
+AbsoluteAnalysis  |  _get_max    |  2.0.0     |           |  yes        |  yes          |  -      | unused?
+AbsoluteAnalysis  |  _get_min    |  2.0.0     |           |  yes        |  yes          |  -      | unused?
+AbsoluteAnalysis  |  _get_column |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcdec
+AbsoluteAnalysis  |  _check_coverage |  2.0.0 |           |  yes        |               |  7.1    | 
+AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |   |  yes        |               |  7.1    | 
+AbsoluteAnalysis  |  _calcdec    |  2.0.0     |           |  yes        |  yes          |  7.1    | ad.calcabsolutes
+AbsoluteAnalysis  |  _calcinc    |  2.0.0     |           |  yes        |  yes          |  7.1    | ad.calcabsolutes
+AbsoluteAnalysis  |  _h          |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcinc
+AbsoluteAnalysis  |  _z          |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcinc
+AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |               |  7.1    |
+           | _logfile_len        |  2.0.0     |           |             |               |  -      | 
+           | deg2degminsec       |  2.0.0     |           |  yes        |               |  7.2    | 
+    d      | absRead             |  2.0.0     |  2.1.0    |             |               |  -      | 
+           | abs_read            |  2.0.0     |           |  yes        |               |  7.1    | 
+           | _abs_read           |  2.0.0     |           |  yes        |               |  -      | 
+    d      | absoluteAnalysis    |  2.0.0     |  2.1.0    |             |               |  -      | 
+           | absolute_analysis   |  2.0.0     |           |             |               |  7.2    | 
          
 """
 
@@ -403,7 +403,13 @@ class AbsoluteData(object):
         return AbsoluteData(liste, self.header)
 
     def _corrangle(self,angle):
-        if angle > 360:
+        """
+        DESCRIPTION
+            make sure that the given input angle in degrees is within [0,360[
+        :param angle:
+        :return:
+        """
+        if angle >= 360:
             angle = angle - 360.0
         elif angle < 0:
             angle = angle + 360.0
@@ -2456,10 +2462,9 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR with DILineStruct.")
             try:
                 ts = datetime.utcnow()
-                absdata = absst[0]
                 data = data_for_di({'file': example5}, starttime='2018-08-29', endtime='2018-08-30', datatype='both',
                                    debug=True)
-                valuetest1 = absdata._check_coverage(data, keys=['f'])
+                valuetest1 = abdi._check_coverage(data, keys=['f'])
                 te = datetime.utcnow()
                 successes['_check_coverage'] = ("Version: {}: _check_coverage {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
@@ -2468,12 +2473,71 @@ if __name__ == '__main__':
             try:
                 ts = datetime.utcnow()
                 func = data.header.get('DataFunctionObject')[0]
-                absdata = absdata._insert_function_values(func)
+                abdi = abdi._insert_function_values(func)
                 te = datetime.utcnow()
                 successes['_insert_function_values'] = ("Version: {}: _insert_function_values {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_insert_function_values'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with _insert_function_values.")
+            try:
+                ts = datetime.utcnow()
+                f = 50.
+                h = abdi._h(f,35.)
+                z = abdi._z(f,35.)
+                te = datetime.utcnow()
+                successes['_h_z'] = ("Version: {}: _h_z {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_h_z'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _h_z.")
+            try:
+                ts = datetime.utcnow()
+                for key in abdi.ABSKEYLIST:
+                    t = abdi._get_column(key)
+                te = datetime.utcnow()
+                successes['_get_column'] = ("Version: {}: _get_column {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_get_column'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _get_column.")
+            try:
+                ts = datetime.utcnow()
+                ma = abdi._get_max('varf')
+                te = datetime.utcnow()
+                successes['_get_max'] = ("Version: {}: _get_max {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_get_max'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _get_max.")
+            try:
+                ts = datetime.utcnow()
+                mi = abdi._get_min('varf')
+                te = datetime.utcnow()
+                successes['_get_min'] = ("Version: {}: _get_min {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_get_min'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _get_min.")
+            try:
+                ts = datetime.utcnow()
+                resultline, decmeanx, decmeany, variocorrold = abdi._calcdec(xstart=20000,ystart=1700,hstart=0.0,hbasis=0.0,ybasis=0.0,deltaD=0.0,usestep=0,scalevalue=None,iterator=0,annualmeans=None,meantime=False,xyzorient=False,residualsign=1,debugmode=False)
+                te = datetime.utcnow()
+                successes['_calcdec'] = ("Version: {}: _calcdec {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_calcdec'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _calcdec.")
+            try:
+                ts = datetime.utcnow()
+                outline, hstart, hbasis = abdi._calcinc(resultline,scalevalue=None,incstart=0.0,deltaI=0.0,iterator=0,usestep=0,annualmeans=None,xyzorient=False,decmeanx=decmeanx,decmeany=decmeany,variocorrold=variocorrold,residualsign=1,debugmode=True)
+                te = datetime.utcnow()
+                successes['_calcinc'] = ("Version: {}: _calcinc {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_calcinc'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _calcinc.")
+            try:
+                ts = datetime.utcnow()
+                angle = abdi._corrangle(386.9)
+                te = datetime.utcnow()
+                successes['_corrangle'] = ("Version: {}: _corrangle {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_corrangle'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _corrangle.")
 
             # If end of routine is reached... break.
             break

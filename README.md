@@ -1492,6 +1492,11 @@ in section 7.2.
            absdata = absdata._insert_function_values(func)
 
 
+#### Considering F differences between reference pier and continuous measurement position
+
+
+
+
 #### Considering pier differences for non-reference pier measurements
 
 If you perform DI measurements on multiple piers you might want to consider the pier differences in respect
@@ -1523,10 +1528,10 @@ stepwise algorythm based on an excel sheet by J. Matzka and DTU Copenhagen (see 
 Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field 
 information needs to be provided as well. 
 
-Checkout `help(di.absoluteAnalysis)` for all options. The analytical procedures are outlined in detail in 
+Checkout `help(di.absolute_analysis)` for all options. The analytical procedures are outlined in detail in 
 section 7.7. A typical analysis looks like:
 
-        diresult = di.absoluteAnalysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
+        diresult = di.absolute_analysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
 
 Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific 
 observatory/pillar. Using the examples provided along with MagPy, an analysis can be performed as follows. Firstly we 

@@ -2,6 +2,7 @@ import unittest
 import sys
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 from magpy.stream import *
+import magpy.absolutes as di
 from magpy.core.flagging import *
 from magpy.core import database
 
@@ -618,6 +619,88 @@ class TestDatabase(unittest.TestCase):
         self.assertTrue(db.flags_to_delete(parameter="operator", value="RL"))
         fl2 = db.flags_from_db()
         self.assertEqual(len(fl1), len(fl2)+1)
+
+
+class TestAbsolutes(unittest.TestCase):
+    def test_deg2degminsec(self):
+        test = di.deg2degminsec(270.5)
+        self.assertEqual(test, '270:30:0')
+
+    def test_absread(self):
+        # if this test fails then the following absolute tests will fail as well
+        absst = di.abs_read(example6a)
+        self.assertEqual(len(absst), 1)
+
+    def test_get_data_list(self):
+        absst = di.abs_read(example6a)
+        lst = absst[0].get_data_list()
+        self.assertEqual(len(lst), 32)
+        self.assertIn('# MagPy Absolutes',lst[0])
+
+    def test_get_abs_distruct(self):
+        absst = di.abs_read(example6a)
+        absdata = absst[0].get_abs_distruct()
+        self.assertEqual(len(absdata), 17)
+
+    def test_h_z(self):
+        absst = di.abs_read(example6a)
+        absdata = absst[0].get_abs_distruct()
+        f = 50.00
+        h = absdata._h(f,35.)
+        z = absdata._z(f,35.)
+        f_test = np.round(np.sqrt(h**2 + z**2),2)
+        self.assertEqual(f, f_test)
+
+    def test_get_column(self):
+        absst = di.abs_read(example6a)
+        absdata = absst[0].get_abs_distruct()
+        example6amire = 180.1372
+        columnmean = np.mean(absdata._get_column('expectedmire'))
+        self.assertEqual(example6amire, columnmean)
+
+    def test_get_max_min(self):
+        absst = di.abs_read(example6a)
+        absdata = absst[0].get_abs_distruct()
+        ma = absdata._get_max('varf')
+        mi = absdata._get_min('varf')
+        self.assertEqual(np.round((ma-mi),2), 2.01)
+
+    def test_corrangle(self):
+        absst = di.abs_read(example6a)
+        absdata = absst[0].get_abs_distruct()
+        a1 = absdata._corrangle(-144.5)
+        a2 = absdata._corrangle(575.5)
+        a3 = absdata._corrangle(215.5)
+        a4 = absdata._corrangle(360.0)
+        self.assertEqual(a1, a2)
+        self.assertEqual(a2, a3)
+        self.assertEqual(a4, 0)
+
+    def test_calcdec_calcinc(self):
+        # construct two easy examples woith well known results
+        absst = di.abs_read(example6a)
+        absdata = absst[0].get_abs_distruct()
+        data = data_for_di({'file': example5}, starttime='2018-08-29', endtime='2018-08-30', datatype='both',
+                           debug=False)
+        valuetest = absdata._check_coverage(data, keys=['x', 'y', 'z', 'f'])
+        func = data.header.get('DataFunctionObject')[0]
+        absdata = absdata._insert_function_values(func)
+        xyzo = False
+        hstart = 0.0
+        hbasis = 0.0
+        ybasis = 0.0
+        resultline, decmeanx, decmeany, variocorrold = absdata._calcdec(xstart=20000, ystart=1700, hstart=0.0,
+                                                                        hbasis=0.0, ybasis=0.0, deltaD=0.0, usestep=0,
+                                                                        scalevalue=None, iterator=0, annualmeans=None,
+                                                                        meantime=False, xyzorient=xyzo, residualsign=1,
+                                                                        debugmode=False)
+        outline, hstart, hbasis = absdata._calcinc(resultline, scalevalue=None, incstart=0.0, deltaI=0.0, iterator=0,
+                                                   usestep=0, annualmeans=None, xyzorient=xyzo, decmeanx=decmeanx,
+                                                   decmeany=decmeany, variocorrold=variocorrold, residualsign=1,
+                                                   debugmode=False)
+        self.assertEqual(np.round(outline[1], 4), 64.3705)
+        self.assertEqual(np.round(outline[2], 4), 4.3424)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
