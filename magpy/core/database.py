@@ -1813,7 +1813,7 @@ class DataBank(object):
         return stream.sorting()
 
 
-    def get_pier(self, pierid, rp, value='deltaF', maxdate=None, dic='DeltaDictionary'):
+    def get_pier(self, pierid, rp, value='deltaF', year=None, dic='DeltaDictionary'):
         """
         DEFINITION:
             Gets values from DeltaDictionary of the PIERS table
@@ -1832,14 +1832,19 @@ class DataBank(object):
         """
         sql = 'SELECT '+ dic +' FROM PIERS WHERE PierID = "' + pierid + '"'
         cursor = self.db.cursor()
-        cursor.execute(sql)
-        row, = cursor.fetchone()
+        msg = self._executesql(cursor, sql)
+        if msg:
+            print(" get_pier: sql comment error: {}".format(msg))
+            return 0.0
 
+        row = cursor.fetchone()
         if not row:
             print(" get_pier: No data found for your selection")
             return 0.0
+        else:
+            row = row[0]
 
-        # Identify version (MagPy1.x - sting, MagPy2.x json)
+        # Identify version (MagPy1.x - string, MagPy2.x json)
         if row.find("_") > 0:
             print (" get_pier: found old dictionary string - updated elsewhere - where this data is filled in")
             d = string2dict(row)
@@ -1849,8 +1854,10 @@ class DataBank(object):
         deltadir = d.get(rp,{})
         if deltadir:
             yearlist = [int(year) for year in deltadir]
-            maxyear = max(yearlist)
-            valdir = deltadir.get(str(maxyear))
+            datayear = max(yearlist)
+            if year:
+                datayear = [year if year in yearlist else max(yearlist)][0]
+            valdir = deltadir.get(str(datayear))
             res = valdir.get(value, 0.0)
             return float(res)
         else:

@@ -329,6 +329,7 @@ DataStream  |  _convertstream  |  2.0.0  |            |  yes           |  yes   
 DataStream  |  _copy_column  |  2.0.0  |              |  yes           |  yes             |    |
 DataStream  |  _det_trange  |  2.0.0  |               |  yes*          |                  |    |  filter
 DataStream  |  _drop_column  |  2.0.0  |              |  yes           |  yes             |    |
+DataStream  |  _find_t_limits  |  2.0.0  |  2.1.0     |  yes           |                  |    |
 DataStream  |  _get_column  |  2.0.0  |               |  yes           |  yes             |    |
 DataStream  |  _get_key_headers  |  2.0.0  |          |  yes           |  yes             |    |
 DataStream  |  _get_key_names  |  2.0.0  |            |  yes           |  yes             |    |
@@ -395,8 +396,10 @@ DataStream  |  sorting  |    2.0.0  |                 |  yes*          |        
 DataStream  |  start  |      2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  steadyrise  |  2.0.0  |                |  yes           |  no              |    |
 DataStream  |  stream2dict  |  2.0.0  |               |  yes*          |                  |    |  baseline
+DataStream  |  timerange  |  2.0.0  |                 |  yes           |                  |    |
 DataStream  |  trim  |       2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  use_sectime  |  2.0.0  |               |  yes           |                  |    |
+DataStream  |  variables  |  2.0.0  |                 |  yes           |                  |    |
 DataStream  |  write  |      2.0.0  |                 |  yes           |                  |    |
 DataStream  |  xyz2hdz  |    2.0.0  |                 |  yes*          |  yes*            |  5.2    |  _convertstream
 DataStream  |  xyz2idf  |    2.0.0  |                 |  yes*          |  yes*            |  5.2    |  _convertstream
@@ -408,6 +411,7 @@ DataStream  |  xyz2idf  |    2.0.0  |                 |  yes*          |  yes*  
 
 
 deprecated:
+    - stream._find_t_limits()
     - stream.flag_range()   -> moved to core.flagging
     - stream.flag_outlier(self, **kwargs)   -> moved to core.flagging
     - stream.remove_flagged(self, **kwargs)  -> core.flagging.apply_flags
@@ -705,32 +709,11 @@ CALLED BY:
         logger.warning("findtime: Didn't find selected time - returning 0")
         return 0
 
+
     def _find_t_limits(self):
-        """
-        DEFINITION:
-            Find start and end times in stream.
-        RETURNS:
-            Two datetime objects, start and end.
-        """
+        # old method  - keep it for a while
+        return self.timerange()
 
-        if len(self.ndarray[0]) > 0:
-            if isinstance(self.ndarray[0][0], datetime):
-                t_start = np.min(self.ndarray[0]).replace(tzinfo=None)
-                t_end = np.max(self.ndarray[0]).replace(tzinfo=None)
-            elif isinstance(self.ndarray[0][0], datetime64):
-                t_start = np.min(self.ndarray[0])
-                t_end = np.max(self.ndarray[0])
-            else:
-                t_start = num2date(self.ndarray[0][0]).replace(tzinfo=None)
-                t_end = num2date(self.ndarray[0][-1]).replace(tzinfo=None)
-        else:
-            try: # old type
-                t_start = num2date(self[0].time).replace(tzinfo=None)
-                t_end = num2date(self[-1].time).replace(tzinfo=None)
-            except: # empty
-                t_start,t_end = None,None
-
-        return t_start, t_end
 
     def _print_key_headers(self):
         print("%10s : %22s : %28s" % ("MAGPY KEY", "VARIABLE", "UNIT"))
@@ -5399,6 +5382,31 @@ CALLED BY:
 
         return np.asarray(rescol)
 
+    def timerange(self):
+        """
+        DEFINITION:
+            Find start and end times in stream.
+        RETURNS:
+            Two datetime objects, start and end.
+        """
+        if len(self.ndarray[0]) > 0:
+            if isinstance(self.ndarray[0][0], datetime):
+                t_start = np.min(self.ndarray[0]).replace(tzinfo=None)
+                t_end = np.max(self.ndarray[0]).replace(tzinfo=None)
+            elif isinstance(self.ndarray[0][0], datetime64):
+                t_start = np.min(self.ndarray[0])
+                t_end = np.max(self.ndarray[0])
+            else:
+                t_start = num2date(self.ndarray[0][0]).replace(tzinfo=None)
+                t_end = num2date(self.ndarray[0][-1]).replace(tzinfo=None)
+        else:
+            try: # old type
+                t_start = num2date(self[0].time).replace(tzinfo=None)
+                t_end = num2date(self[-1].time).replace(tzinfo=None)
+            except: # empty
+                t_start,t_end = None,None
+
+        return t_start, t_end
 
     def trim(self, starttime=None, endtime=None, include=False, newway=False):
         """
@@ -5480,6 +5488,43 @@ CALLED BY:
             stream = stream._drop_column('sectime')
 
         return stream
+
+    def variables(self, **kwargs):
+        """
+        DEFINITION:
+            get a list of existing numerical keys in stream.
+            An alternative to _get_key_headers
+        PARAMETERS:
+        kwargs:
+            - limit:        (int) limit the lenght of the list
+            - numerical:    (bool) if True, select only numerical keys
+        RETURNS:
+            - keylist:      (list) a list like ['x','y','z']
+
+        EXAMPLE:
+            data.variables(limit=1)
+            data_stream._get_key_headers(limit=1)
+        """
+
+        limit = kwargs.get('limit')
+        numerical = kwargs.get('numerical')
+
+        if numerical:
+            TESTLIST = self.FLAGKEYLIST
+        else:
+            TESTLIST = KEYLIST
+
+        keylist = []
+
+        if not len(keylist) > 0:  # e.g. Testing ndarray
+            for ind,elem in enumerate(self.ndarray): # use the long way
+                if len(elem) > 0 and ind < len(TESTLIST):
+                    if not TESTLIST[ind] == 'time':
+                        keylist.append(TESTLIST[ind])
+        if limit and len(keylist) > limit:
+            keylist = keylist[:limit]
+
+        return keylist
 
 
     def _write_format(self, format_type, filenamebegins, filenameends, coverage, dateformat,year):
@@ -7918,15 +7963,17 @@ if __name__ == '__main__':
             try:
                 ts = datetime.utcnow()
                 starttime, endtime = teststream._find_t_limits()
+                starttime, endtime = teststream.timerange()
                 te = datetime.utcnow()
-                successes['_find_t_limits'] = (
-                    "Version: {}, _find_t_limits: {}".format(magpyversion, (te - ts).total_seconds()))
+                successes['timerange'] = (
+                    "Version: {}, timerange: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
-                errors['_find_t_limits'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _find_t_limits")
+                errors['timerange'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with timerange")
             try:
                 ts = datetime.utcnow()
                 keys = teststream._get_key_headers()
+                keys = teststream.variables()
                 print("Printing keys, variables and units:")
                 teststream._print_key_headers()
                 te = datetime.utcnow()

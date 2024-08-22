@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
+from tensorflow_estimator.python.estimator.util import parse_iterator_result
+
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
-from magpy.stream import loggerabs, magpyversion, basestring, DataStream, example6a
+from magpy.stream import loggerabs, magpyversion, basestring, DataStream, example5, example6a
 from magpy.core.methods import *
 from urllib.request import urlopen
 import shutil
@@ -38,7 +41,7 @@ CONTENTS
          - _get_min(self, key) :
          - _get_column(self, key) :
          - _check_coverage(self,datastream, keys=['x','y','z']) :
-         - _insert_function_values(self, function, funckeys=['x','y','z','f'], KEYLIST=None, offset=0.0, debug=False)  :
+         - _insert_function_values(self, function, funckeys=['x','y','z','f'], validkeys=None, offset=0.0, debug=False)  :
                          Add a function-output to the selected values of the data stream -> e.g. get baseline
          - _calcdec(self, **kwargs)  : Calculates declination values from input.
          - _calcinc(self, **kwargs)  : Calculates inclination values from input.
@@ -463,7 +466,7 @@ class AbsoluteData(object):
 
         return True
 
-    def _insert_function_values(self, function, funckeys=None, KEYLIST=None, offset=0.0, debug=False):
+    def _insert_function_values(self, function, funckeys=None, validkeys=DataStream().KEYLIST, offset=0.0, debug=False):
         """
         DEFINITION:
             Add a function-output to the selected values of the data stream -> e.g. get baseline
@@ -482,7 +485,7 @@ class AbsoluteData(object):
             abstream._calcdec()
         """
         if not funckeys:
-            funckeys = ['x', 'y', 'z', 'f']
+            funckeys = function[-1]
 
         for elem in self:
             # check whether time step is in function range
@@ -491,7 +494,7 @@ class AbsoluteData(object):
                 #if debug:
                 #    print ("Inserting at {}:".format(num2date(functime)))
                 for key in funckeys:
-                    if not key in KEYLIST[1:15]:
+                    if not key in validkeys[1:15]:
                         raise ValueError("Column key not valid")
                     fkey = 'f'+key
                     if fkey in function[0]:
@@ -2016,259 +2019,15 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
         print("Starting analysis for ", date)
         print("------------------------------------------------------")
         # a) Read variodata
-        #try:
-        ok =True
-        if ok:
-            valalpha = ''
-            valbeta = ''
-            if not isinstance(variodata, list):
-                # Varioinformation from DB can be a comma separated string -> convert to list
-                # or directly be a list
-                variodbtest = variodata.split(',')
-            else:
-                variodbtest = variodata
-
-            if len(variodbtest) == 2:
-                import magpy.database as dbase
-                variostr = dbase.readDB(variodbtest[0],variodbtest[1],starttime=date,endtime=date+timedelta(days=1))
-            else:
-                variomod = _check_url(variodata, date, debug=debug)
-                variostr = read(variomod,starttime=date,endtime=date+timedelta(days=1))
-        try:
-            print("Length of Variodata ({}): {}".format(variodbtest[-1],variostr.length()[0]))
-            if debug:
-                print(" covering: {} ".format(variostr._find_t_limits()))
-            # ---------------------------------------
-            # 1.1 Variometer data read done
-            # ---------------------------------------
-            # Variometer data needs to be available as xyz in nT
-            # Get current components
-            components = variostr.header.get('DataComponents',[])
-            if debug:
-                print (" - variometer data contains the following components: {}".format(components))
-            if len(components)>3:
-                if components[:3] == 'HDZ':
-                    print ("  Variationdata as HDZ -> converting to XYZ")
-                    variostr = variostr._convertstream('hdz2xyz')
-                elif components[:3] == 'IDF':
-                    print ("  Variationdata as IDF -> converting to XYZ")
-                    variostr = variostr._convertstream('idf2xyz')
-            components2deal = variostr.header.get('DataComponents')
-            if len(components2deal)>=3:
-                variocomps = variostr.header.get('DataComponents')[:3].lower()
-                if variocomps.startswith("xyz") and not variometerorientation.lower()=="xyz":
-                    print ("  Variometer data provided in XYZ, Basevalue output projected in HDZ, however,")
-                    print ("  as variometerorientation is not manually confirmed to be xyz (see manual) ")
-                elif not variocomps.startswith("xyz") and variometerorientation.lower()=="xyz":
-                    print("  Basevalue output projected in XYZ but variometer data provided in HEZ!")
-                    print("  MagPy does not yet support that yet - switching to HDZ basevalues")
-                    variometerorientation = "HEZ"
-            # ---------------------------------------
-            # 1.2 Transformation to nT vector done
-            # ---------------------------------------
-            if not variostr.header.get('SensorID') == '':
-                 varioid = variostr.header.get('SensorID')
-            if db and not skipvariodb:
-                try:
-                    vaflaglist = dbase.db2flaglist(db,variostr.header['SensorID'])
-                    variostr = variostr.flag(vaflaglist)
-                    print("Obtained flagging information for vario data from data base: {} flags".format(len(vaflaglist)))
-                except:
-                    print("Could not find flagging data in database")
-                try:
-                    print("Obtaining variometers meta information from db")
-                    variostr.header = dbase.dbfields2dict(db,variostr.header['SensorID']+'_0001')
-                except:
-                    print("Failed to obtain header information from data base")
-                try:
-                    print("Applying delta values from db ...")
-                    variostr = dbase.applyDeltas(db,variostr)
-                except:
-                    print("Applying delta values failed")
-            # ---------------------------------------
-            # 1.3 IF DB: applied DB header, DB delta values and DB flaglist to stream
-            # ---------------------------------------
-            if magrotation or compensation:
-                print("absoluteAnalysis: Applying compensation fields to variometer data ...")
-                deltasapplied = int(variostr.header.get('DataDeltaValuesApplied',0))
-
-                try:   # Compensation values are essential for correct rotation estimates
-                    if not offset and not deltasapplied == 1:  # if offset is provided then it overrides DB contents
-                        print("Compensation values:")
-                        if db:
-                            print (" from db:")
-                        offdict = {}
-                        xcomp = variostr.header.get('DataCompensationX','0')
-                        ycomp = variostr.header.get('DataCompensationY','0')
-                        zcomp = variostr.header.get('DataCompensationZ','0')
-                        if not float(xcomp)==0.:
-                            offdict['x'] = -1*float(xcomp)*1000.
-                        if not float(ycomp)==0.:
-                            offdict['y'] = -1*float(ycomp)*1000.
-                        if not float(zcomp)==0.:
-                            offdict['z'] = -1*float(zcomp)*1000.
-                        print (' -- applying compensation fields: x={}, y={}, z={}'.format(xcomp,ycomp,zcomp))
-                        variostr = variostr.offset(offdict)
-                except:
-                    print("Applying compensation values failed")
-            # ---------------------------------------
-            # 1.4 IF rot or comp: applied bias fields from header
-            # ---------------------------------------
-            if db and magrotation:
-                try:
-                    if not alpha:
-                        print("Taking rotation parameters from db... (alpha)")
-                        rotstring = variostr.header.get('DataRotationAlpha','')
-                        rotdict = dbase.string2dict(rotstring,typ='oldlist')
-                        #print ("Dealing with year", date.year)
-                        valalpha = rotdict.get(str(date.year),'')
-                        if valalpha == '':
-                            print (" -- no alpha value found for year {}".format(date.year))
-                            maxkey = max([int(k) for k in rotdict])
-                            valalpha = rotdict.get(str(maxkey),0)
-                            print (" -- using alpha for year {}".format(str(maxkey)))
-                        valalpha = float(valalpha)
-                        if not float(valalpha)==0.:
-                            print(" -- rotating with alpha: {a} degree (year {b})".format(a=valalpha,b=date.year))
-                            variostr=variostr.rotation(alpha=float(valalpha))
-                    else:
-                        # Using manually provided rotation value - see below
-                        pass
-                    if not beta:
-                        print("Taking rotation parameters from db... (beta)")
-                        rotstring = variostr.header.get('DataRotationBeta','')
-                        rotdict = dbase.string2dict(rotstring,typ='oldlist')
-                        valbeta = rotdict.get(str(date.year),'')
-                        if valbeta == '':
-                            maxkey = max([int(k) for k in rotdict])
-                            beta = rotdict[str(maxkey)]
-                        valbeta = float(valbeta)
-                        if not float(valbeta)==0.:
-                            print("-- rotating with beta: {a} degree (year {b})".format(a=valbeta,b=date.year))
-                            variostr=variostr.rotation(beta=float(valbeta))
-                    else:
-                        # Using manually provided rotation value - see below
-                        pass
-                except:
-                    print("Applying rotation parameters failed")
-            # ---------------------------------------
-            # 1.5 IF DB and rot: applied rotation angles from header
-            # ---------------------------------------
-            try:
-                variostr = variostr.remove_flagged()
-                print("Flagged records of variodata have been removed")
-            except:
-                print("Flagging of variodata failed")
-            # ---------------------------------------
-            # 1.6 drop flagged data
-            # ---------------------------------------
-        except:
-            print("absoluteAnalysis: reading variometer data failed")
-            variostr = DataStream()
-        if (len(variostr) > 3 and not np.isnan(variostr.mean('time'))) or len(variostr.ndarray[0]) > 0: # can contain ([], 'File not specified')
-            if offset:
-                variostr = variostr.offset(offset)
-            if not alpha:
-                valalpha = 0.0
-            else:
-                valalpha = float(alpha)
-                print ("Rotating vector with manually provided alpha", valalpha)
-            if not beta:
-                valbeta = 0.0
-            else:
-                valbeta = float(beta)
-                print ("Rotating vector with manually provided beta", valbeta)
-            variostr =variostr.rotation(alpha=valalpha, beta=valbeta)
-            vafunc = variostr.interpol(['x','y','z'])
-            if vafunc[0] == {}:
-                print("absoluteAnalysis: check variation data -- data seems to be invalid")
-                variofound = False
-        else:
-            print("absoluteAnalysis: no variometer data available")
-            variofound = False
-        # ---------------------------------------
-        # 1.6 manually provided rotation and offsets applied, interpolated
-        # ---------------------------------------
-
-        # TODO - move to a separate method - scalardata = _scalar_for_di(source, starttime, endtime, debug)
+        datatype = 'vario'
+        if variodata == scalardata:
+            datatype = 'both'
+        vdata = data_for_di(variodata, starttime=starttime, endtime=endtime, datatype=datatype)
         # b) Load Scalardata
-        print("-----------------")
-        try:
-            if not isinstance(scalardata, list):
-                # Scalar information from DB can be a comma separated string -> convert to list
-                # or directly be a list
-                scalardbtest = scalardata.split(',')
-            else:
-                scalardbtest = scalardata
-
-            if len(scalardbtest) == 2:
-                import magpy.database as dbase
-                scalarstr = dbase.readDB(scalardbtest[0],scalardbtest[1],starttime=date,endtime=date+timedelta(days=1))
-            else:
-                scalarmod = _check_url(scalardata, date)
-                scalarstr = read(scalarmod,starttime=date,endtime=date+timedelta(days=1))
-            if not scalarstr.header.get('SensorID') == '':
-                 scalarid = scalarstr.header.get('SensorID')
-            # Check for the presence of f or df
-            fcol = KEYLIST.index('f')
-            dfcol = KEYLIST.index('df')
-            if not len(scalarstr.ndarray[fcol]) > 0 and not len(scalarstr.ndarray[dfcol]) > 0:
-                print ("absoluteAnalysis: No F data found in file")
-                pass
-            elif not len(scalarstr.ndarray[fcol]) > 0:
-                scalarstr = scalarstr.calc_f()
-            else:
-                pass
-            print("Length of Scalardata {}: {}".format(scalardbtest[-1],scalarstr.length()[0]))
-            if debug:
-                print(" covering: {}, {}".format(scalarstr._find_t_limits(), scalarstr.samplingrate()))
-            print (scalarstr.header.get('SensorID') , scalarstr.header.get('DataID'))
-            # ---------------------------------------
-            # 2.1 scalar data loaded
-            # ---------------------------------------
-            if db and not skipscalardb:
-                try:
-                    scflaglist = dbase.db2flaglist(db,scalarstr.header.get('SensorID'))
-                    scalarstr = scalarstr.flag(scflaglist)
-                except:
-                    print("Failed to obtain flagging information from data base")
-                try:
-                    print("Now getting header information")
-                    scalarstr.header = dbase.dbfields2dict(db,scalarstr.header.get('SensorID')+'_0001')
-                except:
-                    print("Failed to obtain header information from data base")
-                try:
-                    print("Applying delta values from database for {}".format(scalarstr.header.get('SensorID')))
-                    scalarstr = dbase.applyDeltas(db,scalarstr)
-                    if not deltaF == 0:
-                        print (" ------------  IMPORTANT ----------------")
-                        print (" Both, deltaF from DB and the provided delta F {b}".format(b=deltaF))
-                        print (" will be applied.")
-                except:
-                    print("Applying delta values failed")
-            # ---------------------------------------
-            # 2.2 If DB: loaded DB flags, applied header and Deltas from DB
-            # ---------------------------------------
-            try:
-                scalarstr = scalarstr.remove_flagged()
-                print("Flagged records of scalardata have been removed")
-            except:
-                print("Flagging of scalardata failed")
-            # ---------------------------------------
-            # 2.3 removed flagged data
-            # ---------------------------------------
-        except:
-            print("absoluteAnalysis: reading scalar data from file failed")
-            scalarstr = DataStream()
-        if (len(scalarstr) > 3 and not np.isnan(scalarstr.mean('time'))) or len(scalarstr.ndarray[0]) > 0: # Because scalarstr can contain ([], 'File not specified')
-            scfunc = scalarstr.interpol(['f'])
-            if scfunc[0] == {}:
-                print("absoluteAnalysis: check scalar data -- f data seems to be invalid")
-                scalarfound = False
+        if not datatype == 'both':
+            sdata = data_for_di(scalardata, starttime=starttime, endtime=endtime, datatype='scalar')
         else:
-            print("absoluteAnalysis: no external scalar data provided")
-            scalarfound = False
-
+            sdata = vdata.copy()
         # c) get absolute data
         abslist = []
         if readfile:
@@ -2285,26 +2044,15 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
                 # could not find dates in filenames
                 difiles = [di for di in filelist]
 
-            #print ("Here", difiles, filelist)
-
             if len(difiles) > 0:
                 for elem in difiles:
-                    #if not deltaF:
-                    #    deltaF = 0.0
                     absst = abs_read(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
                     try:
-                        if not len(absst) > 1: # Manual
-                            stream = absst[0].get_abs_distruct()
-                            abslist.append(absst)
-                            if db and dbadd:
-                                dbase.diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
-                        else: # AutoDIF
-                            for a in absst:
-                                stream = a.get_abs_distruct()
-                                abslist.append(a)
-                            if db and dbadd:
-                                dbase.diline2db(db, absst,mode='insert',tablename='DIDATA_'+stationid)
-                        #print "absoluteAnalysis: Successful analyse of %s" % elem
+                        for a in absst:
+                            stream = a.get_abs_distruct()
+                            abslist.append(a)
+                        if db and dbadd:
+                            dbase.diline2db(db, absst, mode='insert', tablename='DIDATA_' + stationid)
                         successlist.append(elem)
                     except:
                         print("absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem)
@@ -2367,57 +2115,35 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
             if stream[0].person == 'AutoDIF' and not azimuth:
                 print("absoluteAnalysis: AUTODIF but no azimuth provided --- this will not work")
 
-            if variofound:
-                valuetest = stream._check_coverage(variostr)
+            if len(vdata) > 0:
+                valuetest = stream._check_coverage(vdata)
                 if valuetest:
-                    stream = stream._insert_function_values(vafunc,funckeys=['x','y','z'],KEYLIST=KEYLIST,debug=debug)
+                    func = vdata.header.get('DataFunctionObject')[0]
+                    stream = stream._insert_function_values(func,funckeys=['x','y','z'],debug=debug)
                 else:
                     print("Warning! Variation data missing at DI time range")
-                #print ("stream looks like:", stream)
-                #stream = stream._insert_function_values(vafunc)
-            if scalarfound:
-                valuetest = stream._check_coverage(scalarstr,keys=['f'])
+            if len(sdata) > 0:
+                valuetest = stream._check_coverage(sdata,keys=['f'])
                 if valuetest:
-                    stream = stream._insert_function_values(scfunc,funckeys=['f'],KEYLIST=KEYLIST,offset=deltaF,debug=debug)
+                    func = sdata.header.get('DataFunctionObject')[0]
+                    stream = stream._insert_function_values(func,funckeys=['f'],offset=deltaF,debug=debug)
                 else:
                     print ("Warning! Scalar data missing at DI time range")
             try:
                 # get delta D and delta I values here
                 if not deltaD and db:
-                    try:
-                        val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
-                        try:
-                            dic = string2dict(val,typ='dictionary')
-                            res = dicgetlast(dic,pier='A2',element='deltaD,deltaI,deltaF')
-                            deltaD = float(res.get('deltaD','0.00001'))
-                        except:
-                            deltainputs = val.split(',')
-                            lastval = deltainputs[-1]
-                            deltaD = float(lastval.split('_')[2])
-                        print ("Obtained deltaD from database")
-                    except:
-                        deltaD = 0.0
+                    deltaD = db.get_pier(pier, 'A2', value='deltaD', year=starttime.year)
                 if not deltaI and db:
-                    try:
-                        val= dbselect(db,'DeltaDictionary','PIERS','PierID like "{}"'.format(pier))[0]
-                        try:
-                            dic = string2dict(val,typ='dictionary')
-                            res = dicgetlast(dic,pier='A2',element='deltaD,deltaI,deltaF')
-                            deltaI = float(res.get('deltaI','0.00001'))
-                        except:
-                            deltainputs = val.split(',')
-                            lastval = deltainputs[-1]
-                            deltaI = float(lastval.split('_')[3])
-                        print ("Obtained deltaI from database")
-                    except:
-                        deltaI = 0.0
+                    deltaI = db.get_pier(pier, 'A2', value='deltaI', year=starttime.year)
+                #if not deltaF and db:  # check that - not contained in MagPy 1.x
+                #    deltaF = db.get_pier(pier, 'A2', value='deltaF', year=starttime.year)
 
-                #print ("Running calc:", usestep, annualmeans, deltaD, deltaI, meantime, scalevalue)
                 print ("Provided pier differences:")
                 print (" delta F for continuous scalar data: {}".format(deltaF))
                 print (" delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
 
                 result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=debug,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue,variometerorientation=variometerorientation,residualsign=residualsign)
+
                 #print("%s with delta F of %s nT" % (result.str4,str(deltaF)))
                 #print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
                 if not deltaF == 0:
@@ -2703,6 +2429,14 @@ if __name__ == '__main__':
         while True:
             try:
                 ts = datetime.utcnow()
+                test = deg2degminsec(270.5)
+                te = datetime.utcnow()
+                successes['deg2degminsec'] = ("Version: {}: deg2degminsec {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['deg2degminsec'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with deg2degminsec.")
+            try:
+                ts = datetime.utcnow()
                 absdist = abs_read(example6a, output='AbsoluteDIStruct')  # should be the default
                 te = datetime.utcnow()
                 successes['AbsoluteDIStruct'] = ("Version: {}: AbsoluteDIStruct {}".format(magpyversion,(te-ts).total_seconds()))
@@ -2722,12 +2456,24 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR with DILineStruct.")
             try:
                 ts = datetime.utcnow()
-                test = deg2degminsec(270.5)
+                absdata = absst[0]
+                data = data_for_di({'file': example5}, starttime='2018-08-29', endtime='2018-08-30', datatype='both',
+                                   debug=True)
+                valuetest1 = absdata._check_coverage(data, keys=['f'])
                 te = datetime.utcnow()
-                successes['deg2degminsec'] = ("Version: {}: deg2degminsec {}".format(magpyversion,(te-ts).total_seconds()))
+                successes['_check_coverage'] = ("Version: {}: _check_coverage {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
-                errors['deg2degminsec'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with deg2degminsec.")
+                errors['_check_coverage'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _check_coverage.")
+            try:
+                ts = datetime.utcnow()
+                func = data.header.get('DataFunctionObject')[0]
+                absdata = absdata._insert_function_values(func)
+                te = datetime.utcnow()
+                successes['_insert_function_values'] = ("Version: {}: _insert_function_values {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_insert_function_values'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _insert_function_values.")
 
             # If end of routine is reached... break.
             break
