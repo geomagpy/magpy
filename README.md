@@ -1392,33 +1392,37 @@ For the examples and instructions below we will import a few additional packages
 
 Before continuing a few comments on wording as used in the following:
 
-DI measurement/absolute data : individual values of a typical 4-lagen declination (D) and inclination (I) measurement 
++ **DI measurement/absolute data** : individual values of a typical 4-lagen declination (D) and inclination (I) measurement 
 using a non-magnetic theodolite. DI measurements will provide absolute values D(abs) and I(abs)
 
-reference pier (Pref) : the main pier in your observatory at which DI measurements are performed
++ **reference pier (Pref)** : the main pier in your observatory at which DI measurements are performed
 
-alternative pier (P(alt): any other pier where once in a while DI measurements are performed
++ **alternative pier (P(alt)** : any other pier where once in a while DI measurements are performed
 
-pier deltaD,deltaI and deltaF (pdD, pdI, pdF) : differences between P(ref) and P(alt) which can be applied to P(alt) data, so that 
++ **pier deltaD,deltaI and deltaF (pdD, pdI, pdF)** : differences between P(ref) and P(alt) which can be applied to P(alt) data, so that 
 baseline corrected results using P(alt) data correspond to BCR of P(ref)
 
-deltaF (dF) : the difference in F between a continuously measuring scalar sensor and the reference pier (P(ref))
++ **deltaF (dF)** : the difference in F between a continuously measuring scalar sensor and the reference pier (P(ref))
 
-F absolute F(abs) : the absolute F value measured directly at P(ref) at the same height as D And I 
++ **F absolute F(abs)** : the absolute F value measured directly at P(ref) at the same height as D And I 
 
-F continuous F(ext) :  F value from a continuous measurement. F(ext) + dF = F(abs)
++ **F continuous F(ext)** :  F value from a continuous measurement. F(ext) + dF = F(abs)
 
-basevalues : delta values obtained fro each DI analysis which describe the momentary difference between a 
++ **basevalues** : delta values obtained fro each DI analysis which describe the momentary difference between a 
 continuously measuring systems and the DI determination. MagPy determines basevalues either in cylindrical 
 (dH, dD, dZ, dF, default, dH is delta of horizontal component) or carthesian (dX, dY, dZ, dF) coordinates.
 
-baseline/adopted baseline : a best fit of any kind (linear, spline, polynomial , step function) to multiple basevalues.
++ **baseline/adopted baseline** : a best fit of any kind (linear, spline, polynomial , step function) to multiple basevalues.
 
-baseline correction : applying baseline functions to continuously measured data so that this data describes "absolute"
++ **baseline correction** : applying baseline functions to continuously measured data so that this data describes "absolute"
 field variations
 
 
 ### 7.1 Reading and analyzing DI data
+
+In this section we will describe in detail how a DI analysis is preformed and which methods are implemented. For 
+productive data analysis, however, there is a single method implemented, which comprises all of the following
+procedures. Please move to section 7.2 for a description of the productive method.
 
 #### Data structure of DI measurements
 
@@ -1521,6 +1525,35 @@ to the calcabsolute method. You can also organize these values in a MagPy databa
 After reading DI data and associating continuous measurements to its time steps it is now time to determine the 
 absolute values of D and I, and eventually F if not already measured at the main DI pier. DI analysis makes use of a 
 stepwise algorythm based on an excel sheet by J. Matzka and DTU Copenhagen (see section 7.7 for background information). 
+This stepwise procedure is automatically performed by the the `calcabsolutes`method, which will iteratively call the 
+submethods _calddec and calcinc.
+
+       result = absdata.calcabsolutes(usestep=0, annualmeans=None, printresults=True, 
+                              deltaD=0.0, deltaI=0.0, meantime=False, scalevalue=None, 
+                              variometerorientation='hez', residualsign=1)
+
+As option *printresult* is selected this will result in the following output. The variable *result* will contain all 
+analysis data reduced to the time of the first measurement. If you want to use the mean time of the measurements
+active option *meantime=True*. You can also supply *annualmeans* which will be used in case no F(abs) and no F(ext) 
+is available. *residualsign* of either +1 or -1 is related to the orientation of the fluxgate probe on the theodolite
+where +1 denotes an inline-orientation. Finally, *usestep* defines the measurement to be used. Currently MagPy 
+DI analysis supports up to two repeated measurement for each position. You can analyse the first one *usestep=1* or the 
+seocnd *usestep=2* or the average of both with *uesestep=0*.
+
+The output looks as follows:
+
+      $ Vector at: 2018-08-29 07:42:00+00:00
+      $ Declination: 4:20:36, Inclination: 64:22:14, H: 21031.8, Z: 43838.8, F: 48622.8
+      $ Collimation and Offset:
+      $ Declination:    S0: 4.941, delta H: 2.345, epsilon Z: 57.526
+      $ Inclination:    S0: 5.233, epsilon Z: 58.010
+      $ Scalevalue: 1.003 deg/unit
+
+If you want to see what `calcabsolute`is actually doing you can perform the iterative procedure yourself. 
+Just call the submethods `_calddec` and `_calcinc` and gradually improve determinations of D, I and basevalues. 
+You just need to provide some starting values and then call the following methods. Results from a previous step are 
+fed into the next step. Here we are using three steps and you can see, that the results already stabilizes after the 
+second step. This example is part of the jupyter notebook manual. 
 
 
 ### 7.2 The absolute_analysis method - single command DI analysis 

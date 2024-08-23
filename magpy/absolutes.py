@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-
-from tensorflow_estimator.python.estimator.util import parse_iterator_result
-
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
 from magpy.stream import loggerabs, magpyversion, basestring, DataStream, example5, example6a
@@ -590,6 +587,7 @@ class AbsoluteData(object):
         if not residualsign and not residualsign in [1,-1]:
             residualsign = 1
 
+        determinationindex = 0
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
         scale_z = scalevalue[2]
@@ -787,9 +785,6 @@ class AbsoluteData(object):
             if iterator == 0:
                 loggerabs.error('_calcdec: %s : Check the horizontal input of absolute data (or xstart value)' % num2date(poslst[0].time).replace(tzinfo=None))
 
-        #print("_calcdec:  Dec calc: %f, %f, %f, %f" % (decmean, mirediff, variocorr[0], deltaD))
-        #print ("Hallo", decmean, mirediff, variocorr[determinationindex]*180.0/np.pi, deltaD)
-
         # see also IM technical manual (5.0.0), page 45, formula 1c:
         dec_baseval = self._corrangle(decmean + mirediff + deltaD)
         dec = self._corrangle(decmean + mirediff + variocorr[determinationindex]*180.0/np.pi + deltaD)
@@ -803,7 +798,6 @@ class AbsoluteData(object):
         if not hstart == 0:
             s0d = (dl2tmp[0]-dl2tmp[1]+dl2tmp[2]-dl2tmp[3])/4*hstart
             deH = (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4*hstart
-            #print ("deH", (-dl2tmp[0]-dl2tmp[1]+dl2tmp[2]+dl2tmp[3])/4)
             if debugmode:
                 print ("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
             loggerabs.debug("_calcdec:  collimation angle (dl2tmp): %f, %f, %f, %f; hstart: %f" % (dl2tmp[0],dl2tmp[1],dl2tmp[2],dl2tmp[3],hstart))
@@ -2538,6 +2532,16 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['_corrangle'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with _corrangle.")
+            try:
+                ts = datetime.utcnow()
+                result = abdi.calcabsolutes(usestep=0, annualmeans=None, printresults=True, debugmode=False,
+                              deltaD=0.0, deltaI=0.0, meantime=False, scalevalue=None,
+                              variometerorientation='hez', residualsign=1)
+                te = datetime.utcnow()
+                successes['calcabsolutes'] = ("Version: {}: calcabsolutes {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['calcabsolutes'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with calcabsolutes.")
 
             # If end of routine is reached... break.
             break

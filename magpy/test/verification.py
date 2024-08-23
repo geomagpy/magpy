@@ -701,6 +701,20 @@ class TestAbsolutes(unittest.TestCase):
         self.assertEqual(np.round(outline[1], 4), 64.3705)
         self.assertEqual(np.round(outline[2], 4), 4.3424)
 
+    def test_calcabsolutes(self):
+        # construct two easy examples woith well known results
+        absst = di.abs_read(example6a)
+        absdata = absst[0].get_abs_distruct()
+        data = data_for_di({'file':example5}, starttime='2018-08-29',endtime='2018-08-30', datatype='both', debug=False)
+        valuetest = absdata._check_coverage(data,keys=['x','y','z','f'])
+        func = data.header.get('DataFunctionObject')[0]
+        absdata = absdata._insert_function_values(func)
+        results = absdata.calcabsolutes(usestep=0, annualmeans=None, printresults=True, debugmode=False,
+                              deltaD=0.0, deltaI=0.0, meantime=False, scalevalue=None,
+                              variometerorientation='hez', residualsign=1)
+        self.assertEqual(np.round(results[1],4), 64.3705)
+        self.assertEqual(np.round(results[2],4), 4.3435)  # different to calcdec_caclinc as this is the third iteration step
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
