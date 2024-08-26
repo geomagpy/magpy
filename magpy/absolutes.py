@@ -81,7 +81,8 @@ AbsoluteAnalysis  |  _calcinc    |  2.0.0     |           |  yes        |  yes  
 AbsoluteAnalysis  |  _h          |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcinc
 AbsoluteAnalysis  |  _z          |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcinc
 AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |               |  7.1    |
-           | _logfile_len        |  2.0.0     |           |             |               |  -      | 
+           | _analyse_di_source  |  2.0.0     |           |  yes        |               |  -      | 
+           | _logfile_len        |  2.0.0     |           |             |               |  -      | unused?
            | deg2degminsec       |  2.0.0     |           |  yes        |               |  7.2    | 
     d      | absRead             |  2.0.0     |  2.1.0    |             |               |  -      | 
            | abs_read            |  2.0.0     |           |  yes        |               |  7.1    | 
