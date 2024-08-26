@@ -307,13 +307,13 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             if debug:
                 print("  -> applied {} flags from data base ...".format(len(fl)))
             # get all header data from database and apply delta values (i.e. F offsets etc)
-            # data.header = db.dbfields2dict(scalarstr.header.get('SensorID')+'_0001')
+            data.header = db.fields_to_dict(data.header.get('SensorID')+'_0001')
             if debug:
                 print("  -> applied header from data base ...")
-            if not offset:  # check that - not done in MagPy 1.x
+            if not offset:  # TODO check that - not done in MagPy 1.x
                 data = db.apply_deltas(data)
                 if debug:
-                    print("  -> applied delta_valuesfrom data base ...")
+                    print("  -> applied delta_values from data base ...")
                     # print (" ------------  IMPORTANT ----------------")
                     # print (" Both, deltaF from DB and the provided delta F {b}".format(b=deltaF))
                     # print (" will be applied.")
@@ -323,9 +323,9 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
     if datagood and datatype in ['vario', 'variometer', 'both', 'full']:
         if magrotation or compensation and not data.header.get('DataDeltaValuesApplied', False) and not offset:
             offdict = {}
-            xcomp = variostr.header.get('DataCompensationX', '0')
-            ycomp = variostr.header.get('DataCompensationY', '0')
-            zcomp = variostr.header.get('DataCompensationZ', '0')
+            xcomp = data.header.get('DataCompensationX', '0')
+            ycomp = data.header.get('DataCompensationY', '0')
+            zcomp = data.header.get('DataCompensationZ', '0')
             if not float(xcomp) == 0.:
                 offdict['x'] = -1 * float(xcomp) * 1000.
             if not float(ycomp) == 0.:
@@ -355,6 +355,7 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
                 if not float(valalpha) == 0.:
                     print("  -> rotating with alpha: {a} degree (year {b})".format(a=valalpha, b=starttime.year))
                     data = data.rotation(alpha=float(valalpha))
+                    data.header['DataComments'] = "{} - rotated by alpha={}".format(data.header.get('DataComments',''), valalpha)
             else:
                 # Using manually provided rotation value - see below
                 pass
@@ -369,6 +370,7 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
                 if not float(valbeta) == 0.:
                     print("  -> rotating with beta: {a} degree (year {b})".format(a=valbeta, b=date.year))
                     data = data.rotation(beta=float(valbeta))
+                    data.header['DataComments'] = "{} - rotated by beta={}".format(data.header.get('DataComments',''), valbeta)
             else:
                 # Using manually provided rotation value - see below
                 pass

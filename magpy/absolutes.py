@@ -399,6 +399,7 @@ class AbsoluteData(object):
         liste = sorted(self.container, key=lambda tmp: tmp.time)
         return AbsoluteData(liste, self.header)
 
+
     def _corrangle(self,angle):
         """
         DESCRIPTION
@@ -836,11 +837,14 @@ class AbsoluteData(object):
 
         return resultline, meanx, meany, meandec
 
+
     def _h(self, f, inc):
         return f * np.cos(inc*np.pi/(180.0))
 
+
     def _z(self, f, inc):
         return f * np.sin(inc*np.pi/(180.0))
+
 
     def _calcinc(self, linestruct, **kwargs):
         """
@@ -906,7 +910,9 @@ class AbsoluteData(object):
 
         determinationindex = int(linestruct.var5)
         variocorr = []
+        meanf = 0
 
+        calcscaleval = 999.
         scale_x = scalevalue[0]
         scale_y = scalevalue[1]
         scale_z = scalevalue[2]
@@ -1005,17 +1011,6 @@ class AbsoluteData(object):
             meanvarioy = 0.0
             meanvarioz = 0.0
         else:
-            """
-            print ("Hungarian sheet - only using F during Inc")
-            if len(variox) >= 16:
-                # Correct variant: select means for measurements during vc
-                meanvariox = np.mean(variox[8:16])
-                meanvarioy = np.mean(varioy[8:16])
-                meanvarioz = np.mean(varioz[8:16])
-                meanf = np.mean(fvlist[8:16])
-                print ("Dont do that - use original way")
-            else:
-            """
             # Use whatever is there, should never be the case actually
             meanvariox = np.mean(variox)
             meanvarioy = np.mean(varioy)
@@ -1062,9 +1057,6 @@ class AbsoluteData(object):
                     # correctness the following line requires that meanf is determined in the same time range as meanvario comps
                     # other sheets only take meanf and variomeans only during the respective cycle - with constant delta F
                     ppmtmp = meanf + (scale_x*poslst[k].varx - meanvariox)*np.cos(incstart*np.pi/180.) + (scale_z*poslst[k].varz - meanvarioz)*np.sin(incstart*np.pi/180.) + ((scale_y*poslst[k].vary)**2-(meanvarioy)**2)/(2*meanf)
-                    #print ("Getting variationcorrected F value for each Hv measurement:", ppmtmp)
-                    #print (" consisting of ", meanf, (scale_x*poslst[k].varx - meanvariox)*np.cos(incstart*np.pi/180.), (scale_z*poslst[k].varz - meanvarioz)*np.sin(incstart*np.pi/180.),((scale_y*poslst[k].vary)**2-(meanvarioy)**2)/(2*meanf))
-                    #print ("scales", scale_x,scale_y,scale_z, incstart)
                 # old version ---> ppmtmp = np.sqrt(xtmp**2 + ytmp**2 + ztmp**2)
                 if isnan(ppmtmp):
                     ppmval.append(meanf)
@@ -1081,11 +1073,9 @@ class AbsoluteData(object):
                 quad = poslst[k].vc - (poslst[k].hc + mirediff)
             else:
                 quad = poslst[k].vc + 360.0 - (poslst[k].hc + mirediff)
-            #print (" Residual correction", poslst[k].res, rcorri)
             # The signums are essential for the collimation angle calculation
             # test_di: also checks regarding correctness for different location/angles
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #signum1 = np.sign(np.tan(quad*np.pi/180))
             signum1 = np.sign(-np.cos(quad*np.pi/180.0))
             signum2 = np.sign(np.sin(quad*np.pi/180.0))
             if signum2>0:
@@ -1101,7 +1091,8 @@ class AbsoluteData(object):
                 signum2 = -1.0
                 signum3 = -1.0
             #signum2 = 1.0 # i.e. hungarian sheet - is this correct?
-
+            I0 = 0
+            sigdf = 1.0
             if incstart < 0: ###### check here
                 signum2 = -1.*signum2
             if cnt in [0,1]:
@@ -1116,11 +1107,6 @@ class AbsoluteData(object):
             elif cnt in [6,7]:
                 I0 = np.pi - (poslst[k].vc*np.pi/180.0 - signum2*rcorri)
                 sigdf = -1.0
-
-            #print ("I0:", I0*180.0/np.pi)
-            # previous version -- I0 = (signum1*poslst[k].vc*np.pi/180.0 - signum2*rcorri - signum1*PiVal)
-
-            #print ("Inc:", signum1*poslst[k].vc*200/180, quad, I0*200./np.pi, rcorri*200./np.pi, signum2, PiVal, ppmval[cnt])
 
             # S0I
             # (northern =-(H32-H33+H34-H35)/4/200*PI()*K35-((F15-F16+F17-F18)*SIN(H40/200*PI())-(H15-H16+H17-H18)*COS(H40/200*PI()))/4
@@ -1157,7 +1143,6 @@ class AbsoluteData(object):
                         if (deltaR == 0):
                             calcscaleval = 999.0
                         else:
-                            #print "Scaleval", mean(ppmval), deltaB, deltaR, rotation, fieldchange
                             calcscaleval = mean(ppmval) * deltaB/deltaR * np.pi/180
                         loggerabs.debug("_calcinc: Scalevalue calculation in calcinc - Fieldchange: %f, Scalevalue: %f, DeltaR: %f" % (fieldchange,calcscaleval,deltaR))
 
@@ -1220,14 +1205,13 @@ class AbsoluteData(object):
 
         if len(ppmval) > 8: # drop value from scale measurement
             selppmval = ppmval[:8]
+            meanf =  mean(selppmval)
         if len(xvals) > 8: # drop value from scale measurement
             xvals = xvals[:8]
             yvals = yvals[:8]
             zvals = zvals[:8]
 
-
         #avcorrf =  mean(ppmval) # definitely not meanf, evetually use ppmval[0] to pick first time step
-        meanf =  mean(selppmval)
         tmpH = self._h(meanf, inc)
         tmpZ = self._z(meanf, inc)
         dec = linestruct.y
@@ -1237,7 +1221,6 @@ class AbsoluteData(object):
         else:
             # for hdz base value and dec are determined at the initial time step
             dec2 = dec
-            #pass
         tmpX = self._h(tmpH, dec2)
         tmpY = self._z(tmpH, dec2)
 
@@ -1357,22 +1340,6 @@ class AbsoluteData(object):
             return [x,y,z]
 
         # The following was tested for consitency - basevalues + variometervalues should return DI
-        """
-        if debugmode:
-            #1.) get x,y,z from i,d,f
-            xyz = coordinate([inc,linestruct.y,fstart])
-            #2.) Baselinevalues:
-            bax = xyz[0] - scale_x*poslst[0].varx
-            bay = xyz[1] - scale_y*poslst[0].vary
-            baz = xyz[2] - scale_z*poslst[0].varz
-            bax2 = xyz[0] - mean(xvals)
-            bay2 = xyz[1] - mean(yvals)
-            baz2 = xyz[2] - mean(zvals)
-            print ("Variometer values 1:", poslst[0].varx, poslst[0].vary, poslst[0].varz)
-            print ("Variometer values 2:", mean(xvals),mean(yvals),mean(zvals))
-            print ("Basevalues", bax1,bay1,baz1, bax2,bay2,baz2)
-            #baseh = np.sqrt(basex**2+basey**2)
-        """
         if debugmode:
             print ("Delta F", deltaF)
 
@@ -1521,7 +1488,7 @@ class AbsoluteData(object):
             if debugmode:
                 print("Calculated D (%f) - iteration step %d" % (resultline[2],i))
             # requires succesful declination determination
-            if isnan(resultline.y):
+            if np.isnan(resultline.y):
                 try:
                     loggerabs.error('%s : CalcAbsolutes: Declination could not be determined - aborting' % num2date(self[0].time).replace(tzinfo=None))
                 except:
@@ -1529,7 +1496,7 @@ class AbsoluteData(object):
                 break
             # use incstart and ystart as boundary conditions
             try: # check, whether outline already exists
-                if isnan(outline.x):
+                if np.isnan(outline.x):
                     inc = incstart
                 else:
                     inc = outline.x
@@ -1595,6 +1562,111 @@ class AbsoluteData(object):
 #
 
 from magpy.lib.magpy_absformats import *
+
+
+def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, fileidentifier='.txt', debug=False):
+    """
+    DESCRIPTION
+        anaylse the source of di data, read it and then create dictionary with days (date) as key and
+        an absolute data list (as returned by abs_read) as value
+    RETURNS
+        dict : {dattime.date, {'absdata': abslist, 'source' : 'file', etc}
+    VARIABLES
+        didatasource : (string, list) pointing towards di data
+        db : a database.DataBank() object
+    APPLICATION:
+        requires dilines_from_db,
+    """
+    source = None  # can be 'db', 'files', 'urls', 'webservice' ,'dilinestruc' or None
+    resultsdict = {}
+    tablename = ''  # will be filled with an eventually existing tablename for didata
+
+    if not didatasource:
+        source = None
+    elif isinstance(didatasource, basestring):
+        # data base table or single file/url
+        if db:
+            # check if didatasource exists as table in table
+            cursor = db.db.cursor()
+            tablesql = "SHOW TABLES LIKE '{}'".format(didatasource)
+            msg = db._executesql(cursor, tablesql)
+            if msg:
+                print(" _analyse_di_source: accessing data base tables failed: {}".format(msg))
+            else:
+                tablenamel = cursor.fetchone()
+                if tablenamel and len(tablenamel) > 0:
+                    tablename = tablenamel[0]
+                    source = 'db'
+                    # Table is exitsing
+        if not source:
+            # if string is not corresponding to a database table
+            # string is an url or a filename
+            didatasource = [didatasource]
+    filelist = []
+    if isinstance(didatasource, (list, tuple)):
+        # multiple files/urls or an abslist
+        for elem in didatasource:
+            if str(type(elem).__name__) == "DILineStruct":
+                source = 'dilinestruct'
+            elif "://" in elem:
+                source = 'urls'
+                if debug:
+                    print(" _analyse_di_source:  Found URL code - requires name of data set with date")
+                if "observation.json" in elem:
+                    source = 'webservice'
+            elif os.path.isfile(elem):
+                source = 'files'
+                filelist = [elem]
+            elif os.path.exists(elem):
+                # directory
+                source = 'files'
+                for file in os.listdir(str(didatasource)):
+                    if debug:
+                        print("  _analyse_di_source:  scanning for {} (do not include wildcards)".format(fileidentifier))
+                    if file.endswith(fileidentifier):
+                        filelist.append(os.path.join(elem, file))
+            else:
+                print("  _analyse_di_source: can not interprete the following elem of absdata:", elem)
+
+    dilines = []
+    if debug:
+        print("Identified data source:", source)
+    if not source:
+        print(" did not fine a suitable source")
+        return resultsdict
+    elif source == 'db':
+        # tablename is identified
+        # get diline if starttime and endtime fit
+        dilines = db.diline_from_db(starttime=starttime, endtime=endtime, tablename='DIDATA')
+        # datelist = list(set(lst))
+    elif source == 'dilinestruct':
+        dilines = didatasource
+    elif source in ['files', 'urls', 'webservice']:
+        dilines = []
+        for fi in filelist:
+            absst = abs_read(fi)  # azimuth, pier in old code - sort later
+            for a in absst:
+                dilines.append(a)
+    if debug:
+        print("Got {} DI data lines".format(len(dilines)))
+
+    for line in dilines:
+        mintime = testtime(np.nanmin(line.time))
+        maxtime = testtime(np.nanmax(line.time))
+        mindate = mintime.date()
+        maxdate = maxtime.date()
+        contdict = resultsdict.get(mindate, {})
+        dlines = contdict.get("dilines", [])
+        if mindate == maxdate:
+            dlines.append(line)
+            contdict["dilines"] = dlines
+            contdict["source"] = source
+            contdict["filelist"] = filelist
+        else:
+            print(" DI measurement performed while date is changing - not yet supported - skipping")
+        resultsdict[mindate] = contdict
+
+    return resultsdict
 
 
 def _logfile_len(fname, logfilter):
@@ -1751,7 +1823,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
         - starttime:    (string/datetime) define begin
         - endtime:      (string/datetime) define end
         - abstype:      (string) default manual, can be autodif
-        - db:           (mysql database) defined by mysql.connect().
+        - db:           (mysql database) defined by magpy.core.database.databank()
         - dbadd:        (bool) if True DI-raw data will be added to the database
         - alpha:        (float) orientation angle 1 in deg (if z is vertical, alpha is the horizontal rotation angle)
         - beta:         (float) orientation angle 2 in deg
@@ -1822,7 +1894,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     expD = kwargs.get('expD')
     meantime = kwargs.get('meantime')
     movetoarchive = kwargs.get('movetoarchive')
-    absstruct = kwargs.get('absstruct')
+    absstruct = kwargs.get('absstruct')  # what is good for?
     residualsign = kwargs.get('residualsign')
     debug = kwargs.get('debug')
 
@@ -1870,11 +1942,13 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     difiles = []
     KEYLIST = DataStream().KEYLIST
     NUMKEYLIST = DataStream().NUMKEYLIST
-    if db:
-        import magpy.core.database as dbase
+    #if db:
+    #    import magpy.core.database as dbase
+
+    ### 2.0: _analyse_abstype(db, absdata) # input types are database, file and
+    ### 2.0: obtain a dictionary with {date1 : abslist1, date2 : abslist2, etc)
 
     if db and not absstruct:
-        #print("absoluteAnalysis:  You selected a DB. Tyring to import database methods")
         try:
             import magpy.database as dbase
             #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist, string2dict
@@ -2542,6 +2616,41 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['calcabsolutes'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with calcabsolutes.")
+            try:
+                ts = datetime.utcnow()
+                from magpy.core import database
+                db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+                absst = abs_read(example6a)
+                db.diline_to_db(absst, mode="delete", stationid='WIC')
+                te = datetime.utcnow()
+                successes['diline_to_db'] = ("Version: {}: diline_to_db {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['diline_to_db'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with diline_to_db.")
+            try:
+                ts = datetime.utcnow()
+                from magpy.core import database
+                db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+                res = db.diline_from_db()
+                te = datetime.utcnow()
+                successes['diline_from_db'] = ("Version: {}: diline_from_db {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['diline_from_db'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with diline_from_db.")
+            try:
+                ts = datetime.utcnow()
+                from magpy.core import database
+                db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+                absst = abs_read(example6a)  # should be the default
+                t1 = _analyse_di_source('DIDATA', db=db)
+                t2 = _analyse_di_source(example6a, db=db)
+                t3 = _analyse_di_source(absst, db=db, debug=True)
+                print ("{} and {} and {} should all be 1".format(len(t1),len(t2),len(t3)))
+                te = datetime.utcnow()
+                successes['_analyse_di_source'] = ("Version: {}: _analyse_di_source {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_analyse_di_source'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _analyse_di_source.")
 
             # If end of routine is reached... break.
             break

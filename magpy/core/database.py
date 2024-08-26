@@ -6,6 +6,7 @@ from magpy.stream import loggerdatabase, magpyversion, basestring, DataStream
 import pymysql as mysql
 import numpy as np
 import json  # used for storing dictionaries and list in text fields
+import hashlib  # used to create unique database ids
 from datetime import datetime, timedelta
 from magpy.core.methods import testtime, convert_geo_coordinate, string2dict, round_second
 
@@ -75,6 +76,8 @@ class DataBank(object):
         DataBank | datainfo    | 2.0.0 |               | yes          | yes*                |       | db.write
         DataBank | dbinit      | 2.0.0 |               | yes          |                     |  9.2  |
         DataBank | delete      | 2.0.0 |               | yes          |                     |  9.2  |
+        DataBank | diline_to_db | 2.0.0 |              | yes*         |                     |       | absolutes
+        DataBank | diline_from_db | 2.0.0 |            | yes*         |                     |       | absolutes
         DataBank | dict_to_fields | 2.0.0 |            |              |                     |       | unused?
         DataBank | fields_to_dict | 2.0.0 |            | yes*         | yes*                |       | db.read, db.get_lines
         DataBank | flags_from_db | 2.0.0 |             | yes          | yes                 |  9.3  |
@@ -169,8 +172,12 @@ class DataBank(object):
                 IpComment       optional comments
 
         PIER:
+                TODO: create PierID from pier and stationid i.e. with hashlib
+                      Pier is just A2
+                      PierName is a better name for it
+                      PierAlternativeName
                 PierName                e.g. A2
-                PierID                  Reference Number used by BEV
+                PierID                  Reference Number used by BEV -- modify
                 PierAlernativeName      e.g. Mioara
                 PierType                e.g. Aim, Pillar, Groundmark
                 PierConstruction        e.g. Glascube, Concretepillar with glasplate, Groundmark
@@ -994,6 +1001,324 @@ class DataBank(object):
         self.db.commit()
         cursor.close()
 
+    def diline_to_db(self, dilinestruct, mode=None, tablename=None, stationid='WIC', debug=False):
+        """
+        DEFINITION:
+            Method to write dilinestruct to a mysql database
+
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+            - dilinestruct: (magpy diline)
+            - stationid:    (string) - if you maintain several observatories it is important to use the correct station (default is WIC)
+        Optional:
+            - mode:         (string) - default is insert
+                                mode: replace -- replaces existing table contents with new one, also replaces informations from sensors and station table
+                                mode: insert -- create new table with unique ID
+                                mode: delete -- like insert but drops the existing DIDATA table
+            - tablename:    (string) - specify tablename of the DI table (default is DIDATA)
+
+        EXAMPLE:
+            diline_to_db(db,...)
+
+        APPLICATION:
+            Requires an existing mysql database (e.g. mydb)
+            so first connect to the database
+            db = database.DataBank(host="localhost", user="user", passwd="secret", db="mysql")
+        """
+        from matplotlib.dates import num2date
+
+        success = False
+        # DIDATA TABLE
+        if not tablename:
+            tablename = 'DIDATA'
+        if not stationid:
+            stationid = 'XXX'
+
+        loggerdatabase.debug("diline_to_db: Writing DI values to database table {}".format(tablename))
+
+        if len(dilinestruct) < 1:
+            loggerdatabase.error("diline_to_db: Empty diline. Aborting ...")
+            return
+
+        cursor = self.db.cursor()
+        cursor._defer_warnings = True
+
+        oldversion = False
+        # Determine type of table
+        versionsql = "SHOW COLUMNS FROM {} LIKE 'EndTime'".format(tablename)
+        msg = self._executesql(cursor, versionsql)
+        if msg:
+            loggerdatabase.debug("diline_to_db: {}".format(msg))
+        else:
+            rows = cursor.fetchall()
+            ll = len(rows)
+            if debug:
+                print(versionsql, ll)
+            if not ll:
+                oldversion = True
+
+        # 1. Create the diline table if not existing
+        # - DIDATA
+        DIDATAKEYLIST = ['DIID', 'StartTime', 'EndTime', 'TimeArray', 'HcArray', 'VcArray', 'ResArray', 'OptArray',
+                         'LaserArray', 'FTimeArray',
+                         'FArray', 'Temperature', 'ScalevalueFluxgate', 'ScaleAngle', 'Azimuth', 'Pier', 'Observer',
+                         'DIInst',
+                         'FInst', 'FluxInst', 'InputDate', 'DIComment', 'StationID']
+
+        headstr = ' CHAR(100), '.join(DIDATAKEYLIST) + ' CHAR(100)'
+        headstr = headstr.replace('DIID CHAR(100)', 'DIID CHAR(20) NOT NULL PRIMARY KEY')
+        headstr = headstr.replace('StartTime CHAR(100)', 'StartTime DATETIME')
+        headstr = headstr.replace('EndTime CHAR(100)', 'EndTime DATETIME')
+        headstr = headstr.replace('DIComment CHAR(100)', 'DIComment TEXT')
+        headstr = headstr.replace('Array CHAR(100)', 'Array TEXT')
+        createDItablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename, headstr)
+
+        if mode == 'delete':
+            msg = self._executesql(cursor, "DROP TABLE IF EXISTS {}".format(tablename))
+            if msg:
+                print(msg)
+                loggerdatabase.info("diline_to_db: DIDATA table not yet existing")
+            else:
+                loggerdatabase.info("diline_to_db: Old DIDATA table has been deleted")
+        else:
+            if oldversion:
+                print("Please note: the {} table contains a MagPy 1.x format".format(tablename))
+                print("Update the tablestructure to continue:")
+                print("1) Load all old data sets: data = db.diline_from_db()")
+                print("2) Save it to the new format: db.diline_to_db(data, mode='delete', stationid='WIC')")
+                return False
+
+        msg = self._executesql(cursor, createDItablesql)
+        if msg:
+            loggerdatabase.debug("diline_to_db: error-- {}".format(msg))
+        else:
+            loggerdatabase.info("diline_to_db: New DIDATA table created")
+
+        # 2. Add DI values to the table
+        #   Cycle through all lines of the dilinestruct
+        #   - a) convert arrays to underscore separated text like 'nan,nan,765,7656,879.6765,nan"
+        def _create_id(pier, mintime, maxtime, stationid, debug=debug):
+            idgenerator = "{}{}{}{}".format(pier, mintime, maxtime, stationid)
+            if debug:
+                print("Creating ID out of ", idgenerator)
+            m = hashlib.md5()
+            m.update(idgenerator.encode())
+            diid = str(int(m.hexdigest(), 16))[0:12]
+            if debug:
+                print("ID look like ", diid)
+            return diid
+
+        for line in dilinestruct:
+            insertlst = []
+            mintime = np.nanmin(line.time)
+            maxtime = np.nanmax(line.time)
+            insertlst.append(_create_id((line.pier), mintime, maxtime, stationid))
+            insertlst.append(datetime.strftime(num2date(mintime), "%Y-%m-%d %H:%M:%S"))
+            insertlst.append(datetime.strftime(num2date(maxtime), "%Y-%m-%d %H:%M:%S"))
+            insertlst.append(json.dumps(line.time))
+            insertlst.append(json.dumps(line.hc))
+            insertlst.append(json.dumps(line.vc))
+            insertlst.append(json.dumps(line.res))
+            insertlst.append(json.dumps(line.opt))
+            insertlst.append(json.dumps(line.laser))
+            insertlst.append(json.dumps(line.ftime))
+            insertlst.append(json.dumps(line.f))
+            insertlst.append(str(line.t))
+            insertlst.append(str(line.scaleflux))
+            insertlst.append(str(line.scaleangle))
+            insertlst.append(str(line.azimuth))
+            insertlst.append(str(line.pier))
+            insertlst.append(str(line.person))
+            insertlst.append(str(line.di_inst))
+            insertlst.append(str(line.f_inst))
+            insertlst.append(str(line.fluxgatesensor))
+            insertlst.append(str(line.inputdate))
+            insertlst.append("No comment")
+            insertlst.append(stationid)
+
+            disql = "INSERT INTO %s(%s) VALUES (%s)" % (
+            tablename, ', '.join(DIDATAKEYLIST), '"' + '", "'.join(insertlst) + '"')
+            if mode == "replace":
+                disql = disql.replace("INSERT", "REPLACE")
+            if debug:
+                print(" SQL command: ", disql)
+            msg = self._executesql(cursor, disql)
+            if msg:
+                loggerdatabase.debug("diline_to_db: {}".format(msg))
+            else:
+                success = True
+        self.db.commit()
+        cursor.close()
+        return success
+
+    def diline_from_db(self, starttime=None, endtime=None, tablename='DIDATA', sql=None, debug=False):
+        """
+        DEFINITION:
+            Method to read DI values from a database and write them to a list of DILineStruct's
+
+        PARAMETERS:
+        Variables:
+            - db:           (mysql database) defined by mysql.connect().
+            - starttime:    (string/datetime) - time range to select
+            - endtime:      (string/datetime) - if not given just the day defined by starttime is used
+            - sql:          (list) - define any additional selection criteria (e.g. ["Pier = 'A2'", "Observer = 'Mickey Mouse'"] )
+                                    important: dont forget the ' '
+            - tablename:    (string) - specify tablename of the DI table (default is DIDATA)
+
+        EXAMPLE:
+            resultlist = diline_from_db(db,starttime="2013-01-01",sql="Pier='A2'")
+
+        APPLICATION:
+            Requires an existing mysql database (e.g. mydb)
+            so first connect to the database
+
+        RETURNS:
+            list of DILineStruct elements
+        """
+
+        from magpy.absolutes import DILineStruct
+        from matplotlib.dates import num2date
+
+        resultlist = []
+        wherelist = []
+        oldversion = False
+
+        if not self:
+            loggerdatabase.error("diline_from_db: No database connected - aborting")
+            return resultlist
+
+        cursor = self.db.cursor()
+
+        # Determine type of table
+        versionsql = "SHOW COLUMNS FROM {} LIKE 'EndTime'".format(tablename)
+        msg = self._executesql(cursor, versionsql)
+        if msg:
+            loggerdatabase.debug("diline_from_db: {}".format(msg))
+        else:
+            rows = cursor.fetchall()
+            ll = len(rows)
+            if debug:
+                print(versionsql, ll)
+            if not ll:
+                oldversion = True
+
+        whereclause = ""
+        if starttime:
+            starttime = testtime(starttime)
+            wherelist.append("StartTime >= {}".format(starttime))
+        if endtime:
+            endtime = testtime(endtime)
+            wherelist.append("EndTime < {}".format(endtime))
+        if sql and isinstance(sql, basestring):
+            elements = sql.split(" AND ")
+            wherelist.extend(elements)
+        elif sql and isinstance(sql, (list, tuple)):
+            wherelist.extend(sql)
+        if len(wherelist) > 0:
+            whereclause = " WHERE {}".format(" AND ".join(wherelist))
+
+        getdidata = 'SELECT * FROM ' + tablename + whereclause
+
+        if debug:
+            print("Call: ", getdidata)
+        msg = self._executesql(cursor, getdidata)
+        if msg:
+            loggerdatabase.debug("diline_from_db: {}".format(msg))
+        else:
+            rows = cursor.fetchall()
+            ll = len(rows)
+            #print(ll)
+            for idx, di in enumerate(rows):
+                if oldversion:
+                    if debug:
+                        print("Found old DI table")
+                    if idx == 0:
+                        loggerdatabase.debug(
+                            "diline_from_db: found {} DI values structiure in db - importing".format(ll))
+                    # Zerlege time column
+                    timelst = [float(elem) for elem in di[2].split('_')]
+                    distruct = DILineStruct(len(timelst))
+                    distruct.time = timelst
+                    distruct.hc = [float(elem) for elem in di[3].split('_')]
+                    distruct.vc = [float(elem) for elem in di[4].split('_')]
+                    distruct.res = [float(elem) for elem in di[5].split('_') if len(di[5].split('_')) > 1]
+                    distruct.opt = [float(elem) for elem in di[6].split('_') if len(di[6].split('_')) > 1]
+                    distruct.laser = [float(elem) for elem in di[7].split('_') if len(di[7].split('_')) > 1]
+                    distruct.ftime = [float(elem) for elem in di[8].split('_') if len(di[8].split('_')) > 1]
+                    distruct.f = [float(elem) for elem in di[9].split('_') if len(di[9].split('_')) > 1]
+                    try:
+                        distruct.t = float(di[10])
+                    except:
+                        distruct.t = di[10]
+                    try:
+                        distruct.scaleflux = float(di[11])
+                    except:
+                        distruct.scaleflux = di[11]
+                    try:
+                        distruct.scaleangle = float(di[12])
+                    except:
+                        distruct.scaleangle = di[12]
+                    try:
+                        distruct.azimuth = float(di[13])
+                    except:
+                        distruct.azimuth = di[13]
+                    distruct.pier = di[14]
+                    distruct.person = di[15]
+                    distruct.di_inst = di[16]
+                    distruct.f_inst = di[17]
+                    distruct.fluxgatesensor = di[18]
+                    try:
+                        distruct.inputdate = testtime(di[19])
+                    except:
+                        # no input data for AUTODIF
+                        distruct.inputdate = num2date(np.nanmean(distruct.time)).replace(tzinfo=None)
+                else:
+                    if idx == 0:
+                        loggerdatabase.debug(
+                            "diline_from_db: found {} DI values structiure in db - importing".format(ll))
+                    timelst = json.loads(di[3])
+                    distruct = DILineStruct(len(timelst))
+                    distruct.time = timelst
+                    distruct.hc = json.loads(di[4])
+                    distruct.vc = json.loads(di[5])
+                    distruct.res = json.loads(di[6])
+                    distruct.opt = json.loads(di[7])
+                    distruct.laser = json.loads(di[8])
+                    distruct.ftime = json.loads(di[9])
+                    distruct.f = json.loads(di[10])
+                    try:
+                        distruct.t = float(di[11])
+                    except:
+                        distruct.t = di[11]
+                    try:
+                        distruct.scaleflux = float(di[12])
+                    except:
+                        distruct.scaleflux = di[12]
+                    try:
+                        distruct.scaleangle = float(di[13])
+                    except:
+                        distruct.scaleangle = di[13]
+                    try:
+                        distruct.azimuth = float(di[14])
+                    except:
+                        distruct.azimuth = di[14]
+                    distruct.pier = di[15]
+                    distruct.person = di[16]
+                    distruct.di_inst = di[17]
+                    distruct.f_inst = di[18]
+                    distruct.fluxgatesensor = di[19]
+                    try:
+                        distruct.inputdate = testtime(di[20])
+                    except:
+                        # no input data for AUTODIF
+                        distruct.inputdate = num2date(np.nanmean(distruct.time)).replace(tzinfo=None)
+                resultlist.append(distruct)
+
+        cursor.close()
+
+        return resultlist
+
 
     def dict_to_fields(self, header_dict, **kwargs):
         """
@@ -1211,7 +1536,7 @@ class DataBank(object):
     def fields_to_dict(self, datainfoid, debug=False):
         """
         DEFINITION:
-            Provide datainfoid to get all informations from tables STATION, SENSORS and DATAINFO
+            Provide datainfoid to get all information from tables STATION, SENSORS and DATAINFO
             Use it to get metadata from database for saving cdf archive files
             Returns a dictionary
 
@@ -1269,7 +1594,7 @@ class DataBank(object):
                 except mysql.Error as e:
                     loggerdatabase.error("fields_to_dict: mysqlerror while adding key %s, %s" % (key, e))
                 except:
-                    loggerdatabase.error("fields_to_dict: unkown error while adding key %s" % key)
+                    loggerdatabase.error("fields_to_dict: unknown error while adding key %s" % key)
 
         for key in self.SENSORSKEYLIST:
             getsens = 'SELECT ' + key + ' FROM SENSORS WHERE SensorID = "' + ids[0] + '"'
