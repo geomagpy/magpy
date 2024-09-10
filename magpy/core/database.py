@@ -1075,13 +1075,14 @@ class DataBank(object):
         createDItablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename, headstr)
 
         if mode == 'delete':
-            print ("deleting old table", tablename)
+            # For some reason this hangs up in verification.py - works flawless from jn however
             msg = self._executesql(cursor, "DROP TABLE IF EXISTS {}".format(tablename))
             if msg:
                 print(msg)
                 loggerdatabase.info("diline_to_db: DIDATA table not yet existing")
             else:
                 loggerdatabase.info("diline_to_db: Old DIDATA table has been deleted")
+            print ("Done")
         else:
             if oldversion:
                 print("Please note: the {} table contains a MagPy 1.x format".format(tablename))
@@ -1095,7 +1096,7 @@ class DataBank(object):
             loggerdatabase.debug("diline_to_db: error-- {}".format(msg))
         else:
             loggerdatabase.info("diline_to_db: New DIDATA table created")
-
+        print ("created new")
         # 2. Add DI values to the table
         #   Cycle through all lines of the dilinestruct
         #   - a) convert arrays to underscore separated text like 'nan,nan,765,7656,879.6765,nan"
@@ -1168,7 +1169,7 @@ class DataBank(object):
             - tablename:    (string) - specify tablename of the DI table (default is DIDATA)
 
         EXAMPLE:
-            resultlist = diline_from_db(db,starttime="2013-01-01",sql="Pier='A2'")
+            resultlist = db.diline_from_db(starttime="2013-01-01",sql="Pier='A2'")
 
         APPLICATION:
             Requires an existing mysql database (e.g. mydb)
@@ -1203,14 +1204,18 @@ class DataBank(object):
                 print(versionsql, ll)
             if not ll:
                 oldversion = True
+                print ("Found old DIDATA structure in databank")
 
         whereclause = ""
         if starttime:
             starttime = testtime(starttime)
-            wherelist.append("StartTime >= {}".format(starttime))
+            wherelist.append("StartTime >= '{}'".format(starttime))
         if endtime:
             endtime = testtime(endtime)
-            wherelist.append("EndTime < {}".format(endtime))
+            if oldversion:
+                wherelist.append("StartTime < '{}'".format(endtime))
+            else:
+                wherelist.append("EndTime < '{}'".format(endtime))
         if sql and isinstance(sql, basestring):
             elements = sql.split(" AND ")
             wherelist.extend(elements)
@@ -1229,15 +1234,17 @@ class DataBank(object):
         else:
             rows = cursor.fetchall()
             ll = len(rows)
+            if debug:
+                print ("diline_from_db: found {} DI values structure in db - importing".format(ll))
+            loggerdatabase.debug(
+                "diline_from_db: found {} DI values structure in db - importing".format(ll))
             for idx, di in enumerate(rows):
                 if oldversion:
-                    if debug:
-                        print("Found old DI table")
-                    if idx == 0:
-                        loggerdatabase.debug(
-                            "diline_from_db: found {} DI values structure in db - importing".format(ll))
                     # Zerlege time column
                     timelst = [float(elem) for elem in di[2].split('_')]
+                    # Check for old matplotlib - basis 1.1.0001 - dates and correct them to
+                    # matplotlibversion >= 3.3 dates
+                    timelst = [el if not el > 719000 else el-719163.0 for el in timelst]
                     distruct = DILineStruct(len(timelst))
                     distruct.time = timelst
                     distruct.hc = [float(elem) for elem in di[3].split('_')]
