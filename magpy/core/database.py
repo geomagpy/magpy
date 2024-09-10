@@ -78,7 +78,7 @@ class DataBank(object):
         DataBank | delete      | 2.0.0 |               | yes          |                     |  9.2  |
         DataBank | diline_to_db | 2.0.0 |              | yes*         |                     |       | absolutes
         DataBank | diline_from_db | 2.0.0 |            | yes*         |                     |       | absolutes
-        DataBank | dict_to_fields | 2.0.0 |            |              |                     |       | unused?
+        DataBank | dict_to_fields | 2.0.0 |            |              |                     |       |
         DataBank | fields_to_dict | 2.0.0 |            | yes*         | yes*                |       | db.read, db.get_lines
         DataBank | flags_from_db | 2.0.0 |             | yes          | yes                 |  9.3  |
         DataBank | flags_to_db | 2.0.0 |               | yes          | yes                 |  9.3  |
@@ -224,7 +224,7 @@ class DataBank(object):
                                 'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc', 'DataRotationAlpha',
                                 'DataRotationBeta', 'DataAbsInfo', 'DataBaseValues', 'DataArchive']
 
-        self.DATAVALUEKEYLIST = ['CHAR(50)', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
+        self.DATAVALUEKEYLIST = ['CHAR(50) NOT NULL PRIMARY KEY', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
                                  'DATETIME', 'DATETIME', 'CHAR(100)',
                                  'CHAR(100)', 'CHAR(100)', 'CHAR(10)', 'CHAR(100)',
                                  'CHAR(100)',
@@ -1442,6 +1442,24 @@ class DataBank(object):
                     "dict_to_fields: alldi option requires a SensorID in dict which is not provided - skipping")
                 usedatainfo = False
 
+        # 1. create ColumnContents and ColumnUnits from col-...
+        cols = [[key.replace('col-', ''), header_dict.get(key)] for key in header_dict if key.startswith('col-')]
+        units = [[key.replace('unit-col-', ''), header_dict.get(key)] for key in header_dict if
+                 key.startswith('unit-col-')]
+        collst, unitlst = [], []
+        for el in DataStream().KEYLIST[1:]:
+            adderc, adderu = '', ''
+            for col in cols:
+                if col[0] == el:
+                    adderc = col[1]
+            for unit in units:
+                if unit[0] == el:
+                    adderu = unit[1]
+            collst.append(adderc)
+            unitlst.append(adderu)
+        header_dict['ColumnContents'] = ",".join(collst)
+        header_dict['ColumnUnits'] = ",".join(unitlst)
+
         # 2. Update content for the primary IDs
         for key in header_dict:
             fieldname = key
@@ -1450,28 +1468,27 @@ class DataBank(object):
                 if usestation:
                     stationfieldlst.append(fieldname)
                     stationvaluelst.append(fieldvalue)
-            elif fieldname in self.SENSORSKEYLIST:
+            if fieldname in self.SENSORSKEYLIST:
                 if usesensor:
                     sensorfieldlst.append(fieldname)
                     sensorvaluelst.append(fieldvalue)
-            elif fieldname in self.DATAINFOKEYLIST:
+            if fieldname in self.DATAINFOKEYLIST:
                 if usedatainfo:
                     datainfofieldlst.append(fieldname)
                     datainfovaluelst.append(fieldvalue)
-            else:
-                loggerdatabase.warning("dict_to_fields: !!!!!!!! %s not existing !!!!!!!" % fieldname)
-                pass
 
-        if mode == 'insert':  #####   Insert ########
+        if mode in ['insert','replace']:  #####   Insert ########
             if len(stationfieldlst) > 0:
-                insertsql = 'INSERT INTO STATIONS (%s) VALUE (%s)' % (
-                ', '.join(stationfieldlst), '"' + '", "'.join(stationvaluelst) + '"')
+                fields = ', '.join(stationfieldlst)
+                vals = ', '.join(map(repr,stationvaluelst))
+                insertsql = '{} INTO STATIONS ({}) VALUE ({})'.format( mode.upper(), fields, vals)
                 msg = executesql(insertsql)
                 if not msg == '':
                     loggerdatabase.warning("dict_to_fields: insert for STATIONS failed - %s - try update mode" % msg)
             if len(sensorfieldlst) > 0:
-                insertsql = 'INSERT INTO SENSORS (%s) VALUE (%s)' % (
-                ', '.join(sensorfieldlst), '"' + '", "'.join(sensorvaluelst) + '"')
+                fields = ', '.join(sensorfieldlst)
+                vals = ', '.join(map(repr,sensorvaluelst))
+                insertsql = '{} INTO SENSORS ({}) VALUE ({})'.format(mode.upper(), fields, vals)
                 msg = executesql(insertsql)
                 if not msg == '':
                     loggerdatabase.warning("dict_to_fields: insert for SENSORS failed - %s - try update mode" % msg)
@@ -1483,39 +1500,12 @@ class DataBank(object):
                     else:
                         datainfofieldlst.append('DataID')
                         datainfovaluelst.append(elem)
-                    insertsql = 'INSERT INTO DATAINFO (%s) VALUE (%s)' % (
-                    ', '.join(datainfofieldlst), '"' + '", "'.join(datainfovaluelst) + '"')
-                    msg = executesql(insertsql)
-                    if not msg == '':
-                        loggerdatabase.warning(
-                            "dict_to_fields: insert for DATAINFO of %s failed - %s - try update mode" % (elem, msg))
-        elif mode == 'replace':  #####   Replace ########
-            if len(stationfieldlst) > 0:
-                insertsql = 'REPLACE INTO STATIONS (%s) VALUE (%s)' % (
-                ', '.join(stationfieldlst), '"' + '", "'.join(stationvaluelst) + '"')
+                fields = ', '.join(datainfofieldlst)
+                vals = ', '.join(map(repr, datainfovaluelst))
+                insertsql = '{} INTO DATAINFO ({}) VALUE ({})'.format(mode.upper(), fields, vals)
                 msg = executesql(insertsql)
                 if not msg == '':
-                    loggerdatabase.warning("dict_to_fields: insert for STATIONS failed - %s - try update mode" % msg)
-            if len(sensorfieldlst) > 0:
-                print(sensorvaluelst)
-                insertsql = 'REPLACE INTO SENSORS (%s) VALUE (%s)' % (
-                ', '.join(sensorfieldlst), '"' + '", "'.join(sensorvaluelst) + '"')
-                msg = executesql(insertsql)
-                if not msg == '':
-                    loggerdatabase.warning("dict_to_fields: insert for SENSORS failed - %s - try update mode" % msg)
-            if len(datainfofieldlst) > 0:
-                for elem in datainfolst:
-                    if 'DataID' in datainfofieldlst:
-                        ind = datainfofieldlst.index('DataID')
-                        datainfovaluelst[ind] = elem
-                    else:
-                        datainfofieldlst.append('DataID')
-                        datainfovaluelst.append(elem)
-                    insertsql = 'REPLACE INTO DATAINFO (%s) VALUE (%s)' % (
-                    ', '.join(datainfofieldlst), '"' + '", "'.join(datainfovaluelst) + '"')
-                    msg = executesql(insertsql)
-                    if not msg == '':
-                        loggerdatabase.warning(
+                    loggerdatabase.warning(
                             "dict_to_fields: insert for DATAINFO of %s failed - %s - try update mode" % (elem, msg))
         elif mode == 'update':  #####   Update ########
             for key in header_dict:
