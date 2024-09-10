@@ -533,8 +533,8 @@ CALLED BY:
     def apply_deltas(self, debug=False):
         """
         DESCRIPTION:
-           Extract content of DataDeltaDictionary and apply the corrections to stream.
-           The header content DataDeltaDictionary needs to be present
+           Extract content of DataDeltaValues and apply the corrections to stream.
+           The header content DataDeltaValues needs to be present
            In order to extract such data from the database you might want to use
            stream.header = db.fields_to_dict(stream.header.get('DataID')).
            The apply_deltas method makes use of the stream.offset method.
@@ -600,7 +600,7 @@ CALLED BY:
         deltasapplied = False
         streamstart, streamend = stream.timerange()
 
-        deltas = stream.header.get('DataDeltaDictionary', '')
+        deltas = stream.header.get('DataDeltaValues', '')
         if deltas == '':
             print("apply_deltas: No delta values found - returning unmodified stream")
             return stream
@@ -8044,7 +8044,7 @@ if __name__ == '__main__':
             try:
                 ts = datetime.utcnow()
                 fstream = teststream.calc_f()
-                teststream.header["DataDeltaDictionary"] = '{"0": {"st": "1971-11-22 00:00:00", "f": -1.48, "time": "timedelta(seconds=-3.0)", "et": "2018-01-01 00:00:00"}, "1": {"st": "2018-01-01 00:00:00", "f": -1.571, "time": "timedelta(seconds=-3.0)", "et": "2018-09-14 12:00:00"}, "2": {"st": "2018-09-14 12:00:00", "f": -1.571, "time": "timedelta(seconds=1.50)", "et": "2019-01-01 00:00:00"}, "3": {"st": "2019-01-01 00:00:00", "f": -1.631, "time": "timedelta(seconds=-0.30)", "et": "2020-01-01 00:00:00"}, "4": {"st": "2020-01-01 00:00:00", "f": -1.616, "time": "timedelta(seconds=-0.28)", "et": "2021-01-01 00:00:00"}, "5": {"st": "2021-01-01 00:00:00", "f": -1.609, "time": "timedelta(seconds=-0.28)", "et": "2022-01-01 00:00:00"}, "6": {"st": "2022-01-01 00:00:00", "f": -1.655, "time": "timedelta(seconds=-0.33)", "et": "2023-01-01 00:00:00"}, "7": {"st": "2023-01-01 00:00:00", "f": -1.729, "time": "timedelta(seconds=-0.28)"}}'
+                teststream.header["DataDeltaValues"] = '{"0": {"st": "1971-11-22 00:00:00", "f": -1.48, "time": "timedelta(seconds=-3.0)", "et": "2018-01-01 00:00:00"}, "1": {"st": "2018-01-01 00:00:00", "f": -1.571, "time": "timedelta(seconds=-3.0)", "et": "2018-09-14 12:00:00"}, "2": {"st": "2018-09-14 12:00:00", "f": -1.571, "time": "timedelta(seconds=1.50)", "et": "2019-01-01 00:00:00"}, "3": {"st": "2019-01-01 00:00:00", "f": -1.631, "time": "timedelta(seconds=-0.30)", "et": "2020-01-01 00:00:00"}, "4": {"st": "2020-01-01 00:00:00", "f": -1.616, "time": "timedelta(seconds=-0.28)", "et": "2021-01-01 00:00:00"}, "5": {"st": "2021-01-01 00:00:00", "f": -1.609, "time": "timedelta(seconds=-0.28)", "et": "2022-01-01 00:00:00"}, "6": {"st": "2022-01-01 00:00:00", "f": -1.655, "time": "timedelta(seconds=-0.33)", "et": "2023-01-01 00:00:00"}, "7": {"st": "2023-01-01 00:00:00", "f": -1.729, "time": "timedelta(seconds=-0.28)"}}'
                 res = fstream.apply_deltas()
                 te = datetime.utcnow()
                 successes['apply_deltas'] = (

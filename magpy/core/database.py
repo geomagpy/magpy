@@ -76,9 +76,9 @@ class DataBank(object):
         DataBank | datainfo    | 2.0.0 |               | yes          | yes*                |       | db.write
         DataBank | dbinit      | 2.0.0 |               | yes          |                     |  9.2  |
         DataBank | delete      | 2.0.0 |               | yes          |                     |  9.2  |
-        DataBank | diline_to_db | 2.0.0 |              | yes*         |                     |       | absolutes
-        DataBank | diline_from_db | 2.0.0 |            | yes*         |                     |       | absolutes
-        DataBank | dict_to_fields | 2.0.0 |            |              |                     |       |
+        DataBank | diline_to_db | 2.0.0 |              | yes*         | yes*                |       | absolutes
+        DataBank | diline_from_db | 2.0.0 |            | yes*         | yes*                |       | absolutes
+        DataBank | dict_to_fields | 2.0.0 |            | yes          |                     |       |
         DataBank | fields_to_dict | 2.0.0 |            | yes*         | yes*                |       | db.read, db.get_lines
         DataBank | flags_from_db | 2.0.0 |             | yes          | yes                 |  9.3  |
         DataBank | flags_to_db | 2.0.0 |               | yes          | yes                 |  9.3  |
@@ -2959,10 +2959,20 @@ if __name__ == '__main__':
     print("Otherwise True will be returned")
     print("----------------------------------------------------------")
     print()
+    print("----------------------------------------------------------")
+    print("IMPORTANT:")
+    print("Tests can only be performed if mysql is installed")
+    print("and an empty testing database with the following parameters")
+    print("is available on localhost: ")
+    print("user: maxmustermann, passwd: geheim, databasename: testdb")
+    print("DO NOT YOU THIS DB FOR ANYTHING ELSE EXCEPT TESTING!")
+    print("----------------------------------------------------------")
+    print()
 
     # #######################################################
     #                     Runtime testing
     # #######################################################
+    from magpy.stream import read,example5
 
     def create_teststream(startdate=datetime(2022, 11, 21), coverage=86400):
         # Create a random data signal with some nan values in x and z
@@ -3194,6 +3204,15 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['flags_from_db'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with flags_from_db.")
+            try:
+                ts = datetime.utcnow()
+                data = read(example5)
+                db.dict_to_fields(data.header)
+                te = datetime.utcnow()
+                successes['dict_to_fields'] = ("Version: {}, dict_to_fields: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['dict_to_fields'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with dict_to_fields.")
 
             # If end of routine is reached... break.
             break
