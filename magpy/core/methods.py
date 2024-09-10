@@ -311,9 +311,9 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             if debug:
                 print("  -> applied header from data base ...")
             if not offset:  # TODO check that - not done in MagPy 1.x
-                data = db.apply_deltas(data)
+                data = data.apply_deltas()
                 if debug:
-                    print("  -> applied delta_values from data base ...")
+                    print("  -> applied delta_values previously extracted from data base ...")
                     # print (" ------------  IMPORTANT ----------------")
                     # print (" Both, deltaF from DB and the provided delta F {b}".format(b=deltaF))
                     # print (" will be applied.")

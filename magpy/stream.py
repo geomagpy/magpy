@@ -629,6 +629,7 @@ CALLED BY:
                         deltasapplied = True
         if deltasapplied:
             stream.header['DataDeltaValues'] = ''
+            stream.header['DataDeltaValuesApplied'] = True
 
         return stream
 
