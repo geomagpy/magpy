@@ -18,6 +18,7 @@ def isMAGPYABS(filename):
         temp = open(filename, 'rt')
         line = temp.readline()
         line = temp.readline()
+        temp.close()
     except:
         return False
     if not line.startswith('Miren'):
@@ -30,8 +31,8 @@ def isMAGPYNEWABS(filename):
     Checks whether a file is ASCII DIDD (Tihany) format.
     """
     try:
-        temp = open(filename, 'rt')
-        line = temp.readline()
+        with open(filename, 'rt') as temp:
+            line = temp.readline()
     except:
         return False
     if not line.startswith('# MagPy Absolutes'):
@@ -49,6 +50,7 @@ def isAUTODIFRAW(filename):
     try:
         temp = open(filename, 'rt')
         line = temp.readline()
+        temp.close()
     except:
         return False
     if not line.startswith('AUTODIF') and not line.startswith('auto'):
@@ -74,6 +76,7 @@ def isJSONABS(filename):
     try:
         jsonfile = open(filename, 'r')
         dataset = json.load(jsonfile)
+        jsonfile.close()
     except:
         return False
     try:

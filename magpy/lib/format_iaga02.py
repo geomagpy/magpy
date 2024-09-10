@@ -41,7 +41,8 @@ def isIAGA(filename):
     Checks whether a file is ASCII IAGA 2002 format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, 'rt') as myfi:
+            temp = myfi.readline()
     except:
         return False
     try:

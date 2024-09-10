@@ -83,7 +83,7 @@ AbsoluteAnalysis  |  _z          |  2.0.0     |           |  yes        |  yes  
 AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |               |  7.1    |
            | _analyse_di_source  |  2.0.0     |           |  yes        |               |  -      | 
            | _logfile_len        |  2.0.0     |           |             |               |  -      | unused?
-           | deg2degminsec       |  2.0.0     |           |  yes        |               |  7.2    | 
+           | deg2degminsec       |  2.0.0     |           |  yes        |  yes          |  7.2    | 
     d      | absRead             |  2.0.0     |  2.1.0    |             |               |  -      | 
            | abs_read            |  2.0.0     |           |  yes        |               |  7.1    | 
            | _abs_read           |  2.0.0     |           |  yes        |               |  -      | 
@@ -144,6 +144,8 @@ class DILineStruct(object):
     def __repr__(self):
         return repr((self.time, self.hc, self.vc, self.res, self.laser, self.opt, self.ftime, self.f, self.scaleflux, self.scaleangle, self.t, self.azimuth, self.pier, self.person, self.di_inst, self.f_inst, self.fluxgatesensor, self.inputdate))
 
+    def __getitem__(self,key):
+        return getattr(self,key)
 
     @deprecated("renamed")
     def getDataList(self):
@@ -461,7 +463,7 @@ class AbsoluteData(object):
         timea = datastream.ndarray[0].astype(datetime64)
 
         # 3. Get time column of DI data
-        timeb = np.asarray([num2date(el.time) for el in self]).astype(datetime64)
+        timeb = np.asarray([num2date(el.time).replace(tzinfo=None) for el in self]).astype(datetime64)
         # 4. search
         # corrected in version 0.9.9
         indtia = [idx for idx, el in enumerate(timeb) if np.min(np.abs((timea-el)/1000000.).astype(float64))/((samprate)*2) <= 1.]

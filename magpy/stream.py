@@ -344,7 +344,7 @@ DataStream  |  _select_keys  |  2.0.0  |              |  yes           |        
 DataStream  |  _select_timerange  |  2.0.0  |         |  yes*          |                  |    |  write
 DataStream  |  _tau  |       2.0.0  |                 |  yes*          |                  |    |  filter
 DataStream  |  add  |        2.0.0  |                 |  yes*          |                  |    |  absolutes
-DataStream  |  apply_deltas  |  2.0.0  |              |                |  yes             |    |  absolute_analysis
+DataStream  |  apply_deltas  |  2.0.0  |              |  yes           |  yes             |    |  absolute_analysis
 DataStream  |  aic_calc   |  2.0.0  |                 |  yes           |                  |    |
 DataStream  |  amplitude  |  2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  baseline  |   2.0.0  |                 |  yes           |                  |    |
@@ -385,7 +385,7 @@ DataStream  |  length  |     2.0.0  |                 |  yes*          |  yes   
 DataStream  |  mean  |       2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  modwt_calc  |  2.0.0  |                |  yes*          |                  |    |  core.activity
 DataStream  |  multiply  |   2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  offset  |     2.0.0  |                 |  yes           |                  |    |
+DataStream  |  offset  |     2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  randomdrop  |  2.0.0  |                |  yes           |                  |    |
 DataStream  |  remove  |     2.0.0  |                 |  yes           |                  |    |
 DataStream  |  resample  |   2.0.0  |                 |  yes*          |                  |    |  filter

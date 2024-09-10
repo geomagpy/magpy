@@ -687,6 +687,7 @@ class TestAbsolutes(unittest.TestCase):
         absdata = absst[0].get_abs_distruct()
         ma = absdata._get_max('varf')
         mi = absdata._get_min('varf')
+        print (ma,mi)
         self.assertEqual(np.round((ma-mi),2), 2.01)
 
     def test_corrangle(self):
@@ -738,6 +739,37 @@ class TestAbsolutes(unittest.TestCase):
                               variometerorientation='hez', residualsign=1)
         self.assertEqual(np.round(results[1],4), 64.3705)
         self.assertEqual(np.round(results[2],4), 4.3435)  # different to calcdec_caclinc as this is the third iteration step
+
+    def test_diline(self):
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        absst = di.abs_read(example6a)
+        #db.diline_to_db(absst, mode="delete", stationid='WIC')
+        res = db.diline_from_db()
+        success = True
+        atts = ['time', 'hc', 'vc', 'res', 'opt', 'laser', 'ftime', 'f', 't', 'scaleflux', 'scaleangle', 'azimuth', 'person', 'pier', 'stationid', 'di_inst', 'f_inst', 'fluxgatesensor', 'inputdate']
+        # please note: stationid needs to be different as this value has been set by diline_to_db
+        atts.remove("stationid")
+        for el in atts:
+            l1 = absst[0][el]
+            l2 = res[0][el]
+            if isinstance(l1, (list, tuple)):
+                l1 = [el for el in l1 if not np.isnan(el)]
+                l2 = [el for el in l2 if not np.isnan(el)]
+                if len(l1) == len(l2) and len(l1) == sum([1 for i, j in zip(l1, l2) if i == j]):
+                    pass
+                else:
+                    success = False
+            else:
+                if is_number(l1) and not np.isnan(l1):
+                    if l1 == l2:
+                        pass
+                    else:
+                        success = False
+                elif l1 == l2:
+                    pass
+                else:
+                    success = False
+        self.assertTrue(success)
 
 
 if __name__ == "__main__":

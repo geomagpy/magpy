@@ -1228,14 +1228,13 @@ class DataBank(object):
         else:
             rows = cursor.fetchall()
             ll = len(rows)
-            #print(ll)
             for idx, di in enumerate(rows):
                 if oldversion:
                     if debug:
                         print("Found old DI table")
                     if idx == 0:
                         loggerdatabase.debug(
-                            "diline_from_db: found {} DI values structiure in db - importing".format(ll))
+                            "diline_from_db: found {} DI values structure in db - importing".format(ll))
                     # Zerlege time column
                     timelst = [float(elem) for elem in di[2].split('_')]
                     distruct = DILineStruct(len(timelst))
@@ -1276,7 +1275,7 @@ class DataBank(object):
                 else:
                     if idx == 0:
                         loggerdatabase.debug(
-                            "diline_from_db: found {} DI values structiure in db - importing".format(ll))
+                            "diline_from_db: found {} DI values structure in db - importing".format(ll))
                     timelst = json.loads(di[3])
                     distruct = DILineStruct(len(timelst))
                     distruct.time = timelst
@@ -1313,6 +1312,9 @@ class DataBank(object):
                     except:
                         # no input data for AUTODIF
                         distruct.inputdate = num2date(np.nanmean(distruct.time)).replace(tzinfo=None)
+                    # ignore comment as stored in di[21]
+                    if len(di) > 22:
+                        distruct.stationid = di[22]
                 resultlist.append(distruct)
 
         cursor.close()
