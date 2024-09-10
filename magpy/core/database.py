@@ -1075,6 +1075,7 @@ class DataBank(object):
         createDItablesql = "CREATE TABLE IF NOT EXISTS %s (%s)" % (tablename, headstr)
 
         if mode == 'delete':
+            print ("deleting old table", tablename)
             msg = self._executesql(cursor, "DROP TABLE IF EXISTS {}".format(tablename))
             if msg:
                 print(msg)

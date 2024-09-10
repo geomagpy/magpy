@@ -685,10 +685,9 @@ class TestAbsolutes(unittest.TestCase):
     def test_get_max_min(self):
         absst = di.abs_read(example6a)
         absdata = absst[0].get_abs_distruct()
-        ma = absdata._get_max('varf')
-        mi = absdata._get_min('varf')
-        print (ma,mi)
-        self.assertEqual(np.round((ma-mi),2), 2.01)
+        ma = absdata._get_max('vc')
+        mi = absdata._get_min('vc')
+        self.assertEqual(np.round((ma-mi),2), 231.27)
 
     def test_corrangle(self):
         absst = di.abs_read(example6a)
@@ -741,9 +740,12 @@ class TestAbsolutes(unittest.TestCase):
         self.assertEqual(np.round(results[2],4), 4.3435)  # different to calcdec_caclinc as this is the third iteration step
 
     def test_diline(self):
+        def is_nan(x):
+            return (x != x)
+
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
         absst = di.abs_read(example6a)
-        #db.diline_to_db(absst, mode="delete", stationid='WIC')
+        dbaddsucc = db.diline_to_db(absst, mode="delete", stationid='WIC', debug=True)
         res = db.diline_from_db()
         success = True
         atts = ['time', 'hc', 'vc', 'res', 'opt', 'laser', 'ftime', 'f', 't', 'scaleflux', 'scaleangle', 'azimuth', 'person', 'pier', 'stationid', 'di_inst', 'f_inst', 'fluxgatesensor', 'inputdate']
@@ -767,9 +769,13 @@ class TestAbsolutes(unittest.TestCase):
                         success = False
                 elif l1 == l2:
                     pass
+                elif is_nan(l1) and is_nan(l2):
+                    # will work also for strings
+                    pass
                 else:
                     success = False
         self.assertTrue(success)
+        self.assertTrue(dbaddsucc)
 
 
 if __name__ == "__main__":
