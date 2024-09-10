@@ -1568,7 +1568,7 @@ from magpy.lib.magpy_absformats import *
 def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, fileidentifier='.txt', debug=False):
     """
     DESCRIPTION
-        anaylse the source of di data, read it and then create dictionary with days (date) as key and
+        analyse the source of di data, read it and then create dictionary with days (date) as key and
         an absolute data list (as returned by abs_read) as value
     RETURNS
         dict : {dattime.date, {'absdata': abslist, 'source' : 'file', etc}

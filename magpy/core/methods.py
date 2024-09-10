@@ -217,7 +217,7 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
     APPLICATION
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
         tablename = "TEST_0001_0001_0001"
-        data = _data_for_di({'db': (db,tablename)}, starttime='2022-11-22', endtime='2022-11-23', type=scalar)
+        data = data_for_di({'db': (db,tablename)}, starttime='2022-11-22', endtime='2022-11-23', type=scalar)
     """
     from magpy.stream import DataStream, read
     #from magpy.core import flagging

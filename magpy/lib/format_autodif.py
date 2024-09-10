@@ -1,8 +1,6 @@
 from magpy.absolutes import *
 import numpy as np
 
-
-
 def readAUTODIFABS(file_name: string, headonly: bool = False, **kwargs) -> list:
     output = kwargs.get('output')
     if output != 'DIListStruct':

@@ -344,6 +344,7 @@ DataStream  |  _select_keys  |  2.0.0  |              |  yes           |        
 DataStream  |  _select_timerange  |  2.0.0  |         |  yes*          |                  |    |  write
 DataStream  |  _tau  |       2.0.0  |                 |  yes*          |                  |    |  filter
 DataStream  |  add  |        2.0.0  |                 |  yes*          |                  |    |  absolutes
+DataStream  |  apply_deltas  |  2.0.0  |              |                |  yes             |    |  absolute_analysis
 DataStream  |  aic_calc   |  2.0.0  |                 |  yes           |                  |    |
 DataStream  |  amplitude  |  2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  baseline  |   2.0.0  |                 |  yes           |                  |    |
@@ -527,6 +528,109 @@ CALLED BY:
         self.container.append(datlst)
         #except:
         #    print list(self.container).append(datlst)
+
+
+    def apply_deltas(self, debug=False):
+        """
+        DESCRIPTION:
+           Extract content of DataDeltaDictionary and apply the corrections to stream.
+           The header content DataDeltaDictionary needs to be present
+           In order to extract such data from the database you might want to use
+           stream.header = db.fields_to_dict(stream.header.get('DataID')).
+           The apply_deltas method makes use of the stream.offset method.
+
+        PARAMETER:
+           stream:          data stream which is corrected
+
+        RETURNS:
+           a data stream with offsets applied
+
+        APPLICATION:
+           correctedstream = stream.apply_deltas()
+        """
+
+        def _get_old_deltavalues(ddvstring, debug=False):
+            deltadict = {}
+            deltalines = ddvstring.split(';')
+            for idx, delt in enumerate(deltalines):
+                if debug:
+                    print("apply_deltas: Found Deltavalues {}".format(delt))
+                deltdict = {}
+                starttime = ''
+                endtime = ''
+                delts = delt.split(',')
+                for el in delts:
+                    dat = el.split('_')
+                    name = dat[0].strip()
+                    value = dat[1].strip()
+                    if is_number(value):
+                        value = float(value)
+                    if name in ['st', 'et']:
+                        value = num2date(value).replace(tzinfo=None)
+                    deltdict[name] = value
+                deltadict[idx] = deltdict
+            return deltadict
+
+        def _delta_dict_to_string(ddv):
+            def dateconv(d):
+                # Converter to serialize datetime objects in json
+                if isinstance(d, datetime):
+                    return d.__str__()
+
+            return json.dumps(ddv, default=dateconv)
+
+        def _dateparser(dct):
+            # Convert dates in dictionary to datetime objects
+            for (key, value) in dct.items():
+                if str(value).count('-') + str(value).count(':') == 4:
+                    try:
+                        try:
+                            value = datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f")
+                        except:
+                            value = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                    except:
+                        pass
+                dct[key] = value
+            return dct
+
+        def _get_new_deltavalues(ddvstring):
+            return json.loads(ddvstring, object_hook=_dateparser)
+
+        stream = self.copy()
+        deltasapplied = False
+        streamstart, streamend = stream.timerange()
+
+        deltas = stream.header.get('DataDeltaDictionary', '')
+        if deltas == '':
+            print("apply_deltas: No delta values found - returning unmodified stream")
+            return stream
+        if "_" in deltas:
+            # old type
+            deltdict = _get_old_deltavalues(deltas)
+            print("apply_deltas: found old format of delta values in database - you might want to update them")
+            print("              to update copy the following into the database:")
+            newstr = _delta_dict_to_string(deltdict)
+            print(newstr)
+        elif "{" in deltas:
+            deltdict = _get_new_deltavalues(deltas)
+
+        for dd in deltdict:
+            contdict = deltdict[dd]
+            st = contdict.get('st')  # is required
+            et = contdict.get('et', datetime.utcnow())  # will be set to now if not existing
+            for key in contdict:
+                key = key.strip()
+                value = contdict.get(key)
+                if not key in ['st', 'et']:
+                    if (streamstart >= st and streamstart < et) or (streamend >= st and streamend < et):
+                        if debug:
+                            print("apply_deltas: key={}, value={}, starttime={}, endtime={}".format(key, value, st, et))
+                        stream = stream.offset({key: value}, starttime=st, endtime=et)
+                        deltasapplied = True
+        if deltasapplied:
+            stream.header['DataDeltaValues'] = ''
+
+        return stream
 
 
     def length(self):
@@ -4667,7 +4771,7 @@ CALLED BY:
         return sel
 
 
-    def offset(self, offsets, **kwargs):
+    def offset(self, offsets, starttime=None, endtime=None, debug=False, **kwargs):
         """
     DEFINITION:
         Apply constant offsets to elements of the datastream
@@ -4677,31 +4781,26 @@ CALLED BY:
         - offsets:      (dict) Dictionary of offsets with keys to apply to
                         e.g. {'time': timedelta(hours=1), 'x': 4.2, 'f': -1.34242}
                         Important: Time offsets have to be timedelta objects
-    Kwargs:
         - starttime:    (Datetime object) Start time to apply offsets
         - endtime :     (Datetime object) End time to apply offsets
+    Kwargs:
+        - comment :     (string) an annotation to add for the offset values
 
     RETURNS:
-        - variable:     (type) Description.
+        - DataStream:   (DataStream) with offsets applied - destructive
 
-    EXAMPLE:
-        data.offset({'x':7.5})
+    EXAMPLES:
+        data = data.offset({'x':7.5})
         or
-        data.offset({'x':7.5},starttime='2015-11-21 13:33:00',endtime='2015-11-23 12:22:00')
-
-    APPLICATION:
+        data = data.offset({'x':7.5},starttime='2015-11-21 13:33:00',endtime='2015-11-23 12:22:00')
 
         """
-        endtime = kwargs.get('endtime')
-        starttime = kwargs.get('starttime')
         comment = kwargs.get('comment')
 
-        ndtype = False
         if len(self.ndarray[0]) > 0:
-            ndtype =True
             tcol = self.ndarray[0]
         else:
-            tcol = self._get_column('time')
+            return self
 
         if not len(tcol) > 0:
             logger.error("offset: No data found - aborting")
@@ -4709,15 +4808,18 @@ CALLED BY:
 
         stidx = 0
         edidx = len(tcol)
+        commpos = self.KEYLIST.index('comment')
+        flagpos = self.KEYLIST.index('flag')
+
         if starttime:
-            st = date2num(testtime(starttime))
+            st = testtime(starttime)
             # get index number of first element >= starttime in timecol
             stidxlst = np.where(tcol >= st)[0]
             if not len(stidxlst) > 0:
                 return self   ## stream ends before starttime
             stidx = stidxlst[0]
         if endtime:
-            ed = date2num(testtime(endtime))
+            ed = testtime(endtime)
             # get index number of last element <= endtime in timecol
             edidxlst = np.where(tcol <= ed)[0]
             if not len(edidxlst) > 0:
@@ -4726,8 +4828,6 @@ CALLED BY:
 
         if comment and not comment == '':
             if len(self.ndarray[0]) > 0:
-                commpos = KEYLIST.index('comment')
-                flagpos = KEYLIST.index('flag')
                 commcol = self.ndarray[commpos]
             else:
                 commcol = self._get_column('comment')
@@ -4746,42 +4846,27 @@ CALLED BY:
                         commcol[idx] = comment
                 else:
                     commcol[idx] = el
-            print("offset", len(commcol), len(tcol))
+            if debug:
+                print("offset", len(commcol), len(tcol))
             self.ndarray[commpos] = commcol
 
         for key in offsets:
-            if key in KEYLIST:
-                if ndtype:
-                    ind = KEYLIST.index(key)
-                    val = self.ndarray[ind]
-                else:
-                    val = self._get_column(key)
+            if key in self.KEYLIST:
+                ind = self.KEYLIST.index(key)
+                val = self.ndarray[ind]
                 val = val[stidx:edidx]
                 if key == 'time':
-                    secperday = 24*3600
-                    try:
-                        os = offsets[key].total_seconds()/secperday
-                    except:
-                        try:
-                            exec('os = '+offsets[key]+'.total_seconds()/secperday')
-                        except:
-                            print("offset: error with time offset - check provided timedelta")
-                            break
+                    #secperday = 24*3600
+                    if not isinstance(offsets[key], basestring):
+                        os = offsets[key]
+                    else:
+                        os = eval('{}'.format(offsets[key]))
                     val = val + os
-                    #print num2date(val[0]).replace(tzinfo=None)
-                    #print num2date(val[0]).replace(tzinfo=None) + offsets[key]
-                    #newval = [date2num(num2date(elem).replace(tzinfo=None) + offsets[key]) for elem in val]
                     logger.info('offset: Corrected time column by %s sec' % str(offsets[key]))
                 else:
                     val = val + offsets[key]
-                    #newval = [elem + offsets[key] for elem in val]
                     logger.info('offset: Corrected column %s by %.3f' % (key, offsets[key]))
-                if ndtype:
-                    self.ndarray[ind][stidx:edidx] = val
-                else:
-                    nval = self._get_column(key) # repeated extraction of column - could be optimzed but usage of LineStruct will not be supported in future
-                    nval[stidx:edidx] = val
-                    self = self._put_column(nval, key)
+                self.ndarray[ind][stidx:edidx] = val
             else:
                 logger.error("offset: Key '%s' not in keylist." % key)
 
@@ -7854,6 +7939,8 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['_drop_nans'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR _drop_nans of stream.")
+            print (teststream)
+            nancolstream = teststream._remove_nancolumns()
             try:
                 ts = datetime.utcnow()
                 nancolstream = teststream._remove_nancolumns()
@@ -7889,10 +7976,10 @@ if __name__ == '__main__':
                 fstream._move_column('var1', 'var4')
                 fstream._drop_column('var2')
                 te = datetime.utcnow()
-                successes['_xxx_column'] = (
-                    "Version: {}, _xxx_column: {}".format(magpyversion, (te - ts).total_seconds()))
+                successes['_copymovedropput_column'] = (
+                    "Version: {}, _copymovedropput_column: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
-                errors['_xxx_column'] = str(excep)
+                errors['_copymovedropput_column'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR when applying column modifications.")
             try:
                 ts = datetime.utcnow()
@@ -7944,14 +8031,26 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR rotating stream.")
             try:
                 ts = datetime.utcnow()
-                # test with all options
-                test_offset = {'x': 150, 'y': -2000, 'z': 3.2}
-                offstream = teststream.offset(test_offset)
+                offstream1 = teststream.offset({'x': 150, 'y': -2000, 'z': 3.2})
+                offstream2 = teststream.offset({'time': 'timedelta(seconds=-0.33)'}, starttime='2022-01-01',
+                                               endtime='2023-01-01')
+                teststream = orgstream.copy() # offset is destructive - revoke the original data
                 te = datetime.utcnow()
                 successes['offset'] = ("Version: {}, offset: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
                 errors['offset'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR offsetting stream.")
+            try:
+                ts = datetime.utcnow()
+                fstream = teststream.calc_f()
+                teststream.header["DataDeltaDictionary"] = '{"0": {"st": "1971-11-22 00:00:00", "f": -1.48, "time": "timedelta(seconds=-3.0)", "et": "2018-01-01 00:00:00"}, "1": {"st": "2018-01-01 00:00:00", "f": -1.571, "time": "timedelta(seconds=-3.0)", "et": "2018-09-14 12:00:00"}, "2": {"st": "2018-09-14 12:00:00", "f": -1.571, "time": "timedelta(seconds=1.50)", "et": "2019-01-01 00:00:00"}, "3": {"st": "2019-01-01 00:00:00", "f": -1.631, "time": "timedelta(seconds=-0.30)", "et": "2020-01-01 00:00:00"}, "4": {"st": "2020-01-01 00:00:00", "f": -1.616, "time": "timedelta(seconds=-0.28)", "et": "2021-01-01 00:00:00"}, "5": {"st": "2021-01-01 00:00:00", "f": -1.609, "time": "timedelta(seconds=-0.28)", "et": "2022-01-01 00:00:00"}, "6": {"st": "2022-01-01 00:00:00", "f": -1.655, "time": "timedelta(seconds=-0.33)", "et": "2023-01-01 00:00:00"}, "7": {"st": "2023-01-01 00:00:00", "f": -1.729, "time": "timedelta(seconds=-0.28)"}}'
+                res = fstream.apply_deltas()
+                te = datetime.utcnow()
+                successes['apply_deltas'] = (
+                    "Version: {}, apply_deltas: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['apply_deltas'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with apply_deltas to stream.")
             try:
                 ts = datetime.utcnow()
                 rotstream = rotstream.get_gaps()

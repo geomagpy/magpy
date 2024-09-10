@@ -127,6 +127,23 @@ class TestStream(unittest.TestCase):
         amp = teststream.amplitude('x')
         self.assertEqual(amp, 2000)
 
+    def test_apply_deltas(self):
+        fstream = teststream.calc_f()
+        # old type
+        print("apply_deltas: testing with old database input type")
+        ddv1 = "st_690.0,f_-1.48,time_timedelta(seconds=-3.0),et_17532.0;st_17532.0,f_-1.571,time_timedelta(seconds=-3.0),et_17788.5;st_17788.5,f_-1.571,time_timedelta(seconds=1.50),et_17897.0;st_17897.0,f_-1.631,time_timedelta(seconds=-0.30),et_18262.0;st_18262.0,f_-1.616,time_timedelta(seconds=-0.28),et_18628.0;st_18628.0,f_-1.609,time_timedelta(seconds=-0.28),et_18993.0;st_18993.0,f_-1.655,time_timedelta(seconds=-0.33),et_19358.0;st_19358.0,f_-1.729,time_timedelta(seconds=-0.28)"
+        fstream.header["DataDeltaDictionary"] = ddv1
+        res1 = fstream.apply_deltas()
+        diff1 = fstream.mean('f')-res1.mean('f')
+        self.assertEqual(np.round(diff1,3), 1.655)
+        # new type
+        print("apply_deltas: testing with new database input type")
+        ddv2 = '{"0": {"st": "1971-11-22 00:00:00", "f": -1.48, "time": "timedelta(seconds=-3.0)", "et": "2018-01-01 00:00:00"}, "1": {"st": "2018-01-01 00:00:00", "f": -1.571, "time": "timedelta(seconds=-3.0)", "et": "2018-09-14 12:00:00"}, "2": {"st": "2018-09-14 12:00:00", "f": -1.571, "time": "timedelta(seconds=1.50)", "et": "2019-01-01 00:00:00"}, "3": {"st": "2019-01-01 00:00:00", "f": -1.631, "time": "timedelta(seconds=-0.30)", "et": "2020-01-01 00:00:00"}, "4": {"st": "2020-01-01 00:00:00", "f": -1.616, "time": "timedelta(seconds=-0.28)", "et": "2021-01-01 00:00:00"}, "5": {"st": "2021-01-01 00:00:00", "f": -1.609, "time": "timedelta(seconds=-0.28)", "et": "2022-01-01 00:00:00"}, "6": {"st": "2022-01-01 00:00:00", "f": -1.655, "time": "timedelta(seconds=-0.33)", "et": "2023-01-01 00:00:00"}, "7": {"st": "2023-01-01 00:00:00", "f": -1.729, "time": "timedelta(seconds=-0.28)"}}'
+        fstream.header["DataDeltaDictionary"] = ddv2
+        res2 = fstream.apply_deltas()
+        diff2 = fstream.mean('f')-res2.mean('f')
+        self.assertEqual(np.round(diff2,3), 1.655)
+
     def test_baseline(self):
         self.assertEqual(2, 1)
 
@@ -266,7 +283,14 @@ class TestStream(unittest.TestCase):
         self.assertEqual(pmeanx, 42000)
 
     def test_offset(self):
-        self.assertEqual(2, 1)
+        ostream = teststream.copy()
+        ostream = ostream.offset({'x':10},starttime='2022-11-22T00:00:00',endtime='2022-11-22T12:00:00')
+        diff = ostream.mean('x') - teststream.mean('x')
+        self.assertEqual(np.round(diff,1), 5)
+        self.assertEqual(ostream.ndarray[1][0], teststream.ndarray[1][0]+10)
+        ostream = ostream.offset({'time':'timedelta(seconds=-0.5)'},starttime='2022-01-01',endtime='2023-01-01')
+        st, et = ostream.timerange()
+        self.assertEqual(st, testtime('2022-11-21T23:59:59.5'))
 
     def test_randomdrop(self):
         self.assertEqual(2, 1)
