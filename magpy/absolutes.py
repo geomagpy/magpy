@@ -2654,6 +2654,14 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['_analyse_di_source'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with _analyse_di_source.")
+            try:
+                ts = datetime.utcnow()
+                data = data_for_di(example5, starttime="2018-08-29", datatype='both',debug=True)
+                te = datetime.utcnow()
+                successes['data_for_di'] = ("Version: {}: data_for_di {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['data_for_di'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with data_for_di.")
 
             # If end of routine is reached... break.
             break

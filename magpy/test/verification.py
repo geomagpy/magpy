@@ -777,6 +777,79 @@ class TestAbsolutes(unittest.TestCase):
         self.assertTrue(success)
         #self.assertTrue(dbaddsucc)
 
+    def test_data_for_di(self):
+        # Test1 (basic read):
+        # ----------------------
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both', debug=True)
+        tx1, ty1, tz1, tf1 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0], data.ndarray[4][0]
+        self.assertEqual(np.round(tz1, 2), 43859.29)
+        # Test2 (alpha and beta rotations):
+        # ----------------------
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both', alpha=90, debug=True)
+        tx2, ty2, tz2 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
+        # Expected X1 = Y2
+        # Expected Y1 = -X2
+        self.assertEqual(np.round(tx1, 2), np.round(ty2, 2))
+        self.assertEqual(np.round(ty1, 2), -np.round(tx2, 2))
+        # ----------------------
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both', beta=90, debug=True)
+        tx3, ty3, tz3 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
+        # Expected X1 = -Z3
+        # Expected Z1 = X3
+        self.assertEqual(np.round(tx1, 2), -np.round(tz3, 2))
+        self.assertEqual(np.round(tz1, 2), np.round(tx3, 2))
+        # ----------------------
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both', alpha=90, beta=90, debug=True)
+        tx4, ty4, tz4 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
+        # Expected X1 = -Z4
+        # Expected Y1 = -X4
+        # Expected Z1 = Y4
+        self.assertEqual(np.round(tx1, 2), -np.round(tz4, 2))
+        self.assertEqual(np.round(ty1, 2), -np.round(tx4, 2))
+        self.assertEqual(np.round(tz1, 2), np.round(ty4, 2))
+        # Test3 (database usage):
+        # ----------------------
+        # add the original header to the database and add some artificial compensation and rotation and a DataDeltaDictionary
+        db = database.DataBank("localhost", "maxmustermann", "geheim", "testdb")
+        data.header['DataID'] = "{}_0001".format(data.header['SensorID'])
+        data.header['DataRotationAlpha'] = "2016_90.0,2017_0.0"
+        data.header['DataRotationBeta'] = "2018_0.0"
+        data.header[
+            'DataDeltaValues'] = '{"0": {"st": "1971-11-22 00:00:00", "f": -1.48, "time": "timedelta(seconds=-3.0)", "et": "2018-01-01 00:00:00"}, "1": {"st": "2018-01-01 00:00:00", "f": -1.571, "time": "timedelta(seconds=-3.0)", "et": "2018-09-14 12:00:00"}, "2": {"st": "2018-09-14 12:00:00", "f": -1.571, "time": "timedelta(seconds=1.50)", "et": "2019-01-01 00:00:00"}, "3": {"st": "2019-01-01 00:00:00", "f": -1.631, "time": "timedelta(seconds=-0.30)", "et": "2020-01-01 00:00:00"}, "4": {"st": "2020-01-01 00:00:00", "f": -1.616, "time": "timedelta(seconds=-0.28)", "et": "2021-01-01 00:00:00"}, "5": {"st": "2021-01-01 00:00:00", "f": -1.609, "time": "timedelta(seconds=-0.28)", "et": "2022-01-01 00:00:00"}, "6": {"st": "2022-01-01 00:00:00", "f": -1.655, "time": "timedelta(seconds=-0.33)", "et": "2023-01-01 00:00:00"}, "7": {"st": "2023-01-01 00:00:00", "f": -1.729, "time": "timedelta(seconds=-0.28)"}}'
+        # Bias fields in DB are given in !! microT !!. Take of the sign: F_without_bias = F with_bias + DataCompensation
+        data.header['DataCompensationX'] = 1
+        data.header['DataCompensationY'] = -0.5
+        data.header['DataCompensationZ'] = -1
+        db.dict_to_fields(data.header, mode='replace')
+        # only compensation and delta_f from DataDeltaValues, rotatoion is zero
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both', magrotation=True, db=db, debug=True)
+        tx5, ty5, tz5, tf5 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0], data.ndarray[4][0]
+        self.assertEqual(np.round(tx1, 2), np.round(tx5 + 1000, 2))
+        self.assertEqual(np.round(ty1, 2), np.round(ty5 - 500, 2))
+        self.assertEqual(np.round(tz1, 2), np.round(tz5 - 1000, 2))
+        self.assertEqual(np.round(tf1, 2), np.round(tf5 + 1.571, 2))
+        # ----------------------
+        # no compensation but rotation from db and delta_f from DataDeltaValues
+        data.header['DataRotationAlpha'] = "2016_90.0,2017_90.0"
+        data.header['DataRotationBeta'] = "2018_90.0"
+        data.header['DataCompensationX'] = 0.0
+        data.header['DataCompensationY'] = 0.0
+        data.header['DataCompensationZ'] = 0.0
+        db.dict_to_fields(data.header, mode='replace')
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both', magrotation=True, db=db, debug=True)
+        tx6, ty6, tz6 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
+        self.assertEqual(np.round(tx1, 2), -np.round(tz6, 2))
+        self.assertEqual(np.round(ty1, 2), -np.round(tx6, 2))
+        self.assertEqual(np.round(tz1, 2), np.round(ty6, 2))
+        # ----------------------
+        # Test5 (optional offset):
+        offsets = {'x': 1000.0, 'z': -1000.0}
+        data = data_for_di(example5, starttime="2018-08-29", datatype='vario', compensation=True, offset=offsets, db=db,
+                           debug=True)
+        tx7, ty7, tz7 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
+        self.assertEqual(np.round(tx1, 2), np.round(tx7 - 1000, 2))
+        self.assertEqual(np.round(tz1, 2), np.round(tz7 + 1000, 2))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

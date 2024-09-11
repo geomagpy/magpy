@@ -1424,6 +1424,13 @@ In this section we will describe in detail how a DI analysis is preformed and wh
 productive data analysis, however, there is a single method implemented, which comprises all of the following
 procedures. Please move to section 7.2 for a description of the productive method.
 
+Lets first import the required packages for DI/absolute analysis and some exanmple files and helper methods:
+
+        import magpy.absolutes as di
+        from magpy.stream import read, DataStream(), example6a, example5
+        from magpy.core.methods import *
+
+
 #### Data structure of DI measurements
 
 Please check `example6a` or  `example6b` , which are example DI files. You can create these DI files by using the 
@@ -1558,32 +1565,33 @@ second step. This example is part of the jupyter notebook manual.
 
 ### 7.2 The absolute_analysis method - single command DI analysis 
 
-Reading and analyzing DI data requires valid DI file(s). For correct analysis, variometer data and scalar field 
-information needs to be provided as well. 
+Basically everything necessary for DI analysis as shown in 7.1 is available with a single command `absolute_analysis`.
 
-Checkout `help(di.absolute_analysis)` for all options. The analytical procedures are outlined in detail in 
-section 7.7. A typical analysis looks like:
+Besides all the methods shown above, the absolut analysis command also makes use of two additional
+helper methods `absolutes._analyse_di_source` and `methods.data_for_di`. The first one allows you
+to access DI raw data from various different sources. Details will be discussed below.
+The second method `data_for_di` is used by absolute_analysis to read continuous variometer and scalar data for (a) 
+calculations of absolute declination, inclination and F at a single point of time (i.e. first measurement)
+and (b) to determine the basevalues for variometer and scalar sensor for this point in time.
+Both data sets eventually need to be corrected. Variometer data eventually needs bias/compensation fields
+applied, rotations might be used to transform into either HEZ or XYZ coordinate systems. Scalar data might
+corrected for delta F, the difference between continuous measurement position and DI pier. Finally,
+timeshifts can be applied to both data sets.
+
+The application `absolute_analysis` comes with a hugh number of options in order to make full use of all possibilities 
+by the methods listed above and section 7.1. The most important will be discussed here. Checkout 
+`help(di.absolute_analysis)` for all options. The analytical procedures are outlined in detail in 
+section 7.7. 
+
+The most basic application for di ananlysis is as follows:
 
         diresult = di.absolute_analysis('/path/to/DI/','path/to/vario/','path/to/scalar/')
 
 Path to DI can either point to a single file, a directory or even use wildcards to select data from a specific 
-observatory/pillar. Using the examples provided along with MagPy, an analysis can be performed as follows. Firstly we 
-copy the files to a temporary folder and we need to rename the basevalue file. Date and time need to be part of the 
-filename. For the following commands to work you need to be within the examples directory.
+observatory/pillar. Using the examples provided along with MagPy, an analysis can be performed as follows. 
 
-        $ mkdir /tmp/DI
-        $ cp example6a.txt /tmp/DI/2018-08-29_07-16-00_A2_WIC.txt
-        $ cp example5.sec /tmp/DI/
+       diresult = di.absolute_analysis(example6a, example5, example5)
 
-The we start python and import necessary packages
-
-        >>>from magpy import absolutes as di
-        >>>import magpy.mpplot as mp
-        >>>from magpy.stream import read
-
-Finally we issue the analysis command.
-
-        >>>diresult = di.absoluteAnalysis('/tmp/DI/2018-08-29_07-16-00_A2_WIC.txt','/tmp/DI/*.sec','/tmp/DI/*.sec')
 
 
 Calling this method will provide terminal output as follows and a stream object `diresult` which can be used for further analyses.

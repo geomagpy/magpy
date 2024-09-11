@@ -362,6 +362,7 @@ def readIAGA(filename, headonly=False, **kwargs):
         elif filename.count(".") == 1 and len(filename) < 30 and not filename.find("&")>-1:
             tmp, fileext = os.path.splitext(filename)
         stream.header['SensorID'] = stream.header.get('StationIAGAcode','NoCode').upper()+fileext.replace('.','')+'_'+stream.header.get('DataPublicationLevel','0')+'_0001'
+        stream.header['DataID'] = "{}_0001".format(stream.header['SensorID'])
     except:
         pass
 

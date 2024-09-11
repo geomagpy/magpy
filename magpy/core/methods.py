@@ -33,7 +33,7 @@ class | method | since version | until version | runtime test | result verificat
 **core.methods** |  |          |               |              |  |  |
     | ceil_dt         |  2.0.0 |              | yes           |  |  |
     | convert_geo_coordinate | 2.0.0 |        | yes           |  |  |
-    | data_for_di     | 2.0.0 |               | yes*           |  |  | absolutes
+    | data_for_di     | 2.0.0 |               | yes*          | yes*                |        | absolutes
     | dates_to_url    | 2.0.0 |               |               |  |  |
     | deprecated      | 2.0.0 |               | yes           |  |  |
  d  | denoralize      | 2.0.0 |     2.1.0     | no            |  |  |
@@ -164,7 +164,7 @@ def convert_geo_coordinate(lon,lat,pro1,pro2):
 
 
 def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, beta=None, magrotation=False,
-                 compensation=False, offset=None, skipdb=False, debug=False):
+                 compensation=False, offset=None, skipdb=False, db=None, debug=False):
     """
     DESCRIPTION
         Analyzing source: Source is provided as a dictionary, multiple sources are allowed - if it is string or list (old type)
@@ -172,22 +172,36 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
         if database and file is provided then firstly the database is accessed and if failing (no data) then the file is access
         #{'file': pathname , 'database': ( db, tablename ) }
     VARIABLES:
-        offet
-        alpha, beta
-        magrotation
-        compensation
-        datatype(string) : either 'scalar' or 'vario'
-        skipdb (bool) : ignore flagging and delta values from database even if this is the data source
+        db  (databank):        if db is provided then data.header information is updated from the selected database.
+                               Compensation, delta and rotation values from the header are used for optional corrections.
+                               Providing db will also trigger the application of flags from the database. Currently,
+                               this is te only way to apply flags with the data_for_di method
+        magrotation  (bool):   if True then data.header values for alpha and beta are used (i.e. 'DataRotationAlpha')
+        alpha, beta  (floats): if magrotation=False and alpha and/or beta are provided they will be used for rotation
+        compensation (bool):   if True then data.header values for bias field are used (i.e. 'DataCompensationX')
+                               Bias fields in DB are given in !! microT !!.
+                               Take of the sign: F_without_bias = F with_bias + DataCompensation
+                               which is different from offset and delta F
+        offset     (dict):     if provided then data.header data to apply_deltas and compensation corrections are
+                               ignored. The provided offset values are used instead for correction.
+        datatype  (string) :   either 'scalar' or 'vario' or 'both'
+        skipdb (bool) :        data.header is not updated from the databank, even if db is provided. Will then also
+                               ignore flagging and delta values from database even if this is the data source
         Return:
         # Move this part out of the method
         variometerorientation - is eventually modified by this code, but might also not be necessary - just makes sure that HEZ baselines
         are returned in case of non-xyz data
     RETURNS
-        data (DataStream) with corrections applied and a a DataFunctionObject containing an interpolation function
+        data (DataStream) with corrections applied and a DataFunctionObject containing an interpolation function
     APPLICATION
+        # Data in files (or file like objects)
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both')
+        # Webservice  data
+        data = data_for_di("https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC", starttime='2024-08-01',endtime='2024-08-02', datatype='both', debug=True)
+        # Database data
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
         tablename = "TEST_0001_0001_0001"
-        data = data_for_di({'db': (db,tablename)}, starttime='2022-11-22', endtime='2022-11-23', type=scalar)
+        data = data_for_di({'db': (db,tablename)}, starttime='2022-11-22', endtime='2022-11-23', type='scalar')
     """
     from magpy.stream import DataStream, read
     #from magpy.core import flagging
@@ -202,13 +216,13 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
         endtime = starttime + timedelta(days=1)
 
     data = DataStream()
+    func = []
     datagood = True
-    db = None
     if not source:
         datagood = False
     if isinstance(source, dict):
-        tup = source.get('db', None)
-        fi = tup = source.get('file', None)
+        tup = source.get('db', [])
+        fi = source.get('file', None)
         if tup and len(tup) == 2:
             db = tup[0]
             data = tup[0].read(tup[1], starttime=starttime, endtime=endtime)
@@ -233,6 +247,7 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
                 print("   Successfully loaded data with version 1.0")
         else:
             datagood = False
+    sensorid = data.header.get('SensorID')
 
     if datagood:
         if debug:
@@ -240,7 +255,7 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
         # check if a sensorid  is present - except ?
         # check if data is available in the required columns
         if datatype in ['scalar', 'both', 'full'] and not len(data.ndarray[data.KEYLIST.index('f')]) > 0:
-            # Calculate F values if not existing. Please note: this method will consider evertually available delta F data
+            # Calculate F values if not existing. Please note: this method will consider eventually available delta F data
             data = data.calc_f()
         elif datatype in ['vario', 'variometer', 'both', 'full']:
             variocomps = data.header.get('DataComponents', '').lower()
@@ -277,11 +292,15 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             if debug:
                 print("  -> applied {} flags from data base ...".format(len(fl)))
             # get all header data from database and apply delta values (i.e. F offsets etc)
-            data.header = db.fields_to_dict(data.header.get('SensorID')+'_0001')
+            if data.header.get('DataID',''):
+                dataid = data.header.get('DataID','')
+            else:
+                dataid = data.header.get('SensorID') + '_0001'
+            data.header = db.fields_to_dict(dataid)
             if debug:
                 print("  -> applied header from data base ...")
             if not offset:  # TODO check that - not done in MagPy 1.x
-                data = data.apply_deltas()
+                data = data.apply_deltas(debug=debug)
                 if debug:
                     print("  -> applied delta_values previously extracted from data base ...")
                     # print (" ------------  IMPORTANT ----------------")
@@ -308,8 +327,8 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             data = data.offset(offset)
 
         if magrotation:
-            valalpha = ''
-            valbeta = ''
+            valalpha = 0.0
+            valbeta = 0.0
             if not is_number(alpha):
                 # db header has already been applied and alpha is not provided
                 rotstring = data.header.get('DataRotationAlpha', '')
@@ -318,33 +337,40 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
                 valalpha = rotdict.get(str(starttime.year), '')
                 if valalpha == '':
                     print("     no alpha value found for year {}".format(starttime.year))
-                    maxkey = max([int(k) for k in rotdict])
-                    valalpha = rotdict.get(str(maxkey), 0)
-                    print("  -> using alpha for year {}".format(str(maxkey)))
+                    try:
+                        maxkey = max([int(k) for k in rotdict])
+                        valalpha = rotdict.get(str(maxkey), 0)
+                        print("  -> using alpha for year {}".format(str(maxkey)))
+                    except:
+                        valalpha = 0
                 valalpha = float(valalpha)
                 if not float(valalpha) == 0.:
                     print("  -> rotating with alpha: {a} degree (year {b})".format(a=valalpha, b=starttime.year))
-                    data = data.rotation(alpha=float(valalpha))
-                    data.header['DataComments'] = "{} - rotated by alpha={}".format(data.header.get('DataComments',''), valalpha)
             else:
                 # Using manually provided rotation value - see below
                 pass
             if not is_number(beta):
                 rotstring = data.header.get('DataRotationBeta', '')
                 rotdict = string2dict(rotstring, typ='oldlist')
-                valbeta = rotdict.get(str(date.year), '')
+                valbeta = rotdict.get(str(starttime.year), '')
                 if valbeta == '':
-                    maxkey = max([int(k) for k in rotdict])
-                    beta = rotdict[str(maxkey)]
+                    try:
+                        maxkey = max([int(k) for k in rotdict])
+                        valbeta = rotdict[str(maxkey)]
+                    except:
+                        valbeta = 0
                 valbeta = float(valbeta)
                 if not float(valbeta) == 0.:
-                    print("  -> rotating with beta: {a} degree (year {b})".format(a=valbeta, b=date.year))
-                    data = data.rotation(beta=float(valbeta))
-                    data.header['DataComments'] = "{} - rotated by beta={}".format(data.header.get('DataComments',''), valbeta)
+                    print("  -> rotating with beta: {a} degree (year {b})".format(a=valbeta, b=starttime.year))
             else:
                 # Using manually provided rotation value - see below
                 pass
+            if valalpha != 0 or valbeta != 0:
+                data = data.rotation(alpha=valalpha, beta=valbeta)
+                data.header['DataComments'] = "{} - rotated by alpha={} and beta={}".format(data.header.get('DataComments', ''), valalpha, valbeta)
         elif is_number(alpha) or is_number(beta):  # if alpha and beta are provided then rotate anyway
+            if debug:
+                print (" magrotation not set but alpha and/or beta given - rotating with these manual values")
             if is_number(alpha):
                 valalpha = alpha
             else:
@@ -353,9 +379,12 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
                 valbeta = beta
             else:
                 valbeta = 0.0
-            data = data.rotation(alpha=valalpha, beta=valbeta)
-            if debug:
-                print("  -> rotating with manually provided alpha {} and beta {}".format(valalpha, valbeta))
+            if valalpha != 0 or valbeta != 0:
+                data = data.rotation(alpha=valalpha, beta=valbeta)
+                data.header['DataComments'] = "{} - rotated by alpha={} and beta={}".format(
+                data.header.get('DataComments', ''), valalpha, valbeta)
+                if debug:
+                    print("  -> rotating with manually provided alpha {} and beta {}".format(valalpha, valbeta))
         if not len(data) > 0:  # still
             datagood = False
 
