@@ -251,12 +251,15 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
 
     if datagood:
         if debug:
-            print(" -> Obtained {} data points from {}".format(len(data), source))
+            print(" -> Obtained {} data points from {} of datatype {}".format(len(data), source, datatype))
         # check if a sensorid  is present - except ?
         # check if data is available in the required columns
         if datatype in ['scalar', 'both', 'full'] and not len(data.ndarray[data.KEYLIST.index('f')]) > 0:
             # Calculate F values if not existing. Please note: this method will consider eventually available delta F data
             data = data.calc_f()
+        elif datatype in ['scalar']:
+            # just continue - nothing to do yet
+            pass
         elif datatype in ['vario', 'variometer', 'both', 'full']:
             variocomps = data.header.get('DataComponents', '').lower()
             if debug:

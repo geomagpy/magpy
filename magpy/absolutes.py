@@ -1532,10 +1532,10 @@ class AbsoluteData(object):
             loggerabs.info('%s : Declination: %s, Inclination: %s, H: %.1f, F: %.1f' % (num2date(outline.time), deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f))
 
             if printresults:
-                print('Vector at: {}'.format(str(num2date(outline.time))))
-                print('Declination: %s, Inclination: %s, H: %.1f, Z: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f*np.sin(outline.x*np.pi/180),outline.f))
-                print('Collimation and Offset:')
-                print('Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\nInclination:    S0: %.3f, epsilon Z: %.3f\nScalevalue: %.3f deg/unit' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2))
+                print('  Vector at: {}'.format(str(num2date(outline.time))))
+                print('  Declination: %s, Inclination: %s, H: %.1f, Z: %.1f, F: %.1f' % (deg2degminsec(outline.y),deg2degminsec(outline.x),outline.f*np.cos(outline.x*np.pi/180),outline.f*np.sin(outline.x*np.pi/180),outline.f))
+                print('  Collimation and Offset:')
+                print('  Declination:    S0: %.3f, delta H: %.3f, epsilon Z: %.3f\n  Inclination:    S0: %.3f, epsilon Z: %.3f\n  Scalevalue: %.3f deg/unit' % (outline.var1,outline.var2,outline.var3,outline.var4,outline.var5,outline.t2))
                 if outline.str4:
                     ty = str(outline.str4)
                 else:
