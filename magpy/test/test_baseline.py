@@ -159,7 +159,7 @@ if not exepath.endswith('test'):
     exepath = os.path.join(exepath,'magpy','test') # travis...
 datadir = 'testdata'
 dipath = os.path.join(exepath,datadir,"di-data")
-variopath = os.path.join(exepath,datadir,"vario1")
+variopath = os.path.join(exepath,datadir,"variometer")
 scalarpath = os.path.join(exepath,datadir,"scalar")
 testpath = os.path.join(exepath,datadir,"baseline")
 

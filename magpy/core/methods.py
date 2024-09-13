@@ -239,9 +239,15 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             datafailed = True
         elif len(source) == 2:  # old db type
             db = source[0]
-            data = db.read(source[1], starttime=starttime, endtime=endtime)
+            try:
+                data = db.read(source[1], starttime=starttime, endtime=endtime)
+            except:
+                data = DataStream()
         else:
-            data = read(source[0], starttime=starttime, endtime=endtime)
+            try:
+                data = read(source[0], starttime=starttime, endtime=endtime)
+            except:
+                data = DataStream()
         if len(data) > 0:
             if debug:
                 print("   Successfully loaded data with version 1.0")

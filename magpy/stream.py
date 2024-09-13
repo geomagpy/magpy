@@ -6818,8 +6818,9 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headon
         st = st.trim(endtime=endtime)
 
     ### Define some general header information TODO - This is done already in some format libs - clean up
-    st = st.removeduplicates()
-    st.header['DataSamplingRate'] = float("{0:.2f}".format(st.samplingrate()))
+    if len(st) > 0:
+        st = st.removeduplicates()
+        st.header['DataSamplingRate'] = float("{0:.2f}".format(st.samplingrate()))
 
     return st
 

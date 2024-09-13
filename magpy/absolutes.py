@@ -1583,6 +1583,14 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
     source = None  # can be 'db', 'files', 'urls', 'webservice' ,'dilinestruc' or None
     resultsdict = {}
     tablename = ''  # will be filled with an eventually existing tablename for didata
+    if starttime:
+        starttime = testtime(starttime)
+    else:
+        starttime = datetime(1777,4,30)
+    if endtime:
+        endtime = testtime(endtime)
+    else:
+        endtime = datetime.utcnow()
 
     if not didatasource:
         source = None
@@ -1600,7 +1608,7 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
                 if tablenamel and len(tablenamel) > 0:
                     tablename = tablenamel[0]
                     source = 'db'
-                    # Table is exitsing
+                    # Table is existing
         if not source:
             # if string is not corresponding to a database table
             # string is an url or a filename
@@ -1619,19 +1627,20 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
                     source = 'webservice'
             elif os.path.isfile(elem):
                 source = 'files'
-                filelist = [elem]
+                filelist.append(elem)
             elif os.path.exists(elem):
                 # directory
                 source = 'files'
-                for file in os.listdir(str(didatasource)):
+                for file in os.listdir(str(elem)):
                     if debug:
                         print("  _analyse_di_source:  scanning for {} (do not include wildcards)".format(fileidentifier))
                     if file.endswith(fileidentifier):
                         filelist.append(os.path.join(elem, file))
             else:
-                print("  _analyse_di_source: can not interprete the following elem of absdata:", elem)
+                print("  _analyse_di_source: can not interpret the following elem of absdata:", elem)
 
     dilines = []
+    acceptedfiles = []
     if debug:
         print("Identified data source:", source)
     if not source:
@@ -1646,28 +1655,34 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
         dilines = didatasource
     elif source in ['files', 'urls', 'webservice']:
         dilines = []
+        acceptedfiles = []
         for fi in filelist:
             absst = abs_read(fi)  # azimuth, pier in old code - sort later
             for a in absst:
                 dilines.append(a)
+                acceptedfiles.append(fi)
     if debug:
         print("Got {} DI data lines".format(len(dilines)))
 
-    for line in dilines:
+    for idx,line in enumerate(dilines):
         mintime = testtime(np.nanmin(line.time))
         maxtime = testtime(np.nanmax(line.time))
-        mindate = mintime.date()
-        maxdate = maxtime.date()
-        contdict = resultsdict.get(mindate, {})
-        dlines = contdict.get("dilines", [])
-        if mindate == maxdate:
-            dlines.append(line)
-            contdict["dilines"] = dlines
-            contdict["source"] = source
-            contdict["filelist"] = filelist
-        else:
-            print(" DI measurement performed while date is changing - not yet supported - skipping")
-        resultsdict[mindate] = contdict
+        if mintime >= starttime and maxtime <= endtime:
+            mindate = mintime.date()
+            maxdate = maxtime.date()
+            contdict = resultsdict.get(mindate, {})
+            dlines = contdict.get("dilines", [])
+            fl = contdict.get("filelist", [])
+            if mindate == maxdate:
+                dlines.append(line)
+                if acceptedfiles and len(acceptedfiles) >= idx and not acceptedfiles[idx] in fl:
+                    fl.append(acceptedfiles[idx])
+                contdict["dilines"] = dlines
+                contdict["source"] = source
+                contdict["filelist"] = fl
+            else:
+                print(" DI measurement performed while date is changing - not yet supported - skipping")
+            resultsdict[mindate] = contdict
 
     return resultsdict
 

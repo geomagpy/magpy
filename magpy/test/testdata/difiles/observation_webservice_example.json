@@ -1,0 +1,634 @@
+{
+	"metadata": {
+		"date": "2017-08-14T20:31:36Z",
+		"request": "/baselines/observation.json.php?observatory=BOU&starttime=2016-01-29&endtime=2016-01-30&includemeasurements=true",
+		"version": "v1.2.2",
+		"error": false
+	},
+	"data": [
+		{
+			"id": 3230,
+			"time": "2016-01-29T19:48:52Z",
+			"pier_temperature": 22.7,
+			"elect_temperature": null,
+			"flux_temperature": null,
+			"proton_temperature": null,
+			"outside_temperature": null,
+			"reviewed": true,
+			"electronics": {
+				"id": 1,
+				"serial": "0110"
+			},
+			"theodolite": {
+				"id": 2,
+				"serial": "109648"
+			},
+			"mark": {
+				"id": 1,
+				"azimuth": 199.1383,
+				"name": "AZ"
+			},
+			"pier": {
+				"id": 214,
+				"correction": -22,
+				"name": "MainPCDCP"
+			},
+			"observer": "Teresa",
+			"reviewer": "Jake Morris",
+			"readings": [
+				{
+					"id": 52312,
+					"set": 1,
+					"D": {
+						"absolute": 8.6981611,
+						"baseline": 8.9711304,
+						"end": 1454093252,
+						"shift": 0,
+						"start": 1454092976,
+						"valid": true
+					},
+					"H": {
+						"absolute": 20727.4498358,
+						"baseline": -64.5276642,
+						"end": 1454093835,
+						"start": 1454093543,
+						"valid": true
+					},
+					"Z": {
+						"absolute": 47919.9805475,
+						"baseline": 590.1155475,
+						"end": 1454093835,
+						"start": 1454093543,
+						"valid": true
+					},
+					"measurements": [
+						{
+							"id": 627739,
+							"type": "SecondMarkDown",
+							"time": null,
+							"angle": 190.85333333333,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627735,
+							"type": "FirstMarkDown",
+							"time": null,
+							"angle": 190.85277777778,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627740,
+							"type": "SecondMarkUp",
+							"time": null,
+							"angle": 10.854166666667,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627736,
+							"type": "FirstMarkUp",
+							"time": null,
+							"angle": 10.854444444444,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627743,
+							"type": "WestDown",
+							"time": 1454092976,
+							"angle": 270.43472222222,
+							"h": 20792.1,
+							"e": -98.58,
+							"z": 47330.75,
+							"f": 52233.48
+						},
+						{
+							"id": 627733,
+							"type": "EastDown",
+							"time": 1454093064,
+							"angle": 90.278888888889,
+							"h": 20791.6,
+							"e": -98.59,
+							"z": 47330.57,
+							"f": 52233.15
+						},
+						{
+							"id": 627744,
+							"type": "WestUp",
+							"time": 1454093160,
+							"angle": 90.364166666667,
+							"h": 20791.03,
+							"e": -98.67,
+							"z": 47330.46,
+							"f": 52232.81
+						},
+						{
+							"id": 627734,
+							"type": "EastUp",
+							"time": 1454093252,
+							"angle": 270.57638888889,
+							"h": 20791.47,
+							"e": -99.16,
+							"z": 47330.29,
+							"f": 52232.82
+						},
+						{
+							"id": 627741,
+							"type": "SouthDown",
+							"time": 1454093543,
+							"angle": 246.575,
+							"h": 20791.66,
+							"e": -101.13,
+							"z": 47330.04,
+							"f": 52232.68
+						},
+						{
+							"id": 627738,
+							"type": "NorthUp",
+							"time": 1454093629,
+							"angle": 66.564722222222,
+							"h": 20791.91,
+							"e": -101.67,
+							"z": 47329.89,
+							"f": 52232.64
+						},
+						{
+							"id": 627742,
+							"type": "SouthUp",
+							"time": 1454093756,
+							"angle": 113.345,
+							"h": 20792.29,
+							"e": -102.42,
+							"z": 47329.77,
+							"f": 52232.66
+						},
+						{
+							"id": 627737,
+							"type": "NorthDown",
+							"time": 1454093835,
+							"angle": 293.35694444444,
+							"h": 20792.05,
+							"e": -102.83,
+							"z": 47329.76,
+							"f": 52232.61
+						}
+					]
+				},
+				{
+					"id": 52313,
+					"set": 2,
+					"D": {
+						"absolute": 8.6817722,
+						"baseline": 8.970948,
+						"end": 1454094266,
+						"shift": 0,
+						"start": 1454094018,
+						"valid": true
+					},
+					"H": {
+						"absolute": 20726.8789524,
+						"baseline": -65.4385476,
+						"end": 1454094785,
+						"start": 1454094494,
+						"valid": true
+					},
+					"Z": {
+						"absolute": 47920.2547134,
+						"baseline": 590.5222134,
+						"end": 1454094785,
+						"start": 1454094494,
+						"valid": true
+					},
+					"measurements": [
+						{
+							"id": 627752,
+							"type": "SecondMarkUp",
+							"time": null,
+							"angle": 10.853888888889,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627748,
+							"type": "FirstMarkUp",
+							"time": null,
+							"angle": 10.853888888889,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627751,
+							"type": "SecondMarkDown",
+							"time": null,
+							"angle": 190.85277777778,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627747,
+							"type": "FirstMarkDown",
+							"time": null,
+							"angle": 190.85305555556,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627755,
+							"type": "WestDown",
+							"time": 1454094018,
+							"angle": 270.42083333333,
+							"h": 20791.79,
+							"e": -103.87,
+							"z": 47329.76,
+							"f": 52232.48
+						},
+						{
+							"id": 627745,
+							"type": "EastDown",
+							"time": 1454094099,
+							"angle": 90.262777777778,
+							"h": 20791.73,
+							"e": -104.33,
+							"z": 47329.71,
+							"f": 52232.46
+						},
+						{
+							"id": 627756,
+							"type": "WestUp",
+							"time": 1454094174,
+							"angle": 90.3475,
+							"h": 20791.9,
+							"e": -104.93,
+							"z": 47329.72,
+							"f": 52232.51
+						},
+						{
+							"id": 627746,
+							"type": "EastUp",
+							"time": 1454094266,
+							"angle": 270.55638888889,
+							"h": 20791.93,
+							"e": -105.31,
+							"z": 47329.69,
+							"f": 52232.49
+						},
+						{
+							"id": 627753,
+							"type": "SouthDown",
+							"time": 1454094494,
+							"angle": 246.5775,
+							"h": 20791.82,
+							"e": -106.15,
+							"z": 47329.74,
+							"f": 52232.48
+						},
+						{
+							"id": 627750,
+							"type": "NorthUp",
+							"time": 1454094555,
+							"angle": 66.568333333333,
+							"h": 20792.17,
+							"e": -106.59,
+							"z": 47329.74,
+							"f": 52232.61
+						},
+						{
+							"id": 627754,
+							"type": "SouthUp",
+							"time": 1454094680,
+							"angle": 113.34638888889,
+							"h": 20792.51,
+							"e": -107.31,
+							"z": 47329.69,
+							"f": 52232.72
+						},
+						{
+							"id": 627749,
+							"type": "NorthDown",
+							"time": 1454094785,
+							"angle": 293.35888888889,
+							"h": 20792.77,
+							"e": -108.06,
+							"z": 47329.76,
+							"f": 52232.88
+						}
+					]
+				},
+				{
+					"id": 52314,
+					"set": 3,
+					"D": {
+						"absolute": 8.6687167,
+						"baseline": 8.9695864,
+						"end": 1454095214,
+						"shift": 0,
+						"start": 1454094968,
+						"valid": true
+					},
+					"H": {
+						"absolute": 20729.1975933,
+						"baseline": -65.4974067,
+						"end": 1454095777,
+						"start": 1454095449,
+						"valid": true
+					},
+					"Z": {
+						"absolute": 47920.354941,
+						"baseline": 590.574941,
+						"end": 1454095777,
+						"start": 1454095449,
+						"valid": true
+					},
+					"measurements": [
+						{
+							"id": 627764,
+							"type": "SecondMarkUp",
+							"time": null,
+							"angle": 10.854444444444,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627760,
+							"type": "FirstMarkUp",
+							"time": null,
+							"angle": 10.854166666667,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627763,
+							"type": "SecondMarkDown",
+							"time": null,
+							"angle": 190.85222222222,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627759,
+							"type": "FirstMarkDown",
+							"time": null,
+							"angle": 190.85277777778,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627767,
+							"type": "WestDown",
+							"time": 1454094968,
+							"angle": 270.40555555556,
+							"h": 20792.6,
+							"e": -108.1,
+							"z": 47329.69,
+							"f": 52232.75
+						},
+						{
+							"id": 627757,
+							"type": "EastDown",
+							"time": 1454095049,
+							"angle": 90.253888888889,
+							"h": 20793.24,
+							"e": -108.51,
+							"z": 47329.69,
+							"f": 52233.02
+						},
+						{
+							"id": 627768,
+							"type": "WestUp",
+							"time": 1454095136,
+							"angle": 90.338888888889,
+							"h": 20793.64,
+							"e": -109.19,
+							"z": 47329.8,
+							"f": 52233.25
+						},
+						{
+							"id": 627758,
+							"type": "EastUp",
+							"time": 1454095214,
+							"angle": 270.53694444444,
+							"h": 20793.31,
+							"e": -109.61,
+							"z": 47329.79,
+							"f": 52233.13
+						},
+						{
+							"id": 627765,
+							"type": "SouthDown",
+							"time": 1454095449,
+							"angle": 246.5825,
+							"h": 20794.25,
+							"e": -111.06,
+							"z": 47329.85,
+							"f": 52233.57
+						},
+						{
+							"id": 627762,
+							"type": "NorthUp",
+							"time": 1454095585,
+							"angle": 66.567222222222,
+							"h": 20794.27,
+							"e": -112.07,
+							"z": 47329.86,
+							"f": 52233.59
+						},
+						{
+							"id": 627766,
+							"type": "SouthUp",
+							"time": 1454095714,
+							"angle": 113.3525,
+							"h": 20794.46,
+							"e": -111.92,
+							"z": 47329.74,
+							"f": 52233.56
+						},
+						{
+							"id": 627761,
+							"type": "NorthDown",
+							"time": 1454095777,
+							"angle": 293.36583333333,
+							"h": 20795.8,
+							"e": -112.07,
+							"z": 47329.67,
+							"f": 52234.02
+						}
+					]
+				},
+				{
+					"id": 52315,
+					"set": 4,
+					"D": {
+						"absolute": 8.6565639,
+						"baseline": 8.969175,
+						"end": 1454096168,
+						"shift": 0,
+						"start": 1454095927,
+						"valid": true
+					},
+					"H": {
+						"absolute": 20734.6183574,
+						"baseline": -64.1691426,
+						"end": 1454096628,
+						"start": 1454096389,
+						"valid": false
+					},
+					"Z": {
+						"absolute": 47919.8156987,
+						"baseline": 589.9856987,
+						"end": 1454096628,
+						"start": 1454096389,
+						"valid": true
+					},
+					"measurements": [
+						{
+							"id": 627772,
+							"type": "FirstMarkUp",
+							"time": null,
+							"angle": 10.854722222222,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627775,
+							"type": "SecondMarkDown",
+							"time": null,
+							"angle": 190.85194444444,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627771,
+							"type": "FirstMarkDown",
+							"time": null,
+							"angle": 190.8525,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627776,
+							"type": "SecondMarkUp",
+							"time": null,
+							"angle": 10.853611111111,
+							"h": null,
+							"e": null,
+							"z": null,
+							"f": null
+						},
+						{
+							"id": 627779,
+							"type": "WestDown",
+							"time": 1454095927,
+							"angle": 270.38222222222,
+							"h": 20796.42,
+							"e": -112.79,
+							"z": 47329.73,
+							"f": 52234.33
+						},
+						{
+							"id": 627769,
+							"type": "EastDown",
+							"time": 1454096016,
+							"angle": 90.25,
+							"h": 20796.81,
+							"e": -112.91,
+							"z": 47329.68,
+							"f": 52234.41
+						},
+						{
+							"id": 627780,
+							"type": "WestUp",
+							"time": 1454096088,
+							"angle": 90.331388888889,
+							"h": 20797.58,
+							"e": -113.13,
+							"z": 47329.71,
+							"f": 52234.73
+						},
+						{
+							"id": 627770,
+							"type": "EastUp",
+							"time": 1454096168,
+							"angle": 270.52222222222,
+							"h": 20798.11,
+							"e": -113.69,
+							"z": 47329.75,
+							"f": 52234.99
+						},
+						{
+							"id": 627777,
+							"type": "SouthDown",
+							"time": 1454096389,
+							"angle": 246.57027777778,
+							"h": 20798.48,
+							"e": -114.15,
+							"z": 47329.86,
+							"f": 52235.25
+						},
+						{
+							"id": 627774,
+							"type": "NorthUp",
+							"time": 1454096459,
+							"angle": 66.562777777778,
+							"h": 20798.11,
+							"e": -114.54,
+							"z": 47329.86,
+							"f": 52235.11
+						},
+						{
+							"id": 627778,
+							"type": "SouthUp",
+							"time": 1454096543,
+							"angle": 113.35777777778,
+							"h": 20798.86,
+							"e": -114.92,
+							"z": 47329.75,
+							"f": 52235.3
+						},
+						{
+							"id": 627773,
+							"type": "NorthDown",
+							"time": 1454096628,
+							"angle": 293.36666666667,
+							"h": 20799.7,
+							"e": -115.96,
+							"z": 47329.85,
+							"f": 52235.71
+						}
+					]
+				}
+			]
+		}
+	]
+}
