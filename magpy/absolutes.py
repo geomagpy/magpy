@@ -67,6 +67,7 @@ CONTENTS
 AbsoluteDIStrcut  |              |  2.0.0     |           |  yes        |  yes          |  7.1    | 
 DILineStruct  |  get_data_list   |  2.0.0     |           |  yes        |  yes          |  7.1    |
 DILineStruct  |  get_abs_distruct |  2.0.0    |           |  yes        |  yes          |  7.1    | 
+DILineStruct  |  save_di         |  2.0.0     |           |  yes*       |  yes*         |  7.3    | absolute_analysis
 AbsoluteAnalysis  |  add         |  2.0.0     |           |             |               |       | unused?
 AbsoluteAnalysis  |  extend      |  2.0.0     |           |             |               |       | unused?
 AbsoluteAnalysis  |  sorting     |  2.0.0     |           |             |               |       | unused?
@@ -336,13 +337,20 @@ class DILineStruct(object):
                 row.f = self.f[i]
                 sortlist.append(row)
 
-        #print sortlist
-
         ## Eventually append f values
-
         for elem in sortlist:
             stream.add(elem)
         return stream
+
+
+    def save_di(self, path="/tmp"):
+        fname = "{}_{}_{}.txt".format(num2date(np.nanmin(np.asarray(self.time))).replace(tzinfo=None), self.pier,
+                                  self.stationid).replace(" ", "_").replace(":", "-")
+        savelst = self.get_data_list()
+        destination = os.path.join(path,fname)
+        with open(destination, 'w') as f:
+            for line in savelst:
+                f.write(f"{line}")
 
 
 class AbsoluteData(object):
@@ -2639,7 +2647,8 @@ if __name__ == '__main__':
                 from magpy.core import database
                 db = database.DataBank("localhost","maxmustermann","geheim","testdb")
                 absst = abs_read(example6a)
-                db.diline_to_db(absst, mode="delete", stationid='WIC')
+                if db:
+                    db.diline_to_db(absst, mode="delete", stationid='WIC')
                 te = datetime.utcnow()
                 successes['diline_to_db'] = ("Version: {}: diline_to_db {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
@@ -2649,7 +2658,8 @@ if __name__ == '__main__':
                 ts = datetime.utcnow()
                 from magpy.core import database
                 db = database.DataBank("localhost","maxmustermann","geheim","testdb")
-                res = db.diline_from_db()
+                if db:
+                    res = db.diline_from_db()
                 te = datetime.utcnow()
                 successes['diline_from_db'] = ("Version: {}: diline_from_db {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
@@ -2660,10 +2670,11 @@ if __name__ == '__main__':
                 from magpy.core import database
                 db = database.DataBank("localhost","maxmustermann","geheim","testdb")
                 absst = abs_read(example6a)  # should be the default
-                t1 = _analyse_di_source('DIDATA', db=db)
-                t2 = _analyse_di_source(example6a, db=db)
-                t3 = _analyse_di_source(absst, db=db, debug=True)
-                print ("{} and {} and {} should all be 1".format(len(t1),len(t2),len(t3)))
+                if db:
+                    t1 = _analyse_di_source('DIDATA', db=db)
+                    t2 = _analyse_di_source(example6a, db=db)
+                    t3 = _analyse_di_source(absst, db=db, debug=True)
+                    print ("{} and {} and {} should all be 1".format(len(t1),len(t2),len(t3)))
                 te = datetime.utcnow()
                 successes['_analyse_di_source'] = ("Version: {}: _analyse_di_source {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
@@ -2677,6 +2688,24 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['data_for_di'] = str(excep)
                 print(datetime.utcnow(), "--- ERROR with data_for_di.")
+            try:
+                ts = datetime.utcnow()
+                baseval1 = absolute_analysis(example6a, example5, example5)
+                baseval2 = absolute_analysis([example6a, example6b],
+                                               {'file': example5}, example5, db=db,
+                                               starttime="2018-08-28", endtime="2018-08-30")
+                from magpy.core import database
+                db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+                if db:
+                    data = read(example5)
+                    db.write(data)
+                    baseval3 = absolute_analysis(example6a, {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
+                    baseval4 = absolute_analysis('DIDATA', {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
+                te = datetime.utcnow()
+                successes['_analyse_di_source'] = ("Version: {}: _analyse_di_source {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['_analyse_di_source'] = str(excep)
+                print(datetime.utcnow(), "--- ERROR with _analyse_di_source.")
 
             # If end of routine is reached... break.
             break

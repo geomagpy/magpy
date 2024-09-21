@@ -40,6 +40,38 @@ def isMAGPYNEWABS(filename):
     return True
 
 
+# AUTODIF ABS VALUES AVAILABLE IN FILE .ABS
+def isAUTODIFABS(filename: string):
+    """
+    Checks whether a file is AUTODIF format.
+    """
+    return filename.endswith('.abs')
+
+
+def isJSONABS(filename):
+    """
+    Checks whether a file is AUTODIF format.
+    """
+    print ("Testing json")
+    try:
+        jsonfile = open(filename, 'r')
+        dataset = json.load(jsonfile)
+        jsonfile.close()
+    except:
+        return False
+    print ("good")
+    #try:
+    for idx, elem in enumerate(dataset):
+        if idx==0:
+            print (dataset.get(elem))
+            datadict = dataset[elem][0]
+            if not 'readings' in datadict:
+                return False
+    #except:
+    #    return False
+    print ("Testing json - success")
+    return True
+
 
 @deprecated(" please use AUTODIFABS")
 # this format isn't supported by AUTODIF MK3 anymore
@@ -54,38 +86,6 @@ def isAUTODIFRAW(filename):
     except:
         return False
     if not line.startswith('AUTODIF') and not line.startswith('auto'):
-        return False
-    return True
-
-
-# AUTODIF ABS VALUES AVAILABLE IN FILE .ABS
-def isAUTODIFABS(filename: string):
-    """
-    Checks whether a file is AUTODIF format.
-    """
-    return filename.endswith('.abs')
-
-
-
-
-
-def isJSONABS(filename):
-    """
-    Checks whether a file is AUTODIF format.
-    """
-    try:
-        jsonfile = open(filename, 'r')
-        dataset = json.load(jsonfile)
-        jsonfile.close()
-    except:
-        return False
-    try:
-        for idx, elem in enumerate(dataset):
-            if idx==0:
-                datadict = dataset[elem][0]
-                if not 'readings' in datadict:
-                    return False
-    except:
         return False
     return True
 
