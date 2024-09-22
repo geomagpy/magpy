@@ -1,6 +1,6 @@
 # MagPy Absolutes
 # Abs-Observer: 
-# Abs-Theodolite: 
+# Abs-Theodolite: Theodolite_with_gon
 # Abs-TheoUnit: gon
 # Abs-FGSensor: DTU_DI0146_04-2012
 # Abs-AzimuthMark: 200.15244

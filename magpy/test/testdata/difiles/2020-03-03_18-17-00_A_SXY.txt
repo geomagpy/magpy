@@ -1,8 +1,8 @@
 # MagPy Absolutes
-# Abs-Observer: Brilling
+# Abs-Observer: Someone
 # Abs-Theodolite: THEO-020B_XXX_0001
 # Abs-TheoUnit: deg
-# Abs-FGSensor: MAG-01H_XXX_0001                                      |
+# Abs-FGSensor: MAG-01H_XXX_0001
 # Abs-AzimuthMark: 61.06333333333333
 # Abs-Pillar: A1
 # Abs-Scalar:

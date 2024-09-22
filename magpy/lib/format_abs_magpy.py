@@ -52,15 +52,14 @@ def isJSONABS(filename):
     """
     Checks whether a file is AUTODIF format.
     """
-    print ("Testing json")
     try:
         jsonfile = open(filename, 'r')
         dataset = json.load(jsonfile)
         jsonfile.close()
     except:
         return False
-    print ("good")
     #try:
+    print (dataset)
     for idx, elem in enumerate(dataset):
         if idx==0:
             print (dataset.get(elem))

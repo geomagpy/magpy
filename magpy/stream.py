@@ -1123,7 +1123,8 @@ CALLED BY:
                 if len(self.ndarray[idx]) > 0 and KEYLIST[idx] in self.NUMKEYLIST:
                     lst = list(self.ndarray[idx])
                     if np.isnan(float(lst[0])) and np.isnan(float(lst[-1])):
-                        nanlen = sum(math.isnan(x) for x in lst)
+                        #nanlen = sum(math.isnan(x) for x in lst)
+                        nanlen = np.count_nonzero(np.isnan(lst))
                         if nanlen == len(lst):
                             array[idx] = np.asarray([])
                     else:
@@ -7631,8 +7632,8 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
                 numcommon = np.array(sorted(list(set(numtimea).intersection(numtimeb))))
                 indtia = numtimea.searchsorted(numcommon)
                 #indtib = numtimeb.searchsorted(numcommon)
-                funcstart = (np.datetime64(num2date(function[1]), 's').astype(float64)/minsamprate)
-                funcend =  (np.datetime64(num2date(function[2]), 's').astype(float64)/minsamprate)
+                funcstart = (np.datetime64(num2date(function[1]).replace(tzinfo=None), 's').astype(float64)/minsamprate)
+                funcend =  (np.datetime64(num2date(function[2]).replace(tzinfo=None), 's').astype(float64)/minsamprate)
 
                 # Get a list of indicies for which timeb values are
                 #   in the vicintiy of a (within half of samplingrate)
@@ -7946,6 +7947,7 @@ if __name__ == '__main__':
             try:
                 ts = datetime.utcnow()
                 nancolstream = teststream._remove_nancolumns()
+                print ("Length with nan: {}, length without nan: {}".format(len(teststream),len(nancolstream)))
                 te = datetime.utcnow()
                 successes['_remove_nancolumns'] = (
                     "Version: {}, _remove_nancolumns: {}".format(magpyversion, (te - ts).total_seconds()))

@@ -1,8 +1,8 @@
 # MagPy Absolutes
 # Abs-Observer: 
-# Abs-Theodolite: 
+# Abs-Theodolite: Theodolite_with_gon
 # Abs-TheoUnit: gon
-# Abs-FGSensor: 
+# Abs-FGSensor: FG
 # Abs-AzimuthMark: 122.3519
 # Abs-Pillar: 2
 # Abs-Scalar: None
