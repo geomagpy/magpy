@@ -1592,22 +1592,64 @@ observatory/pillar. Using the examples provided along with MagPy, an analysis ca
 
        diresult = di.absolute_analysis(example6a, example5, example5)
 
+Calling this method will provide terminal output as shown above in 7.1 and a stream object `diresult` which can be 
+used for further analyses.
 
+Fext indicates that F values have been used from a separate file and not provided along with DI data. Delta values
+for F, D, and I have not been provided either. `diresult` is a stream object containing average D, I and F values, 
+the collimation angles, scale factors and the base values for the selected variometer, beside some additional meta 
+information provided in the data input form.
 
-Calling this method will provide terminal output as follows and a stream object `diresult` which can be used for further analyses.
+Variometer and Scalar data can be obtained from files, directories, databases and webservices. The same applies for 
+data sources for th DI data. You might even want to define i.e. both a database source and a file archive. In this 
+case first the database will be searched for valid data and if not found than the file path will be used
 
-        >>>...
-        >>>Analyzing manual measurement from 2015-03-25
-        >>>Vector at: 2015-03-25 08:18:00+00:00
-        >>>Declination: 3:53:46, Inclination: 64:17:17, H: 21027.2, Z: 43667.9, F: 48466.7
-        >>>Collimation and Offset:
-        >>>Declination:    S0: -3.081, delta H: -6.492, epsilon Z: -61.730
-        >>>Inclination:    S0: -1.531, epsilon Z: -60.307
-        >>>Scalevalue: 1.009 deg/unit
-        >>>Fext with delta F of 0.0 nT
-        >>>Delta D: 0.0, delta I: 0.0
+In the following some axamples for different data sources are shown:
 
-Fext indicates that F values have been used from a separate file and not provided along with DI data. Delta values for F, D, and I have not been provided either. `diresult` is a stream object containing average D, I and F values, the collimation angles, scale factors and the base values for the selected variometer, beside some additional meta information provided in the data input form.
+       from magpy.core import database
+       db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+       basevalues = absolute_analysis(example6a, {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
+       basevalues = absolute_analysis([example6a,example6b], {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
+       basevalues = absolute_analysis('DIDATA', {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
+
+The following options are available to provide DI data:
+ - database       : 'tablename' ; requires options db, starttime and endtime, recommended option pier (if you use more then one)
+                                  i.e. db=database.DataBank("localhost","user","pwd","dbname"), starttime=
+ - individual file  : "/path/to/file1.txt"
+ - multiple files : ["/path/to/file1.txt","/path/to/file2.txt"]
+ - directory      : "/directory/with/difiles/"; requires options starttime and endtime, option diid recommended
+ - webservice     : TODO ;requires options starttime and endtime,
+
+Depending on the DI data source it migth also be necessary to provide the following options, if this information 
+is not part of the header (i.e. AutoDIF data, webservices): startionid, pier, azimuth
+
+The following options are available to provide variometer and scalar data:
+ - database                : {"db":(db,"tablename")}
+ - individual file           : "/path/to/data.cdf" or {"file":"/path/to/data.cdf"}
+ - directory with wildcards : "/path/with/data/*" or "/path/with/data/*.cdf" or {"file":"/path/to/data/*"}
+ - webservice              : "https://cobs.geosphere.at/gsa/webservice/query.php?id=WIC" or {"file": ...}
+
+In the following a few options are discussed. This is only the tip of the iceberg. If you want to get information about
+all options please use help(di.absolute_analysis).
+
+All options correspond to the similar named options in all other di methods as listed in 7.1. The probably most
+important are 
+Basic parameters: variometerorientation (XYZ or HEZ analysis)
+Corrections: alpha, beta, deltaF, deltaD, deltaI, compensation, magrotation; 
+Residual method: residualsign
+Thresholds: expD, expI, expT
+Archiving successful analysis: movetoarchive and dbadd; TODO code needs to be written and tested  
+
+       basevalues = absolute_analysis('DIDATA', {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30", movetoarchive="/home/leon/Tmp/")
+       basevalues = absolute_analysis("/home/leon/Tmp/2018-08-29_07-42-00_A2_WIC.txt", {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30", movetoarchive="/tmp")
+       basevalues = absolute_analysis(example6b, example5, example5, db=db, dbadd='DIDATA', stationid='WIC')
+
+A typical command as used in the Conrad Observatories automatically scheduled analysis routine looks as follows. 
+Manual data, as typed in using the xmagpy form, and automatic AutoDIF measurements are collected by a script within 
+an analysis directory. The successfully analzed data sets are stored in a database and files are moved/stored in an 
+archive - raw -directory. Failed analyses will remain within the analysis directory for review by the observer.
+
+TODO : F(abs) and F(ext) - examples 
 
 
 ### 7.3 Reading BLV files
