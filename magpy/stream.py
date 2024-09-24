@@ -1123,7 +1123,6 @@ CALLED BY:
                 if len(self.ndarray[idx]) > 0 and KEYLIST[idx] in self.NUMKEYLIST:
                     lst = list(self.ndarray[idx])
                     if np.isnan(float(lst[0])) and np.isnan(float(lst[-1])):
-                        #nanlen = sum(math.isnan(x) for x in lst)
                         nanlen = np.count_nonzero(np.isnan(lst))
                         if nanlen == len(lst):
                             array[idx] = np.asarray([])

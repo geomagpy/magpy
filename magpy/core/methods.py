@@ -378,22 +378,23 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
                 data = data.rotation(alpha=valalpha, beta=valbeta)
                 data.header['DataComments'] = "{} - rotated by alpha={} and beta={}".format(data.header.get('DataComments', ''), valalpha, valbeta)
         elif is_number(alpha) or is_number(beta):  # if alpha and beta are provided then rotate anyway
-            if debug:
-                print (" magrotation not set but alpha and/or beta given - rotating with these manual values")
-            if is_number(alpha):
-                valalpha = alpha
-            else:
-                valalpha = 0.0
-            if is_number(beta):
-                valbeta = beta
-            else:
-                valbeta = 0.0
-            if valalpha != 0 or valbeta != 0:
-                data = data.rotation(alpha=valalpha, beta=valbeta)
-                data.header['DataComments'] = "{} - rotated by alpha={} and beta={}".format(
-                data.header.get('DataComments', ''), valalpha, valbeta)
+            if not alpha == 0.0 or not beta == 0.0:
                 if debug:
-                    print("  -> rotating with manually provided alpha {} and beta {}".format(valalpha, valbeta))
+                    print (" magrotation not set but alpha and/or beta given - rotating with these manual values: alpha={} and beta={}".format(alpha, beta))
+                if is_number(alpha):
+                    valalpha = alpha
+                else:
+                    valalpha = 0.0
+                if is_number(beta):
+                    valbeta = beta
+                else:
+                    valbeta = 0.0
+                if valalpha != 0 or valbeta != 0:
+                    data = data.rotation(alpha=valalpha, beta=valbeta)
+                    data.header['DataComments'] = "{} - rotated by alpha={} and beta={}".format(
+                    data.header.get('DataComments', ''), valalpha, valbeta)
+                    if debug:
+                        print("  -> rotating with manually provided alpha {} and beta {}".format(valalpha, valbeta))
         if not len(data) > 0:  # still
             datagood = False
 

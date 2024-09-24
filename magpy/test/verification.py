@@ -850,6 +850,129 @@ class TestAbsolutes(unittest.TestCase):
         self.assertEqual(np.round(tx1, 2), np.round(tx7 - 1000, 2))
         self.assertEqual(np.round(tz1, 2), np.round(tz7 + 1000, 2))
 
+    def test_absolute_analysis(self):
+        """
+        Complete testrun with unittest and some additional runtime tests for absolute_analysis.
+        Additionally tests the following methods of the DI package: basically all
+        """
+        # INDEPTH FORMAT SPECIFIC UNITTESTS are separate
+        # - test_format_autodif
+        # - test_format_json
+
+        path = os.path.abspath(di.__file__)
+        testdidata = os.path.join(os.path.split(path)[0], 'test', 'testdata', 'difiles/')
+        varionxy = os.path.join(os.path.split(path)[0], 'test', 'testdata', 'variometer', 'NXY*')
+        variosxy = os.path.join(os.path.split(path)[0], 'test', 'testdata', 'variometer', 'SXY*')
+        varionxx = os.path.join(os.path.split(path)[0], 'test', 'testdata', 'variometer', 'NXX_vario*')
+        scalarnxx = os.path.join(os.path.split(path)[0], 'test', 'testdata', 'scalar', 'NXX_scalar*')
+        varioxyzf = os.path.join(os.path.split(path)[0], 'test', 'testdata', 'variometer', 'wic20220810vsec.zip')
+        scalarxyzf = os.path.join(os.path.split(path)[0], 'test', 'testdata', 'scalar', 'GP20S32022-08-10.cdf')
+
+        # to be added:
+        # -run with all failed analysis and check error reactions (add try/except)
+
+        def vdi(absresult):
+            """
+            Extract some parameters of the results for verification with known results
+            """
+            if len(absresult) > 0:
+                incl = np.round(absresult.ndarray[1][0], 4)
+                decl = np.round(absresult.ndarray[2][0], 4)
+                fstr = np.round(absresult.ndarray[3][0], 2)
+                scalev = np.round(absresult.ndarray[6][0], 3)
+                s0d = np.round(absresult.ndarray[7][0], 2)
+                ze = np.round(absresult.ndarray[11][0], 2)
+                str2 = absresult.ndarray[17][0]
+                #print("Theodolite", str2)
+                return {"inc": incl, "dec": decl, "f": fstr, "sv": scalev, "s0d": s0d, "ze": ze}
+            else:
+                return {}
+
+        def check_base(data, basevalues, comps='HDZ'):
+            # get basevalues
+            ti = basevalues._get_column('time')
+            bh = basevalues._get_column('dx')
+            be = basevalues._get_column('dy')
+            bz = basevalues._get_column('dz')
+            ainc = basevalues._get_column('x')
+            adec = basevalues._get_column('y')
+            af = basevalues._get_column('z')
+            # perform a baseline correction with this basevalues -> will lead to a hdz data files
+            data = data.simplebasevalue2stream([bh[0], be[0], bz[0]], basecomp=comps)
+            # select IDF from the baseline corrected dataset and compare with absolutes
+            if comps == 'HDZ':
+                data = data.hdz2xyz()
+            data = data.xyz2idf()
+            idx = data.findtime(ti[0])
+            dinc = data.ndarray[1][idx]
+            ddec = data.ndarray[2][idx]
+            df = data.ndarray[3][idx]
+            self.assertEqual(np.round(ainc[0],6),np.round(dinc,6))
+            self.assertEqual(np.round(adec[0],6),np.round(ddec,6))
+            self.assertEqual(np.round(af[0],6),np.round(df,6))
+            #print(np.round(ainc[0], 6), np.round(adec[0], 6), np.round(af[0], 6), np.round(dinc, 6), np.round(ddec, 6),
+            #      np.round(df, 6))
+
+        ## FIRST TEST: READ DATA AND USE OPTIONS NOT TESTED BELOW
+        # ----------------------------------------------------------------------
+
+        # Corrections: alpha, beta, deltaF, deltaD, deltaI, compensation, magrotation;
+        # Residual method: residualsign
+        # Thresholds: expD, expI, expT
+        # Archiving successful analysis: movetoarchive and dbadd; TODO code needs to be written and tested (start and endtime seem not to be
+        # considered for filelist),
+
+        # movetoarchive
+        # basevalues = absolute_analysis('DIDATA', {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30", movetoarchive="/home/leon/Tmp/")
+        # basevalues = absolute_analysis("/home/leon/Tmp/2018-08-29_07-42-00_A2_WIC.txt", {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30", movetoarchive="/tmp")
+
+        ## SECOND TEST: GET VALUES FROM ANALYSIS AND COMPARE WITH EXPECTED VALUES
+        # ----------------------------------------------------------------------
+        # EXPECTED = {"NXY" : {"S0D" : 16.815, "HD" : -19.762, "HE" : -93.382, "S0Z" : 15.972, "ZE" : -93.267, "SV" : 1.000, "D" : 311.27127, "I" : 85.80933, "F": 56326.961},
+        #            "SXX" : {"S0D" : 6.8, "HD" : 0.7, "HE" : 3.8, "S0Z" : 7.2, "ZE" : 4.3, "SV" : 0.981, "D" : '338:13:41.4', "I" : -65},
+        #            "SXY" : {"S0D" : 5.123, "HD" : 3.826, "HE" : 0.778, "S0Z" : 6.046, "ZE" : 1.916, "SV" : 0.981, "D" : 15.68170, "I" : -57.19036, "F": 37820.98}}
+
+        secondsuccess = True
+        expnxy = {'inc': 85.8093, 'dec': 311.2713, 'f': 56326.93, 'sv': 1.0, 's0d': 16.82, 'ze': -93.27}
+        expsxy = {'inc': -57.1904, 'dec': 15.6817, 'f': 37821.0, 'sv': 999.0, 's0d': 5.12, 'ze': 1.92}
+        expnxx = {'inc': 64.3155, 'dec': 4.1843, 'f': 48585.45, 'sv': 0.995, 's0d': -4.42, 'ze': 16.27}
+        expxyzf = {'inc': 64.4645, 'dec': 4.8976, 'f': 48836.75, 'sv': 0.991, 's0d': -3.26, 'ze': -42.01}
+
+        nabsresult = di.absolute_analysis(testdidata, varionxy, varionxy, diid='NXY.txt', stationid='NXY', pier='2',
+                                       alpha=0.0, deltaF=0.0)
+        sabsresult = di.absolute_analysis(testdidata, variosxy, variosxy, diid='SXY.txt', stationid='SXY', pier='A1',
+                                       alpha=0.0, deltaF=0.0)
+        nxxabsresult = di.absolute_analysis(testdidata, varionxx, scalarnxx, diid='NXX.txt', stationid='NXX', pier='A2',
+                                         alpha=0.0, deltaF=-0.5)
+        #print(vdi(nxxabsresult))
+        xyzfabsresult = di.absolute_analysis(testdidata, varioxyzf, scalarxyzf, diid='WIC.txt', stationid='WIC', pier='A2',
+                                          variometerorientation='XYZ', expD=5.0, expI=64.0, expT=2.0)
+        if not expnxy == vdi(nabsresult):
+            secondsuccess = False
+            print(" absolute_analysis second unittest: NXY test failed")
+        if not expsxy == vdi(sabsresult):
+            secondsuccess = False
+            print(" absolute_analysis second unittest: SXY test failed")
+        if not expnxx == vdi(nxxabsresult):
+            secondsuccess = False
+            print(" absolute_analysis second unittest: NXX test failed")
+        if not expxyzf == vdi(xyzfabsresult):
+            secondsuccess = False
+            print(" absolute_analysis second unittest: XYZF test failed")
+        self.assertTrue(secondsuccess)
+
+        ## THIRD TEST: APPLY DETERMINED BASEVALUES TO VARIOMETER DATA - CHECK IF DEC, INC and F are identically found in VARIO and SCALAR DATA
+        # ----------------------------------------------------------------------
+        # Test with HEZ
+        basevalues1 = di.absolute_analysis(example6a, example5, example5, stationid='WIC')
+        data1 = read(example5)
+        check_base(data1, basevalues1)
+        # Test with XYZF
+        basevalues2 = di.absolute_analysis(testdidata, varioxyzf, scalarxyzf, diid='A2_WIC.txt', stationid='WIC',
+                                        pier='A2', variometerorientation='XYZ')
+        data2 = read(varioxyzf)
+        check_base(data2, basevalues2, comps='XYZ')
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

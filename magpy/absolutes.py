@@ -273,7 +273,7 @@ class DILineStruct(object):
         headers = {}
         headers['pillar'] = self.pier
         if self.inputdate == '':
-            headers['analysisdate'] = self.time[0]
+            headers['analysisdate'] = str(self.time[0])
         else:
             headers['analysisdate'] = self.inputdate
 
@@ -1579,9 +1579,10 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
     """
     DESCRIPTION
         analyse the source of di data, read it and then create dictionary with days (date) as key and
-        an absolute data list (as returned by abs_read) as value
+        an absolute data list (as returned by abs_read) as value.
     RETURNS
         dict : {dattime.date, {'absdata': abslist, 'source' : 'file', etc}
+        failinglist : list , a list containing filenames of failed file readings
     VARIABLES
         didatasource : (string, list) pointing towards di data
         db : a database.DataBank() object
@@ -1649,10 +1650,11 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
 
     dilines = []
     acceptedfiles = []
+    failedfiles = []
     if debug:
-        print("Identified data source:", source)
+        print("  _analyse_di_source: Identified data source:", source)
     if not source:
-        print(" did not fine a suitable source")
+        print("  _analyse_di_source:  did not fine a suitable source")
         return resultsdict
     elif source == 'db':
         # tablename is identified
@@ -1665,12 +1667,19 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
         dilines = []
         acceptedfiles = []
         for fi in filelist:
+            msg = "  _analyse_di_source: checking {} ...".format(fi)
             absst = abs_read(fi)  # azimuth, pier in old code - sort later
+            if not absst:
+                failedfiles.append(fi)
             for a in absst:
                 dilines.append(a)
                 acceptedfiles.append(fi)
+                if not msg.endswith('SUCCESS'):
+                    msg += " SUCCESS"
+            if debug:
+                print(msg)
     if debug:
-        print("Got {} DI data lines".format(len(dilines)))
+        print("  _analyse_di_source: got {} DI data lines".format(len(dilines)))
 
     for idx,line in enumerate(dilines):
         mintime = testtime(np.nanmin(line.time))
@@ -1689,10 +1698,10 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
                 contdict["source"] = source
                 contdict["filelist"] = fl
             else:
-                print(" DI measurement performed while date is changing - not yet supported - skipping")
+                print("  _analyse_di_source: DI measurement performed during two days - not yet supported - skipping")
             resultsdict[mindate] = contdict
 
-    return resultsdict
+    return resultsdict, failedfiles
 
 
 def _logfile_len(fname, logfilter):
@@ -1838,49 +1847,87 @@ def absoluteAnalysis(absdata, variodata, scalardata, **kwargs):
 def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     """
     DEFINITION:
-        Analyze absolute data from files or database and create datastream
+        Single method access to analyze absolute data from any selected source. This method will create
+        a datastream with results.
 
     PARAMETERS:
-    Variables:
+      Variables:
         - header_dict:  (dict) dictionary with header information
         variodata:      (string) path to variodata, can include wildcards like /my/path/*.sec
         scalardata:     (string) path to scalardata, can include wildcards like /my/path/*.sec
-    Kwargs:
+      Optional (often used):
         - starttime:    (string/datetime) define begin
         - endtime:      (string/datetime) define end
-        - abstype:      (string) default manual, can be autodif
         - db:           (mysql database) defined by magpy.core.database.databank()
-        - dbadd:        (bool) if True DI-raw data will be added to the database
-        - alpha:        (float) orientation angle 1 in deg (if z is vertical, alpha is the horizontal rotation angle)
-        - beta:         (float) orientation angle 2 in deg
-        - deltaF:       (float) difference between scalar measurement point and pier (F(DI-flux pier) - F(scalar pier))
+        - deltaF:       (float) difference between scalar measurement point and pier (F(DIflux-pier) - F(scalar-pier))??
         - deltaD:       (float) = kwargs.get('deltaD')
         - deltaI:       (float) = kwargs.get('deltaI')
         - diid:         (string) identifier (id) of di files (e.g. A2_WIC.txt, don't use wildcards like *)
-        - outputformat: (string) one of 'idf', 'xyz', 'hdf'
-        - usestep:      (int) which step to use for analysis, usually both, in autodif only 2
-        - annualmeans:  (list) provide annualmean for x,y,z as [x,y,z] with floats
-        - azimuth:      (float) required for Autodif measurements
+        - pier:         (string) only analyse data from this pier i.e. A2 will only select pier A2 data from source
+        - azimuth:      (float) if not contained in absdata - i.e. required for Autodif raw measurements
         - variometerorientation: (string) accepts XYZ, xyz, in any other case HEZ is asumed
         - expD:         (float) expected Declination - failure produced when D differs by more than expT deg
         - expI:         (float) expected Inclination - failure produced when I differs by more than expT deg
-        - expT:         (float) expected value threshold - default 1 deg
-        - movetoarchive:(string) define a local directory to store archived data (only works when reading files)
+        - expT:         (float) expected value threshold - default 2 deg
+        - stationid:    (string) provide the stationid if you use archiving or dbadd
+        - dbadd:        (string) if provided then DI-raw data will be added to the given database table i.e. dbadd='DIDATA'
+                                 Caution: this method is using the "replace" mode
+        - movetoarchive:(string) define a local directory to store archived data. The directory needs to exist already.
+        - alpha:        (float) orientation angle in declination plane (deg)
+        - beta:         (float) orientation angle in inclination plane (deg)
+        - magrotation   (bool) rotate variometer data using rotationvalues in database, requires db.
+                               given alpha and beta values by above options will override db data.
+                               if magrotation is selected, compensation=True will always be applied.
+        - compensation  (bool) apply fluxgate compensation values (i.e. LEMI) to variometer data
+                            so that the obtained vector is representing some reasonable geomagnetic field
+                            vector. compensation values will be taken from header or db. By provinding
+                            option 'offset' you can override these values by a user choice
+        - offset        (dict)
+        - residualsign: (int) either +1 (default) or -1. defines the orientation of the fluxgate probe on
+                              the theodolite. This value is important when using the residual method and might
+                              be different for different theodolites (please consider for data selection)
+
+      Optional (seldom used):
+        - abstype:      (string) default 'manual', other options: 'autodif' (is actually automatically selected)
+        - outputformat: (string) one of 'idf', 'xyz', 'hdf' (default is idf)
+        - usestep:      (int) which step to use for analysis, usually both, in autodif raw = 2
+        - annualmeans:  (list) provide annualmeans X, Y, Z as a list of these components in nT
+                               i.e. [21124.45, 1723.12, 44679.97]. Providing annualmeans makes sense
+                               if you don't have any F measurements
+        - meantime:     (bool) default=False. Results will be averaged on the time of the first measurement
+                               if meantime=True results are calculated at the horizontal measurement nearest
+                               to average time
+        - skipvariodb:  (bool) default False. If True then, even if db is provided, then NEITHER the
+                               data header is updated from the database, NOR flags and 'apply_deltas'
+                               from the database is performed for variometer data
+        - skipscalardb:  (bool) default False. If True then, even if db is provided, then NEITHER the
+                               data header is updated from the database, NOR flags and 'apply_deltas'
+                               from the database is performed for scalar data
+
+
     RETURNS:
-        --
+        DataStream()    a datastream containing absolute directions, basevalues for the input instruments and
+                        collimation angles as well as information on the measurement
+
     EXAMPLE:
-        (1) >>> stream = absoluteAnalysis('/home/leon/Dropbox/Daten/Magnetism/DI-WIC/autodif',variopath,'',abstype='autodif',azimuth=267.4242,starttime='2014-02-10',endtime='2014-02-25')
-        (2) >>> stream = absoluteAnalysis('DIDATA_WIK',variopath,'',starttime='2013-12-20',endtime='2013-12-30',db=db)
-        (3) >>> stream = absoluteAnalysis('/home/leon/Dropbox/Daten/Magnetism/DI-WIC/raw/',variopath,scalarpath,diid='A2_WIC.txt',starttime='2014-02-10',endtime='2014-02-25',db=db,dbadd=True)
-        (3) >>> stream = absoluteAnalysis('http://localhost/mydata.html',variopath,scalarpath,diid='A2_WIC.txt',db=db,dbadd=True)
+        # a single absolute file and variable source for variometer data
+        basevalues = absolute_analysis(example6a, {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
+        # multiple absolute files and adding results to database tabe DIDATA
+        basevalues = absolute_analysis([example6a,example6b], {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30", dbadd='DIDATA')
+        # read DI data from database and save raw DI data to archive (will be moved in cas of DI files instead of DI database)
+        basevalues = absolute_analysis('DIDATA', {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30", movetoarchive='/tmp')
+        # read DI data from directory with diid identifier
+        basevalues = absolute_analysis('/home/leon/Dropbox/Daten/Magnetism/DI-WIC/raw/', variopath, scalarpath, diid='A2_WIC.txt', starttime='2014-02-10',endtime='2014-02-25',db=db,dbadd=True)
+
+        (1) stream = absolute_analysis('/home/leon/Dropbox/Daten/Magnetism/DI-WIC/autodif',variopath,'',abstype='autodif',azimuth=267.4242,starttime='2014-02-10',endtime='2014-02-25')
 
     PERFORMED TESTS:
-        (OK)1. Read data from database and files
+        (okOK)1. Read data from database and files
         (OK)2. Read data from autodif and manual analysis
-        (OK)3. Put data to database (dbadd)
-        (OK)4. Check parameter for all possibilities: a) no db, b) db, c) db and override by input
-        (OK)5. Archiving function
-        6. Appropriate information on failed analyses -> add test for expected values
+        (okOK)3. Put data to database (dbadd)
+        (okOK)4. Check parameter for all possibilities: a) no db, b) db, c) db and override by input
+        (okOK)5. Archiving function
+        (okOK)6. Appropriate information on failed analyses -> add test for expected values
         (OK)7. is the usestep variable correctly applied for autodif and normal?
         (OK)8. overwrite of existing database lines?
         (OK)9. Order of saving data when analyzing older data sets - requires reload and delete
@@ -1891,19 +1938,11 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
         when importing db2diline from database, the DILineStruct, defined in absolutes is missing.... why???????? see Test4 in FullAbsoluteAnalysis -- order of import is very important
 
     """
-    db = kwargs.get('db')
-    dbadd = kwargs.get('dbadd')
-    skipvariodb = kwargs.get('skipvariodb')
-    skipscalardb = kwargs.get('skipscalardb')
-    magrotation = kwargs.get('magrotation') ### if true then compensation fields are applied
-    compensation = kwargs.get('compensation') ### if true then compensation fields are applied
-    alpha = kwargs.get('alpha')
-    offset = kwargs.get('offset')
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    db = kwargs.get('db')
+    alpha = kwargs.get('alpha')
     beta = kwargs.get('beta')
-    stationid = kwargs.get('stationid')
-    pier = kwargs.get('pier')
     deltaF = kwargs.get('deltaF')
     deltaD = kwargs.get('deltaD')
     deltaI = kwargs.get('deltaI')
@@ -1912,46 +1951,60 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     usestep = kwargs.get('usestep')
     annualmeans = kwargs.get('annualmeans')
     variometerorientation = kwargs.get('variometerorientation')
-    scalevalue = kwargs.get('scalevalue')
-    azimuth = kwargs.get('azimuth') # 267.4242 # A16 to refelctor
-    abstype = kwargs.get('abstype')
+    azimuth = kwargs.get('azimuth')  # 267.4242 # A16 to refelctor
     expT = kwargs.get('expT')
     expI = kwargs.get('expI')
     expD = kwargs.get('expD')
-    meantime = kwargs.get('meantime')
+    dbadd = kwargs.get('dbadd')
     movetoarchive = kwargs.get('movetoarchive')
-    absstruct = kwargs.get('absstruct')  # what is good for?
+    abstype = kwargs.get('abstype')
+    pier = kwargs.get('pier')
+    stationid = kwargs.get('stationid')
+    magrotation = kwargs.get('magrotation')
+    compensation = kwargs.get('compensation')
+    meantime = kwargs.get('meantime')
     residualsign = kwargs.get('residualsign')
+    offset = kwargs.get('offset')
+    skipvariodb = kwargs.get('skipvariodb')
+    skipscalardb = kwargs.get('skipscalardb')
+    skipvariodb = kwargs.get('skipvariodb')
+    skipscalardb = kwargs.get('skipscalardb')
+
+    scalevalue = kwargs.get('scalevalue')
     debug = kwargs.get('debug')
 
-    #residualsign=-1
-    #debug=True
+    # residualsign=-1
+    # debug=True
     if not outputformat:
-        outputformat='idf'
+        outputformat = 'idf'
     if not annualmeans:
-        #annualmeans=[20000,1200,43000]
-        annualmeans=[0.0,0.0,0.0]
+        # annualmeans=[20000,1200,43000]
+        annualmeans = [0.0, 0.0, 0.0]
     if not variometerorientation:
-        variometerorientation="HEZ"
+        variometerorientation = "HEZ"
     if not abstype:
         abstype = "manual"
-    if abstype == 'autodif': # we also check the person given in the file. if this is AutoDIF abstype will be set correctly automatically
-        usestep=2
+    if abstype == 'autodif':  # we also check the person given in the file. if this is AutoDIF abstype will be set correctly automatically
+        usestep = 2
         if not azimuth:
             print("Azimuth needs ro be provided for AutoDIF measurements")
             return
     if not expT:
-        expT = 1
+        expT = 2
     if not deltaF:
-        deltaF=0.0
+        deltaF = 0.0
     if not stationid:
-        stationid=''
+        stationid = ''
     if not pier:
-        pier=''
+        pier = ''
     if not diid:
-        diid=".txt"
+        diid = ".txt"
     if not residualsign:
         residualsign = 1
+    if starttime:
+        starttime = testtime(starttime)
+    if endtime:
+        endtime = testtime(endtime)
 
     varioid = 'Unknown'
     scalarid = 'Unknown'
@@ -1961,400 +2014,281 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
 
     # 2.1 Database or File -> Get a datelist
     # --------------------
-    readfile = True
-    filelist, datelist = [],[]
+    filelist, datelist = [], []
     failinglist = []
+    failingdict = {}  # contains {failedsource : reason, ...}
     successlist = []
+    successfiles = []
     difiles = []
+    datastructok = True
     KEYLIST = DataStream().KEYLIST
     NUMKEYLIST = DataStream().NUMKEYLIST
-    #if db:
-    #    import magpy.core.database as dbase
 
-    ### 2.0: _analyse_abstype(db, absdata) # input types are database, file and
-    ### 2.0: obtain a dictionary with {date1 : abslist1, date2 : abslist2, etc)
+    resultdict, failinglist = _analyse_di_source(absdata, db=db, starttime=starttime, endtime=endtime,
+                                                    fileidentifier=diid, debug=debug)
 
-    if db and not absstruct:
-        try:
-            import magpy.database as dbase
-            #from magpy.database import diline2db, db2diline, readDB, applyDeltas, db2flaglist, string2dict
-        except:
-            print("absoluteAnalysis:  import of database methods failed - skipping eventually selected option dbadd")
-            dbadd = False
-        cursor = db.cursor()
-        # Check whether absdata exists as table
-        #print("absoluteAnalysis:  Tyring to interprete the didata path as DB Table")
-        cursor.execute("SHOW TABLES LIKE '%s'" % absdata)
-        try:
-            value = cursor.fetchone()[0]
-            # Found a table - now reading it and setting file read to zero
-            try:
-                sql = "SELECT StartTime FROM " + value
-                cursor.execute(sql)
-                values = cursor.fetchall()
-                lst = [elem[0].split()[0] for elem in values]
-                datelist = list(set(lst))
-            except:
-                print("absoluteAnalysis: Error while getting Absdata from db")
-                return
-            # DI TABLE FOUND
-            readfile = False
-            print("absoluteAnalysis:  getting DI data from database")
-        except:
-            print("absoluteAnalysis:  getting DI data from files")
-            pass
-
-    if absstruct:
-        """
-        assume that the provided absdata is already a diline structure
-        """
-        print ("Absolut data directly provided")
-        datelist = sort(list(set([datetime.strftime(num2date(np.nanmean(el.time)).replace(tzinfo=None),"%Y-%m-%d") for el in absdata])))
-        readfile = False
-
-    if readfile:
-        # Get list of files
-        if isinstance(absdata, basestring):
-            if "://" in absdata:
-                if debug:
-                    print("absolute Analysis: Found URL code - requires name of data set with date")
-                if "observation.json" in absdata:
-                    dataformat = 'JSONABS'
-                filelist.append(absdata)
-                movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
-            elif os.path.isfile(absdata):
-                if debug:
-                    print("absolute Analysis: Found single file")
-                filelist.append(absdata)
-            else:
-                if debug:
-                    print("absolute Analysis: Found directory")
-                if os.path.exists(absdata):
-                    pass
-                else:
-                    print("absolute Analysis: Error - path to absdata not existing: %s" % absdata)
-                    sys.exit()
-                for file in os.listdir(absdata):
-                    if debug:
-                        print("   - scanning for {} (do not include wildcards)".format(diid))
-                    if file.endswith(diid):
-                        filelist.append(os.path.join(absdata,file))
-        else:
-            try:
-                #print ("Found List")
-                listlen = len(absdata)
-                for elem in absdata:
-                    if "://" in elem:
-                        if "observation.json" in elem:
-                            dataformat = 'JSONABS'
-                        print("Found URL code - requires name of data set with date")
-                        filelist.append(elem)
-                        movetoarchive = False # XXX No archiving function supported so far - will be done as soon as writing to files is available
-                    elif os.path.isfile(elem):
-                        #print "Found single file"
-                        filelist.append(elem)
-            except:
-                print("Could not interpret absdata")
-                return
-
-        if debug:
-            print("Files:", filelist)
-
-        for elem in filelist:
-            head, tail = os.path.split(elem)
-            try:
-                if elem.endswith('.json'):
-                    data = readJSONABS(elem)
-                    for dat in data:
-                        stream = dat.get_abs_distruct()
-                        datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
-                else:
-                    # Drop pier and stationid from filename to simplify parser
-                    tail = tail.replace(stationid,"")
-                    tail = tail.replace(pier,"")
-                    date = dparser.parse(tail,fuzzy=True)
-                    datelist.append(datetime.strftime(date,"%Y-%m-%d"))
-            except:
-                try:
-                    # Drop pier and stationid from filename to simplify parser
-                    tail = tail.replace(stationid,"")
-                    tail = tail.replace(pier,"")
-                    date = dparser.parse(tail[:19],fuzzy=True)
-                    datelist.append(datetime.strftime(date,"%Y-%m-%d"))
-                except:
-                    print("absoluteAnalysis: Found date problem in file: %s" % tail)
-                    failinglist.append(elem)
-
-        datelist = list(set(datelist))
-
-
-    datetimelist = [datetime.strptime(elem,'%Y-%m-%d') for elem in datelist]
-    if debug:
-        print ("Datetime list of data to deal with:", datetimelist)
-
-    if starttime:
-        datetimelist = [elem for elem in datetimelist if elem.date() >= testtime(starttime).date()]
-    if endtime:
-        datetimelist = [elem for elem in datetimelist if elem.date() <= testtime(endtime).date()]
-
-    if not len(datetimelist) > 0:
-        print("absoluteAnalysis: No matching dates found - aborting")
-        return
-
-
-        # Please Note for pier information always the existing pier in the file is used
-
-    # 2.2 Cycle through datetimelist
+    for fa in failinglist:
+        failingdict[fa] = "analysing di source failed"
+    # 2.2 Cycle through dates
     # --------------------
     # read varios, scalar and all absfiles of one day
     # analyze data for each day and append results to a resultstream
     # XXX possible issues: an absolute measurement which is performed in two day (e.g. across midnight)
+    if expI or expD:
+        print("")
+        print("Thresholds for valid data: Declination within {a}+/-{c} deg, Inclination within {b}+/-{c} deg".format(
+            a=expD, b=expI, c=expT))
+        print("")
 
     resultstream = DataStream()
-    for date in sorted(datetimelist):
+    for date in resultdict:
         variofound = True
         scalarfound = True
         print("")
         print("------------------------------------------------------")
         print("Starting analysis for ", date)
         print("------------------------------------------------------")
+        st = datetime.combine(date, datetime.min.time())
+        et = datetime.combine(date, datetime.max.time())
         # a) Read variodata
         datatype = 'vario'
+        msg = " Variation data analysis ..."
         if variodata == scalardata:
             datatype = 'both'
-        vdata = data_for_di(variodata, starttime=starttime, endtime=endtime, datatype=datatype)
+            print("variodata equals scalardata")
+        vdata = data_for_di(variodata, starttime=st, endtime=et, datatype=datatype, alpha=alpha, beta=beta,
+                            magrotation=magrotation,
+                            compensation=compensation, offset=offset, skipdb=skipvariodb, debug=debug)
+        if len(vdata) > 0:
+            print("{} OK".format(msg))
+        else:
+            print("{} no data".format(msg))
         # b) Load Scalardata
+        msg = " Scalar data analysis ..."
         if not datatype == 'both':
-            sdata = data_for_di(scalardata, starttime=starttime, endtime=endtime, datatype='scalar')
+            sdata = data_for_di(scalardata, starttime=st, endtime=et, datatype='scalar', alpha=alpha, beta=beta,
+                                magrotation=magrotation,
+                                compensation=compensation, offset=offset, skipdb=skipscalardb, debug=debug)
         else:
             sdata = vdata.copy()
-        # c) get absolute data
-        abslist = []
-        if readfile:
-            datestr = datetime.strftime(date,"%Y-%m-%d")
-            datestr2 = datetime.strftime(date,"%Y%m%d") # autodif
-            print("-----------------")
-            print(datestr, abstype)
-            if abstype == 'autodif':
-                difiles = [di for di in filelist if datestr2 in di]
-            else:
-                difiles = [di for di in filelist if datestr in di]
-
-            if not len(difiles) > 0:
-                # could not find dates in filenames
-                difiles = [di for di in filelist]
-
-            if len(difiles) > 0:
-                for elem in difiles:
-                    absst = abs_read(elem,azimuth=azimuth,pier=pier,output='DIListStruct')
-                    try:
-                        for a in absst:
-                            stream = a.get_abs_distruct()
-                            abslist.append(a)
-                        if db and dbadd:
-                            dbase.diline2db(db, absst, mode='insert', tablename='DIDATA_' + stationid)
-                        successlist.append(elem)
-                    except:
-                        print("absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem)
-                        failinglist.append(elem)
-                        # TODO Drop that line from filelist
-                        pass
-        elif absstruct:
-            abslist = [el for el in absdata if num2date(np.nanmean(el.time)).replace(tzinfo=None).date() == date.date()]
+        if len(sdata) > 0:
+            print("{} OK".format(msg))
         else:
-            #get list from database
-            startd = datetime.strftime(date,"%Y-%m-%d")
-            endd = datetime.strftime(date+timedelta(days=1),"%Y-%m-%d")
-            if not stationid or stationid == '':
-                stationid = absdata.split('_')[1]
+            print("{} no data".format(msg))
+        # c) get absolute data
+        contdict = resultdict.get(date)
+        files = contdict.get('filelist')
+        abslist = contdict.get('dilines')
 
-            sql = "Pier='%s'" % pier
-            tablename = absdata
-
-            try:
-                abslist = dbase.db2diline(db,starttime=startd,endtime=endd,sql=sql,tablename=tablename)
-            except:
-                print("absoluteAnalysis: Problems when reading from database")
-
-        for absst in abslist:
+        for ab in abslist:
             print("-----------------")
+            # get pier
             try:
-                stream = absst[0].get_abs_distruct()
-                filepier = absst[0].pier
-                if not pier == filepier:
-                    loggerabs.info(" -- piers in data file(s) and filenames are different - using file content")
-                    pier = filepier
+                distruct = ab.get_abs_distruct()
+                datastructok = True
             except:
-                #TODO - rename stream to absdata
-                stream = absst.get_abs_distruct()
+                datastructok = False
+                if not failingdict.get(st, None):
+                    failingdict[st] = "problem with data structure"
+            if pier and not pier == ab.pier:
+                print("Differences between projected pier ({}) and pier in data struct ({}) - skipping".format(pier,
+                                                                                                               ab.pier))
+                if not failingdict.get(st, None):
+                    failingdict[st] = "piers provided in data file and analysis command do not fit"
+            elif datastructok:
+                if azimuth:
+                    for i in range(len(distruct.container)):
+                        distruct[0].expectedmire = azimuth
+                if ab.person == 'AutoDIF':
+                    abstype = 'autodif'
+                    if not usestep:
+                        usestep = 2
+                    if not azimuth:
+                        print("absolute_analysis: AUTODIF but no azimuth provided --- this will not work")
 
-            if stream[0].person == 'AutoDIF':
-                abstype = 'autodif'
+                print(" Analyzing {} measurement from {} with given azimuth {}".format(abstype, date,
+                                                                                       distruct[0].expectedmire))
 
-            if azimuth:
-                for i in range(len(stream.container)):
-                    stream[i].expectedmire = azimuth
-
-            print("Analyzing {} measurement from {} with given azimuth {}".format(abstype,datetime.strftime(date,"%Y-%m-%d"),stream[0].expectedmire))
-            # if usestep not given and AutoDIF measurement found
-            #print ("Identified pier in file:", stream[0])
-            try:
-                streamtime = datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d")
-            except:
-                print (" absoluteAnalysis: Could not extract an appropriate date from data source")
-                streamtime = "2233-03-22"
-            if streamtime == datetime.strftime(date,"%Y-%m-%d"):
-                if debug:
-                    print (" absoluteAnalysis: Times in stream are fine")
-            else:
-                continue
-
-            if stream[0].person == 'AutoDIF' and not usestep:
-                usestep = 2
-
-            if stream[0].person == 'AutoDIF' and not azimuth:
-                print("absoluteAnalysis: AUTODIF but no azimuth provided --- this will not work")
-
-            if len(vdata) > 0:
-                valuetest = stream._check_coverage(vdata)
-                if valuetest:
-                    func = vdata.header.get('DataFunctionObject')[0]
-                    stream = stream._insert_function_values(func,funckeys=['x','y','z'],debug=debug)
-                else:
-                    print("Warning! Variation data missing at DI time range")
-            if len(sdata) > 0:
-                valuetest = stream._check_coverage(sdata,keys=['f'])
-                if valuetest:
-                    func = sdata.header.get('DataFunctionObject')[0]
-                    stream = stream._insert_function_values(func,funckeys=['f'],offset=deltaF,debug=debug)
-                else:
-                    print ("Warning! Scalar data missing at DI time range")
-            try:
+                if len(vdata) > 0:
+                    valuetest = distruct._check_coverage(vdata)
+                    if valuetest:
+                        func = vdata.header.get('DataFunctionObject')[0]
+                        distruct = distruct._insert_function_values(func, funckeys=['x', 'y', 'z'], debug=debug)
+                    else:
+                        print(" Warning! Variation data missing at DI time range")
+                    # Check orinetation
+                    variocomps = vdata.header.get('DataComponents').lower()
+                    if variocomps.startswith("xyz") and not variometerorientation.lower() == "xyz":
+                        print("  Variometer data provided in XYZ, Basevalue output projected in HDZ, however,")
+                        print("  as variometerorientation is not manually confirmed to be xyz (see manual) ")
+                    elif not variocomps.startswith("xyz") and variometerorientation.lower() == "xyz":
+                        print("  Basevalue output projected in XYZ but variometer data provided in HEZ!")
+                        print("  MagPy does not yet support that yet - switching to HDZ basevalues")
+                        variometerorientation = "HEZ"
+                if len(sdata) > 0:
+                    valuetest = distruct._check_coverage(sdata, keys=['f'])
+                    if valuetest:
+                        func = sdata.header.get('DataFunctionObject')[0]
+                        distruct = distruct._insert_function_values(func, funckeys=['f'], offset=deltaF, debug=debug)
+                    else:
+                        print(" Warning! Scalar data missing at DI time range")
                 # get delta D and delta I values here
                 if not deltaD and db:
-                    deltaD = db.get_pier(pier, 'A2', value='deltaD', year=starttime.year)
+                    deltaD = db.get_pier(pier, 'A2', value='deltaD', year=st.year)
                 if not deltaI and db:
-                    deltaI = db.get_pier(pier, 'A2', value='deltaI', year=starttime.year)
-                #if not deltaF and db:  # check that - not contained in MagPy 1.x
+                    deltaI = db.get_pier(pier, 'A2', value='deltaI', year=st.year)
+                # if not deltaF and db:  # check that - not contained in MagPy 1.x
                 #    deltaF = db.get_pier(pier, 'A2', value='deltaF', year=starttime.year)
 
-                print ("Provided pier differences:")
-                print (" delta F for continuous scalar data: {}".format(deltaF))
-                print (" delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
+                if debug:
+                    print("Provided pier differences (either by option (primary) or from database):")
+                    print(" delta F for continuous scalar data: {}".format(deltaF))
+                    print(" pier delta D: {}, pier delta I: {}".format(deltaD, deltaI))
 
-                result = stream.calcabsolutes(usestep=usestep,annualmeans=annualmeans,printresults=True,debugmode=debug,deltaD=deltaD,deltaI=deltaI,meantime=meantime,scalevalue=scalevalue,variometerorientation=variometerorientation,residualsign=residualsign)
+                result = distruct.calcabsolutes(usestep=usestep, annualmeans=annualmeans, printresults=True,
+                                                debugmode=debug, deltaD=deltaD, deltaI=deltaI, meantime=meantime,
+                                                scalevalue=scalevalue, variometerorientation=variometerorientation,
+                                                residualsign=residualsign)
 
-                #print("%s with delta F of %s nT" % (result.str4,str(deltaF)))
-                #print("Delta D: %s, delta I: %s" % (str(deltaD),str(deltaI)))
+                paralist = []
                 if not deltaF == 0:
-                    result.str4 = result.str4 + "_" + str(deltaF)
-                #print("absolutes", valalpha, alpha,result.str4)
-                if valalpha != 0 or alpha:
-                    #print ("absolute alpha", valalpha,alpha)
-                    alphavaluetobeadded = 0
-                    if not valalpha == 0:
-                        alphavaluetobeadded = valalpha
-                    elif not alpha == None:
-                        alphavaluetobeadded = alpha
-                    if not result.str4 == '':
-                        result.str4 = result.str4 + ","
-                    result.str4 += "alpha_" + str(alphavaluetobeadded)
-                #print("absolutes", result.str4, valbeta, beta)
-                if valbeta != 0 or beta:
-                    #print ("absolute beta", valbeta,beta)
-                    betavaluetobeadded = 0
-                    if not valbeta == 0:
-                        betavaluetobeadded = valbeta
-                    elif not beta == 0:
-                        betavaluetobeadded = beta
-                    if not result.str4 == '':
-                        result.str4 = result.str4 + ","
-                    result.str4 += "beta_" + str(betavaluetobeadded)
-                #print("absolutes", result.str4)
-            except:
-                result = LineStruct()
-            dataok = True
-            if expD:
-                if not float(expD)-float(expT) < result.y < float(expD)+float(expT):
-                    try:
-                        #print ("expD", expD, expT, stream[0], stream[0].time)
-                        test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
-                        xl = [ el for el in difiles if test in el]
-                        if len(xl) > 0:
-                            failinglist.append(xl[0])
-                        print("absoluteAnalysis: Failed to analyse {} - threshold for acceptable angular offset in Dec exceeded".format(test))
+                    paralist.append("dF_{}".format(deltaF))
+                comments = vdata.header.get('DataComments', '')
+                if comments.find('alpha') > 0 or alpha:
+                    if alpha:
+                        paralist.append("alpha_{}".format(alpha))
+                    else:
+                        val = comments.split('alpha=')[1]
+                        print(val)
+                        calpha = val.split(" - ")[0]
+                        paralist.append("alpha_{}".format(calpha))
+                if comments.find('beta') > 0 or beta:
+                    if beta:
+                        paralist.append("beta_{}".format(beta))
+                    else:
+                        val = comments.split('beta=')[1]
+                        print(val)
+                        cbeta = val.split(" - ")[0]
+                        paralist.append("beta_{}".format(cbeta))
+                if len(paralist) > 0:
+                    parastr = ",".join(paralist)
+                    result.str4 = "{},{}".format(result.str4, parastr)
+                    # if debug:
+                    print("Parameterlist:", result.str4)
+                dataok = True
+                if expD:
+                    if not float(expD) - float(expT) < result.y < float(expD) + float(expT):
+                        print(" absolute_analysis: Failed to analyse {} - threshold for dec exceeded".format(
+                            num2date(result.time)))
                         dataok = False
-                    except:
-                        print("absoluteAnalysis: checking expD - Value error likely while determining time - failed analysis")
+                if expI and dataok:
+                    if not float(expI) - float(expT) < result.x < float(expI) + float(expT):
+                        print(" absolute_analysis: Failed to analyse {} - threshold for inc exceeded".format(
+                            num2date(result.time)))
                         dataok = False
-            if expI and dataok:
-                if not float(expI)-float(expT) < result.x < float(expI)+float(expT):
-                    try:
-                        test = datetime.strftime(num2date(stream[0].time),'%Y-%m-%d_%H-%M-%S')
-                        xl = [ el for el in difiles if test in el]
-                        if len(xl) > 0:
-                            failinglist.append(xl[0])
-                        print("absoluteAnalysis: Failed to analyse {} - threshold for acceptable angular offset in Inc exceeded".format(test))
-                        dataok = False
-                    except:
-                        print("absoluteAnalysis: checking expI - Value error likely while determining time - failed analysis")
-                        dataok = False
-            if dataok:
-                resultstream.add(result)
+                if dataok:
+                    successlist.append(ab)
+                    successfiles.append(files)
+                    resultstream.add(result)
+                else:
+                    failinglist.append(files)
+                    if not failingdict.get(st, None):
+                        failingdict[st] = "provided validity threshold not met"
+
+    if debug:
+        print(" absolute_analysis: obtained  {} successful analyses".format(len(successlist)))
 
     # ####################################
-    # 3. Format output
+    # 3. Archiving - adding to database
+    # ####################################
+    if len(successlist) > 0 and movetoarchive and os.path.isdir(movetoarchive):
+        # save this particular data set to archive
+        successfiles = np.asarray(successfiles).flatten()
+        if len(successfiles) > 0:
+            successfiles = list(set(successfiles))
+        if debug:
+            print(" absolute_analysis: adding DI raw data to archive {} ...".format(movetoarchive))
+        if contdict.get('source') == 'files':
+            # then copy the files paths to archive and overwrite existing data
+            for fi in successfiles:
+                source = fi
+                destination = os.path.join(movetoarchive, os.path.split(fi)[1])
+                if not source == destination:
+                    # delete destination
+                    if os.path.exists(destination):
+                        if debug:
+                            print("archive file already existing - replacing it")
+                        os.remove(destination)
+                    shutil.move(source, destination)
+        else:
+            for dat in successlist:
+                dat.save_di(movetoarchive)
+    if len(successlist) > 0 and dbadd and db:
+        # add this particular data set into a database table
+        if debug:
+            print(" absolute_analysis: adding DI raw data to database ...")
+        if not stationid:
+            print(" absolute_analysis: error when adding data to db - please provide a stationID")
+        else:
+            tablename = 'DIDATA'
+            if isinstance(dbadd, basestring):
+                tablename = dbadd
+            db.diline_to_db(successlist, mode='replace', tablename=tablename, stationid=stationid)
+        if debug:
+            print("                   ... done")
+
+            # ####################################
+    # 4. Format output - datastream
     # ####################################
 
     # 3.0 Convert result to ndarray and dx,dy,dz to XYZ in nT
     #     --- This is important for baseline correction as all variometer provided components in nT
 
     # cleanup resultsstream:
-    # replace all 999999.99 and -inf with NaN
-    #print ("Finished nearly", resultstream.container)
-
     rest = np.asarray([list(el) for el in resultstream.container])
     rest = rest.T
     array = [np.asarray([]) for elem in KEYLIST]
-    for i,el in enumerate(rest):
-        if i < len(KEYLIST)-1:
+    for i, el in enumerate(rest):
+        if i < len(KEYLIST) - 1:
             if i == 0:
-                array[i] = num2date(el.astype(float64))
-            elif KEYLIST[i+1] in NUMKEYLIST:
-                array[i] = el.astype(float64)
+                array[i] = num2date(el.astype(np.float64))
+                array[i] = np.asarray([el.replace(tzinfo=None) for el in array[i]])
+            elif KEYLIST[i + 1] in NUMKEYLIST:
+                array[i] = el.astype(np.float64)
             else:
                 array[i] = el
     array = np.asarray(array, dtype=object)
-    resultstream = DataStream([LineStruct()], resultstream.header, array)
+    resultstream = DataStream(header=resultstream.header, ndarray=array)
 
     for idx, elem in enumerate(resultstream.ndarray):
         if KEYLIST[idx] in NUMKEYLIST:
-            resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float)==999999.99,NaN,resultstream.ndarray[idx])
-            resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)),NaN,resultstream.ndarray[idx])
+            resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float) == 999999.99, np.nan,
+                                                 resultstream.ndarray[idx])
+            resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)), np.nan,
+                                                 resultstream.ndarray[idx])
 
     # Add deltaF to resultsstream for all Fext:  if nan then df == deltaF else df = df+deltaF,
     posF = KEYLIST.index('str4')
     posdf = KEYLIST.index('df')
 
-    for idx,elem in enumerate(resultstream.ndarray[posF]):
-        #print elem
-        #if not deltaF:
+    for idx, elem in enumerate(resultstream.ndarray[posF]):
+        # print elem
+        # if not deltaF:
         #    deltaF = 0.0
         if not deltaF == 0 and elem.startswith('Fext'):
             try:
                 resultstream.ndarray[posdf][idx] = deltaF
             except:
-                array = [np.nan]*len(resultstream.ndarray[0])
+                array = [np.nan] * len(resultstream.ndarray[0])
                 array[idx] = deltaF
                 resultstream.ndarray[posdf] = np.asarray(array)
         elif not deltaF == 0 and elem.startswith('Fabs'):
             try:
-                resultstream.ndarray[posdf][idx] = float(resultstream.ndarray[posdf][idx])+float(deltaF)
+                resultstream.ndarray[posdf][idx] = float(resultstream.ndarray[posdf][idx]) + float(deltaF)
             except:
-                array = [np.nan]*len(resultstream.ndarray[0])
+                array = [np.nan] * len(resultstream.ndarray[0])
                 array[idx] = deltaF
                 resultstream.ndarray[posdf] = np.asarray(array)
-
 
     if not stationid and varioid == scalarid:
         stationid = varioid
@@ -2365,7 +2299,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['StationID'] = stationid
     resultstream.header['DataPier'] = pier
     resultstream.header['DataFormat'] = 'MagPyDI'
-    resultstream.header['DataType'] = "{}{}".format('MagPyDI',di_version)
+    resultstream.header['DataType'] = "{}{}".format('MagPyDI', di_version)
     resultstream.header['DataComponents'] = 'IDFF'
     resultstream.header['col-time'] = 'Epoch'
     resultstream.header['col-x'] = 'i'
@@ -2376,7 +2310,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['unit-col-z'] = 'nT'
     resultstream.header['col-f'] = 'f'
     resultstream.header['unit-col-f'] = 'nT'
-    if variometerorientation in ["XYZ","xzy"]:
+    if variometerorientation in ["XYZ", "xzy"]:
         resultstream.header['col-dx'] = 'X-base'
         resultstream.header['unit-col-dx'] = 'nT'
         resultstream.header['col-dy'] = 'Y-base'
@@ -2404,53 +2338,31 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     resultstream.header['col-str4'] = 'F-type'
 
     # Provide a SensorID
-    #resultstream.header['SensorID'] = 'BLV'
-    #print ("Vario:", varioid)
-    #print ("Scalar:", scalarid)
-    #print ("Pier:", pier)
-    resultstream.header['DataID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pier)
-    resultstream.header['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pier)
+    resultstream.header['DataID'] = 'BLV_{}_{}_{}'.format(varioid, scalarid, pier)
+    resultstream.header['SensorID'] = 'BLV_{}_{}_{}'.format(varioid, scalarid, pier)
 
-    #print "Files for archive:"
-    #print "---------------------------"
-    archivelist = [x for x in successlist if x not in failinglist]
     print("------------------------------------------------------")
     print("Failed files:")
     print("------------------------------------------------------")
-    if len(failinglist) > 0:
-        for el in failinglist:
-            print(el)
+    if failingdict:
+        for el in failingdict:
+            print(el, failingdict.get(el))
     else:
         print("None")
     print("------------------------------------------------------")
-
-
-    # 3.2 Eventually archive the data
-    # --------------------
-    # XXX possible issues: direct ftp reading or url reading
-    if movetoarchive:
-        if readfile:
-            for fi in archivelist:
-                if not "://" in fi:
-                    src = fi
-                    fname = os.path.split(src)[1]
-                    dst = os.path.join(movetoarchive,fname)
-                    shutil.move(src,dst)
-                else:
-                    print ("Archiving to FTP deprecated - mount the file system and archive then")
 
     resultstream = resultstream.sorting()
 
     # Apply correct format to resultsstream
     array = [[] for el in KEYLIST]
-    for idx,el in enumerate(resultstream.ndarray):
+    for idx, el in enumerate(resultstream.ndarray):
         if KEYLIST[idx] in NUMKEYLIST:
             array[idx] = np.asarray(el).astype(float)
         elif 'time' in KEYLIST[idx]:
-            array[idx] = np.asarray(el).astype(datetime64)
+            array[idx] = np.asarray(el).astype(np.datetime64).astype(datetime)
         else:
             array[idx] = np.asarray(el)
-    resultstream.ndarray = np.asarray(array,dtype=object)
+    resultstream.ndarray = np.asarray(array, dtype=object)
 
     return resultstream
 
@@ -2671,9 +2583,9 @@ if __name__ == '__main__':
                 db = database.DataBank("localhost","maxmustermann","geheim","testdb")
                 absst = abs_read(example6a)  # should be the default
                 if db:
-                    t1 = _analyse_di_source('DIDATA', db=db)
-                    t2 = _analyse_di_source(example6a, db=db)
-                    t3 = _analyse_di_source(absst, db=db, debug=True)
+                    t1, fa = _analyse_di_source('DIDATA', db=db)
+                    t2, fa = _analyse_di_source(example6a, db=db)
+                    t3, fa = _analyse_di_source(absst, db=db, debug=True)
                     print ("{} and {} and {} should all be 1".format(len(t1),len(t2),len(t3)))
                 te = datetime.utcnow()
                 successes['_analyse_di_source'] = ("Version: {}: _analyse_di_source {}".format(magpyversion,(te-ts).total_seconds()))

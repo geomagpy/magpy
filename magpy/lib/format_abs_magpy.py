@@ -7,6 +7,7 @@ Written by Roman Leonhardt June 2012
 
 from magpy.core.methods import *
 from magpy.absolutes import *
+from magpy.stream import loggerlib
 #import magpy.absolutes as di
 
 
@@ -241,7 +242,7 @@ def readMAGPYABS(filename, headonly=False, **kwargs):
                     dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
                 except:
                     if not posstr[0] == 'Variometer':
-                        logging.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                        loggerlib.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
                     return stream
                 try:
                     row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
@@ -398,7 +399,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                         expectedmire = azimuth
                     dirow.azimuth = expectedmire
                 except:
-                    logging.error('ReadAbsolute: Azimuth mark could not be interpreted, please provide it by option - azimuth = xxx.xxxx - %s' % filename)
+                    loggerlib.error('ReadAbsolute: Azimuth mark could not be interpreted, please provide it by option - azimuth = xxx.xxxx - %s' % filename)
                     return stream
             if headline[0] == ('# Abs-Pillar'):
                 headers['pillar'] = headline[1].strip()
@@ -440,12 +441,12 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 row.time = date2num(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"))
                 dirow.ftime.append(row.time)
             except:
-                logging.warning('ReadAbsolute: Check date format of f measurements in file %s' % filename)
+                loggerlib.warning('ReadAbsolute: Check date format of f measurements in file %s' % filename)
             try:
                 row.f = float(fstr[1]) + delf
                 dirow.f.append(row.f)
             except:
-                logging.warning('ReadAbsolute: Check data format in file %s' % filename)
+                loggerlib.warning('ReadAbsolute: Check data format in file %s' % filename)
             stream.add(row)
         elif numelements == 4:
             # Position mesurements
@@ -481,13 +482,13 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             try:
                 dirow.time[count] = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
-                logging.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                loggerlib.error('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
                 return stream
             try:
                 row.time = date2num(datetime.strptime(posstr[0],"%Y-%m-%d_%H:%M:%S"))
             except:
                 if not posstr[0] == 'Variometer':
-                    logging.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                    loggerlib.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
                 return stream
             try:
                 row.hc = float(posstr[1])/ang_fac
@@ -505,7 +506,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
                 row.di_inst = di_inst+'_'+fgsensor
                 row.f_inst = f_inst
             except:
-                logging.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
+                loggerlib.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
                 return stream
             count = count +1
             stream.add(row)
@@ -522,7 +523,7 @@ def readMAGPYNEWABS(filename, headonly=False, **kwargs):
             mustd = np.std([float(mirestr[2]),float(mirestr[3]),float(mirestr[6]),float(mirestr[7])])
             maxdev = np.max([mustd, mdstd])
             if abs(maxdev) > 0.01:
-                logging.warning('ReadAbsolute: Check miren readings in file %s' % filename)
+                loggerlib.warning('ReadAbsolute: Check miren readings in file %s' % filename)
         else:
             #print line
             pass
@@ -683,7 +684,7 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                     try:
                         row.time[count] = date2num(datetime.strptime(posstr[2] + '_' + posstr[3],"%Y-%m-%d_%H:%M:%S"))
                     except:
-                        logging.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                        loggerlib.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
                         pass
                     row.laser[count] = float(posstr[4])
                     row.res[count] = float(posstr[5])*scaleflux
@@ -712,7 +713,7 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                     try:
                         row.time[count] = date2num(datetime.strptime(posstr[2] + '_' + posstr[3],"%Y-%m-%d_%H:%M:%S"))
                     except:
-                        logging.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
+                        loggerlib.warning('ReadAbsolute: Check date format of measurements positions in file %s (%s)' % (filename,posstr[0]))
                         pass
                     row.res[count] = float(posstr[5])*scaleflux
                     row.opt[count] = float(posstr[6])
@@ -720,7 +721,7 @@ def readAUTODIF(filename, headonly=False, **kwargs):
                     row.hc[count] = float(posstr[8])+180 # 180 deg are necessary for the magpy routine
                     count = count +1
             except:
-                logging.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
+                loggerlib.warning('ReadAbsolute: Check general format of measurements positions in file %s' % filename)
                 return
     fh.close()
 
