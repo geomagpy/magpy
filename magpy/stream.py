@@ -89,28 +89,32 @@ magpyversion = __version__
 # import default methods
 from magpy.core.methods import *
 
+
 # verified packages of magpy main
-import numpy as np   # methods
-import copy # used only in core.activity for deepcopy of header  # methods
+#import numpy as np   # methods
+#import copy # used only in core.activity for deepcopy of header  # methods
+#import dateutil.parser as dparser   # methods
+
 import copyreg as copyreg
-import dateutil.parser as dparser   # methods
+import types
+from tempfile import NamedTemporaryFile
+import shutil
+from glob import glob, iglob, has_magic
+from urllib.request import urlopen, Request, ProxyHandler, install_opener, build_opener
+
 
 # not yet verified
 import pickle
-import types
 import struct
-import re   # methods
-import time, string, os, shutil
+#import re   # methods
+import time, string, shutil
 import fnmatch
-from tempfile import NamedTemporaryFile
-import warnings # methods
-from glob import glob, iglob, has_magic
+#import warnings # methods
 from itertools import groupby
 from operator import itemgetter
-import operator  # used for stereoplot legend
+#import operator  # used for stereoplot legend
 
 from urllib.parse import urlparse, urlencode
-from urllib.request import urlopen, Request, ProxyHandler, install_opener, build_opener
 from urllib.error import HTTPError
 import _thread
 from io import StringIO
@@ -125,11 +129,11 @@ from scipy.ndimage import filters
 import scipy.optimize as op
 import math
 
-ssl._create_default_https_context = ssl._create_unverified_context
+#ssl._create_default_https_context = ssl._create_unverified_context
 pyvers = 3
 PLATFORM = sys.platform
 from pylab import *
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta # methods
 
 
 # NetCDF  # move to respective library
@@ -158,6 +162,7 @@ def _pickle_method(method):
     return _unpickle_method, (func_name, obj, cls)
 
 def _unpickle_method(func_name, obj, cls):
+    func = None
     for cls in cls.mro():
        try:
            func = cls.__dict__[func_name]
@@ -343,7 +348,6 @@ DataStream  |  _remove_nancolumns  |  2.0.0  |        |  yes*          |        
 DataStream  |  _select_keys  |  2.0.0  |              |  yes           |                  |    |
 DataStream  |  _select_timerange  |  2.0.0  |         |  yes*          |                  |    |  write
 DataStream  |  _tau  |       2.0.0  |                 |  yes*          |                  |    |  filter
-DataStream  |  add  |        2.0.0  |                 |  yes*          |                  |    |  absolutes
 DataStream  |  apply_deltas  |  2.0.0  |              |  yes           |  yes             |    |  absolute_analysis
 DataStream  |  aic_calc   |  2.0.0  |                 |  yes           |                  |    |
 DataStream  |  amplitude  |  2.0.0  |                 |  yes           |  yes             |    |
@@ -362,7 +366,6 @@ DataStream  |  dwt_calc  |   2.0.0  |                 |  yes*          |        
 DataStream  |  end  |        2.0.0  |                 |  yes           |  yes             |    |
 DataStream  |  extend  |     2.0.0  |                 |  yes*          |                  |    |  read
 DataStream  |  extract  |    2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  extract_headerlist  |  2.0.0  |        |                |                  |    |
 DataStream  |  extrapolate  |  2.0.0  |               |  yes           |  yes             |  5.8    |
 DataStream  |  filter  |     2.0.0  |                 |  yes           |                  |    |
 DataStream  |  fillempty  |  2.0.0  |                 |  yes*          |                  |    |  sorting
@@ -391,7 +394,7 @@ DataStream  |  remove  |     2.0.0  |                 |  yes           |        
 DataStream  |  resample  |   2.0.0  |                 |  yes*          |                  |    |  filter
 DataStream  |  rotation  |   2.0.0  |                 |  yes           |  fail            |  5.2    |
 DataStream  |  samplingrate  |  2.0.0  |              |  yes           |  yes             |    |
-DataStream  |  simplebasevalue2stream  |  2.0.0  |    |  no            |  no              |    |
+DataStream  |  simplebasevalue2stream  |  2.0.0  |    |  yes*          |  yes*            |    | test_absolute_analysis
 DataStream  |  smooth  |     2.0.0  |                 |  yes           |                  |    |
 DataStream  |  sorting  |    2.0.0  |                 |  yes*          |                  |    |  read
 DataStream  |  start  |      2.0.0  |                 |  yes           |  yes             |    |
@@ -419,6 +422,8 @@ deprecated:
     - stream.flag()  -> core.flagging.apply_flags
     - stream.bindetector(self,key,text=None,**kwargs):
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
+    - stream.add
+    - stream.extract_headerlist
 
 
 removed:
@@ -515,6 +520,7 @@ CALLED BY:
     # ------------------------------------------------------------------------
 
 
+    @deprecated("Only used by old linestruct class - moved to absolutes and will be removed in 2.1")
     def add(self, datlst):
         """
         DESCRIPTION
@@ -599,6 +605,7 @@ CALLED BY:
         stream = self.copy()
         deltasapplied = False
         streamstart, streamend = stream.timerange()
+        deltdict = {}
 
         deltas = stream.header.get('DataDeltaValues', '')
         if deltas == '':
@@ -1035,6 +1042,7 @@ CALLED BY:
     EXAMPLE:
         data_stream._move_column('f', 'var1')
         '''
+        result = self
 
         if not key in KEYLIST:
             logger.error("_move_column: Column key %s not valid!" % key)
@@ -1044,8 +1052,8 @@ CALLED BY:
             logger.error("_move_column: Column key %s (to move %s to) is not valid!" % (put2key,key))
         if len(self.ndarray[0]) > 0:
             col = self._get_column(key)
-            self =self._put_column(col,put2key)
-        return self
+            result = self._put_column(col,put2key)
+        return result
 
 
     def _move_column(self, key, put2key):
@@ -1065,7 +1073,7 @@ CALLED BY:
     EXAMPLE:
         data_stream._move_column('f', 'var1')
         '''
-
+        result = self
         if not key in KEYLIST:
             logger.error("_move_column: Column key %s not valid!" % key)
         if key == 'time':
@@ -1074,9 +1082,9 @@ CALLED BY:
             logger.error("_move_column: Column key %s (to move %s to) is not valid!" % (put2key,key))
         if len(self.ndarray[0]) > 0:
             col = self._get_column(key)
-            self = self._put_column(col, put2key, columnname=self.header.get('col-{}'.format(key)), columnunit=self.header.get('unit-col-{}'.format(key)))
-            self = self._drop_column(key)
-        return self
+            result = self._put_column(col, put2key, columnname=self.header.get('col-{}'.format(key)), columnunit=self.header.get('unit-col-{}'.format(key)))
+            result = result._drop_column(key)
+        return result
 
     def _drop_column(self,key):
         """
@@ -1140,6 +1148,7 @@ CALLED BY:
     # ------------------------------------------------------------------------
 
     def _aic(self, signal, k, debug=None):
+        aicval = 0
         try:
             aicval = (k-1)* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
         except:
@@ -1322,6 +1331,7 @@ CALLED BY:
         used by k_fmi, variocorrection
 
         """
+        result = self
         ext = ''
         if len(self.ndarray[4]) > 0:
             ext = 'F'
@@ -1330,28 +1340,28 @@ CALLED BY:
 
         if len(self.ndarray[0]) > 0:
             if coordinate == 'xyz2hdz':
-                self = self.xyz2hdz()
-                self.header['DataComponents'] = 'HDZ'+ext
+                result = result.xyz2hdz()
+                result.header['DataComponents'] = 'HDZ'+ext
             elif coordinate == 'xyz2idf':
-                self = self.xyz2idf()
-                self.header['DataComponents'] = 'IDF'+ext
+                result = result.xyz2idf()
+                result.header['DataComponents'] = 'IDF'+ext
             elif coordinate == 'hdz2xyz':
-                self = self.hdz2xyz()
-                self.header['DataComponents'] = 'XYZ'+ext
+                result = result.hdz2xyz()
+                result.header['DataComponents'] = 'XYZ'+ext
             elif coordinate == 'idf2xyz':
-                self = self.idf2xyz()
-                self.header['DataComponents'] = 'XYZ'+ext
+                result = result.idf2xyz()
+                result.header['DataComponents'] = 'XYZ'+ext
             elif coordinate == 'idf2hdz':
-                self = self.idf2xyz()
-                self = self.xyz2hdz()
-                self.header['DataComponents'] = 'HDZ'+ext
+                result = result.idf2xyz()
+                result = result.xyz2hdz()
+                result.header['DataComponents'] = 'HDZ'+ext
             elif coordinate == 'hdz2idf':
-                self = self.hdz2xyz()
-                self = self.xyz2idf()
-                self.header['DataComponents'] = 'IDF'+ext
+                result = result.hdz2xyz()
+                result = result.xyz2idf()
+                result.header['DataComponents'] = 'IDF'+ext
             else:
                 print("_convertstream: unkown coordinate transform")
-        return self
+        return result
 
 
     def _det_trange(self, period):
@@ -1416,8 +1426,7 @@ CALLED BY:
         # Method only works with numerical columns and the time column
         searchlist = ['time']
         searchlist.extend(self.NUMKEYLIST)
-        if debug:
-            tstart = datetime.utcnow()
+        tstart = datetime.utcnow()
 
         array = [np.asarray([]) for elem in KEYLIST]
         if len(self) > 0 and key in searchlist:
@@ -1912,7 +1921,7 @@ CALLED BY:
         return func
 
 
-    def stream2dict(self, keys=['dx','dy','dz','df'], dictkey='DataBaseValues'):
+    def stream2dict(self, keys=None, dictkey='DataBaseValues'):
         """
         DESCRIPTION:
             Method to convert stream contents into a list and assign this to a dictionary.
@@ -1920,7 +1929,7 @@ CALLED BY:
             data time series (e.g. using NasaCDF). Multilayer storage as supported by NetCDF
             might provide better options to combine both data sets in one file.
         PARAMETERS:
-            stream		(DataStream) data containing e.g. basevalues
+            self		(DataStream) data containing e.g. basevalues
             keys		(list of keys) keys which are going to be stored
             dictkey		(string) name of the dictionaries key
         RETURNS:
@@ -1930,6 +1939,8 @@ CALLED BY:
             d = neicdata.stream2dict(['f','str3'],'Earthquakes')
         """
 
+        if not keys:
+            keys = ['dx','dy','dz','df']
         if not self.length()[0] > 0:
             return {}
 
@@ -1968,7 +1979,7 @@ CALLED BY:
             Method to convert the list stored in stream.header['DataBaseValue']
             to an absolute stream.
         PARAMETERS:
-            stream		(DataStream) stream with variation data
+            self		(DataStream) stream with variation data
             dictkey		(string) ususally 'DataBaseValues'
         RETURNS:
             stream		(DataStream) containing values of header info
@@ -2101,7 +2112,7 @@ CALLED BY:
         return streamlist
 
 
-    def bc(self, function=[], ctype=None, alpha=0.0, beta=0.0, level='preliminary',debug=False):
+    def bc(self, function=None, ctype=None, alpha=0.0, beta=0.0, level='preliminary',debug=False):
         """
         DEFINITION:
             Method to obtain baseline corrected data. By default flagged data is removed
@@ -2121,6 +2132,10 @@ CALLED BY:
         """
         logger.debug("BC: Performing baseline correction: Requires HEZ data.")
         logger.debug("    H magnetic North, E magnetic East, Z vertical downwards, all in nT.")
+
+        if not function:
+            function = []
+        keys = ['x', 'y', 'z']
 
         pierdata = False
         absinfostring = self.header.get('DataAbsInfo')
@@ -2292,7 +2307,9 @@ CALLED BY:
 
 
     @deprecated("replaced by core.flagging flag_binary")
-    def bindetector(self,key,flagnum=1,keystoflag=['x'],sensorid=None,text=None,**kwargs):
+    def bindetector(self,key,flagnum=1,keystoflag=None,sensorid=None,text=None,**kwargs):
+        if not keystoflag:
+            keystoflag = ['x']
         markallon = kwargs.get('markallon')
         markalloff = kwargs.get('markalloff')
         from magpy.core import flagging
@@ -2307,7 +2324,6 @@ CALLED BY:
             this value is considered as well.
             According to IM Technical Manual 5.0.0: F(scalar) = F(vector) - dF
         PARAMETERS:
-         Kwargs:
             - skipdelta   (bool)  if selecetd then an existing delta f is not accounted for
         RETURNS:
             - DataStream with f
@@ -2362,7 +2378,6 @@ CALLED BY:
             is set to 1.
 
         PARAMETERS:
-         Kwargs:
             - skipdelta   (bool)  if True then DataDeltaValues are ignored
         RETURNS:
             - DataStream with compensation values appliesd to xyz values
@@ -2444,7 +2459,7 @@ CALLED BY:
         return stream
 
 
-    def dailymeans(self, keys=['x','y','z','f'], offset = timedelta(hours=12), keepposition=False, **kwargs):
+    def dailymeans(self, keys=None, offset = timedelta(hours=12), keepposition=False, **kwargs):
         """
     DEFINITION:
         Calculates daily means of xyz components and their standard deviations. By default
@@ -2486,6 +2501,9 @@ CALLED BY:
         keys = keys[:4]
         poslst,deltaposlst = [],[]
         deltakeys = ['dx','dy','dz','df']
+        if not keys:
+            keys = ['x', 'y', 'z', 'f']
+        diff = 0
 
         for key in keys:
             poslst.append(KEYLIST.index(key))
@@ -2864,6 +2882,7 @@ CALLED BY:
         return stream
 
 
+    @deprecated("Still in use anywhere - better use string2dict or switch to json.loads")
     def extract_headerlist(self, element, parameter=1, year=None):
         """
         DESCRIPTION
@@ -2915,6 +2934,9 @@ CALLED BY:
         """
         skipst = False
         skipet = False
+        indbefore, indafter = 0, 0
+        xnew = []
+        xs = None
         n_harm = 10  # number of harmonics in fourier method
         starttime = testtime(starttime)
         endtime = testtime(endtime)
@@ -3188,6 +3210,7 @@ CALLED BY:
         if not missingdata:
             missingdata = 'conservative'
 
+        std = 0
         if debugmode:
             print ("filter: selected the following parameters: filter_type={}, filter_width={}, resample_period={}".format(filter_type,filter_width,resample_period))
 
@@ -3255,6 +3278,8 @@ CALLED BY:
         # Reading data of each selected column in stream
         # ########################
 
+        v = []
+        t = []
         if len(fstream.ndarray[0])>0:
             t = fstream.ndarray[0]
 
@@ -3430,6 +3455,7 @@ CALLED BY:
                 logger.warning('Fit: No valid data for key {}'.format(key))
                 break
             elif fitfunc == 'spline':
+                knots = []
                 try:
                     #logger.error('Interpolation: Testing knots (knotsteps = {}), (len(val) = {}'.format(knotstep, len(val)))
                     knots = np.array(arange(np.min(nt)+knotstep,np.max(nt)-knotstep,knotstep))
@@ -3440,9 +3466,7 @@ CALLED BY:
                     ti = interpolate.splrep(nt, val, k=3, s=0, t=knots)
                 except:
                     logger.error('Value error in fit function - likely reason: no valid numbers or too few numbers for fit: len(knots)={} > len(val)={}? '.format(len(knots),len(val)))
-                    print ("Checking", key, len(val), val, sp, knotstep, len(knots))
                     raise ValueError("Value error in fit function - not enough data or invalid numbers")
-                    return
                 f_fit = interpolate.splev(x,ti)
             elif fitfunc == 'poly':
                 logger.debug('Selected polynomial fit - amount of data: %d, time steps: %d, degree of fit: %d' % (len(nt), len(val), fitdegree))
@@ -3508,13 +3532,12 @@ CALLED BY:
         returnflaglist = kwargs.get('returnflaglist')
 
         from magpy.core import flagging
-        fl = flagging.flag_range(self,keys=keys, threshold=threshold, timerange=timerange, markall=markall)
+        fl = flagging.flag_outlier(self,keys=keys, threshold=threshold, timerange=timerange, markall=markall)
         return fl
 
 
     @deprecated("replaced by core.flagging apply_flags")
     def flag(self, flaglist, removeduplicates=False, debug=False):
-        from magpy.core import flagging
         data = flaglist.apply_flags(self, mode='insert')
         return data
 
@@ -3622,6 +3645,8 @@ CALLED BY:
         posstr = KEYLIST.index('str1')
         testx = []
         basex = np.asarray([])
+        arrayx = np.asarray([])
+        arrayy = np.asarray([])
 
         # required for addbaseline option
         if mode == 'addbaseline':
@@ -4009,16 +4034,18 @@ CALLED BY:
         stream = self.copy()
         prevtime = 0
 
-        if len(stream.ndarray[0]) > 0:
-            mintime,maxtime = stream._find_t_limits()
-            length = len(stream.ndarray[0])
-            sourcetime = stream.ndarray[0]
+        if not len(stream.ndarray[0]) > 0:
+            return stream
+        mintime,maxtime = stream._find_t_limits()
+        length = len(stream.ndarray[0])
+        sourcetime = stream.ndarray[0]
 
         if debug:
             print("Time range:", mintime, maxtime)
             print("Length, samp_per, and accuracy:", self.length()[0], newsps, accuracy)
 
         shift = 0
+        lenelem = 0
         # Get time diff and expected count
         timediff = (maxtime - mintime).total_seconds()
         expN = int(round(timediff/newsps))+1
@@ -4080,7 +4107,7 @@ CALLED BY:
         return stream.sorting()
 
 
-    def determine_rotationangles(self,referenceD=0.0,referenceI=None,keys = ['x','y','z'],debug=False):
+    def determine_rotationangles(self, referenceD=0.0, referenceI=None, keys = None, debug=False):
         """
         DESCRIPTION:
             "Estimating" the rotation angle alpha and beta relative to a magnetic
@@ -4140,7 +4167,9 @@ CALLED BY:
 
 
     @deprecated("Replaced by determine_rotationangles")
-    def get_rotation(self, referenceD=0.0, referenceI=None, keys = ['x','y','z'], debug=False):
+    def get_rotation(self, referenceD=0.0, referenceI=None, keys=None, debug=False):
+        if not keys:
+            keys = ['x', 'y', 'z']
         return self.get_rotation(referenceD=referenceD, referenceI=referenceI, keys=keys, debug=debug)
 
 
@@ -4430,6 +4459,7 @@ CALLED BY:
         indvar1 = KEYLIST.index('var1')
         indvar2 = KEYLIST.index('var2')
         ar = []
+        k = 0
         for elem in self.ndarray[indvar2]:
             for count,val in enumerate(newlst):
                 if elem > val:
@@ -4739,20 +4769,12 @@ CALLED BY:
     APPLICATION:
 
         """
-        ndtype = False
-        if len(self.ndarray[0]) > 0:
-            ndtype = True
-
         sel = self.copy()
-
 
         for key in factors:
             if key in KEYLIST:
-                if ndtype:
-                    ind = KEYLIST.index(key)
-                    val = sel.ndarray[ind]
-                else:
-                    val = sel._get_column(key)
+                ind = KEYLIST.index(key)
+                val = sel.ndarray[ind]
                 if key == 'time':
                     logger.error("factor: Multiplying time? That's just plain silly.")
                 else:
@@ -4762,10 +4784,7 @@ CALLED BY:
                     else:
                         newval = [elem ** factors[key] for elem in val]
                         logger.info('factor: Multiplied column %s by %s.' % (key, factors[key]))
-                if ndtype:
                     sel.ndarray[ind] = np.asarray(newval)
-                else:
-                    sel = sel._put_column(newval, key)
             else:
                 logger.warning("factor: Key '%s' not in keylist." % key)
 
@@ -4891,7 +4910,7 @@ CALLED BY:
         import magpy.core.plot as mp
         if keys == None:
             keys = []
-        mp.tsplot(self, variables=keys, **kwargs)
+        mp.tsplot(self, keys=keys, **kwargs)
 
 
     def randomdrop(self,percentage=None,fixed_indicies=None):
@@ -5106,8 +5125,6 @@ CALLED BY:
                 logger.warning("resample: Key %s not supported!" % key)
 
             index = KEYLIST.index(key)
-            if debugmode:
-                t1 = datetime.utcnow()
             try:
                 int_data = stwithnan.interpol([key],kind='linear')#'cubic')
                 int_func = int_data[0]['f'+key]
@@ -5161,10 +5178,6 @@ CALLED BY:
 
         t_list.insert(0, t0)
         array[0] = np.asarray(t_list)
-
-        if debugmode:
-            t2 = datetime.utcnow()
-            print ("Needed ", (t2-t1).total_seconds())
 
         logger.info("resample: Data resampling complete.")
         stwithnan.header['DataSamplingRate'] = period
@@ -5517,7 +5530,7 @@ CALLED BY:
 
     APPLICATION:
         """
-
+        vind = None
         if starttime and endtime:
             if testtime(starttime) > testtime(endtime):
                 raise ValueError("Starttime is larger than endtime.")
@@ -5734,7 +5747,7 @@ CALLED BY:
             if year:
                 blvyear = str(year)
             else:
-                blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),'%Y')
+                blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),"%Y")
             try:
                 filenamebegins = (self.header['StationID']).upper()+blvyear
             except:
@@ -5854,9 +5867,9 @@ CALLED BY:
         - ...           (bool) True if successful.
 
     EXAMPLE:
-        >>> stream.write('/home/user/data',
+        stream.write('/home/user/data',
                         format_type='IAGA')
-        >>> stringio = stream.write('StringIO',
+        stringio = stream.write('StringIO',
                         format_type='IAGA')
 
     APPLICATION:
@@ -6281,108 +6294,6 @@ CALLED BY:
         self.header['DataComponents'] = prevcomps.replace('HDZ','XYZ')
 
         return DataStream(self,self.header,self.ndarray)
-
-
-class PyMagLog(object):
-    """
-    Looging class for warning messages and analysis steps.
-    logger and warnings are lists of strings.
-    They contain full text information for file and screen output
-    """
-    def __init__(self, logger=[], warnings=[], process=[], proc_count=0):
-        self.logger = logger
-        self.warnings = warnings
-        self.process = process
-        self.proc_count = proc_count
-
-    def __getitem__(self, key):
-        return self.key
-
-    def addwarn(self, warnmsg):
-        self.warnings.append(warnmsg)
-
-    def addlog(self, logmsg):
-        self.logger.append(logmsg)
-
-    def addpro(self, promsg):
-        self.process.append(promsg)
-
-    def clearpro(self):
-        process = []
-
-    def clearlog(self):
-        logger = []
-
-    def clearwarn(self):
-        warnings = []
-
-    def addcount(self, num, maxnum):
-        """
-        creates an integer number relative to maxnum ranging from 0 to 100
-        assuming num starting at zero
-        """
-        self.proc_count = int(np.round(num*100/maxnum))
-
-    def clearcount(self):
-        self.proc_count = 0
-
-    def _removeduplicates(self,content):
-        return list(set(content))
-
-    """
-    def sendLogByMail(self,loglist,**kwargs):
-        smtpserver = kwargs.get('smtpserver')
-        sender = kwargs.get('sender')
-        user = kwargs.get('user')
-        pwd = kwargs.get('pwd')
-        destination = kwargs.get('destination')
-        subject = kwargs.get('subject')
-
-        if not smtpserver:
-            smtpserver = 'smtp.internet.at'
-        if not sender:
-           sender = 'frau.musterfrau@internet.at'
-        if not destination:
-            destination = ['fuer.mich@my.institution.at']
-        if not user:
-            user = "FrauMusterfrau"
-        if not pwd:
-            pwd = "HelloWorld"
-        if not subject:
-            subject= 'MagPy Log from %s' % datetime.utcnow()
-
-        # typical values for text_subtype are plain, html, xml
-        text_subtype = 'plain'
-
-        content = '\n'.join(''.join(line) for line in loglist)
-
-        try:
-            msg = MIMEText(content, text_subtype)
-            msg['Subject']= subject
-            msg['From'] = sender # some SMTP servers will do this automatically, not all
-            smtp = SMTP()
-            smtp.set_debuglevel(False)
-            smtp.connect(smtpserver, 587)
-            smtp.ehlo()
-            smtp.starttls()
-            smtp.ehlo()
-            smtp.login(user, pwd)
-
-            try:
-                smtp.sendmail(sender, destination, msg.as_string())
-            finally:
-                smtp.close()
-
-        except Exception as exc:
-            raise ValueError( "mail failed; %s" % str(exc) ) # give a error message
-    """
-
-    def combineWarnLog(self,warning,log):
-        comlst = ['Warning:']
-        comlst.extend(self._removeduplicates(warning))
-        comlst.extend(['Non-critical info:'])
-        comlst.extend(self._removeduplicates(log))
-        return comlst
 
 
 class LineStruct(object):

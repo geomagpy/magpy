@@ -32,7 +32,7 @@ except:
 def _checklogfile(logfile):
     data=[]
     try:
-       lfile = file(logfile,"r")
+       lfile = open(logfile,"r")
        line=lfile.readline()
        while line!="":
           print(line)
@@ -334,7 +334,6 @@ def ftpdirlist (**kwargs):
     """
     Getting directory listing of ftp server
     """
-    plog = PyMagLog()
 
     ftppath = kwargs.get('ftppath')
     myproxy = kwargs.get('myproxy')
@@ -351,13 +350,13 @@ def ftpdirlist (**kwargs):
             files=site.nlst()
         except ftplib.error_perm as resp:
             if str(resp) == "550 No files found":
-                plog.addwarn("no files in this directory")
+                print("no files in this directory")
             else:
                 raise
             pass
         site.quit()
     except:
-        plog.addwarn("FTP check failed")
+        print("FTP check failed")
         return
 
     return files
@@ -369,7 +368,6 @@ def ftpremove (**kwargs):
     """
     Removing files from ftp server
     """
-    plog = PyMagLog()
     ftppath = kwargs.get('ftppath')
     filestr = kwargs.get('filestr')
     myproxy = kwargs.get('myproxy')
@@ -392,11 +390,11 @@ def ftpremove (**kwargs):
         try:
             site.delete(filestr)
         except:
-            plog.addwarn('File not present so far')
+            print('File not present so far')
             pass
         site.quit()
     except:
-        plog.addwarn('FTP file removal failed')
+        print('FTP file removal failed')
         pass
     return
 
