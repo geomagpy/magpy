@@ -9,7 +9,7 @@ import json
 from matplotlib.dates import date2num
 import numpy as np
 
-from magpy.stream import KEYLIST, DataStream, loggerlib
+from magpy.stream import DataStream, loggerlib
 from magpy.core.methods import test_timestring
 
 def isJSON(filename):
@@ -36,7 +36,7 @@ def readJSON(filename, headonly=False, **kwargs):
     """
     stream = DataStream()
     header = {}
-    array = [[] for key in KEYLIST]
+    array = [[] for key in DataStream().KEYLIST]
 
     with open(filename, 'r') as jsonfile:
         dataset = json.load(jsonfile)

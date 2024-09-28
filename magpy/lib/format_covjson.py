@@ -16,7 +16,7 @@ from datetime import datetime
 from matplotlib.dates import date2num, num2date
 import numpy as np
 
-from magpy.stream import KEYLIST, NUMKEYLIST, DataStream, loggerlib
+from magpy.stream import DataStream, loggerlib
 from magpy.core.methods import test_timestring
 
 
@@ -123,7 +123,7 @@ def readCOVJSON(filename, headonly=False, **kwargs):
 
     """
     header = {}
-    array = [[] for key in KEYLIST]
+    array = [[] for key in DataStream().KEYLIST]
 
     print ("Reading coverage json")
 
@@ -158,7 +158,7 @@ def readCOVJSON(filename, headonly=False, **kwargs):
 
     numcnt = 0
     strcnt = 1
-    AVAILKEYS = NUMKEYLIST
+    AVAILKEYS = DataStream().NUMKEYLIST
     ELEMENTSTODO = []
     fixedgroups = {'x' : ['x','X','H','I'], 'y' : ['y','Y','D','E'], 'z' : ['z','Z'], 'f' : ['f','F','S'], 'df' : ['g','G']}
     # Firstly assign data from fixed groups, then fill rest

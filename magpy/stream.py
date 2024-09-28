@@ -11,7 +11,6 @@ import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 import logging
 import os
-import sys
 import tempfile
 
 # ----------------------------------------------------------------------------
@@ -45,7 +44,7 @@ def setup_logger(name, warninglevel=logging.WARNING, logfilepath=path_to_log,
         if os.access(logfile, os.W_OK):
             pass
         else:
-            for count in range (1,100):
+            for count in range(1,100):
                 logfile=os.path.join(logfilepath,'magpy{:02}.log'.format(count))
                 value = os.access(logfile, os.W_OK)
                 if value or not os.path.isfile(logfile):
@@ -89,51 +88,50 @@ magpyversion = __version__
 # import default methods
 from magpy.core.methods import *
 
-
 # verified packages of magpy main
-#import numpy as np   # methods
-#import copy # used only in core.activity for deepcopy of header  # methods
-#import dateutil.parser as dparser   # methods
-
 import copyreg as copyreg
 import types
 from tempfile import NamedTemporaryFile
 import shutil
 from glob import glob, iglob, has_magic
-from urllib.request import urlopen, Request, ProxyHandler, install_opener, build_opener
-
-
-# not yet verified
-import pickle
-import struct
-#import re   # methods
-import time, string, shutil
-import fnmatch
-#import warnings # methods
-from itertools import groupby
-from operator import itemgetter
-#import operator  # used for stereoplot legend
-
-from urllib.parse import urlparse, urlencode
-from urllib.error import HTTPError
-import _thread
-from io import StringIO
-import ssl
-import scipy as sp
-from scipy import interpolate
-from scipy import stats
-from scipy import signal
-from scipy.interpolate import UnivariateSpline
-from scipy.interpolate import CubicSpline
-from scipy.ndimage import filters
-import scipy.optimize as op
+from urllib.request import urlopen, ProxyHandler, install_opener, build_opener
+from scipy import signal, fftpack, interpolate, integrate
 import math
 
+# not yet verified
+#import numpy as np   # methods
+#import copy # used only in core.activity for deepcopy of header  # methods
+#import dateutil.parser as dparser   # methods
+#import pickle
+#import struct
+#import re   # methods
+#import time
+#import string
+#import fnmatch
+#import warnings # methods
+#from itertools import groupby
+#from operator import itemgetter
+#import operator  # used for stereoplot legend
+#from urllib.parse import urlparse, urlencode
+#from urllib.error import HTTPError
+#import _thread
+#from io import StringIO
+#from urllib.request import Request
+#import ssl
 #ssl._create_default_https_context = ssl._create_unverified_context
-pyvers = 3
-PLATFORM = sys.platform
+#import scipy as sp
+#from scipy import interpolate
+#from scipy.interpolate import UnivariateSpline
+#from scipy import stats
+#from scipy import signal
+#from scipy.ndimage import filters
+#import scipy.optimize as op
+#pyvers = 3
+#PLATFORM = sys.platform
+
 from pylab import *
-from datetime import datetime, timedelta # methods
+from datetime import datetime
+from datetime import timedelta
 
 
 # NetCDF  # move to respective library
@@ -178,6 +176,7 @@ copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 # Part 2: Define Dictionaries
 # ----------------------------------------------------------------------------
 
+"""
 KEYLIST = ['time',  # Timestamp (date2num object)
                 'x',  # X or I component of magnetic field (float)
                 'y',  # Y or D component of magnetic field (float)
@@ -204,6 +203,7 @@ KEYLIST = ['time',  # Timestamp (date2num object)
                 'sectime'  # Secondary time variable (date2num)
                 ]
 NUMKEYLIST = KEYLIST[1:16]
+"""
 
 # Empty key values at initiation of stream:
 KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),
@@ -511,7 +511,7 @@ CALLED BY:
         self.header = header if header else {}
         self.container = container if container else []
         if ndarray is None:
-            ndarray = np.array([np.asarray([]) for elem in KEYLIST])
+            ndarray = np.array([np.asarray([]) for elem in self.KEYLIST])
         self.ndarray = ndarray
         self.progress = 0
 
@@ -3018,7 +3018,7 @@ CALLED BY:
                     ar = ar.astype(float)
                     # identify and drop nans
                     nonnaninds = np.logical_not(np.isnan(ar))
-                    natural = CubicSpline(xs[nonnaninds], ar[nonnaninds], bc_type='natural')
+                    natural = interpolate.CubicSpline(xs[nonnaninds], ar[nonnaninds], bc_type='natural')
                     add_boundary_knots(natural)
                     vals = natural(xnew)
                     if indbefore - 1 > 0:
@@ -4308,7 +4308,7 @@ CALLED BY:
             mval = val[msk]
             mt = t[msk]
             array[ind] = val
-            dval = sp.integrate.cumtrapz(mval,mt)
+            dval = integrate.cumtrapz(mval,mt)
             dval = np.insert(dval, 0, 0) # Prepend 0 to maintain original length
             for n in nind:
                 dval = np.insert(dval, n, np.nan) # Insert nans at original position
@@ -6796,11 +6796,10 @@ def saveflags(mylist=None,path=None, overwrite=False):
     RETURNS:
         - True if succesful otherwise False
     EXAMPLE:
-        >>> saveflags(flaglist,'/my/path/myfile.pkl')
+        saveflags(flaglist,'/my/path/myfile.pkl')
 
     """
     print("Saving flaglist ...")
-    import json
     if not mylist:
         print("error 1")
         return False
@@ -7260,7 +7259,7 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
             if len(array[i]) > 0 and len(colb) > 0  and key in keys:
                 # eventually insert or replace
                 if mode == 'replace':
-                    np.put(array[i], indices, colb)
+                    np.put(np.asarray(array[i]), indices, colb)
                 else:
                     # add some flagdict containing inserted ranges
                     # get indices of nan values in stream_a
@@ -7271,9 +7270,9 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
                         if not (indices[0] == 0):
                             # stream b start after beginning of a
                             # insind are relative to the length of colb
-                            np.put(array[i], insind, colb)
+                            np.put(np.asarray(array[i]), insind, colb)
                         else:
-                            np.put(array[i], insind, colb[insind])
+                            np.put(np.asarray(array[i]), insind, colb[insind])
                         # get the ranges of inserted indices
                         indgroups = group_indices(insind)
                         # from indgroups a flagging dict can be created
@@ -7283,7 +7282,7 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
                         pass
             elif len(colb) > 0  and key in keys:
                 array[i] = np.asarray([np.nan]*len(timea))
-                np.put(array[i],indices,colb)
+                np.put(np.asarray(array[i]),indices,colb)
                 if headerb.get('col-{}'.format(key),''):
                     header['col-{}'.format(key)] = headerb.get('col-{}'.format(key),'')
                 if headerb.get('unit-col-{}'.format(key),''):
@@ -7346,7 +7345,6 @@ def determine_time_shift(array1, array2, col2compare='f', method='correlate', de
     ar2 = func2[0].get('f{}'.format(col2compare))(i2)
     ar2 = ar2 - np.nanmean(ar2)
 
-    from scipy import signal, fftpack
     if method == 'fft' or method == 'all':
         A = fftpack.fft(ar1)
         B = fftpack.fft(ar2)
@@ -7494,6 +7492,7 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
                 indtib = numtimeb.searchsorted(numcommon)
                 #t5 = datetime.utcnow()
 
+                foundnan = False
                 if len(indtia) == len(indtib):
                     nanind = []
                     for key in keys:
@@ -7550,6 +7549,7 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
                 # limit time range to valued covered by the interpolation function
                 indtia = [elem for elem in indtia if funcstart < numtimeafull[elem] < funcend]
 
+                foundnan = False
                 if len(function) > 0:
                     nanind = []
                     for key in keys:
@@ -7753,24 +7753,24 @@ if __name__ == '__main__':
     def create_minteststream(startdate=datetime(2022, 11, 1), addnan=True):
         c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
         l = 32 * 1440
-        import scipy
+        #import scipy
         teststream = DataStream()
         array = [[] for el in DataStream().KEYLIST]
-        win = scipy.signal.windows.hann(60)
+        win = signal.windows.hann(60)
         a = np.random.uniform(20950, 21000, size=int(l / 2))
         b = np.random.uniform(20950, 21050, size=int(l / 2))
-        x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        x = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
         if addnan:
             x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
         array[1] = x[1440:-1440]
         a = np.random.uniform(1950, 2000, size=int(l / 2))
         b = np.random.uniform(1900, 2050, size=int(l / 2))
-        y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        y = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
         if addnan:
             y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
         array[2] = y[1440:-1440]
         a = np.random.uniform(44300, 44400, size=l)
-        z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+        z = signal.convolve(a, win, mode='same') / sum(win)
         array[3] = z[1440:-1440]
         array[4] = np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440]
         array[0] = np.asarray([startdate + timedelta(minutes=i) for i in range(0, len(array[1]))])
@@ -7818,6 +7818,13 @@ if __name__ == '__main__':
 
 
     teststream = create_secteststream()
+    fstream = DataStream()
+    trimstream = DataStream()
+    orgstream = DataStream()
+    rotstream = DataStream()
+    intstream = DataStream()
+    filtstream = DataStream()
+    func = None
     # Do indents correctly already
     ok = True
     errors = {}
@@ -7975,8 +7982,8 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR get_gaps of stream.")
             try:
                 ts = datetime.utcnow()
-                starttime, endtime = teststream._find_t_limits()
-                starttime, endtime = teststream.timerange()
+                starttime1, endtime1 = teststream._find_t_limits()
+                starttime2, endtime2 = teststream.timerange()
                 te = datetime.utcnow()
                 successes['timerange'] = (
                     "Version: {}, timerange: {}".format(magpyversion, (te - ts).total_seconds()))
@@ -7985,8 +7992,8 @@ if __name__ == '__main__':
                 print(datetime.utcnow(), "--- ERROR with timerange")
             try:
                 ts = datetime.utcnow()
-                keys = teststream._get_key_headers()
-                keys = teststream.variables()
+                keys1 = teststream._get_key_headers()
+                keys2 = teststream.variables()
                 print("Printing keys, variables and units:")
                 teststream._print_key_headers()
                 te = datetime.utcnow()
