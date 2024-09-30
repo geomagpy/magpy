@@ -43,13 +43,13 @@ python environments.
 
 ### 1.1 Prerequisites
 
-MagPy requires Python3.7 or newer. MagPy makes use of a number of packages of which the following are 
+MagPy requires Python3.7 or newer. MagPy makes use of a number of modules of which the following are 
 essential for its basic functionality: 
 numpy
 scipy
 matplotlib
 
-Optional but recommended python packages are:
+Optional but recommended python modules are:
 cdflib : support of ImagCDF, the INTERMAGNET one-second format, and internal MagPy CDF archives)
 jupyter-notebook : coding
 pandas : timeseries manipulation (flagging and activity analysis)
@@ -78,7 +78,7 @@ Switch into this environment:
 
         (base)$ conda activate jnmagpy
 
-Install some basic packages packages for full MagPy support:
+Install some basic packages for full MagPy support:
 
         (jnmagpy)$ conda install pymysql
 
@@ -579,22 +579,147 @@ Various datasets from multiple data streams will be plotted above one another. P
 
 ## 5. Timeseries methods
 
-### 5.1 Filtering and smoothing data
+Lets first load some example data set to demonstrate the application of basic data stream timeseries manipulation methods.
 
-MagPy's `filter` uses the settings recommended by [IAGA]/[INTERMAGNET]. Ckeck `help(data.filter)` for further options and definitions of filter types and pass bands.
+        data = read(example5)
+        mp.tsplot(data, height=2)
 
-First, get the sampling rate before filtering in seconds:
+### 5.1 Get some basic data characteristics and commonly used manipulations
 
-        print("Sampling rate before [sec]:", cleandata.samplingrate())
+#### 5.1.1 Basic data characteristics
 
-Filter the data set with default parameters (`filter` automatically chooses the correct settings depending on the provided sanmpling rate):
+Lets firstly check what data is actually contained in the data stream.
+If you want to now which column keys are used in the current data set use
 
-        filtereddata = cleandata.filter()
+        print (data.variables())
 
-Get sampling rate and filtered data after filtering (please note that all filter information is added to the data's meta information dictionary (data.header):
+Some basic column information, particluarly column name and units as asigned to each column key can be obtained by
 
-        print("Sampling rate after [sec]:", filtereddata.samplingrate())
-        print("Filter and pass band:", filtereddata.header.get('DataSamplingFilter',''))
+        print (data.get_key_name('x'))
+        print (data.get_key_unit('x'))
+
+The following command will give you a an overview about used keys and their asigned column names and units
+
+        data._print_key_headers()
+
+The amount of data in each column needs to be identical. You can check the length of all columns using
+
+        print(data.length())
+
+As all columns require the either the same length or zero length, you simply check the length of the time column
+for the total amount of individual timesteps. This will be returned by the classic len command
+
+        print(len(data))
+
+
+#### 5.1.2 Modifying data columns
+
+The following methods allow you modifying individual data columns, move them to other keys or add some new information
+into your data set. Lets deal with another example for the following commands and extract data from key 'f' into a simple 
+numpy array:
+
+        fdata = read(example2)
+        fcolumn = fdata._get_column('f')
+        print (len(fcolumn))
+
+Now we create a new data column filled with random values and insert it into key 'x'
+
+        xcolumn = np.random.uniform(20950, 21000, size=len(fcolumn))
+        fdata = fdata._put_column(x,'x')
+
+Asign some variable name and unit to the new column and plot the new data set
+
+        fdata.header['col-x'] = 'Random'
+        fdata.header['unit-col-x'] = 'arbitrary'
+        mp.tsplot(fdata, height=2)
+
+Other possibly commands to move, copy or drop individual columns are as follwos
+
+        fdata = fdata._copy_column('x','var1')
+        fdata = fdata._move_column('var1','var2')
+        fdata = fdata._drop_column('var2')
+
+Creating a data set with selected keys can also be accomplished by
+
+        fdata = fdata._select_keys(['f'])
+
+Columns consisting solely of NaN values con be dropped using
+
+        fdata = fdata._remove_nancolumns()
+
+A random subselection of data can be obtained using `randomdrop`. The percentage defines the amount of data to be reomved.
+You can also define indicies which cannot be randomly dropped, the first and last point in outr example below.
+
+        dropstream = teststream.randomdrop(percentage=50,fixed_indicies=[0,len(teststream)-1])
+
+For later we will add a secondary time column to data1
+
+        tcolumn = fdata._get_column('time')
+        newtcolumn = np.asarray([element+timedelta(minutes=15) for element in tcolumn])
+        fdata = fdata._put_column(newtcolumn,'sectime')
+        print (fdata.variables())
+
+
+#### 5.1.3 All about time
+
+To extract time constrains use the following methods:
+Covered time range
+
+        print (data.timerange())
+        print (data.start())
+        print (data.end())
+
+The sampling period in seconds can be obtained as follows
+
+        print (data.samplingrate())
+
+Whenever you load data sets with MagPy the data will be sorted according to the primary time column
+You can manually repeat that anytime using
+
+        data = data.sorting()
+
+If you want to select specific time ranges from the already opened data set you can use the `trim`method
+
+        trimmeddata = data.trim(starttime='2018-08-02T08:00:00', endtime='2018-08-02T09:00:00')
+        print(" Timesteps after trimming:", len(trimmeddata))
+
+The trim method will create a new datastream containing only data from the selected time window. There is another
+mainly internally used method `_select_timerange` which will do exatcly the same as trim but returns only the
+data array (ndarray) without any header information 
+
+        ar = data._select_timerange(starttime='2018-08-02T08:00:00', endtime='2018-08-02T09:00:00')
+        print(" Datatype after select_timerange:", type(ar))
+        print(" Timesteps after _select_timerange:", len(ar[0]))
+
+Inversly you can drop a certain time range out of the data set by
+
+        ddata = data.remove(starttime='2018-08-02T08:00:00', endtime='2018-08-02T09:00:00')
+
+Please note that the remove command currently removes one point before starttime and endtime. This behavior
+will be corrected in a future version.
+
+Finally you can trim the given stream also by percentage or amount. This is done using the `cut`method and its
+options. By default `cut` is using percentage. The following command will cutout the last 50% of data
+
+        cutdata = fdata.cut(50,kind=0,order=0)
+        print(cutdata.timerange())
+
+Choosing option kind=1 will switch from percentage to amount and order=1 will take data from the beginning 
+of the data set
+
+        cutdata = fdata.cut(10,kind=1,order=0)
+        print(cutdata.timerange())
+
+The default key list of any MagPy data stream supports two time columns 'time' and 'sec_time'. The secondary time column
+might be used to store an alternative time reading i.e. GPS dates in the primary columns and NTP time in the secondary
+one. You can switch this columns using a single command.
+
+        shifted_fdata = fdata.use_sectime()
+
+If you want to get the line index number of a specific time step in your data series you can get it by
+
+        index = fdata.findtime("2018-08-02T22:22:22")
+        print(index)
 
 ### 5.2 Coordinate transformation and rotations
 
@@ -1004,13 +1129,13 @@ LabelGroups: 0 - normal data, 1 - disturbance to be removed, 2 - signal to be ke
 
 Marking or labelling certain signals within data sets is supported since the first versions of MagPy. MagPy2.x comes
 with a number of reorganizations and new functions to assist the observers. In section 6.1 we will firstly give you 
-some instructions to some underlying routines of the new flagging package. Then, starting in section 6.2, we will 
+some instructions to some underlying routines of the new flagging module. Then, starting in section 6.2, we will 
 focus on flagging methods which can be directly applied to data sets in order to obtain specific information on 
 contained signals.
 
-## 6.1 Basics of the flagging package
+## 6.1 Basics of the flagging module
 
-Data flagging is handled by magpy.core.flagging package.
+Data flagging is handled by magpy.core.flagging module.
 
         from magpy.core import flagging
 
@@ -1100,7 +1225,7 @@ Spikes are identified by a well known and commonly used technique for outlier de
 timerange across the sequence we determine the inner quartile range IQR for the sequence. Any datapoint exceeding
 the IQR by a given multiplier as defined in *threshold* will be termed "outlier". 
 
-Import the necessary packages:
+Import the necessary modules:
 
         from magpy.stream import *
         from magpy.core import plot as mp
@@ -1134,7 +1259,7 @@ This results in Figure ![6.2.](./magpy/doc/fl_outlier.png "Removing outlier from
 ### 6.3 Flagging ranges
 
 You can flag ranges either in time or value by using the `flag_range` method.
-Import the necessary packages:
+Import the necessary modules:
 
         from magpy.stream import *
         from magpy.core import plot as mp
@@ -1180,7 +1305,7 @@ This results in the following plot ![6.3.](./magpy/doc/fl_range.png "Flagging ra
 You can flag data based on binary states. This method can be used i.e. to flag data if a certain switch, stored
 as binary state in some data column, is turned on.
 
-Import the necessary packages:
+Import the necessary modules:
 
         from magpy.stream import *
         from magpy.core import plot as mp
@@ -1229,7 +1354,7 @@ By default any flagging information is directly related to the sensor informatio
 flagging has been performed. Sometimes however it is necessary to apply flags identified in one data set on data 
 from another independent data set. A typical example would be the quake information as follows. 
 
-Import the necessary packages:
+Import the necessary modules:
 
         from magpy.stream import *
         from magpy.core import plot as mp
@@ -1277,7 +1402,7 @@ Result: ![6.5.](./magpy/doc/fl_quakes.png "Quakes flagged as flagtype 4 - to be 
 
 ### 6.6 Saving and loading flagging data
 
-Firstly we will import some necessary packages:
+Firstly we will import some necessary modules:
 
         from magpy.stream import *
         from magpy.core import flagging
@@ -1304,7 +1429,7 @@ supply option "overwrite=True".
 
 #### 6.6.2 Loading flagging objects
 
-In order to load flagging data use the `load` method of the flagging package
+In order to load flagging data use the `load` method of the flagging module
 
         fl = flagging.load("/tmp/myflags.json")
 
@@ -1360,7 +1485,7 @@ to the observer for final verification.
 Assigning flag labels without AI can be done by the flag_ultra probability technique. This is only useful for 
 testing purposes.  
 
-TODO - Import packages:
+TODO - Import modules:
 
         from magpy.stream import *
         from magpy.core import plot as mp
@@ -1381,11 +1506,11 @@ Show original data in red and cleand data in grey in a single plot:
 The first sections will give you a quick overview about the application of methods related to DI-Flux analysis, 
 determination und usage of baseline values (basevalues), and adopted baselines. The theoretical background and 
 details on these application are found in section 7.7. Methods and classes for basevalue DI analysis are
-contained in the `absolutes` package:
+contained in the `absolutes` module:
 
         from magpy import absolutes as di
 
-For the examples and instructions below we will import a few additional packages and methods:
+For the examples and instructions below we will import a few additional modules and methods:
 
         from magpy.stream import example6a, example5, DataStream, read
         from magpy.core.methods import *
@@ -1424,7 +1549,7 @@ In this section we will describe in detail how a DI analysis is preformed and wh
 productive data analysis, however, there is a single method implemented, which comprises all of the following
 procedures. Please move to section 7.2 for a description of the productive method.
 
-Lets first import the required packages for DI/absolute analysis and some exanmple files and helper methods:
+Lets first import the required modules for DI/absolute analysis and some exanmple files and helper methods:
 
         import magpy.absolutes as di
         from magpy.stream import read, DataStream(), example6a, example5
@@ -1969,7 +2094,7 @@ The following sources and variations should affect the baseline/variation:
 
 Our general approach relies on a frequency separation. Higher frequencies are removed and lower frequencies define the Sq variation. This is a general 
 feature of many sq-variation separation techniques and also forms the basis of our approach. For frequency separation we are decomposing the original signal
-into "frequency" bands using an empirical mode decomposition technique (EMD). For this purpose we are using the python package [emd](https://emd.readthedocs.io/en/stable/index.html). Geomagnetic data is non-stationary, highly dynamic, and contains
+into "frequency" bands using an empirical mode decomposition technique (EMD). For this purpose we are using the python module [emd](https://emd.readthedocs.io/en/stable/index.html). Geomagnetic data is non-stationary, highly dynamic, and contains
 non-sinusoidal contributions. In comparison to other Fourier-transform based decomposition techniques, which basically determine a set of sinusoidal basis functions, EMD is perfectly suited for such data sets and isolates a small number of temporally adaptive basis functions and derive dynamics in frequency and amplitude directly from them.
 These adaptive basis functions are called Intrinsic Mode Functions (IMF's).
 
@@ -1996,7 +2121,7 @@ storm-times. Details in 8.3.2
 
 ##### Empirical mode decomposition
 
-The emd python package is used to determine IMF's from any given input signal. For the following example we are analyzing 3 months of definitive h data containing
+The emd python module is used to determine IMF's from any given input signal. For the following example we are analyzing 3 months of definitive h data containing
 various different disturbances from weak geomagnetic storms. Each decomposition step, "sift" is removing complexity from the original data curve. 
 The original data is show in the upper diagram of Figure ![8.1.](./magpy/doc/sqbase-emd.png "Emperical mode decomposition") Altogether 16 sifts were found containing decreasing complex signal contributions. 
 Summing up all these IMF curves will exactly reconstruct the original data, another important feature of EMD.  
@@ -2120,7 +2245,7 @@ Please refer to official MySQL documentations for details and further commands.
          mysql> GRANT ALL PRIVILEGES ON #DB-NAME.* TO '#USERNAME'@'%' IDENTIFIED BY '#PASSWORD';
 
 Thats it! Everything else can now be done using MagPy's database support class, which is based on the pymysql 
-package. To enable database support import the following package 
+module. To enable database support import the following module 
 
         from magpy.core import database
 
@@ -2354,7 +2479,7 @@ Similar reminders to fill out complete header information will be shown for othe
 
 #### 10.4.2 Providing location data
 
-Providing location data usually requires information on the reference system (ellipsoid,...). By default MagPy assumes that these values are provided in WGS84/WGS84 reference system. In order to facilitate most easy referencing and conversions, MagPy supports [EPSG] codes for coordinates. If you provide the geodetic references as follows, and provided that the [proj4] Python package is available, MagPy will automatically convert location data to the requested output format (currently WGS84).
+Providing location data usually requires information on the reference system (ellipsoid,...). By default MagPy assumes that these values are provided in WGS84/WGS84 reference system. In order to facilitate most easy referencing and conversions, MagPy supports [EPSG] codes for coordinates. If you provide the geodetic references as follows, and provided that the [proj4] Python module is available, MagPy will automatically convert location data to the requested output format (currently WGS84).
 
         mydata.header['DataAcquisitionLongitude'] = -34949.9
         mydata.header['DataAcquisitionLatitude'] = 310087.0
@@ -2444,7 +2569,7 @@ If provided criteria are invalid, then the logfile is changed accordingly. This 
 
 ### 12.14 Data acquisition support
 
-MagPy contains a couple of packages which can be used for data acquisition, collection and organization. These methods are primarily contained in two applications: [MARTAS] and [MARCOS]. MARTAS (Magpy Automated Realtime Acquisition System) supports communication with many common instruments (e.g. GSM, LEMI, POS1, FGE, and many non-magnetic instruments) and transfers serial port signals to [WAMP] (Web Application Messaging Protocol), which allows for real-time data access using e.g. WebSocket communication through the internet. MARCOS (Magpy's Automated Realtime Collection and Organistaion System) can access such real-time streams and also data from many other sources and supports the observer by storing, analyzing, archiving data, as well as monitoring all processes. Details on these two applications can be found elsewhere.
+MagPy contains a couple of modules which can be used for data acquisition, collection and organization. These methods are primarily contained in two applications: [MARTAS] and [MARCOS]. MARTAS (Magpy Automated Realtime Acquisition System) supports communication with many common instruments (e.g. GSM, LEMI, POS1, FGE, and many non-magnetic instruments) and transfers serial port signals to [WAMP] (Web Application Messaging Protocol), which allows for real-time data access using e.g. WebSocket communication through the internet. MARCOS (Magpy's Automated Realtime Collection and Organistaion System) can access such real-time streams and also data from many other sources and supports the observer by storing, analyzing, archiving data, as well as monitoring all processes. Details on these two applications can be found elsewhere.
 
 
 ### 12.15 Graphical user interface
@@ -2464,7 +2589,7 @@ MagPy supports the exchange of data with ObsPy, the seismological toolbox. Data 
         magpydata = obspy2magpy(seeddata,keydict={'ObsPyColName': 'x'})
         mp.plotSpectrogram(magpydata,['x'])
 
-Possible issues with MagPy and ObsPy on the same machine as obspy requires specific, eventually conflicting scipy/numpy packages:
+Possible issues with MagPy and ObsPy on the same machine as obspy requires specific, eventually conflicting scipy/numpy modules:
 If you observe such problems, consider installing ObsPy via APT
 
   https://github.com/obspy/obspy/wiki/Installation-on-Linux-via-Apt-Repository

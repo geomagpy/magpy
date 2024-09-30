@@ -704,7 +704,7 @@ CALLED BY:
         return len(self.ndarray[0])
 
 
-    @deprecated("Useless method")
+    @deprecated("Clean header is useless - just asign an empty dict to self.header")
     def clear_header(self):
         """
         Remove header information
@@ -734,6 +734,7 @@ CALLED BY:
                     else:
                         array[idx] = ndarray[idx].astype(object)
             self.ndarray = np.asarray(array, dtype=object)
+
 
     @deprecated("Used only by old flagging routines")
     def union(self,column):
@@ -1214,15 +1215,13 @@ CALLED BY:
             raise ValueError("Column key not valid")
         key_ind = KEYLIST.index(key)
         t_ind = KEYLIST.index('time')
+        result = None
+        tresult = None
 
         if len(self.ndarray[0]) > 0:
             result = np.nanmax(self.ndarray[key_ind].astype(float))
             ind = np.nanargmax(self.ndarray[key_ind].astype(float))
             tresult = self.ndarray[t_ind][ind]
-        else:
-            elem = max(self, key=lambda tmp: eval('tmp.'+key))
-            result = eval('elem.'+key)
-            tresult = elem.time
 
         if returntime:
             return result, tresult
@@ -1235,15 +1234,13 @@ CALLED BY:
             raise ValueError("Column key not valid")
         key_ind = KEYLIST.index(key)
         t_ind = KEYLIST.index('time')
+        result = None
+        tresult = None
 
         if len(self.ndarray[0]) > 0:
             result = np.nanmin(self.ndarray[key_ind].astype(float))
             ind = np.nanargmin(self.ndarray[key_ind].astype(float))
             tresult = self.ndarray[t_ind][ind]
-        else:
-            elem = min(self, key=lambda tmp: eval('tmp.'+key))
-            result = eval('elem.'+key)
-            tresult = elem.time
 
         if returntime:
             return result, tresult
@@ -2459,18 +2456,11 @@ CALLED BY:
         return stream
 
 
-    def dailymeans(self, keys=None, offset = timedelta(hours=12), keepposition=False, **kwargs):
+    def dailymeans(self, keys=None, offset=timedelta(hours=12), keepposition=False, percentage=90, **kwargs):
         """
     DEFINITION:
         Calculates daily means of xyz components and their standard deviations. By default
         numpy's mean and std methods are applied even if only two data sets are available.
-
-        TODO ---
-        If less then three data sets are provided, twice the difference between two values
-        is used as an conservative proxy of uncertainty. I only on value is available, then
-        the maximum uncertainty of the collection is assumed. This behavior can be changed
-        by keyword arguments.
-        TODO ---
 
         An outputstream is generated which containes basevalues in columns
         x,y,z and uncertainty values in dx,dy,dz
@@ -2482,6 +2472,7 @@ CALLED BY:
     Variables
     	- keys: 	(list) provide up to four keys which are used in columns x,y,z
         - offset:       (float) offset as timedelta(seconds=xx)
+        - percentage: (float) default is 90
     Kwargs:
         - none
 
@@ -2497,13 +2488,12 @@ CALLED BY:
 
         """
 
-        percentage = 90
-        keys = keys[:4]
         poslst,deltaposlst = [],[]
         deltakeys = ['dx','dy','dz','df']
         if not keys:
             keys = ['x', 'y', 'z', 'f']
         diff = 0
+        keys = keys[:4]
 
         for key in keys:
             poslst.append(KEYLIST.index(key))
@@ -5230,6 +5220,7 @@ CALLED BY:
             return self
 
         logger.info('rotation: Applying rotation matrix.')
+        data = self.copy()
 
         """
         a[0][0] = cos(p)*cos(b);
@@ -5250,39 +5241,23 @@ CALLED BY:
         ind2 = KEYLIST.index(keys[1])
         ind3 = KEYLIST.index(keys[2])
 
-        if len(self.ndarray[0]) > 0:
-            if len(self.ndarray[ind1]) > 0 and len(self.ndarray[ind2]) > 0 and len(self.ndarray[ind3]) > 0:
+        if len(data.ndarray[0]) > 0:
+            if len(data.ndarray[ind1]) > 0 and len(data.ndarray[ind2]) > 0 and len(data.ndarray[ind3]) > 0:
                 ra = np.pi*alpha/(180.*ang_fac)
                 rb = np.pi*beta/(180.*ang_fac)
-                xar = self.ndarray[ind1].astype(float)*np.cos(rb)*np.cos(ra)-self.ndarray[ind2].astype(float)*np.sin(ra)+self.ndarray[ind3].astype(float)*np.sin(rb)*np.cos(ra)
+                xar = data.ndarray[ind1].astype(float)*np.cos(rb)*np.cos(ra)-data.ndarray[ind2].astype(float)*np.sin(ra)+data.ndarray[ind3].astype(float)*np.sin(rb)*np.cos(ra)
 
-                yar = self.ndarray[ind1].astype(float)*np.cos(rb)*np.sin(ra)+self.ndarray[ind2].astype(float)*np.cos(ra)+self.ndarray[ind3].astype(float)*np.sin(rb)*np.sin(ra)
+                yar = data.ndarray[ind1].astype(float)*np.cos(rb)*np.sin(ra)+data.ndarray[ind2].astype(float)*np.cos(ra)+data.ndarray[ind3].astype(float)*np.sin(rb)*np.sin(ra)
 
-                zar = -self.ndarray[ind1].astype(float)*np.sin(rb)+self.ndarray[ind3].astype(float)*np.cos(rb)
+                zar = -data.ndarray[ind1].astype(float)*np.sin(rb)+data.ndarray[ind3].astype(float)*np.cos(rb)
 
-                self.ndarray[ind1] = xar
-                self.ndarray[ind2] = yar
-                self.ndarray[ind3] = zar
+                data.ndarray[ind1] = xar
+                data.ndarray[ind2] = yar
+                data.ndarray[ind3] = zar
 
-        """
-        for elem in self:
-            ra = np.pi*alpha/(180.*ang_fac)
-            rb = np.pi*beta/(180.*ang_fac)
-            # Testing the conservation of f ##### Error corrected in May 2014 by leon
-            #fbefore = sqrt(elem.x**2+elem.y**2+elem.z**2)
-            xs = elem.x*np.cos(rb)*np.cos(ra)-elem.y*np.sin(ra)+elem.z*np.sin(rb)*np.cos(ra)
-            ys = elem.x*np.cos(rb)*np.sin(ra)+elem.y*np.cos(ra)+elem.z*np.sin(rb)*np.sin(ra)
-            zs = -elem.x*np.sin(rb)+elem.z*np.cos(rb)
-            #fafter = sqrt(xs**2+ys**2+zs**2)
-            #print "f:", fbefore,fafter,fbefore-fafter
-
-            elem.x = xs
-            elem.y = ys
-            elem.z = zs
-        """
         logger.info('rotation: Finished reorientation.')
 
-        return self
+        return data
 
 
     @deprecated("Replaced by twice as fast _select_keys")
@@ -6447,6 +6422,7 @@ class LineStruct(object):
         Rotation matrix for ratating x,y,z to new coordinate system xs,ys,zs using angles alpha and beta
         alpha is the horizontal rotation in degree, beta the vertical
         """
+        data = self.copy()
         unit = kwargs.get('unit')
         if unit == 'gon':
             ang_fac = 400./360.
@@ -6454,25 +6430,25 @@ class LineStruct(object):
             ang_fac = np.pi/180.
         else:
             ang_fac = 1.
-        xval = self.x
-        yval = self.y
-        zval = self.z
+        xval = data.x
+        yval = data.y
+        zval = data.z
 
         ra = np.pi*alpha/(180.*ang_fac)
         rb = np.pi*beta/(180.*ang_fac)
-        xs = self.x*np.cos(rb)*np.cos(ra)-self.y*np.sin(ra)+self.z*np.sin(rb)*np.cos(ra)
-        ys = self.x*np.cos(rb)*np.sin(ra)+self.y*np.cos(ra)+self.z*np.sin(rb)*np.sin(ra)
-        zs = self.x*np.sin(rb)+self.z*np.cos(rb)
+        xs = data.x*np.cos(rb)*np.cos(ra)-data.y*np.sin(ra)+data.z*np.sin(rb)*np.cos(ra)
+        ys = data.x*np.cos(rb)*np.sin(ra)+data.y*np.cos(ra)+data.z*np.sin(rb)*np.sin(ra)
+        zs = data.x*np.sin(rb)+data.z*np.cos(rb)
 
         xs2 = xval*np.cos(rb)*np.cos(ra)-yval*np.sin(ra)+zval*np.sin(rb)*np.cos(ra)
         ys2 = xval*np.cos(rb)*np.sin(ra)+yval*np.cos(ra)+zval*np.sin(rb)*np.sin(ra)
         zs2 = xval*np.sin(rb)+zval*np.cos(rb)
 
-        self.x = xs
-        self.y = ys
-        self.z = zs
+        data.x = xs
+        data.y = ys
+        data.z = zs
 
-        return self
+        return data
 
 
 # -------------------
@@ -8266,23 +8242,6 @@ if __name__ == '__main__':
         - obspy2magpy              -> core.conversions (untested)
 
     TODO: check validity of gaussian filter (as period treatment might have changed from day to second treatment) 
-
-
-        Testing multiple stream methods:
-        - average_streams (to be written)
-
-
-        # Flagging related
-        - stream.bindetector(self,key,text=None,**kwargs):
-        - stream.extractflags()
-        - stream.flagfast()
-        - stream.flag_range()
-        - stream.flag()
-        - stream.flag_outlier(self, **kwargs):
-        - stream.flag_stream(self, key, flag, comment, startdate, enddate=None, samplingrate):
-        - stream.flaglistadd(self, flaglist, sensorid, keys, flagnumber, comment, startdate, enddate=None):
-        - stream.remove_flagged(self, **kwargs):
-        - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
 
 
             """

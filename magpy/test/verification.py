@@ -10,11 +10,12 @@ from magpy.core import database
 def create_verificationstream(startdate=datetime(2022, 11, 22)):
     teststream = DataStream()
     array = [[] for el in DataStream().KEYLIST]
-    array[1] = [20000]*720
-    array[1].extend([22000]*720)
+    array[1] = [20000] * 720
+    array[1].extend([22000] * 720)
     array[1] = np.asarray(array[1])
     array[2] = np.asarray([0] * 1440)
     array[3] = np.asarray([20000] * 1440)
+    array[6] = np.asarray([np.nan] * 1440)
     # array[4] = np.sqrt((x*x) + (y*y) + (z*z))
     array[0] = np.asarray([startdate + timedelta(minutes=i) for i in range(0, len(array[1]))])
     array[KEYLIST.index('sectime')] = np.asarray(
@@ -23,13 +24,17 @@ def create_verificationstream(startdate=datetime(2022, 11, 22)):
     teststream.header['col-x'] = 'X'
     teststream.header['col-y'] = 'Y'
     teststream.header['col-z'] = 'Z'
+    teststream.header['col-t2'] = 'Text'
     teststream.header['unit-col-x'] = 'nT'
     teststream.header['unit-col-y'] = 'nT'
     teststream.header['unit-col-z'] = 'nT'
+    teststream.header['unit-col-t2'] = 'degC'
     teststream.header['DataComponents'] = 'XYZ'
     return teststream
 
+
 teststream = create_verificationstream()
+
 
 class TestStream(unittest.TestCase):
 
@@ -46,8 +51,9 @@ class TestStream(unittest.TestCase):
         meand2 = hdz.mean('y')
         xyz = hdz.hdz2xyz()
         # test for floating point accuracy
-        val1 = [np.round(teststream.ndarray[1][0], 8), np.round(teststream.ndarray[2][0],8), np.round(teststream.ndarray[3][0],8)]
-        val2 = [np.round(xyz.ndarray[1][0],8), np.round(xyz.ndarray[2][0],8), np.round(xyz.ndarray[3][0],8)]
+        val1 = [np.round(teststream.ndarray[1][0], 8), np.round(teststream.ndarray[2][0], 8),
+                np.round(teststream.ndarray[3][0], 8)]
+        val2 = [np.round(xyz.ndarray[1][0], 8), np.round(xyz.ndarray[2][0], 8), np.round(xyz.ndarray[3][0], 8)]
         self.assertEqual(meand1, meand2)
         self.assertEqual(teststream.length(), xyz.length())
         self.assertEqual(val1, val2)
@@ -70,19 +76,15 @@ class TestStream(unittest.TestCase):
 
     def test_get_key_headers(self):
         keys = teststream._get_key_headers()
-        self.assertEqual(keys, ['x', 'y', 'z', 'sectime'])
-
-    def test_get_key_names(self):
-        keysdic = teststream._get_key_names()
-        self.assertEqual(keysdic.get('X'), 'x')
+        self.assertEqual(keys, ['x', 'y', 'z', 't2', 'sectime'])
 
     def test_get_max(self):
         max = teststream._get_max('x')
         self.assertEqual(max, 22000)
 
     def test_get_min(self):
-        max = teststream._get_min('x')
-        self.assertEqual(max, 20000)
+        min = teststream._get_min('x')
+        self.assertEqual(min, 20000)
 
     def test_get_variance(self):
         var = teststream._get_variance('x')
@@ -103,21 +105,23 @@ class TestStream(unittest.TestCase):
         self.assertEqual(len(pustream._get_column('var1')), 1440)
 
     def test_remove_nancolumns(self):
-        self.assertEqual(2, 1)
+        before = teststream._get_key_headers()
+        nanstream = teststream._remove_nancolumns()
+        after = nanstream._get_key_headers()
+        val = [x for x in before if not x in after]
+        self.assertEqual(val, ['t2'])
 
     def test_select_keys(self):
-        xystream = teststream._select_keys(keys=['x','y'])
+        xystream = teststream._select_keys(keys=['x', 'y'])
         self.assertEqual(len(xystream.ndarray[1]), 1440)
         self.assertEqual(len(xystream.ndarray[2]), 1440)
         self.assertEqual(len(xystream.ndarray[3]), 0)
 
     def test_select_timerange(self):
-        self.assertEqual(2, 1)
+        ar = teststream._select_timerange(starttime='2022-11-22T08:00:00', endtime='2022-11-22T09:00:00')
+        self.assertEqual(len(ar[0]), 60)
 
     def test_tau(self):
-        self.assertEqual(2, 1)
-
-    def test_add(self):
         self.assertEqual(2, 1)
 
     def test_aic_calc(self):
@@ -134,15 +138,15 @@ class TestStream(unittest.TestCase):
         ddv1 = "st_690.0,f_-1.48,time_timedelta(seconds=-3.0),et_17532.0;st_17532.0,f_-1.571,time_timedelta(seconds=-3.0),et_17788.5;st_17788.5,f_-1.571,time_timedelta(seconds=1.50),et_17897.0;st_17897.0,f_-1.631,time_timedelta(seconds=-0.30),et_18262.0;st_18262.0,f_-1.616,time_timedelta(seconds=-0.28),et_18628.0;st_18628.0,f_-1.609,time_timedelta(seconds=-0.28),et_18993.0;st_18993.0,f_-1.655,time_timedelta(seconds=-0.33),et_19358.0;st_19358.0,f_-1.729,time_timedelta(seconds=-0.28)"
         fstream.header["DataDeltaValues"] = ddv1
         res1 = fstream.apply_deltas()
-        diff1 = fstream.mean('f')-res1.mean('f')
-        self.assertEqual(np.round(diff1,3), 1.655)
+        diff1 = fstream.mean('f') - res1.mean('f')
+        self.assertEqual(np.round(diff1, 3), 1.655)
         # new type
         print("apply_deltas: testing with new database input type")
         ddv2 = '{"0": {"st": "1971-11-22 00:00:00", "f": -1.48, "time": "timedelta(seconds=-3.0)", "et": "2018-01-01 00:00:00"}, "1": {"st": "2018-01-01 00:00:00", "f": -1.571, "time": "timedelta(seconds=-3.0)", "et": "2018-09-14 12:00:00"}, "2": {"st": "2018-09-14 12:00:00", "f": -1.571, "time": "timedelta(seconds=1.50)", "et": "2019-01-01 00:00:00"}, "3": {"st": "2019-01-01 00:00:00", "f": -1.631, "time": "timedelta(seconds=-0.30)", "et": "2020-01-01 00:00:00"}, "4": {"st": "2020-01-01 00:00:00", "f": -1.616, "time": "timedelta(seconds=-0.28)", "et": "2021-01-01 00:00:00"}, "5": {"st": "2021-01-01 00:00:00", "f": -1.609, "time": "timedelta(seconds=-0.28)", "et": "2022-01-01 00:00:00"}, "6": {"st": "2022-01-01 00:00:00", "f": -1.655, "time": "timedelta(seconds=-0.33)", "et": "2023-01-01 00:00:00"}, "7": {"st": "2023-01-01 00:00:00", "f": -1.729, "time": "timedelta(seconds=-0.28)"}}'
         fstream.header["DataDeltaValues"] = ddv2
         res2 = fstream.apply_deltas()
-        diff2 = fstream.mean('f')-res2.mean('f')
-        self.assertEqual(np.round(diff2,3), 1.655)
+        diff2 = fstream.mean('f') - res2.mean('f')
+        self.assertEqual(np.round(diff2, 3), 1.655)
 
     def test_baseline(self):
         self.assertEqual(2, 1)
@@ -154,13 +158,25 @@ class TestStream(unittest.TestCase):
         fstream = teststream.calc_f()
         self.assertEqual(len(fstream.ndarray[4]), 1440)
         fval = fstream.ndarray[4][0]
-        self.assertEqual(fval, np.sqrt(20000*20000 + 20000*20000))
+        self.assertEqual(fval, np.sqrt(20000 * 20000 + 20000 * 20000))
 
     def test_compensation(self):
-        self.assertEqual(2, 1)
+        teststream.header['DataCompensationX'] = -10
+        teststream.header['DataCompensationY'] = 0
+        teststream.header['DataCompensationZ'] = 10
+        compstream = teststream.compensation()
+        minx = compstream._get_min('x')
+        minz = compstream._get_min('z')
+        self.assertEqual(minx, 30000)
+        self.assertEqual(minz, 10000)
 
     def test_cut(self):
-        self.assertEqual(2, 1)
+        cutstream = teststream.cut(50, kind=0, order=0)
+        self.assertEqual(len(cutstream), 720)
+        self.assertEqual(cutstream.start(), datetime(2022, 11, 22, 12, 0))
+        cutstream = teststream.cut(10, kind=1, order=1)
+        self.assertEqual(len(cutstream), 10)
+        self.assertEqual(cutstream.start(), datetime(2022, 11, 22, 0, 0))
 
     def test_dailymeans(self):
         dmt = teststream.calc_f()
@@ -168,7 +184,12 @@ class TestStream(unittest.TestCase):
         self.assertEqual(len(dm), 1)
 
     def test_delta_f(self):
-        self.assertEqual(2, 1)
+        fstream = teststream.calc_f()
+        dfstream = fstream.delta_f()
+        mindf = dfstream._get_min('df')
+        maxdf = dfstream._get_min('df')
+        self.assertEqual(mindf, maxdf)
+        self.assertEqual(mindf, 0.0)
 
     def test_determine_rotationangles(self):
         cpstream = teststream.copy()  # rotation is destructive
@@ -177,9 +198,9 @@ class TestStream(unittest.TestCase):
         meani = idfstream.mean('x')
         meand = idfstream.mean('y')
         rotstream = cpstream.rotation(alpha=45, beta=45)  # v in z upwards
-        alpha, beta = rotstream.determine_rotationangles(referenceD=meand,referenceI=meani)
-        self.assertEqual(np.round(alpha,1), -45)
-        self.assertEqual(np.round(beta,1), -45)
+        alpha, beta = rotstream.determine_rotationangles(referenceD=meand, referenceI=meani)
+        self.assertEqual(np.round(alpha, 1), -45)
+        self.assertEqual(np.round(beta, 1), -45)
 
     def test_dict2stream(self):
         self.assertEqual(2, 1)
@@ -187,39 +208,34 @@ class TestStream(unittest.TestCase):
     def test_differentiate(self):
         self.assertEqual(2, 1)
 
-    def test_dropempty(self):
-        self.assertEqual(2, 1)
-
     def test_dwt_calc(self):
         self.assertEqual(2, 1)
 
     def test_end(self):
         end = teststream.end()
-        self.assertEqual(end, datetime(2022,11,22,23,59))
+        self.assertEqual(end, datetime(2022, 11, 22, 23, 59))
 
     def test_extend(self):
-        self.assertEqual(2, 1)
+        a = teststream.cut(25)
+        b = teststream.cut(25, order=1)
+        a.extend([], b.header, b.ndarray)
+        self.assertEqual(len(a), 720)
 
     def test_extract(self):
-        extstream = teststream.extract("x" , 20000, ">")
+        extstream = teststream.extract("x", 20000, ">")
         self.assertEqual(len(extstream), 720)
-
-    def test_extract_headerlist(self):
-        self.assertEqual(2, 1)
 
     def test_extrapolate(self):
         t1 = teststream.trim(starttime='2022-11-22T09:00:00', endtime='2022-11-22T14:00:00')
-        ex1 = t1.extrapolate(starttime='2022-11-22T07:00:00', endtime='2022-11-22T16:00:00',method='spline')
+        ex1 = t1.extrapolate(starttime='2022-11-22T07:00:00', endtime='2022-11-22T16:00:00', method='spline')
         self.assertEqual(len(ex1), 538)
 
     def test_filter(self):
         self.assertEqual(2, 1)
 
-    def test_fillempty(self):
-        self.assertEqual(2, 1)
-
     def test_findtime(self):
-        self.assertEqual(2, 1)
+        index = teststream.findtime("2022-11-22T12:00:00")
+        self.assertEqual(index, 720)
 
     def test_fit(self):
         self.assertEqual(2, 1)
@@ -237,24 +253,19 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_get_key_name(self):
-        self.assertEqual(2, 1)
+        kn = teststream.get_key_name('x')
+        self.assertEqual(kn, 'X')
 
     def test_get_key_unit(self):
-        self.assertEqual(2, 1)
+        ku = teststream.get_key_unit('x')
+        self.assertEqual(ku, 'nT')
 
     def test_get_sampling_period(self):
-        self.assertEqual(2, 1)
+        sr = teststream.get_sampling_period()
+        self.assertEqual(np.round(sr, 1), 60.0)
 
     def test_harmfit(self):
         self.assertEqual(2, 1)
-
-    def test_hdz2xyz(self):
-        # tested by _conversion
-        self.assertEqual(1, 1)
-
-    def test_idf2xyz(self):
-        # tested by _conversion
-        self.assertEqual(1, 1)
 
     def test_integrate(self):
         self.assertEqual(2, 1)
@@ -278,25 +289,29 @@ class TestStream(unittest.TestCase):
         self.assertEqual(2, 1)
 
     def test_multiply(self):
-        mstream = teststream.multiply({'x':2})
+        mstream = teststream.multiply({'x': 2})
         pmeanx = mstream.mean('x')
         self.assertEqual(pmeanx, 42000)
 
     def test_offset(self):
         ostream = teststream.copy()
-        ostream = ostream.offset({'x':10},starttime='2022-11-22T00:00:00',endtime='2022-11-22T12:00:00')
+        ostream = ostream.offset({'x': 10}, starttime='2022-11-22T00:00:00', endtime='2022-11-22T12:00:00')
         diff = ostream.mean('x') - teststream.mean('x')
-        self.assertEqual(np.round(diff,1), 5)
-        self.assertEqual(ostream.ndarray[1][0], teststream.ndarray[1][0]+10)
-        ostream = ostream.offset({'time':'timedelta(seconds=-0.5)'},starttime='2022-01-01',endtime='2023-01-01')
+        self.assertEqual(np.round(diff, 1), 5)
+        self.assertEqual(ostream.ndarray[1][0], teststream.ndarray[1][0] + 10)
+        ostream = ostream.offset({'time': 'timedelta(seconds=-0.5)'}, starttime='2022-01-01', endtime='2023-01-01')
         st, et = ostream.timerange()
         self.assertEqual(st, testtime('2022-11-21T23:59:59.5'))
 
     def test_randomdrop(self):
-        self.assertEqual(2, 1)
+        dropstream = teststream.randomdrop(percentage=50, fixed_indicies=[0, len(teststream) - 1])
+        self.assertEqual(len(dropstream), 720)
+        self.assertEqual(dropstream.end(), datetime(2022, 11, 22, 23, 59))
 
     def test_remove(self):
-        self.assertEqual(2, 1)
+        # One point too much in the beginning
+        dstream = teststream.remove(starttime='2022-11-22T00:02:00', endtime='2022-11-22T01:00:00')
+        self.assertEqual(len(teststream), len(dstream) + 62)
 
     def test_resample(self):
         self.assertEqual(2, 1)
@@ -307,7 +322,7 @@ class TestStream(unittest.TestCase):
         cpstream = teststream.copy()
         rotstream = cpstream.rotation(alpha=45, beta=135)
         meanz = rotstream.mean('z')
-        self.assertEqual(np.sqrt(pmeanx**2 + pmeanz**2), np.abs(meanz))
+        self.assertEqual(np.sqrt(pmeanx ** 2 + pmeanz ** 2), np.abs(meanz))
 
     def test_samplingrate(self):
         # Tests also _get_sampling_period
@@ -324,7 +339,7 @@ class TestStream(unittest.TestCase):
 
     def test_start(self):
         start = teststream.start()
-        self.assertEqual(start, datetime(2022,11,22))
+        self.assertEqual(start, datetime(2022, 11, 22))
 
     def test_steadyrise(self):
         self.assertEqual(2, 1)
@@ -336,19 +351,20 @@ class TestStream(unittest.TestCase):
         t1 = teststream.trim(starttime='2022-11-22T09:00:00', endtime='2022-11-22T14:00:00')
         self.assertEqual(len(t1), 300)
 
+    def test_timerange(self):
+        t1, t2 = teststream.timerange()
+        self.assertEqual(t1, datetime(2022, 11, 22))
+        self.assertEqual(t2, testtime("2022-11-22T23:59:00"))
+
     def test_use_sectime(self):
         self.assertEqual(2, 1)
 
+    def test_variables(self):
+        v = teststream.variables()
+        self.assertEqual(v, ['x', 'y', 'z', 't2', 'sectime'])
+
     def test_write(self):
         self.assertEqual(2, 1)
-
-    def test_xyz2hdz(self):
-        # tested by _conversion
-        self.assertEqual(1, 1)
-
-    def test_xyz2idf(self):
-        # tested by _conversion
-        self.assertEqual(1, 1)
 
 
 class TestFlagging(unittest.TestCase):
