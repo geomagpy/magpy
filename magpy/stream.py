@@ -3346,7 +3346,10 @@ CALLED BY:
         if resample:
             if debugmode:
                 print("Resampling: ", keys, resample_period)
+                print(" length before resampling: ", len(fstream))
             fstream = fstream.resample(keys,period=resample_period,offset=resampleoffset)
+            if debugmode:
+                print(" length after resampling: ", len(fstream))
 
         # ########################
         # Update header information
@@ -4334,7 +4337,7 @@ CALLED BY:
                         list[2]:        (float) date2num value of maximum timestamp
 
     EXAMPLE:
-        int_data = pos_data.interpol(['f'])
+        int_func = pos_data.interpol(['f'])
 
     APPLICATION:
         used by resample, subtract and merge_streams, as well as some func2stream methods
@@ -4996,7 +4999,7 @@ CALLED BY:
 
         if len(cutstream.ndarray[0]) > 0:
             timearray = self.ndarray[0]
-            st = (np.abs(timearray-starttime)).argmin() - 1
+            st = (np.abs(timearray-starttime)).argmin()
             ed = (np.abs(timearray-endtime)).argmin() + 1
             if starttime < cutstream.ndarray[0][0]:
                 st = 0
@@ -5107,7 +5110,7 @@ CALLED BY:
 
         # res stream with new t_list is used for return
         array=[np.asarray([]) for elem in KEYLIST]
-        t0 = t_list[0] - timedelta(seconds=period)
+        t0 = t_list[0] #- timedelta(seconds=period)
         for key in keys:
             if debugmode:
                 print ("Resampling:", key)

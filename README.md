@@ -566,20 +566,23 @@ Many more examples are provided in chapter 5:
 
 ### 4.3 Data from multiple streams
 
-Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array of keys:
+Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array 
+of keys:
 
         fig, ax = mp.tsplot([data1,data2],[['x','y','z'],['f']])
 
 ### 4.4 Getting an options overview
 
-Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array of keys:
+Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array 
+of keys:
 
         help(mp.tsplot)
 
 
 ## 5. Timeseries methods
 
-Lets first load some example data set to demonstrate the application of basic data stream timeseries manipulation methods.
+Lets first load some example data set to demonstrate the application of basic data stream timeseries manipulation 
+methods.
 
         data = read(example5)
         mp.tsplot(data, height=2)
@@ -615,8 +618,8 @@ for the total amount of individual timesteps. This will be returned by the class
 #### 5.1.2 Modifying data columns
 
 The following methods allow you modifying individual data columns, move them to other keys or add some new information
-into your data set. Lets deal with another example for the following commands and extract data from key 'f' into a simple 
-numpy array:
+into your data set. Lets deal with another example for the following commands and extract data from key 'f' into a 
+simple numpy array:
 
         fdata = read(example2)
         fcolumn = fdata._get_column('f')
@@ -627,7 +630,8 @@ Now we create a new data column filled with random values and insert it into key
         xcolumn = np.random.uniform(20950, 21000, size=len(fcolumn))
         fdata = fdata._put_column(x,'x')
 
-Asign some variable name and unit to the new column and plot the new data set
+Assign some variable name and unit to the new column and plot the new data set as shown in 
+Figure ![5.1.2](./magpy/doc/ts_512.png "Adding a additional data column to a datastream")
 
         fdata.header['col-x'] = 'Random'
         fdata.header['unit-col-x'] = 'arbitrary'
@@ -647,8 +651,8 @@ Columns consisting solely of NaN values con be dropped using
 
         fdata = fdata._remove_nancolumns()
 
-A random subselection of data can be obtained using `randomdrop`. The percentage defines the amount of data to be reomved.
-You can also define indicies which cannot be randomly dropped, the first and last point in outr example below.
+A random subselection of data can be obtained using `randomdrop`. The percentage defines the amount of data to be 
+removed. You can also define indicies which cannot be randomly dropped, the first and last point in our example below.
 
         dropstream = teststream.randomdrop(percentage=50,fixed_indicies=[0,len(teststream)-1])
 
@@ -691,12 +695,11 @@ data array (ndarray) without any header information
         print(" Datatype after select_timerange:", type(ar))
         print(" Timesteps after _select_timerange:", len(ar[0]))
 
-Inversly you can drop a certain time range out of the data set by
+Inversely you can drop a certain time range out of the data set by
 
         ddata = data.remove(starttime='2018-08-02T08:00:00', endtime='2018-08-02T09:00:00')
 
-Please note that the remove command currently removes one point before starttime and endtime. This behavior
-will be corrected in a future version.
+Please note that the remove command removes all timesteps including the given starttime and endtime. 
 
 Finally you can trim the given stream also by percentage or amount. This is done using the `cut`method and its
 options. By default `cut` is using percentage. The following command will cutout the last 50% of data
@@ -723,38 +726,186 @@ If you want to get the line index number of a specific time step in your data se
 
 ### 5.2 Coordinate transformation and rotations
 
-Assuming vector data in columns x,y,z you can freely convert between xyz, hdz, and idf coordinates:
+#### 5.2.1 Rotations
 
-        cleandata = cleandata.xyz2hdz()
+Lets first look at our example data set. The example is provided in HEZ components. In order to convert HEZ into XYZ 
+components we simply need to rotate the data set by the declination value. You can achieve that by using the `rotation` 
+method
 
-The summary method `_convertstream` can also be used by giving the conversion type as option. The following conversions are possible: 'xyz2hdz','hdz2xyz','xyz2idf','idf2xyz':
+        xyzdata = data.rotation(alpha=4.3)
+        xyzdata.header['DataComponents'] = 'XYZ'
+        xyzdata.header['col-x'] = 'X'
+        xyzdata.header['col-y'] = 'Y'
+        xyzdata.header['col-z'] = 'Z'
+        mp.tsplot(xyzdata, height=2)
 
-        xyzstream = hdzstream._convertstream('hdz2xyz')
+Vectorial data can be rotated using the `rotation` method by keeping F constant. Such rotations require just two angles 
+which are referred to as *alpha* for rotations in the declination plane and *beta* for rotations in the inclination 
+plane. Assume a simple vector x=4, y=0 and z=4. Rotation by alpha=45° will lead to x=2,y=2,z=4, a clockwise rotation.
+Rotating by beta=45° will rotate F into the X-Y plane with x=4, y=4, z=0. Please note: you need to supply xyz data when 
+applying the `rotation` method.
 
-The vectorial data columns as defined by the keys 'x','y','z' need to filled accordingly. i.e. a XYZ data stream has X in key 'x', Y in key 'y' and Z in key 'z', all with the same unit, usually nT in magnetism.
-A HDZ data stream as H assigned to key 'x', D in key 'y' and Z in key 'z'. H and Z are provided with the same unit (nT) and D has to be provided in degrees.decimals.
-IDF data contains I in key 'x', D in key 'y' and F in key 'z', with I and D provided in degree.decimals.
+        rotdata = data.rotation(alpha=45,beta=45)
 
-Vectorial data can be rotated using the `rotation` method by keeping F constant. Such rotations require just two angles which are referred to as *alpha* for rotations
-in the declination plane and *beta* for rotations in the inclination plane. Assume a simple vector x=4, y=0 and z=4. Rotation by alpha=45° will lead to x=2,y=2,z=4, a clockwise rotation.
-Rotating further by beta=45° will rotate F into the X-Y plane with x=4, y=4, z=0. Please note: you need to supply xyz data when applying the `rotation` method.
+#### 5.2.2 Transforming coordinate systems
 
-        rotdata = cleandata.rotate(alpha=45,beta=45)
+Assuming vector data in columns x,y,z you can freely convert between cartesian *xyz*, cylindrical *hdz*, and spherical
+*idf* coordinates:
 
-If you have a measurement (XYZ data) and would like to obtain the rotation values regarding and expected reference direction defined by *referenceD* reference declination and
-*referenceI* inclination, both given in degree.decimals you can use the following method:
+        hdzdata = xyzdata.xyz2hdz()
+        mp.tsplot(hdzdata, height=2)
 
-        alpha, beta = rotateddata.determine_rotationangles(referenceD=4.3,referenceI=66.5)
+The summary method `_convertstream` can also be used by giving the conversion type as option. The following conversions 
+are possible: 'xyz2hdz','hdz2xyz','xyz2idf','idf2xyz':
+
+        xyzdata = hdzdata._convertstream('hdz2xyz')
+        mp.tsplot(xyzdata, height=2)
+
+The vectorial data columns as defined by the keys 'x','y','z' need to filled accordingly. i.e. a XYZ data stream has X 
+in key 'x', Y in key 'y' and Z in key 'z', all with the same unit, usually nT in magnetism. A HDZ data stream as H 
+assigned to key 'x', D in key 'y' and Z in key 'z'. H and Z are provided with the same unit (nT) and D has to be 
+provided in degrees.decimals. IDF data contains I in key 'x', D in key 'y' and F in key 'z', with I and D provided in 
+degree.decimals.
 
 
-### 5.3 Calculating vectorial F and delta F
+#### 5.2.3 Determining rotation angles
+
+If you have a measurement (XYZ data) and would like to obtain the rotation values regarding and expected reference 
+direction defined by *referenceD* reference declination and *referenceI* inclination, both given in degree.decimals 
+you can use the following method. Let us apply this method to the original rotdata, which contains the HEZ data set 
+rotated by alpha and beta of 45 degree. The HEZ data has an expected decliation of 0 and and expected inclination
+of 64.4 degree. Please note that these values are not exact:
+
+        alpha, beta = rotdata.determine_rotationangles(referenceD=0.0,referenceI=64.4)
+        print (alpha, beta)
+
+The method will return angles with which rotdata needs to be rotated in order to get a non-rotated data set. Thus alpha 
+and beta of -45 degree will be obtained.
+
+
+### 5.3 Filtering and smoothing data
+
+#### 5.3.1 General filter options and resampling
+
+MagPy's `filter` uses the settings recommended by [IAGA]/[INTERMAGNET]. Ckeck `help(data.filter)` for further options 
+and definitions of filter types and pass bands. Here is short list of supported filter types:
+'flat','barthann','bartlett','blackman','blackmanharris','bohman','boxcar',
+'cosine','flattop','hamming','hann','nuttall','parzen','triang','gaussian','wiener','butterworth'
+Important options of the filter method, beside the chosen *filter_type* are *filter_width* which defines the window
+width in a timedelta object and the *resample_period* in seconds defining the resolution of the resulting data set.
+To get an overview over all filter_type and their basic characteristics you can run the following code. This will
+calculate filtered one-minute data and then calculate and plot the power spectral density of each filtered data set.
+Please note that we apply the *missingdata='interpolate'* option as the matplotlib.pyplot.psd method requires the data 
+set being free of NaN values.
+
+        filterlist = ['flat', 'barthann', 'bartlett', 'blackman', 'blackmanharris', 'bohman',
+                              'boxcar', 'cosine', 'flattop', 'hamming', 'hann', 'nuttall', 'parzen', 'triang',
+                              'gaussian', 'wiener', 'butterworth']
+        for filter_type in filterlist:
+            filtereddata = data.filter(filter_type=filter_type, missingdata='interpolate', filter_width=timedelta(seconds=120), resample_period=60)
+            T = filtereddata._get_column('time')
+            t = np.linspace(0,len(T),len(T))
+            h = filtereddata._get_column('x') - filtereddata.mean('x')
+            sr = filtereddata.samplingrate() # in seconds
+            fs = 1./sr
+            fig, (ax0, ax1) = plt.subplots(2, 1, layout='constrained')
+            ax0.plot(t, h)
+            ax0.set_xlabel('Time')
+            ax0.set_ylabel('Signal')
+            ax1.set_title(filter_type)
+            power, freqs = ax1.psd(h, NFFT=len(t), pad_to=len(t), Fs=fs, scale_by_freq=True)
+            plt.show()
+
+The `filter` method will resample the data set by default towards a projected period. In order to skip resampling 
+choose option *noresample=True*. You can apply the resample method also to any data set as follows. Resample will 
+extract values at the given sampling interval or take the linear interpolated value between adjacent data points if no 
+value is existing at the given time step.
+
+        resampleddata = data.resample(['x','y','z'],period=60)
+        print(len(resampleddata))
+        print(resampleddata.timerange())
+
+
+#### 5.3.2 Smoothing data
+
+The `smooth` method is similar to the filter method without resampling. It is a quick method with only a limited amount 
+of supported window types: flat, hanning (default), hamming, bartlett and blackman. The window length is given as number
+of data points. Smooth will throw an error in case of columns with only NaN values, so make sure to drop them before
+
+        data = data._remove_nancolumns()
+        smootheddata = data.smooth(window='hanning', window_len=11)
+
+#### 5.3.3 Filtering in geomagnetic applications
+
+When dealing with geomagnetic data a number of simplifications have been added into the application. To filter the data 
+set with default parameters as recommended by IAGA you can skip all the options and just call `filter`.
+It automatically chooses a gaussian window with the correct settings depending on the provided sampling rate of the 
+data set and filter towards the next time period i.e. if you supply 1sec, 5 sec or 10 sec period data they will be
+filtered to 1 min. Therefore in basically all geomagnetic applications the following command is sufficient
+
+        filtereddata = data.filter()
+
+Get sampling rate and filtered data after filtering (please note that all filter information is added to the data's 
+meta information dictionary (data.header):
+
+        print("Sampling rate after [sec]:", filtereddata.samplingrate())
+        print("Filter and pass band:", filtereddata.header.get('DataSamplingFilter',''))
+
+#### 5.3.4 Frequency analysis and missing data
+
+When dealing with geomagnetic data, especially when it comes to the frequency domain, then the treatment of missing 
+data and  is of particular importance. The time domain should be evenly distributed and missing data needs to be 
+adequately considered. Missing data is often replaced by unrealistic numerical values like 99999 or negative data. 
+MagPy is using NaN values instead to internally treat such missing data. Two methods are available to help you 
+preparing your data for frequency analysis. The `get_gaps` method will analyse the time column and identify any missing
+time steps for an equally distant time scale. Time steps will be filled in and NaNs will be added into the data 
+columns. In order to deal with NaN values you can use filtering procedures as shown above or use the `interpolate_nan` 
+method, which will linearly interpolate NaNs. Please be careful with these techniques as you might create spurious 
+signals when interpolating. 
+
+        data = data.get_gaps()
+        data = data.interpolate_nans(['x'])
+
+The power spectral density can then be analyzed using build in python matplotlib methods. First extract time and data 
+column.
+
+        T = data._get_column('time')
+        print (len(T))
+        t = np.linspace(0,len(T),len(T))
+        h = data._get_column('x')
+        sr = data.samplingrate() # in seconds
+        fs = 1./sr
+
+Then plot timeseries of the selected data and psd.
+
+        fig, (ax0, ax1) = plt.subplots(2, 1, layout='constrained')
+        ax0.plot(t, h)
+        ax0.set_xlabel('Time')
+        ax0.set_ylabel('Signal')
+        power, freqs = ax1.psd(h, NFFT=len(t), pad_to=len(t), Fs=fs, detrend='mean', scale_by_freq=True)
+        plt.show()
+
+
+#### 5.3.4 Quickly get daily mean values
+
+Another method which belongs basically to the filter section is the the `dailymeans` method which allow you to 
+quickly obtain dailymean values according to IAGA standards from any given data set covering at least one day.
+Acceptable sind all data resolutions as the dailymeans will filter the data stepwise until daily mean values.
+
+        dailymeans = data.dailymeans()
+
+
+
+### 5.4 Calculating vectorial F and delta F
 
 Vectorial F can be easily calculated if the vectorial keys x,y,z are available. Just use the method
 
         data_with_f = data.calcf()
 
-Calculated F data will be filled into column 'f' of the data stream. Mostly however you will be interested not in vectorial F (F_V) but in delta values between F_V and a scalar F (F_S).
-Let us assume you have two data sources variodata with X,Y,and Z data as well as scalardata with F. Make sure that both data sets cover the same time range and are sampled at the same frequency and time steps:
+Calculated F data will be filled into column 'f' of the data stream. Mostly however you will be interested not in 
+vectorial F (F_V) but in delta values between F_V and a scalar F (F_S). Let us assume you have two data sources 
+variodata with X,Y,and Z data as well as scalardata with F. Make sure that both data sets cover the same time range 
+and are sampled at the same frequency and time steps:
 
         combineddata = merge_streams(variodata,scalardata)   # checkout section 5.10 for details
 
