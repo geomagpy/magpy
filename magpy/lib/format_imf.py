@@ -139,14 +139,39 @@ def isIAF(filename):
     return True
 
 
-def isBLV(filename):
+def isBLV1_2(filename):
     """
-    Checks whether a file is ASCII IMF 1.22,1.23 minute format.
+    Checks whether a file is ASCII IBFV 1.2 Baseline format.
     """
     try:
         fi = open(filename, 'rt')
         temp1 = fi.readline()
         temp2 = fi.readline()
+        fi.close()
+    except:
+        return False
+    if temp1.startswith('XYZ') or temp1.startswith('DIF') or temp1.startswith('HDZ') or temp1.startswith('UVZ') or temp1.startswith('DHZ'):
+        pass
+    else:
+        return False
+    print (temp1, temp2, len(temp1), len(temp2))
+    if not 15 <= len(temp1) <= 30:
+        return False
+    if not 43 <= len(temp2) <= 45:
+        return False
+
+    logger.debug("isBLV1_2: Found IBFV1.2 data")
+    return True
+
+def isBLV(filename):
+    """
+    Checks whether a file is ASCII IBFV 2.0 format.
+    """
+    try:
+        fi = open(filename, 'rt')
+        temp1 = fi.readline()
+        temp2 = fi.readline()
+        fi.close()
     except:
         return False
     if temp1.startswith('XYZ') or temp1.startswith('DIF') or temp1.startswith('HDZ') or temp1.startswith('UVZ') or temp1.startswith('DHZ'):
@@ -1373,11 +1398,251 @@ def writeIMF(datastream, filename, **kwargs):
 
     return True
 
+def readBLV1_2(filename, headonly=False, **kwargs):
+    """
+    IBFV1.20 INTERMAGNET BASELINE FORMAT (2008 and BEFORE)
+    This format is to be used to provide baselines for use in examining equipment performance and for
+    inclusion on the INTERMAGNET DVD. The first section contains the observed baseline values on those
+    days on which they were measured. Consequently the number of entries will depend upon the schedule for
+    absolute measurements at that observatory. The second section contains adopted baseline values
+    representing each day of the year. A comment section is also provided.
+    COMP_HHHHH_IDC_YEARCrLf
+    DDD_AAAAAAA_BBBBBBB_ZZZZZZZ CrLf.
+    . . . . .
+    . . . . .
+    . . . . .
+    DDD_AAAAAAA_BBBBBBB_ZZZZZZZ CrLf.
+    *
+    001_AAAAAAA_BBBBBBB_ZZZZZZZ_FFFFF CrLf.
+    002_AAAAAAA_BBBBBBB_ZZZZZZZ_FFFFF CrLf.
+    003_AAAAAAA_BBBBBBB_ZZZZZZZ_FFFFF CrLf.
+    ...
+    366_AAAAAAA_BBBBBBB_ZZZZZZZ_FFFFF CrLf.
+    *
+    Comments:
+    Component values are coded as signed integers, right-justified with a field width of 7. Total field (Delta
+    F) values are coded as signed integers, right-justified with a field width of 5. The field widths must be
+    maintained, either through zero-filling or space-filling. The '+' sign for positive values is optional.
+    Field Description
+    COMP Order of components HDZF, XYZF, DIF, UVZF
+    HHHHH Annual mean value of H component in nT.
+    IDC IAGA three-letter observatory ID code eg: BOU for Boulder, OTT for Ottawa, LER for
+    Lerwick, etc.
+    YEAR 4-digit Year: for example, 1991.
+    DDD Day of the year.
+    AAAAAAA Signed value of H, D, U or X in 0.1 nT
+    BBBBBBB Signed value of D, I, V or Y in 0.1 nT or 0.1 min of arc for D
+    ZZZZZZZ Signed value of Z or F in 0.1 nT
+    FFFFF Signed value of Delta F, the difference between calculated and observed value of F (by a
+    proton magnetometer) in 0.1 nT
+    * Section separator.
+    _ Space character.
+    CrLf Indicates Carriage Return and Line Feed.
+    Missing values must be replaced by 999999 for D, H, X, Y, Z and by 9999 for F.
+    File name convention is IAGYR.BLV where:
+    IAG = 3-letter observatory IAGA code
+    YR = 2-digit year
+    """
+    starttime = kwargs.get('starttime')
+    endtime = kwargs.get('endtime')
+    mode = kwargs.get('mode')
+    debug = kwargs.get('debug')
+    getfile = True
+
+    fh = open(filename, 'rt')
+    # read file and split text into channels
+    stream = DataStream()
+    # Check whether header infromation is already present
+    if stream.header is None:
+        headers = {}
+    else:
+        headers = stream.header
+    headers = {}
+
+    data = []
+    key = None
+    year = 1900
+
+    # get day from filename (platform independent)
+    theday = extract_date_from_string(filename)
+    try:
+        year = str(theday[0].year)
+    except:
+        pass
+    try:
+        if starttime:
+            if not theday[-1] >= datetime.date(testtime(starttime)):
+                getfile = False
+        if endtime:
+            if not theday[0] <= datetime.date(testtime(endtime)):
+                getfile = False
+    except:
+        # Date format not recognized. Need to read all files
+        getfile = True
+
+    array = [[] for key in KEYLIST]
+    farray = [[] for key in KEYLIST]
+    funclist = []
+    xpos = KEYLIST.index('dx')
+    ypos = KEYLIST.index('dy')
+    zpos = KEYLIST.index('dz')
+    fpos = KEYLIST.index('df')
+    dfpos = KEYLIST.index('f')
+    strpos = KEYLIST.index('str1')
+    scalarid = 'None'
+    varioid = 'None'
+    pierid = 'None'
+
+    starfound = []
+    if getfile:
+        for line in fh:
+            if line.isspace():
+                # blank line
+                continue
+            elif len(line) in [26,27] and not len(starfound) > 0:
+                # data info
+                block = line.split()
+                year = block[-1]
+                headers['DataComponents'] = block[0]
+                headers['col-{}'.format(KEYLIST[fpos])] = 'f base'
+                headers['unit-col-{}'.format(KEYLIST[fpos])] = 'nT'
+                headers['col-{}'.format(KEYLIST[zpos])] = 'z base'
+                headers['unit-col-{}'.format(KEYLIST[zpos])] = 'nT'
+                headers['unit-col-{}'.format(KEYLIST[xpos])] = 'nT'
+                if headers['DataComponents'].startswith('HDZ') or headers['DataComponents'].startswith('hdz'):
+                     headers['col-{}'.format(KEYLIST[xpos])] = 'h base'
+                     headers['col-{}'.format(KEYLIST[ypos])] = 'd base'
+                     headers['unit-col-{}'.format(KEYLIST[ypos])] = 'deg'
+                if headers['DataComponents'].startswith('XYZ') or headers['DataComponents'].startswith('xyz'):
+                     headers['col-{}'.format(KEYLIST[xpos])] = 'x base'
+                     headers['col-{}'.format(KEYLIST[ypos])] = 'y base'
+                     headers['unit-col-{}'.format(KEYLIST[ypos])] = 'nT'
+                headers['DataScaleX'] = float(block[1])
+                headers['DataScaleZ'] = float(block[2])
+                headers['StationID'] = block[3]
+                headers['StationIAGAcode'] = block[3]
+            elif headonly:
+                # skip data for option headonly
+                return
+            elif len(line) in [44,45] and not len(starfound) > 1:  # block 1 - basevalues
+                # data info
+                if not mode == 'adopted':
+                    block = line.split()
+                    block = [el if not float(el) == 99999.00 and not float(el) == 88888.00 else np.nan for el in block]
+                    dttime = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
+                    if dttime in array[0]:
+                        dttime = dttime+timedelta(seconds=1)
+                    array[0].append(dttime)
+                    array[xpos].append(float(block[1]))
+                    if headers.get('DataComponents','').startswith('HDZ') or headers.get('DataComponents','').startswith('hdz'):
+                        array[ypos].append(float(block[2])/60.0)
+                    else:
+                        array[ypos].append(float(block[2]))
+                    array[zpos].append(float(block[3]))
+                    if not block[4] == 999.0 and not block[4] == 888.0:
+                        array[fpos].append(float(block[4]))
+                    else:
+                        array[fpos].append(np.nan)
+            elif len(line) in [54,55] and not len(starfound) > 1:  # block 2 - adopted basevalues
+                # data info
+                block = line.split()
+                if float(block[5])==999.0 or float(block[5])==888.0:
+                    block[5] = np.nan
+                if float(block[1])>88887.0:
+                    block[1] = np.nan
+                if float(block[2])>88887.0:
+                    block[2] = np.nan
+                if float(block[3])>88887.0:
+                    block[3] = np.nan
+                if float(block[4])>88887.0:
+                    block[4] = np.nan
+                dt = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
+                xval = float(block[1])
+                if headers['DataComponents'][:3] == 'HDZ':
+                    yval = float(block[2])/60.0
+                else:
+                    yval = float(block[2])
+                zval = float(block[3])
+                fval = float(block[4])
+                dfval = float(block[5])
+                strval = block[6]
+                if mode == 'adopted':
+                    if strval in ['d','D']:
+                        print ("Found break at {}".format(block[0]))
+                        print ("Adding nan column for jumps in plot")
+                        array[0].append(dt-0.5)
+                        array[xpos].append(np.nan)
+                        array[ypos].append(np.nan)
+                        array[zpos].append(np.nan)
+                        array[fpos].append(np.nan)
+                        array[dfpos].append(np.nan)
+                        array[strpos].append('a')
+                    array[0].append(dt)
+                    array[xpos].append(xval)
+                    array[ypos].append(yval)
+                    array[zpos].append(zval)
+                    array[fpos].append(fval)
+                    array[dfpos].append(dfval)
+                    array[strpos].append(strval)
+                else:
+                    try:
+                        if strval in ['d','D']:
+                            # use the current time step as last one for fit and then add this step as first
+                            # element for the next fit
+                            if debug:
+                                print ("Fitting from {} to {}".format(farray[0][0],farray[0][-1]))
+                            tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
+                            func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
+                            func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
+                            funclist.append(func1)
+                            funclist.append(func2)
+                            farray = [[] for key in KEYLIST]
+                        farray[0].append(dt)
+                        farray[xpos].append(xval)
+                        farray[ypos].append(yval)
+                        farray[zpos].append(zval)
+                        farray[fpos].append(fval)
+                        farray[dfpos].append(dfval)
+                        farray[strpos].append(strval)
+                    except:
+                        pass
+            elif line.startswith('*'):
+                # data info
+                starfound.append('*')
+                if len(starfound) > 1: # Comment section starts here
+                    if debug:
+                        print("Fitting from {} to {}".format(farray[0][0], farray[0][-1]))
+                    tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
+                    func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
+                    func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
+                    funclist.append(func1)
+                    funclist.append(func2)
+            elif len(starfound) > 1: # Comment section starts here
+                logger.debug("Found comment section", starfound)
+                block = line.split()
+                if block[0].startswith('Scalar') and len(block) > 1:
+                    scalarid = block[1]
+                if block[0].startswith('Vario') and len(block) > 1:
+                    varioid = block[1]
+                if block[0].startswith('Pier') and len(block) > 1:
+                    pierid = block[1]
+            else:
+                pass
+    fh.close()
+
+    array = [np.asarray(el) for el in array]
+    if len(funclist) > 0:
+        headers['DataFunctionObject'] = funclist
+    headers['DataFormat'] = 'MagPyDI'
+    headers['DataType'] = 'MagPyDI0.1'
+    headers['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pierid)
+
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 def readBLV(filename, headonly=False, **kwargs):
     """
-    Reading Intermagnet BLV data format (IBFV2.00)
+    Reading INTERMAGNET BLV data format (IBFV2.00)
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')

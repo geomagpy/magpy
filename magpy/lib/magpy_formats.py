@@ -247,6 +247,12 @@ def isFormat(filename, format_type):
                 return True
         except:
             pass
+    elif (format_type == "BLV1_2"):  # Intermagnet IBFV1.2
+        try:
+            if (isBLV(filename)):
+                return True
+        except:
+            pass
     elif (format_type == "AUTODIF_FREAD"): # Text AUTODIF F for baseline (0.2 Hz, from POS1)
         try:
             if (isAUTODIF_FREAD(filename)):
@@ -316,6 +322,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readIAF(filename, headonly, **kwargs)
     elif (format_type == "BLV"): # Intermagnet IBFV2.00
         return readBLV(filename, headonly, **kwargs)
+    elif (format_type == "BLV1_2"):  # Intermagnet IBFV1.20
+        return readBLV1_2(filename, headonly, **kwargs)
     elif (format_type == "IYFV"): # Intermagnet IYVF1.01
         return readIYFV(filename, headonly, **kwargs)
     elif (format_type == "DKA"): # Intermagnet DKA
