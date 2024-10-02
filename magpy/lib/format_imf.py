@@ -5,10 +5,11 @@ Written by Roman Leonhardt December 2012
 - contains test, read and write functions for
         IMF 1.22,1.23
         IAF
-        ImagCDF
-        IYFV    (yearly means)
-        DKA     (k values)d
-        BLV     (baseline data)
+        ImagCDF  -> moved to separate library
+        IYFV     (yearly means)
+        DKA      (k values)
+        IBFV2.0  (baseline data)
+        IBFV1.2  (baseline data)
 """
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
@@ -154,10 +155,16 @@ def isBLV1_2(filename):
         pass
     else:
         return False
-    print (temp1, temp2, len(temp1), len(temp2))
+    try:
+        tl1 = temp1.split()
+        tl2 = temp2.split()
+    except:
+        return False
+    if not len(tl1) == 4 or not len(tl2) == 4:
+        return False
     if not 15 <= len(temp1) <= 30:
         return False
-    if not 43 <= len(temp2) <= 45:
+    if not len(tl2[0]) == 3: # check DOY length
         return False
 
     logger.debug("isBLV1_2: Found IBFV1.2 data")
@@ -1389,7 +1396,6 @@ def writeIMF(datastream, filename, **kwargs):
             if minute % 2: # uneven
                 dataline += '  9999999 9999999 9999999 999999\r\n'
                 myFile.writelines( dataline.encode('utf-8') )
-                #print minute, dataline
             else: # even
                 dataline = '9999999 9999999 9999999 999999'
             minute = minute + 1
@@ -1403,7 +1409,7 @@ def readBLV1_2(filename, headonly=False, **kwargs):
     IBFV1.20 INTERMAGNET BASELINE FORMAT (2008 and BEFORE)
     This format is to be used to provide baselines for use in examining equipment performance and for
     inclusion on the INTERMAGNET DVD. The first section contains the observed baseline values on those
-    days on which they were measured. Consequently the number of entries will depend upon the schedule for
+    days on which they were measured. Consequently, the number of entries will depend upon the schedule for
     absolute measurements at that observatory. The second section contains adopted baseline values
     representing each day of the year. A comment section is also provided.
     COMP_HHHHH_IDC_YEARCrLf
@@ -1487,21 +1493,21 @@ def readBLV1_2(filename, headonly=False, **kwargs):
     ypos = KEYLIST.index('dy')
     zpos = KEYLIST.index('dz')
     fpos = KEYLIST.index('df')
-    dfpos = KEYLIST.index('f')
-    strpos = KEYLIST.index('str1')
-    scalarid = 'None'
-    varioid = 'None'
-    pierid = 'None'
+    scalarid = 'Scalar'
+    varioid = 'Variometer'
+    pierid = 'Pier'
+    obscode = ''
+    comments = ''
 
     starfound = []
     if getfile:
         for line in fh:
+            block = line.split()
             if line.isspace():
                 # blank line
                 continue
-            elif len(line) in [26,27] and not len(starfound) > 0:
+            elif line.startswith('XYZ') or line.startswith('DIF') or line.startswith('HDZ') or line.startswith('UVZ') or line.startswith('DHZ') and not len(starfound) > 0 and len(block) == 4:
                 # data info
-                block = line.split()
                 year = block[-1]
                 headers['DataComponents'] = block[0]
                 headers['col-{}'.format(KEYLIST[fpos])] = 'f base'
@@ -1518,92 +1524,58 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                      headers['col-{}'.format(KEYLIST[ypos])] = 'y base'
                      headers['unit-col-{}'.format(KEYLIST[ypos])] = 'nT'
                 headers['DataScaleX'] = float(block[1])
-                headers['DataScaleZ'] = float(block[2])
-                headers['StationID'] = block[3]
-                headers['StationIAGAcode'] = block[3]
+                headers['StationID'] = block[-2]
+                obscode = block[-2]
+                headers['StationIAGAcode'] = block[-2]
             elif headonly:
                 # skip data for option headonly
                 return
-            elif len(line) in [44,45] and not len(starfound) > 1:  # block 1 - basevalues
-                # data info
+            elif len(block) == 4 and len(block[0]) == 3 and not len(starfound) > 0:  # block 1 - basevalues
+                # data basevalues
                 if not mode == 'adopted':
                     block = line.split()
-                    block = [el if not float(el) == 99999.00 and not float(el) == 88888.00 else np.nan for el in block]
+                    block = [el if not float(el) > 999998.00 else np.nan for el in block]
                     dttime = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
                     if dttime in array[0]:
                         dttime = dttime+timedelta(seconds=1)
                     array[0].append(dttime)
-                    array[xpos].append(float(block[1]))
+                    array[xpos].append(float(block[1])/10.)
                     if headers.get('DataComponents','').startswith('HDZ') or headers.get('DataComponents','').startswith('hdz'):
-                        array[ypos].append(float(block[2])/60.0)
+                        array[ypos].append(float(block[2])/10./60.0)
                     else:
-                        array[ypos].append(float(block[2]))
-                    array[zpos].append(float(block[3]))
-                    if not block[4] == 999.0 and not block[4] == 888.0:
-                        array[fpos].append(float(block[4]))
-                    else:
-                        array[fpos].append(np.nan)
-            elif len(line) in [54,55] and not len(starfound) > 1:  # block 2 - adopted basevalues
-                # data info
-                block = line.split()
-                if float(block[5])==999.0 or float(block[5])==888.0:
-                    block[5] = np.nan
-                if float(block[1])>88887.0:
+                        array[ypos].append(float(block[2])/10.)
+                    array[zpos].append(float(block[3])/10.)
+            elif len(block) == 5 and len(block[0]) == 3 and len(starfound) == 1:  # block 2 - adopted basevalues
+                # adopted basevalues
+                if float(block[1])>888887.0:
                     block[1] = np.nan
-                if float(block[2])>88887.0:
+                if float(block[2])>888887.0:
                     block[2] = np.nan
-                if float(block[3])>88887.0:
+                if float(block[3])>888887.0:
                     block[3] = np.nan
-                if float(block[4])>88887.0:
+                if float(block[4])>8887.0:
                     block[4] = np.nan
                 dt = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
-                xval = float(block[1])
+                xval = float(block[1])/10.
                 if headers['DataComponents'][:3] == 'HDZ':
-                    yval = float(block[2])/60.0
+                    yval = float(block[2])/10./60.0
                 else:
-                    yval = float(block[2])
-                zval = float(block[3])
-                fval = float(block[4])
-                dfval = float(block[5])
-                strval = block[6]
+                    yval = float(block[2])/10.
+                zval = float(block[3])/10.
+                dfval = float(block[4])/10.
                 if mode == 'adopted':
-                    if strval in ['d','D']:
-                        print ("Found break at {}".format(block[0]))
-                        print ("Adding nan column for jumps in plot")
-                        array[0].append(dt-0.5)
-                        array[xpos].append(np.nan)
-                        array[ypos].append(np.nan)
-                        array[zpos].append(np.nan)
-                        array[fpos].append(np.nan)
-                        array[dfpos].append(np.nan)
-                        array[strpos].append('a')
                     array[0].append(dt)
                     array[xpos].append(xval)
                     array[ypos].append(yval)
                     array[zpos].append(zval)
-                    array[fpos].append(fval)
-                    array[dfpos].append(dfval)
-                    array[strpos].append(strval)
+                    array[fpos].append(dfval)
                 else:
                     try:
-                        if strval in ['d','D']:
-                            # use the current time step as last one for fit and then add this step as first
-                            # element for the next fit
-                            if debug:
-                                print ("Fitting from {} to {}".format(farray[0][0],farray[0][-1]))
-                            tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
-                            func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
-                            func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
-                            funclist.append(func1)
-                            funclist.append(func2)
-                            farray = [[] for key in KEYLIST]
                         farray[0].append(dt)
                         farray[xpos].append(xval)
                         farray[ypos].append(yval)
                         farray[zpos].append(zval)
-                        farray[fpos].append(fval)
-                        farray[dfpos].append(dfval)
-                        farray[strpos].append(strval)
+                        farray[fpos].append(dfval)
                     except:
                         pass
             elif line.startswith('*'):
@@ -1613,19 +1585,22 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                     if debug:
                         print("Fitting from {} to {}".format(farray[0][0], farray[0][-1]))
                     tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
+                    tempstream = tempstream._remove_nancolumns()
                     func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
-                    func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
                     funclist.append(func1)
-                    funclist.append(func2)
+                    if len(tempstream.ndarray[fpos]) > 0:
+                        func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
+                        funclist.append(func2)
             elif len(starfound) > 1: # Comment section starts here
                 logger.debug("Found comment section", starfound)
-                block = line.split()
                 if block[0].startswith('Scalar') and len(block) > 1:
                     scalarid = block[1]
-                if block[0].startswith('Vario') and len(block) > 1:
+                elif block[0].startswith('Vario') and len(block) > 1:
                     varioid = block[1]
-                if block[0].startswith('Pier') and len(block) > 1:
+                elif block[0].startswith('Pier') and len(block) > 1:
                     pierid = block[1]
+                else:
+                    comments += "{} ".format(line.strip())
             else:
                 pass
     fh.close()
@@ -1633,8 +1608,16 @@ def readBLV1_2(filename, headonly=False, **kwargs):
     array = [np.asarray(el) for el in array]
     if len(funclist) > 0:
         headers['DataFunctionObject'] = funclist
+    if comments:
+        headers['DataComments'] = comments
     headers['DataFormat'] = 'MagPyDI'
     headers['DataType'] = 'MagPyDI0.1'
+    if varioid == 'Variometer':
+        varioid += obscode.upper()
+    if scalarid == 'Scalar':
+        scalarid += obscode.upper()
+    if pierid == 'Pier':
+        pierid += obscode.upper()
     headers['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pierid)
 
     return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
@@ -1690,9 +1673,11 @@ def readBLV(filename, headonly=False, **kwargs):
     fpos = KEYLIST.index('df')
     dfpos = KEYLIST.index('f')
     strpos = KEYLIST.index('str1')
-    scalarid = 'None'
-    varioid = 'None'
-    pierid = 'None'
+    scalarid = 'Scalar'
+    varioid = 'Variometer'
+    pierid = 'Pier'
+    obscode = ''
+    comments = ''
 
     starfound = []
     if getfile:
@@ -1721,6 +1706,7 @@ def readBLV(filename, headonly=False, **kwargs):
                 headers['DataScaleX'] = float(block[1])
                 headers['DataScaleZ'] = float(block[2])
                 headers['StationID'] = block[3]
+                obscode = block[3]
                 headers['StationIAGAcode'] = block[3]
             elif headonly:
                 # skip data for option headonly
@@ -1823,10 +1809,12 @@ def readBLV(filename, headonly=False, **kwargs):
                 block = line.split()
                 if block[0].startswith('Scalar') and len(block) > 1:
                     scalarid = block[1]
-                if block[0].startswith('Vario') and len(block) > 1:
+                elif block[0].startswith('Vario') and len(block) > 1:
                     varioid = block[1]
-                if block[0].startswith('Pier') and len(block) > 1:
+                elif block[0].startswith('Pier') and len(block) > 1:
                     pierid = block[1]
+                else:
+                    comments += "{} ".format(line.strip())
             else:
                 pass
     fh.close()
@@ -1834,6 +1822,14 @@ def readBLV(filename, headonly=False, **kwargs):
     array = [np.asarray(el) for el in array]
     if len(funclist) > 0:
         headers['DataFunctionObject'] = funclist
+    if comments:
+        headers['DataComments'] = comments
+    if varioid == 'Variometer':
+        varioid += obscode.upper()
+    if scalarid == 'Scalar':
+        scalarid += obscode.upper()
+    if pierid == 'Pier':
+        pierid += obscode.upper()
     headers['DataFormat'] = 'MagPyDI'
     headers['DataType'] = 'MagPyDI0.1'
     headers['SensorID'] = 'BLV_{}_{}_{}'.format(varioid,scalarid,pierid)

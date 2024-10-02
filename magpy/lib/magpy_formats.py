@@ -249,7 +249,7 @@ def isFormat(filename, format_type):
             pass
     elif (format_type == "BLV1_2"):  # Intermagnet IBFV1.2
         try:
-            if (isBLV(filename)):
+            if (isBLV1_2(filename)):
                 return True
         except:
             pass

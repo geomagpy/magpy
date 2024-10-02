@@ -444,7 +444,7 @@ To get an overview about possible write options use:
 
 Some file formats contain multiple data sources and when writing certain archive formats, additional information will bve save in separate files. Below you will find descriptions for such format-specific pecularities.
 
-#### IAF format
+#### 3.4.1 IAF format
 
 The IAF (INTERMAGNET archive format) contains 1-minute data along with filtered 1-hour data and daily averages. Typically components X,Y,Z and delta F (G) values are provided. Beside the geomagnetic components, the K indicies (3 hour resolution) are also contained within  the IAF structure.
 When reading IAF data, by default only the 1-minute data is loaded. If you want to access other resolutions data or K values you can use the following "resolution" options (hour, day, k) while reading (please note: XMagPy only allows for reading minute data):
@@ -457,13 +457,13 @@ When writing IAF data, you need to provide 1-minute geomagnetic data covering at
 
 Additionally a README.IMO file will be created and filled with existing meta information. If at least on year of 1-minute data is written, then also a DKA file will be created containing K values separatly. Please checkout INTERMAGNET format specifications for further details on DKA, README and IAF formats.   
 
-#### IMF format
+#### 3.4.2 IMF format
 
 The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute data products. The IMF format can be created from basically and data set in 1-minute resolution. Individual files cover one day. The data header of the IMF file contains an abbrevation of the geomagnetic information node GIN which by default is set to EDI (for Edinbourgh). To change that use the "gin" option.
 
         data.write('/path/to/export/IMF/', gin="GOL")
 
-#### IMAGCDF format
+#### 3.4.3 IMAGCDF format
 
 The IMAGCDF format can contain several data sets from different instruments represented by different time columns. Typical examples are scalar data with lower sampling resolution as vector data and/or temperature data in lower resolution.
 MagPy's IMAGCDF library will read all those data sets and, by default, will only use the most detailed time column which typically is GeomagneticVectorTimes. Low resolution data will refer to this new time column and "missing values" will be represented as NaN.
@@ -481,9 +481,46 @@ MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy
 
 Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varying sampling rates the plots of the lower resolution data are apparently empty. Got to "Plot Options" on the Data panel and use "plottype" -> "continuous" to display graphs of low resolution data sets.  
 
+#### 3.4.4 IBFV baseline data
+
+Baseline data can be read as as any other data set in MagPy. Supported versions of IBFV are versions 1.2 and 2.0 and 
+both are automatically recognized. When just loading the blv file without any additioal options. Then the basevalue 
+data will be stored within the datastream columns. Adopted baseline, as contained in the blv files, will not be read as 
+data, but will extracted as well, approximated by simple spline functions, actually separate splines for all components,
+and the resulting adopted baseline function will be stored in the data sets header 'DataFunctionObject'. 
+Discontinuities are considered in IBVF version 2.0. Please be aware, althoigh this is a reasonable approximation of the
+adopted baseline function, it not necessarily the an exact reproduction of the originally used adopted baseline. The
+comment section of blv files is also extracted and stored in the data sets header. How to access and plot such 
+basevalues and the adopted functions is shown here
+
+        basevalues = read("/home/leon/Cloud/Daten/MagPyTestFiles/abk95.blv")
+        func = basevalues.header.get('DataFunctionObject')
+        mp.tsplot(basevalues, ['dx','dy','dz'], symbols=[['o','o','o']], functions=[[func,func,func]])
+
+If you are mainly interested in the adopted baseline data you can use the read mode 'adopted'. This will then load only 
+the adopted baseline data into the data columns. Function header will remain empty and measured basevalues will be 
+ignored. This mode will give you an exact reproduction of the contained adopted baseline values.
+
+        adoptedbase = read("/home/leon/Cloud/Daten/MagPyTestFiles/abk95.blv", mode='adopted')
+        mp.tsplot(adoptedbase, ['dx','dy','dz'])
+
+If you want to plot data and original adopted basevalues use
+
+        mp.tsplot([basevalues,adoptedbase], [['dx','dy','dz']], symbols=[['o','o','o'],['-','-','-']])
+
+The meta information is accessible within the data header. MagPy is desgined to be strongly related to underlying 
+instruments, as defined by SensorID's and PierID's. BLV files are strongly instrument related as the baseline is always
+referring to a variometer and eventually also a scalar sensor. Another essential aspect is the pier at which DI
+measurements are performed. MagPy's BLV DataID therefore typically look like BLV_VariometerID_ScalarID_PierID. If any
+of this information is not contained in the blv comment section then the read command will assign dummy values like
+VariometerIAGACODE, or SalarIAGACODE. The comment section can also be found in the data header. Give it a quick look
+
+        print(basevalues.header)
+
 ### 3.5 Selecting timerange
 
-The stream can be trimmed to a specific time interval after reading by applying the trim method, e.g. for a specific month:
+The stream can be trimmed to a specific time interval after reading by applying the trim method, e.g. for a specific
+month:
 
         data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
 
@@ -851,7 +888,7 @@ meta information dictionary (data.header):
         print("Sampling rate after [sec]:", filtereddata.samplingrate())
         print("Filter and pass band:", filtereddata.header.get('DataSamplingFilter',''))
 
-#### 5.3.4 Frequency analysis and missing data
+#### 5.3.4 Missing data and its treatment
 
 When dealing with geomagnetic data, especially when it comes to the frequency domain, then the treatment of missing 
 data and  is of particular importance. The time domain should be evenly distributed and missing data needs to be 
