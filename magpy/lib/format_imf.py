@@ -160,7 +160,7 @@ def isBLV1_2(filename):
         tl2 = temp2.split()
     except:
         return False
-    if not len(tl1) == 4 or not len(tl2) == 4:
+    if not len(tl1) == 4 or not len(tl2) in [4,5]:
         return False
     if not 15 <= len(temp1) <= 30:
         return False
@@ -1530,7 +1530,7 @@ def readBLV1_2(filename, headonly=False, **kwargs):
             elif headonly:
                 # skip data for option headonly
                 return
-            elif len(block) == 4 and len(block[0]) == 3 and not len(starfound) > 0:  # block 1 - basevalues
+            elif len(block) in [4,5] and len(block[0]) == 3 and not len(starfound) > 0:  # block 1 - basevalues
                 # data basevalues
                 if not mode == 'adopted':
                     block = line.split()
@@ -1545,6 +1545,8 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                     else:
                         array[ypos].append(float(block[2])/10.)
                     array[zpos].append(float(block[3])/10.)
+                    if len(block) == 5:
+                        array[fpos].append(float(block[4])/10.)
             elif len(block) == 5 and len(block[0]) == 3 and len(starfound) == 1:  # block 2 - adopted basevalues
                 # adopted basevalues
                 if float(block[1])>888887.0:
