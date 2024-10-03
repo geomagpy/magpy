@@ -483,12 +483,12 @@ Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varyi
 
 #### 3.4.4 IBFV baseline data
 
-Baseline data can be read as as any other data set in MagPy. Supported versions of IBFV are versions 1.2 and 2.0 and 
-both are automatically recognized. When just loading the blv file without any additioal options. Then the basevalue 
-data will be stored within the datastream columns. Adopted baseline, as contained in the blv files, will not be read as 
-data, but will extracted as well, approximated by simple spline functions, actually separate splines for all components,
-and the resulting adopted baseline function will be stored in the data sets header 'DataFunctionObject'. 
-Discontinuities are considered in IBVF version 2.0. Please be aware, althoigh this is a reasonable approximation of the
+Baseline data can be read as any other timeseries data set in MagPy. Supported versions of IBFV are versions 1.2 and 
+2.0 and  both are automatically recognized. When just loading the blv file without any additional options. Then the 
+basevalue data will be stored within the datastream columns. Adopted baseline, as contained in the blv files, will not 
+be read as data, but will extracted as well, approximated by simple spline functions, actually separate splines for all 
+components, and the resulting adopted baseline function will be stored in the data sets header 'DataFunctionObject'. 
+Discontinuities are considered in IBVF version 2.0. Please be aware, although this is a reasonable approximation of the
 adopted baseline function, it not necessarily the an exact reproduction of the originally used adopted baseline. The
 comment section of blv files is also extracted and stored in the data sets header. How to access and plot such 
 basevalues and the adopted functions is shown here
@@ -508,7 +508,7 @@ If you want to plot data and original adopted basevalues use
 
         mp.tsplot([basevalues,adoptedbase], [['dx','dy','dz']], symbols=[['o','o','o'],['-','-','-']])
 
-The meta information is accessible within the data header. MagPy is desgined to be strongly related to underlying 
+The meta information is accessible within the data header. MagPy is designed to be strongly related to underlying 
 instruments, as defined by SensorID's and PierID's. BLV files are strongly instrument related as the baseline is always
 referring to a variometer and eventually also a scalar sensor. Another essential aspect is the pier at which DI
 measurements are performed. MagPy's BLV DataID therefore typically look like BLV_VariometerID_ScalarID_PierID. If any
@@ -1965,21 +1965,23 @@ archive - raw -directory. Failed analyses will remain within the analysis direct
 TODO : F(abs) and F(ext) - examples 
 
 
-### 7.3 Reading BLV files
+### 7.3 Dealing with INTERMAGNET IBFV files
 
-Basevalues:
-
-        blvdata = read('/path/myfile.blv')
-        mp.plot(blvdata, symbollist=['o','o','o'])
-
-Adopted baseline:
-
-        bldata = read('/path/myfile.blv',mode='adopted')
-        mp.plot(bldata)
+Please check out section 3.4.4 for details on the read process for INTERMAGNET IBFV files. Basevalue data is stored 
+internally like any other timeseries datastream object. Please remember that such data sets unlike other timeseries
+objects are not evenly spaced. Consider for any ongoing analyses. MagPy allows you to incorporate much more information
+into such basevalue data sets as possible in IBFV structures. Among these additional data are collimation angles,
+information on observer and instruments etc. Therefore it is recommended to use one of MagPy's internal data formats to
+save basevalue data as obtained in sections 7.1 and 7.2. IBFV files can then be easily created for final publication. 
 
 ### 7.4 Basevalues and baselines
 
-Basevalues as obtained in (2.11.2) or (2.11.3) are stored in a normal data stream object, therefore all analysis methods outlined above can be applied to this data. The `diresult` object contains D, I, and F values for each measurement in columns x,y,z. Basevalues for H, D and Z related to the selected variometer are stored in columns dx,dy,dz. In `example4`, you will find some more DI analysis results. To plot these basevalues we can use the following plot command, where we specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 5 nT for H and Z, +/- 0.05 deg for D.
+Basevalues as obtained section 7.2 are stored in a normal data stream object, therefore all analysis methods outlined
+above can be applied to this data. The `diresult` object contains D, I, and F values for each measurement in columns
+x,y,z. Basevalues for H, D and Z related to the selected variometer are stored in columns dx,dy,dz. In `example3`, you
+will find some example DI analysis results. To plot these basevalues we can use the following plot command, where we
+specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 5 nT for H 
+and Z, +/- 0.05 deg for D.
 
         basevalues = read(example3)
         mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5])

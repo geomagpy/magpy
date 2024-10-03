@@ -19,7 +19,6 @@ import tempfile
 
 logpygen = ''           # temporary logger variable
 badimports = []         # List of missing packages
-nasacdfdir = "c:\CDF Distribution\cdf33_1-dist\lib"
 
 # Logging
 # ---------
@@ -1761,12 +1760,13 @@ CALLED BY:
         logger.info(' --- Start baseline-correction at %s' % str(datetime.now()))
 
         absolutestream  = absolutedata.copy()
-        absolutestream = absolutestream.remove_flagged()
+        #absolutestream = absolutestream.remove_flagged()
 
         absndtype = False
         if len(absolutestream.ndarray[0]) > 0:
             #print ("HERE1: adopting time range absolutes - before {} {}".format(startabs, endabs))
             absndtype = True
+            print (absolutestream.ndarray[0][0], endtime)
             if not absolutestream.ndarray[0][0] < endtime:
                 logger.warning("Baseline: Last measurement prior to beginning of absolute measurements ")
             abst = absolutestream.ndarray[0]
@@ -6473,8 +6473,8 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headon
     PARAMETERS:
     Variables:
         - path_or_url:  (str) Path to data files in form:
-                                a) c:\my\data\*
-                                b) c:\my\data\thefile.txt
+                                a) c:/my/data/*"
+                                b) c:/my/data/thefile.txt
                                 c) /home/data/*
                                 d) /home/data/thefile.txt
                                 e) ftp://server/directory/

@@ -1757,7 +1757,7 @@ def readBLV(filename, headonly=False, **kwargs):
                     if strval in ['d','D']:
                         print ("Found break at {}".format(block[0]))
                         print ("Adding nan column for jumps in plot")
-                        array[0].append(dt-0.5)
+                        array[0].append(dt-timedelta(days=0.5))
                         array[xpos].append(np.nan)
                         array[ypos].append(np.nan)
                         array[zpos].append(np.nan)
@@ -1800,10 +1800,12 @@ def readBLV(filename, headonly=False, **kwargs):
                     if debug:
                         print("Fitting from {} to {}".format(farray[0][0], farray[0][-1]))
                     tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
+                    tempstream = tempstream._remove_nancolumns()
                     func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
-                    func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
                     funclist.append(func1)
-                    funclist.append(func2)
+                    if len(tempstream.ndarray[fpos]) > 0:
+                        func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
+                        funclist.append(func2)
             elif len(starfound) > 1: # Comment section starts here
                 logger.debug("Found comment section", starfound)
                 block = line.split()
@@ -1903,6 +1905,7 @@ def writeBLV(datastream, filename, **kwargs):
             except:
                 knotstep=0.1
             keys = parameter[6:9]
+            print (startabs,endabs,extradays,fitfunc,fitdegree,knotstep,keys)
             line = [startabs,endabs,extradays,fitfunc,fitdegree,knotstep,keys]
             if len(parameter) >= 14:
                     #extract pier information
@@ -1916,21 +1919,14 @@ def writeBLV(datastream, filename, **kwargs):
             funclist.append(line)
         return funclist
 
-    lyear = datetime.strftime(num2date(datastream.ndarray[0][-1]), '%Y')
     if not year:
-        year = datetime.strftime(datetime.utcnow(),'%Y')
-        if lyear < year:
-            year = lyear
-            t1 = date2num(datetime.strptime(str(int(year)) + '-01-01', '%Y-%m-%d'))
-            t2 = date2num(datetime.strptime(str(int(year) + 1) + '-01-01', '%Y-%m-%d'))
-        else:
-            t1 = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
-            t2 = date2num(datetime.utcnow())
-    else:
-        t1 = date2num(datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d'))
-        t2 = date2num(datetime.strptime(str(int(year)+1)+'-01-01','%Y-%m-%d'))
+        st, et = datastream.timerange()
+        average_delta = (et - st) / 2
+        average_ts = st + average_delta
+        year = datetime.strftime(average_ts,'%Y')
+    t1 = datetime.strptime(str(int(year))+'-01-01','%Y-%m-%d')
+    t2 = datetime.strptime(str(int(year)+1)+'-01-01','%Y-%m-%d')
 
-    #absinfoline = []
     absinfodiff = ''
     if diff:
         if diff.length()[0] > 1:
@@ -1939,13 +1935,8 @@ def writeBLV(datastream, filename, **kwargs):
             if not absinfodiff == '':
                 logger.info("writeBLV: Getting Absolute info from header of provided dailymean file")
                 absinfo = absinfodiff
-                #absinfoline = absinfo.split('_')
-                #extradays= int(absinfoline[2])
-                #fitfunc = absinfoline[3]
-                #fitdegree = int(absinfoline[4])
-                #knotstep = float(absinfoline[5])
-                #keys = ['dx','dy','dz']#,'df'] # absinfoline[6]
 
+    # getting functional parameters for adopted baseline
     if absinfo:
         parameterlist = getAbsInfo(absinfo)
     if not absinfo or not parameterlist:
@@ -1966,7 +1957,7 @@ def writeBLV(datastream, filename, **kwargs):
     # override using optionally provided fit parameters
     basefunctionlist = datastream.header.get('DataFunctionObject')
     if not basefunctionlist:
-        print ("writeBLV: baseline adoption function contained in data structure")
+        print ("writeBLV: baseline adoption function not part of the data header")
         basefunctionlist =[]
     if fitfunc and isinstance(fitfunc, list) and len(fitfunc) > 0:
         print ("writeBLV: baseline adoption function directly provided along with write call")
@@ -2010,11 +2001,8 @@ def writeBLV(datastream, filename, **kwargs):
     # 4. create dummy stream with time range
     dummystream = DataStream()
     array = [[] for key in KEYLIST]
-    row1, row2 = LineStruct(), LineStruct()
-    row1.time = t1
-    row2.time = t2
-    array[0].append(row1.time)
-    array[0].append(row2.time)
+    array[0].append(t1)
+    array[0].append(t2)
     indx = KEYLIST.index('dx')
     indy = KEYLIST.index('dy')
     indz = KEYLIST.index('dz')
@@ -2025,16 +2013,12 @@ def writeBLV(datastream, filename, **kwargs):
         array[indy].append(0.0)
         array[indz].append(0.0)
         array[indf].append(0.0)
-    dummystream.add(row1)
-    dummystream.add(row2)
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
     dummystream.ndarray = np.asarray(array, dtype=object)
 
     # 5. Extract the data for one year and calculate means
     backupabsstream = datastream.copy()
-    if not len(datastream.ndarray[0]) > 0:
-        backupabsstream = backupabsstream.linestruct2ndarray()
 
     datastream = datastream.trim(starttime=t1, endtime=t2)
 
@@ -2056,6 +2040,7 @@ def writeBLV(datastream, filename, **kwargs):
             except:
                 fbase = getAbsInfo(deltaF)
                 if fbase:
+                    # doesnt make sense - is set false in a few lines
                     fbasefunc = True
 
     if keys == ['dx','dy','dz','df'] and is_number(deltaF):
@@ -2090,8 +2075,10 @@ def writeBLV(datastream, filename, **kwargs):
         comps = 'HDZF'
 
     meanstream = datastream.extract('f', 0.0, '>')
-    meanstream = meanstream.flag_outlier()
-    meanstream = meanstream.remove_flagged()
+    # new 2.0 : do not flag anything internally, the user should do that beforehand
+    #if meanstream and len(meanstream) > 0:
+    #    meanstream = meanstream.flag_outlier()
+    #    meanstream = meanstream.remove_flagged()
 
     if not meanf:
         meanf = meanstream.mean('f')
@@ -2099,6 +2086,8 @@ def writeBLV(datastream, filename, **kwargs):
         meanh = meanstream.mean('x')
 
     # 6. calculate baseline function
+    t1num = date2num(t1)
+    t2num = date2num(t2)
     if not len(basefunctionlist) > 0:
         basefunctionlist =[]
         keys = []
@@ -2111,7 +2100,7 @@ def writeBLV(datastream, filename, **kwargs):
                 basefunctionlist.append(dummystream.baseline(backupabsstream, startabs=parameter[0],endabs=parameter[1],keys=parameter[6], fitfunc=parameter[3],fitdegree=parameter[4],knotstep=parameter[5],extradays=parameter[2]))
 
     yar = [[] for key in KEYLIST]
-    datelist = [day+0.5 for day in range(int(t1),int(t2))]
+    datelist = num2date([day+0.5 for day in range(int(t1num),int(t2num))])
     for idx, elem in enumerate(yar):
         if idx == 0:
             yar[idx] = np.asarray(datelist)
@@ -2150,7 +2139,7 @@ def writeBLV(datastream, filename, **kwargs):
         logger.debug("writeBLV: {}".format(datastream.length()))
         for idx, elem in enumerate(datastream.ndarray[0]):
             if t2 >= elem >= t1:
-                day = datetime.strftime(num2date(elem),'%j')
+                day = datetime.strftime(elem,'%j')
                 x = float(datastream.ndarray[indx][idx])
                 if comps.lower() in ['xyzf','xyz']:
                     y = float(datastream.ndarray[indy][idx])
@@ -2212,7 +2201,6 @@ def writeBLV(datastream, filename, **kwargs):
     myFile.writelines( '*\r\n' )
     posstr = KEYLIST.index('str1')
 
-    #print ("LENGTH", len(yearstream.ndarray[posstr]))
     if not len(yearstream.ndarray[posstr]) > 0:
         parameterlst = ['c']*len(yearstream.ndarray[0])
     else:
@@ -2220,7 +2208,7 @@ def writeBLV(datastream, filename, **kwargs):
 
     for idx, t in enumerate(yearstream.ndarray[0]):
         #001_AAAAAA.AA_BBBBBB.BB_ZZZZZZ.ZZ_SSSSSS.SS_DDDD.DD_mCrLf
-        day = datetime.strftime(num2date(t),'%j')
+        day = datetime.strftime(t,'%j')
         parameter = parameterlst[idx]
         if not len(yearstream.ndarray[indx])>0:
             x = 99999.00
@@ -2267,15 +2255,6 @@ def writeBLV(datastream, filename, **kwargs):
                     df = 999.00
             else:
                 df = 999.00
-            """
-            indext = [np.abs(np.asarray(diff.ndarray[0])-t).argmin()]
-            if len(indext) > 0:
-                df = diff.ndarray[posdf][indext[0]]
-                if np.isnan(df):
-                    df = 999.00
-            else:
-                df = 999.00
-            """
         else:
             df = 888.00
         line = '%s %9.2f %9.2f %9.2f %9.2f %7.2f %s\r\n' % (day,x,y,z,f,df,parameter)
@@ -2285,6 +2264,8 @@ def writeBLV(datastream, filename, **kwargs):
     myFile.writelines( '*\r\n' ) #.encode('utf-8') )
     myFile.writelines( 'Comments:\r\n' ) #.encode('utf-8') )
     myFile.writelines( '-'*40 + '\r\n' ) #.encode('utf-8') )
+    commentstring = datastream.header.get('DataComments','')
+    # split comments to individual string of length x
     absinfostring = dummystream.header.get('DataAbsInfo','')
     parameterlist = getAbsInfo(absinfostring)
     #print ("writeBLV", absinfostring, parameterlist)
@@ -2304,26 +2285,32 @@ def writeBLV(datastream, filename, **kwargs):
 
     # get some data:
     infolist = [] # contains all provided information for comment section
-    db = False
-    if not db:
-        posst1 = KEYLIST.index('str2')
-        infolist.append(datastream[-1].str2)
-        infolist.append(datastream[-1].str3)
-        infolist.append(datastream[-1].str4)
-        #
+    posst2 = KEYLIST.index('str2')
+    posst3 = KEYLIST.index('str3')
+    posst4 = KEYLIST.index('str4')
+    if len(datastream.ndarray[posst2]) > 0:
+        infolist.append(datastream.ndarray[posst2][-1])
+    if len(datastream.ndarray[posst3]) > 0:
+        infolist.append(datastream.ndarray[posst3][-1])
+    if len(datastream.ndarray[posst4]) > 0:
+        infolist.append(datastream.ndarray[posst4][-1])
 
+
+    myFile.writelines( '-'*40 + '\r\n' ) #.encode('utf-8') )
     funcline5 = 'Measurements conducted primarily with:\r\n'
-    funcline6 = 'DI: %s\r\n' % infolist[0]
-    funcline7 = 'Scalar: %s\r\n' % infolist[1]
-    funcline8 = 'Variometer: %s\r\n' % infolist[2]
+    myFile.writelines( funcline5 ) #.encode('utf-8') )
+    if len(infolist) > 0:
+        funcline6 = 'DI: %s\r\n' % infolist[0]
+        myFile.writelines( funcline6 ) #.encode('utf-8') )
+    if len(infolist) > 1:
+        funcline7 = 'Scalar: %s\r\n' % infolist[1]
+        myFile.writelines(funcline7)  # .encode('utf-8') )
+    if len(infolist) > 2:
+        funcline8 = 'Variometer: %s\r\n' % infolist[2]
+        myFile.writelines( funcline8 ) #.encode('utf-8') )
     funcline9 = 'Pier: %s\r\n' % datastream.header.get('DataPier','-')
     # additional text with pier, instrument, how f difference is defined, which are the instruments etc
     summaryline = '-- analysis supported by MagPy\r\n'
-    myFile.writelines( '-'*40 + '\r\n' ) #.encode('utf-8') )
-    myFile.writelines( funcline5 ) #.encode('utf-8') )
-    myFile.writelines( funcline6 ) #.encode('utf-8') )
-    myFile.writelines( funcline7 ) #.encode('utf-8') )
-    myFile.writelines( funcline8 ) #.encode('utf-8') )
     myFile.writelines( funcline9 ) #.encode('utf-8') )
     myFile.writelines( '-'*40 + '\r\n' ) #.encode('utf-8') )
     myFile.writelines( summaryline ) #.encode('utf-8') )  changed open to 'wt' -> no encoding to binary necessary
@@ -3025,7 +3012,6 @@ if __name__ == '__main__':
     testrun = 'STREAMTESTFILE'
     t_start_test = datetime.utcnow()
     # Testing the following methods
-    #writeBLV()
     #writeIYFV()
 
     while True:
@@ -3103,6 +3089,43 @@ if __name__ == '__main__':
             diff = subtract_streams(kstream,dat)
             km = diff.mean('var1')
             print (km)
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+        testset = 'BLV'
+        try:
+            from magpy.stream import example3
+            filename = os.path.join('/tmp',
+                                    '{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test, '%Y%m%d-%H%M')))
+            # read basevalue data
+            ts = datetime.utcnow()
+            base = read(example3)
+            # fit adopted baseline
+            func1 = base.fit(['dx', 'dy', 'dz'], fitfunc='spline', knotstep=0.33, endtime='2018-07-15')
+            func2 = base.fit(['dx', 'dy', 'dz'], fitfunc='spline', knotstep=0.05, starttime='2018-07-15')
+            func = [func1, func2]
+            # no extrapolation to a endtime
+            base.header['DataFunctionObject'] = [func1, func2]
+            # mp.tsplot([base], keys=[['dx','dy','dz']], symbols=[['o','o','o']], padding=[[2,0.02,2]], functions=[[func,func,func]])
+            print("Writing to ", filename)
+            succ1 = writeBLV(base, filename, coverage='all')
+            # raw data will have exact time steps of measurements - BLV data will have only daily accuracy
+            succ2 = isBLV(filename)
+            print("Reading")
+            dat = readBLV(filename)
+            func2 = dat.header.get('DataFunctionObject')
+            # Check func2 display - seems not to work in all cases in BLV tests - part of the fit verification
+            # validity tests - run comparison of basevalue
+            base = base.trim(starttime='2018-01-01', endtime='2019-01-01')
+            print(np.round(base.mean('dx'), 2), np.round(dat.mean('dx'), 2))
+            print(np.round(base.mean('dy') * 60., 2), np.round(dat.mean('dy') * 60., 2))
+            print(np.round(base.mean('dz'), 2), np.round(dat.mean('dz'), 2))
+            ado = readBLV(filename, mode="adopted")
+            # mp.tsplot([base,dat,ado], keys=[['dx','dy','dz']], symbols=[['o','o','o'],['o','o','o'],['-','-','-']], padding=[[2,0.02,2]], functions=[[func,func,func],[],[]])
+            # ado and func perfectly match in graph find another test
+            te = datetime.utcnow()
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
