@@ -2596,7 +2596,12 @@ CALLED BY:
         return self
 
 
+    @deprecated("Use the derivative method instead")
     def differentiate(self, **kwargs):
+        return self.derivative(**kwargs)
+
+
+    def derivative(self, **kwargs):
         """
     DEFINITION:
         Method to differentiate all columns with respect to time.
@@ -4278,7 +4283,6 @@ CALLED BY:
             keys: (list - default ['x','y','z','f'] provide limited key-list
         """
 
-
         logger.info('--- Integrating started at %s ' % str(datetime.now()))
 
         keys = kwargs.get('keys')
@@ -4294,8 +4298,8 @@ CALLED BY:
         else:
             return self
         for key in keys:
-            ind = KEYLIST.index(key)
-            val = np.asarray(self.ndarray[ind])
+            ind = self.KEYLIST.index(key)
+            val = np.asarray(self.ndarray[ind],dtype=float)
             ninds = np.isnan(val)
             nind = np.array(range(0,len(val)))[ninds]
             msk = np.logical_not(ninds)
@@ -5105,13 +5109,12 @@ CALLED BY:
 
         if debugmode:
             print ("Times:", stwithnan.ndarray[0][0],stwithnan.ndarray[0][-1],t_list[0],t_list[-1])
-            print ("Times:", num2date(stwithnan.ndarray[0][0]),num2date(stwithnan.ndarray[0][-1]),num2date(t_list[0]),num2date(t_list[-1]))
             print("Multiplikator:", multiplicator, stwithnan.length()[0], len(t_list))
             print("Diff:", diff)
 
         # res stream with new t_list is used for return
         array=[np.asarray([]) for elem in KEYLIST]
-        t0 = t_list[0] #- timedelta(seconds=period)
+        t0 = t_list[0] - timedelta(seconds=period)
         for key in keys:
             if debugmode:
                 print ("Resampling:", key)
@@ -5125,7 +5128,7 @@ CALLED BY:
                 int_min = int_data[1]
                 int_max = int_data[2]
                 # add an initial value
-                t0 = t_list[0]-timedelta(seconds=period)
+                t0 = t_list[0] -timedelta(seconds=period)
                 v0 = np.nan
                 if len(stwithnan.ndarray[index]) > 2 and not np.isnan(stwithnan.ndarray[index][0]) and not np.isnan(stwithnan.ndarray[index][1]):
                     ti1 = stwithnan.ndarray[0][0]
@@ -5170,8 +5173,10 @@ CALLED BY:
             except:
                 logger.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
 
-        t_list.insert(0, t0)
+        t_list.insert(0, t0) # do not insert startcondition
         array[0] = np.asarray(t_list)
+        # now drop first line of array
+        array = [ar[1:] for ar in array]
 
         logger.info("resample: Data resampling complete.")
         stwithnan.header['DataSamplingRate'] = period

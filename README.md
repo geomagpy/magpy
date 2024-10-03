@@ -688,8 +688,8 @@ Columns consisting solely of NaN values con be dropped using
 
         fdata = fdata._remove_nancolumns()
 
-A random subselection of data can be obtained using `randomdrop`. The percentage defines the amount of data to be 
-removed. You can also define indicies which cannot be randomly dropped, the first and last point in our example below.
+A random sub-selection of data can be obtained using `randomdrop`. The percentage defines the amount of data to be 
+removed. You can also define indices which cannot be randomly dropped, the first and last point in our example below.
 
         dropstream = teststream.randomdrop(percentage=50,fixed_indicies=[0,len(teststream)-1])
 
@@ -725,7 +725,7 @@ If you want to select specific time ranges from the already opened data set you 
         print(" Timesteps after trimming:", len(trimmeddata))
 
 The trim method will create a new datastream containing only data from the selected time window. There is another
-mainly internally used method `_select_timerange` which will do exatcly the same as trim but returns only the
+mainly internally used method `_select_timerange` which will do exactly the same as trim but returns only the
 data array (ndarray) without any header information 
 
         ar = data._select_timerange(starttime='2018-08-02T08:00:00', endtime='2018-08-02T09:00:00')
@@ -935,58 +935,110 @@ Acceptable sind all data resolutions as the dailymeans will filter the data step
 
 ### 5.4 Calculating vectorial F and delta F
 
-Vectorial F can be easily calculated if the vectorial keys x,y,z are available. Just use the method
+Vectorial F can be easily calculated if the vectorial keys x,y,z are available. Lets start with examples1
+from the provided data sets. Example1 contains a column filled with nan values for testing purposes.
+We first remove this column (see also 5.1.2). 
 
-        data_with_f = data.calcf()
+        data = read(example1)
+        data = data._remove_nancolumns()
 
-Calculated F data will be filled into column 'f' of the data stream. Mostly however you will be interested not in 
-vectorial F (F_V) but in delta values between F_V and a scalar F (F_S). Let us assume you have two data sources 
-variodata with X,Y,and Z data as well as scalardata with F. Make sure that both data sets cover the same time range 
-and are sampled at the same frequency and time steps:
+Afterwards we check the available keys in the data set and see that x,y,z 
+are available, a prerequisite to calculate the vector sum. We can also check what components are actually 
+stored below keys x,y,z by checking the data's meta information. HEZ is perfectly fine for calculating
+the vector sum.
 
-        combineddata = merge_streams(variodata,scalardata)   # checkout section 5.10 for details
+        print(data.variables())
+        print(data.header.get('DataComponents'))
 
-Now the data file contains xyz (hdz, idf) data and an independently measured f value. You can calculate delta F between the two instruments using the following:
+The command 'calc_f` is now performing the calculation of the vector sum and stores it with key f
+
+        data_with_F_v = data.calc_f()
+
+Mostly however you will be interested not in vectorial F (F_V) but in delta values between F_V and a scalar F (F_S).
+Lets read an independent F data set from example2, which covers a similar time range as vectorial data from example1.
+
+        fdata = read(example2)
+
+Let us assume you have two data sources variodata with X,Y,and Z data as well as scalardata with F. 
+Make sure that both data sets cover the same time range and are sampled at the same frequency and time steps
+
+        combineddata = merge_streams(data,fdata)   # checkout section 5.10 for details
+
+Now the data file contains xyz (hdz, idf) data and an independently measured f value. You can calculate delta F 
+between the two instruments using the following:
 
         combineddata = combineddata.delta_f()
 
-Combined data will now contain an additional column at key 'df' containing F_v - F_s, the scalar pier difference as defined within the IM technical manual.  
+Combined data will now contain an additional column at key 'df' containing F_v - F_s, 
+the scalar pier difference as defined within the IM technical manual. The delta F values will added 
+to key/column df (Figure ![5.4](./magpy/doc/ts_54.png "Data stream plot with F and dF")):
 
-### 5.4 Applying offsets and scaling values
-
-Constant offsets can be added to individual columns using the `offset` method with a dictionary defining the MagPy stream column keys and the offset to be applied (datetime.timedelta object for time column, float for all others):
-
-        offsetdata = cleandata.offset({'time':timedelta(seconds=0.19),'f':1.24})
-
-Individual columns can also be multiplied by values provided in a dictionary:
-
-        multdata = cleandata.multiply({'x':-1})
+        mp.tsplot(combineddata, keys=['x','y','z','f','df'], height=2)
 
 
-### 5.5 Statistics
+### 5.5 Means, amplitudes and standard deviation
 
-Mean values for certain data columns can be obtained using the `mean` method. The mean will only be calculated for data with the percentage of valid data (in contrast to missing data) points not falling below the value given by the percentage option (default 95). If too much data is missing, then no mean is calulated and the function returns NaN.
+Mean values for certain data columns can be obtained using the `mean` method. The mean will only be 
+calculated for data with the percentage of valid data points. By default 95% of valid data is required. 
+You can change that by using the percentage option. In case of too many missing data points, then no mean 
+is calculated and the function returns NaN.
 
-        print(cleandata.mean('df', percentage=80))
+        print(data.mean('x', percentage=80))
+
+If you want also the standard deviation use option *std*:
+
+        print(data.mean('x', percentage=80, std=True))
 
 The median can be calculated by defining the `meanfunction` option:
 
-        print(cleandata.mean('df', meanfunction='median'))
+        print(data.mean('x', meanfunction='median'))
 
-Amplitude, get_variance, etc
+The amplitude, the difference between maximum and minimum, can be obtained as follows
+
+        print(data.amplitude('x'))
+
+Just maximum and minimum values can be obtained with these methods
+
+        print("Maximum:", data._get_max('x'))
+        print("Minimum:", data._get_min('x'))
+
+If you just need the variance you can either square the standrad deviation or use the `_get_variance` method
+
+        print("Variance:", data._get_variance('x'))
+
+### 5.6 Offsets and Scales
+
+#### 5.6.1 Offsets
+
+Constant offsets can be added to individual columns using the `offset` method with a dictionary defining 
+the MagPy stream column keys and the offset to be applied (datetime.timedelta object for time column, float for all others):
+
+        offsetdata = data.offset({'time':timedelta(seconds=0.19),'f':1.24})
+
+#### 5.6.2 Scaling
+
+Individual columns can also be multiplied by values provided in a dictionary:
+
+        multdata = data.multiply({'x':-1})
 
 
-### 5.6 Some basic methods for timeseries data manipulations 
+### 5.7 Derivatives and integrating
 
-Assigning data to other keys, removing missing data, etc
+Time derivatives, which are useful to identify outliers and sharp changes, are calculated based on successive
+gradients based on numpy gradient. By using the option *put2keys* you can add the derivative to columns of your
+choice. By default they are added to dx,,dy, dz, df.
 
+        diffdata = data.derivative(keys=['x','y','z'],put2keys = ['dx','dy','dz'])
+        mp.tsplot(diffdata,keys=['x','dx'], height=2)
 
-### 5.7 Derivatives
+We can also integrate the curve again based on scipy.integrate.cumtrapz. Use the `integrate`method for this purpose.
+Integrate can only be applied to keys x,y,z,f and puts integrated data into columns dx,dy,dz,df. So sometimes you will
+need to move data into the projected columns first. In the following we will move one of the earlier derived
+columns towards x and then integrate. The correct scaling cannot be reconstructed and needs to be adjusted separately
 
-Time derivatives, which are useful to identify outliers and sharp changes, are calculated as follows:
-
-        diffdata = cleandata.differentiate(keys=['x','y','z'],put2keys = ['dx','dy','dz'])
-        mp.plot(diffdata,variables=['dx','dy','dz'])
+        diffdata._move_column('dx','x')
+        test = diffdata.integrate(keys=['x','y','z'])
+        mp.tsplot(test,keys=['dx'], height=2)
 
 
 ### 5.8 Extrapolation
