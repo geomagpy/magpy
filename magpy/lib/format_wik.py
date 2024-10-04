@@ -13,7 +13,8 @@ def isOPT(filename):
     Checks whether a file is ASCII PMAG format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -29,7 +30,8 @@ def isPMAG1(filename):
     Checks whether a file is ASCII PMAG format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
 
@@ -57,6 +59,7 @@ def isPMAG2(filename):
             temp = fh.readline()
         if temp == "":
             temp = fh.readline()
+        fh.close()
     except:
         return False
     try:

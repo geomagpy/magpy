@@ -29,7 +29,9 @@ def isUSBLOG(filename):
     Extend that code for CO logger as well
     """
     try:
-        temp = open( filename, "r", newline='', encoding='utf-8', errors='ignore' ).readline()
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
+            temp = fi.readline()
+        #temp = open( filename, "r", newline='', encoding='utf-8', errors='ignore' ).readline()
     except:
         return False
     try:
@@ -48,8 +50,8 @@ def isRMRCS(filename):
     Checks whether a file is ASCII RCS format.
     """
     try:
-        fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
-        temp = fh.readline()
+        with open(filename, 'r', encoding='utf-8', newline='', errors='ignore') as fh:
+            temp = fh.readline()
     except:
         return False
     try:
@@ -65,7 +67,8 @@ def isIWT(filename):
     """
 
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -86,8 +89,8 @@ def isMETEO(filename):
     """
 
     try:
-        fh = open(filename, 'rb')
-        temp = fh.readline()
+        with open(filename, "rb") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -117,8 +120,8 @@ def isLNM(filename):
     """
 
     try:
-        fh = open(filename, 'rt')
-        temp = fh.readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -135,8 +138,8 @@ def isLIPPGRAV(filename):
     """
 
     try:
-        fh = open(filename, 'rt')
-        temp = fh.readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -161,7 +164,8 @@ def isGRAVSG(filename):
     """
 
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -178,7 +182,8 @@ def isCS(filename):
     should be called as one of the last options
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:

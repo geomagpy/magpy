@@ -99,7 +99,9 @@ def isIMF(filename):
     Checks whether a file is ASCII IMF 1.22,1.23 minute format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
+        #temp = open(filename, 'rt').readline()
     except:
         return False
     try:
@@ -122,7 +124,9 @@ def isIAF(filename):
     """
 
     try:
-        temp = open(filename, 'rb').read(64)
+        with open(filename, 'rb') as fi:
+            temp = fi.read(64)
+        #temp = open(filename, 'rb').read(64)
         data= struct.unpack('<4s4l4s4sl4s4sll4s4sll', temp)
     except:
         return False
@@ -223,17 +227,22 @@ def isIYFV(filename):
             temp = fi.readline()
         except UnicodeDecodeError as e:
             print ("Found an unicode error whene reading:",e)
+            fi.close()
             return False
         except:
+            fi.close()
             return False
         try:
             searchstr = ['ANNUAL MEAN VALUES', 'Annual Mean Values', 'annual mean values']
             for elem in searchstr:
                 if temp.find(elem) > 0:
                     logger.debug("isIYFV: Found IYFV data")
+                    fi.close()
                     return True
         except:
+            fi.close()
             return False
+    fi.close()
     return False
 
 
@@ -256,6 +265,7 @@ def isDKA(filename):
         temp4 = fh.readline()
         temp5 = fh.readline()
         temp6 = fh.readline()
+        fh.close()
     except:
         return False
     try:

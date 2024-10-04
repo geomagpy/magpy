@@ -17,8 +17,8 @@ def isJSON(filename):
     Checks whether a file is JSON format.
     """
     try:
-        jsonfile = open(filename, 'r')
-        j = json.load(jsonfile)
+        with open(filename, 'r') as jsonfile:
+            j = json.load(jsonfile)
     except:
         return False
     try:

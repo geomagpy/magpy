@@ -13,7 +13,8 @@ def isGDASA1(filename):
     Checks whether a file is ASCII GDAS (type1) format used by Romans modification of Chris Turbits code.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -30,7 +31,9 @@ def isGDASB1(filename):
     Checks whether a file is Binary GDAS (type1) format "flare type Chris Turbit".
     """
     try:
-        temp = open(filename, 'rb').read(25)
+        with open(filename, "rb") as fi:
+            temp = fi.read(25)
+        #temp = open(filename, 'rb').read(25)
     except:
         return False
     # This format falsely identifies some ace data.

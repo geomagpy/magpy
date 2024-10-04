@@ -142,12 +142,15 @@ def isGSM19(filename):
     try:
         li = temp.readline()
     except:
+        temp.close()
         return False
     while li.isspace():
         li = temp.readline()
     if not li.startswith('Gem Systems GSM-19'):
         if not li.startswith('/Gem Systems GSM-19'):
+            temp.close()
             return False
+    temp.close()
     return True
 
 

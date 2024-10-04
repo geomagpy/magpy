@@ -41,7 +41,8 @@ def isLEMIHF(filename):
     Checks whether a file is ASCII Lemi txt file format.
     '''
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -65,7 +66,9 @@ def isLEMIBIN1(filename):
     Checks whether a file is Binary Lemi file format.
     '''
     try:
-        temp = open(filename, 'rb').read(32)
+        with open(filename, "rb") as fi:
+            temp = fi.read(32)
+        #temp = open(filename, 'rb').read(32)
         data= struct.unpack('<4cb6B11Bcbbhhhb', temp)
     except:
         return False
@@ -74,7 +77,7 @@ def isLEMIBIN1(filename):
         if not data[0].decode('ascii') == 'L':
             return False
         if not data[22].decode('ascii') in (['A','P']):
-            return false
+            return False
     except:
         return False
 
@@ -87,7 +90,8 @@ def isLEMIBIN(filename):
     Checks whether a file is Binary Lemi025 file format. (2nd format. Used at Conrad Observatory.)
     '''
     try:
-        temp = open(filename, 'rb').read(169)
+        with open(filename, 'rb') as fi:
+            temp = fi.read(169)
         if temp[:20].decode('ascii').startswith("LemiBin"):
             return True
         else:
@@ -99,7 +103,7 @@ def isLEMIBIN(filename):
         if not data[0].decode('ascii') == 'L':
             return False
         if not data[53].decode('ascii') in (['A','P']):
-            return false
+            return False
     except:
         return False
 

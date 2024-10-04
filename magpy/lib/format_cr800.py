@@ -18,7 +18,8 @@ def isCR800(filename):
     Checks whether a file is ASCII CR800 txt file format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -38,7 +39,8 @@ def isRADON(filename):
     """
     debug = True
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:

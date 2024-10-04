@@ -18,7 +18,8 @@ def isIONO(filename):
     Checks whether a file is IM806 format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:

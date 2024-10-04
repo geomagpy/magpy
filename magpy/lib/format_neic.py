@@ -16,7 +16,8 @@ def isNEIC(filename):
     Checks whether a file is ASCII NEIC format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
