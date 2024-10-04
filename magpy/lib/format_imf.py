@@ -147,7 +147,20 @@ def isIAF(filename):
 def isBLV1_2(filename):
     """
     Checks whether a file is ASCII IBFV 1.2 Baseline format.
+    This is rather complicated as apparently many data providers did not
+    care about the content and format description.
     """
+    try:
+        #import ntpath
+        #head, tail = ntpath.split(filename)
+        head, tail = os.path.split(filename)
+        tail = tail.lower()
+        if tail.endswith(".blv"):
+            pass
+        else:
+            return False
+    except:
+        return False
     try:
         fi = open(filename, 'rt')
         temp1 = fi.readline()
@@ -164,12 +177,18 @@ def isBLV1_2(filename):
         tl2 = temp2.split()
     except:
         return False
-    if not len(tl1) == 4 or not len(tl2) in [4,5]:
+    if not len(tl1) in [2,3,4] or not len(tl2) in [4,5]:
         return False
-    if not 15 <= len(temp1) <= 30:
+    if not 5 <= len(temp1) <= 30:
         return False
     if not len(tl2[0]) == 3: # check DOY length
-        return False
+        try:
+            if int(tl2[0]) < 365:
+                pass
+            else:
+                return False
+        except:
+            return False
 
     logger.debug("isBLV1_2: Found IBFV1.2 data")
     return True
