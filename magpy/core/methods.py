@@ -717,7 +717,7 @@ def evaluate_function(component, function, samplingrate, starttime=None, endtime
     DESCRIPTION
         Evaluates a function obtained i.e. by the fit method and returns the times and function values
         within the selected time range.
-        Please note: function values outside the originally fitted datapoints will be no.nan. If you
+        Please note: function values outside the originally fitted datapoints will be np.nan. If you
         want to get fits for ranges outside the data range use stream.extrapolate first
     PARAMETERS:
         starttime and endtime defines the range in which function is evaluated

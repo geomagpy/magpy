@@ -102,7 +102,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                                  errorbars=[[ex,{}],[evar1]] with:
                                  ex = {'key':'dx','color':'red','marker':'o', 'linestype':'-'}, evar1={'key':'var5'}
                                  if errorbars are selected then general symbols and linestyles will be replaced
-        function (list)     :    a list of functions in the same format as keys, functions will be plotted in functioncolor.
+        functions (list)     :    a list of functions in the same format as keys, functions will be plotted in functioncolor.
                                  empty values are defined by emtpy lists
                                  EXAMPLE: keys=[['x','y'],['var1']], functions=[[func1,[]],[func2]]
         functionfmt(string) :    Default "r-" for all functions
@@ -216,7 +216,8 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         if not xinds[idx]:
             # plot only selected indicies
             xinds[idx] = list(range(0, len(x), 1))
-
+        # drop nan columns
+        dat = dat._remove_nancolumns()
         for i, component in enumerate(keys[idx]):
             comp = dat._get_column(component)
             if len(comp) > 0 or force:
@@ -360,7 +361,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                                 if fres and len(fres) == 2:
                                     ax.plot(fres[0], fres[1], functionfmt, alpha=0.5)
                         else:
-                            # funtion should contain the fitted time range and the projected timerange
+                            # function should contain the fitted time range and the projected timerange
                             fres = evaluate_function(component, function, dat.samplingrate(), starttime=None,
                                                      endtime=None, debug=False)
                             if fres and len(fres) == 2:
@@ -448,6 +449,80 @@ if __name__ == '__main__':
     print("----------------------------------------------------------")
     print()
 
+    def create_minteststream(startdate=datetime(2022, 11, 1), addnan=True):
+        c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+        l = 32 * 1440
+        #import scipy
+        teststream = DataStream()
+        array = [[] for el in DataStream().KEYLIST]
+        win = signal.windows.hann(60)
+        a = np.random.uniform(20950, 21000, size=int(l / 2))
+        b = np.random.uniform(20950, 21050, size=int(l / 2))
+        x = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+        array[1] = x[1440:-1440]
+        a = np.random.uniform(1950, 2000, size=int(l / 2))
+        b = np.random.uniform(1900, 2050, size=int(l / 2))
+        y = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+        array[2] = y[1440:-1440]
+        a = np.random.uniform(44300, 44400, size=l)
+        z = signal.convolve(a, win, mode='same') / sum(win)
+        array[3] = z[1440:-1440]
+        array[4] = np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440]
+        array[0] = np.asarray([startdate + timedelta(minutes=i) for i in range(0, len(array[1]))])
+        array[KEYLIST.index('sectime')] = np.asarray(
+            [startdate + timedelta(minutes=i) for i in range(0, len(array[1]))]) + timedelta(minutes=15)
+        teststream = DataStream(header={'SensorID': 'Test_0001_0001'}, ndarray=np.asarray(array, dtype=object))
+        minstream = teststream.filter()
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['col-f'] = 'F'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        teststream.header['unit-col-f'] = 'nT'
+        return teststream
+
+    teststream = create_minteststream()
+    errors = {}
+    try:
+        v1 = datetime.utcnow()
+        v2 = np.datetime64(v1)
+        v3 = date2num(v1)
+        # can also be used for unittest
+        var1 = testtimestep(v1)
+        var2 = testtimestep(v2)
+        var3 = testtimestep(v3)
+    except Exception as excep:
+        errors['testtimestep'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR testing number.")
+    try:
+        ml = [1,2,3,4,5,6,7,8,9]
+        v1 = fill_list(ml, 19, 10)
+        # can also be used for unittest with np.sum
+        #print (np.sum(v1), np.sum(ml)) # +100 for unittest
+    except Exception as excep:
+        errors['fill_list'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR testing number.")
+    try:
+        #v1 = tsplot(testdata)
+        pass
+    except Exception as excep:
+        errors['tsplot'] = str(excep)
+        print(datetime.utcnow(), "--- ERROR testing number.")
+
     print()
-    print("Good-bye!")
     print("----------------------------------------------------------")
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(str(errors.keys()))
+        print()
+        print("Exceptions thrown:")
+        for item in errors:
+            print("{} : errormessage = {}".format(item, errors.get(item)))

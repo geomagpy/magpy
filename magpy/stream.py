@@ -4201,12 +4201,13 @@ CALLED BY:
         # New way:
         if len(timecol) > 1:
             newtd = np.nanmedian(np.diff(timecol))
-            #diffs = (np.asarray(timecol[1:]-timecol[:-1])/1000000.).astype(float64) # in seconds
-            #diffs = diffs[~np.isnan(diffs)]
-            #me = np.median(diffs)
-            #st = np.std(diffs)
-            #diffs = [el for el in diffs if el <= me+2*st and el >= me-2*st]
-            #return np.median(diffs)
+            # also get the mean
+            meand = np.nanmean(np.diff(timecol))
+            # if the mean is significantly larger than the median (might happen in heavily
+            # unevenly spaced series like DI measurements) then better use mean
+            # otherwise median will return the short distance but does not reveal a weekly repetion
+            if meand > newtd * 1000:
+                newtd = meand
             return newtd.total_seconds()
         else:
             return 0.0
@@ -7728,8 +7729,9 @@ if __name__ == '__main__':
     #                      Testing
     # #######################################################
     """
-    Currently we are not using the unittest package. Nevertheless, the implementation of tests and their outcome below is similar.
-    The testing environment contains the following parts:
+    In the following you find runtime tests of the stream package.
+    Verification tests based on unittest are done separately in tests/verification.py
+    The runtime testing environment below contains the following parts:
     Test set creation part, runtime tests, verification tests, and application tests
     1) creation of articfical data streams for runtime and verification tests
        - runtime tests: random test set mimicking natural data with gaps and uncertainties

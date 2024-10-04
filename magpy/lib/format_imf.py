@@ -1565,6 +1565,16 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                      headers['col-{}'.format(KEYLIST[xpos])] = 'x base'
                      headers['col-{}'.format(KEYLIST[ypos])] = 'y base'
                      headers['unit-col-{}'.format(KEYLIST[ypos])] = 'nT'
+                if headers['DataComponents'].startswith('DIF') or headers['DataComponents'].startswith('dif'):
+                     headers['col-{}'.format(KEYLIST[xpos])] = 'd base'
+                     headers['unit-col-{}'.format(KEYLIST[xpos])] = 'deg'
+                     headers['col-{}'.format(KEYLIST[ypos])] = 'i base'
+                     headers['unit-col-{}'.format(KEYLIST[ypos])] = 'deg'
+                     headers['col-{}'.format(KEYLIST[zpos])] = 'f base'
+                if headers['DataComponents'].startswith('UVZ') or headers['DataComponents'].startswith('uvz'):
+                     headers['col-{}'.format(KEYLIST[xpos])] = 'u base'
+                     headers['col-{}'.format(KEYLIST[ypos])] = 'v base'
+                     headers['unit-col-{}'.format(KEYLIST[ypos])] = 'nT'
                 headers['DataScaleX'] = float(block[1])
                 if len(block) == 4:
                     obscode = block[-2]
@@ -1583,8 +1593,12 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                     if dttime in array[0]:
                         dttime = dttime+timedelta(seconds=1)
                     array[0].append(dttime)
-                    array[xpos].append(float(block[1])/10.)
-                    if headers.get('DataComponents','').startswith('HDZ') or headers.get('DataComponents','').startswith('hdz'):
+                    comps = headers.get('DataComponents', '').upper()
+                    if comps.startswith('DIF'):
+                        array[xpos].append(float(block[1])/10./60.0)
+                    else:
+                        array[xpos].append(float(block[1])/10.)
+                    if comps.startswith('HDZ') or comps.startswith('DIF'):
                         array[ypos].append(float(block[2])/10./60.0)
                     else:
                         array[ypos].append(float(block[2])/10.)
@@ -1604,8 +1618,12 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                         block[4] = np.nan
                 doy = str(int(block[0])).zfill(3)
                 dt = datetime.strptime(year+'-'+doy, "%Y-%j")+timedelta(hours=12)
-                xval = float(block[1])/10.
-                if headers['DataComponents'][:3] == 'HDZ':
+                comps = headers.get('DataComponents', '').upper()
+                if comps.startswith('DIF'):
+                    xval = float(block[1])/10./60.0
+                else:
+                    xval = float(block[1])/10.
+                if comps.startswith('HDZ') or comps.startswith('DIF'):
                     yval = float(block[2])/10./60.0
                 else:
                     yval = float(block[2])/10.
@@ -1754,6 +1772,16 @@ def readBLV(filename, headonly=False, **kwargs):
                      headers['col-{}'.format(KEYLIST[xpos])] = 'x base'
                      headers['col-{}'.format(KEYLIST[ypos])] = 'y base'
                      headers['unit-col-{}'.format(KEYLIST[ypos])] = 'nT'
+                if headers['DataComponents'].startswith('DIF') or headers['DataComponents'].startswith('dif'):
+                     headers['col-{}'.format(KEYLIST[xpos])] = 'd base'
+                     headers['unit-col-{}'.format(KEYLIST[xpos])] = 'deg'
+                     headers['col-{}'.format(KEYLIST[ypos])] = 'i base'
+                     headers['unit-col-{}'.format(KEYLIST[ypos])] = 'deg'
+                     headers['col-{}'.format(KEYLIST[zpos])] = 'f base'
+                if headers['DataComponents'].startswith('UVZ') or headers['DataComponents'].startswith('uvz'):
+                     headers['col-{}'.format(KEYLIST[xpos])] = 'u base'
+                     headers['col-{}'.format(KEYLIST[ypos])] = 'v base'
+                     headers['unit-col-{}'.format(KEYLIST[ypos])] = 'nT'
                 headers['DataScaleX'] = float(block[1])
                 headers['DataScaleZ'] = float(block[2])
                 headers['StationID'] = block[3]
@@ -1771,8 +1799,12 @@ def readBLV(filename, headonly=False, **kwargs):
                     if dttime in array[0]:
                         dttime = dttime+timedelta(seconds=1)
                     array[0].append(dttime)
-                    array[xpos].append(float(block[1]))
-                    if headers.get('DataComponents','').startswith('HDZ') or headers.get('DataComponents','').startswith('hdz'):
+                    comps = headers.get('DataComponents', '').upper()
+                    if comps.startswith('DIF'):
+                        array[xpos].append(float(block[1])/60.0)
+                    else:
+                        array[xpos].append(float(block[1]))
+                    if comps.startswith('HDZ') or comps.startswith('DIF'):
                         array[ypos].append(float(block[2])/60.0)
                     else:
                         array[ypos].append(float(block[2]))
@@ -1795,8 +1827,12 @@ def readBLV(filename, headonly=False, **kwargs):
                 if float(block[4])>88887.0:
                     block[4] = np.nan
                 dt = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
-                xval = float(block[1])
-                if headers['DataComponents'][:3] == 'HDZ':
+                comps = headers.get('DataComponents', '').upper()
+                if comps.startswith('DIF'):
+                    xval = float(block[1]) / 60.0
+                else:
+                    xval = float(block[1])
+                if comps.startswith('HDZ') or comps.startswith('DIF'):
                     yval = float(block[2])/60.0
                 else:
                     yval = float(block[2])
