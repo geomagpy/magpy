@@ -291,6 +291,7 @@ example4 = resource_filename('magpy', 'examples/example4.cdf')  #MagPy CDF
 example5 = resource_filename('magpy', 'examples/example5.sec')  #Imag CDF
 example6a = resource_filename('magpy', 'examples/example6a.txt')  #DI file
 example6b = resource_filename('magpy', 'examples/example6b.txt')  #DI file
+example7 = resource_filename('magpy', 'examples/example7.blv')  #IBFV2.0 file
 
 # ----------------------------------------------------------------------------
 #  Part 4: Main classes -- DataStream, LineStruct and
@@ -2936,22 +2937,31 @@ CALLED BY:
         n_harm = 10  # number of harmonics in fourier method
         starttime = testtime(starttime)
         endtime = testtime(endtime)
+        if not len(self) > 0:
+            print ("extrapolate: Empty stream provided - aborting")
+            return self
         stst, etst = self._find_t_limits()
         duration = (etst - stst).total_seconds()
         dist1 = (stst - starttime).total_seconds()
+        if starttime >= etst or endtime <= stst:
+            print ("extrapolate: Time range of data set and extrapolation range do not fit - aborting")
+            return self
         if dist1 < 0:
-            print("Starttime younger then first date in stream - skipping")
+            print("extrapolate: Starttime younger then first date in stream - skipping")
             skipst = True
         dist2 = (endtime - etst).total_seconds()
         if dist2 < 0:
-            print("Endtime older then last date in stream - skipping")
+            print("extrapolate: Endtime older then last date in stream - skipping")
             skipet = True
         if dist1 > duration or dist1 > duration:
-            print("raise error")
+            print("extrapolate: raise error")
+            return self
         if debug:
             print(dist1, dist2, duration)
         st = self.copy()
+        # do some cleanups for extrapolation
         st = st._drop_column('sectime')
+        st = st._remove_nancolumns()
         samprate = st.samplingrate() * 1000000
 
         # get the average sampling rate of st

@@ -633,7 +633,7 @@ If you want to now which column keys are used in the current data set use
 
         print (data.variables())
 
-Some basic column information, particluarly column name and units as asigned to each column key can be obtained by
+Some basic column information, particularly column name and units as assigned to each column key can be obtained by
 
         print (data.get_key_name('x'))
         print (data.get_key_unit('x'))
@@ -674,7 +674,7 @@ Figure ![5.1.2](./magpy/doc/ts_512.png "Adding a additional data column to a dat
         fdata.header['unit-col-x'] = 'arbitrary'
         mp.tsplot(fdata, height=2)
 
-Other possibly commands to move, copy or drop individual columns are as follwos
+Other possibly commands to move, copy or drop individual columns are as follows
 
         fdata = fdata._copy_column('x','var1')
         fdata = fdata._move_column('var1','var2')
@@ -684,6 +684,13 @@ Creating a data set with selected keys can also be accomplished by
 
         fdata = fdata._select_keys(['f'])
 
+If you want to extract data by some given threshold values i.e. get only data exceeding a certain value you should
+have a look at the `extract` method. The extract method requires three parameters: the first one defining the column/key name
+the second the threshold value, and the third one defines a comparator, which can be one of ">=", "<=",">", "<", "==", "!=",
+default is "==". You can also apply the extract method on columns containing strings but then only with "==".
+
+        extdata = fdata.extract("f" , 48625, ">")
+
 Columns consisting solely of NaN values con be dropped using
 
         fdata = fdata._remove_nancolumns()
@@ -691,9 +698,9 @@ Columns consisting solely of NaN values con be dropped using
 A random sub-selection of data can be obtained using `randomdrop`. The percentage defines the amount of data to be 
 removed. You can also define indices which cannot be randomly dropped, the first and last point in our example below.
 
-        dropstream = teststream.randomdrop(percentage=50,fixed_indicies=[0,len(teststream)-1])
+        dropstream = data.randomdrop(percentage=50,fixed_indicies=[0,len(teststream)-1])
 
-For later we will add a secondary time column to data1
+As an example and for later we will add a secondary time column with a time shift to fdata
 
         tcolumn = fdata._get_column('time')
         newtcolumn = np.asarray([element+timedelta(minutes=15) for element in tcolumn])
@@ -719,7 +726,7 @@ You can manually repeat that anytime using
 
         data = data.sorting()
 
-If you want to select specific time ranges from the already opened data set you can use the `trim`method
+If you want to select specific time ranges from the already opened data set you can use the `trim` method
 
         trimmeddata = data.trim(starttime='2018-08-02T08:00:00', endtime='2018-08-02T09:00:00')
         print(" Timesteps after trimming:", len(trimmeddata))
@@ -738,7 +745,7 @@ Inversely you can drop a certain time range out of the data set by
 
 Please note that the remove command removes all timesteps including the given starttime and endtime. 
 
-Finally you can trim the given stream also by percentage or amount. This is done using the `cut`method and its
+Finally you can trim the given stream also by percentage or amount. This is done using the `cut` method and its
 options. By default `cut` is using percentage. The following command will cutout the last 50% of data
 
         cutdata = fdata.cut(50,kind=0,order=0)
@@ -894,11 +901,11 @@ When dealing with geomagnetic data, especially when it comes to the frequency do
 data and  is of particular importance. The time domain should be evenly distributed and missing data needs to be 
 adequately considered. Missing data is often replaced by unrealistic numerical values like 99999 or negative data. 
 MagPy is using NaN values instead to internally treat such missing data. Two methods are available to help you 
-preparing your data for frequency analysis. The `get_gaps` method will analyse the time column and identify any missing
-time steps for an equally distant time scale. Time steps will be filled in and NaNs will be added into the data 
-columns. In order to deal with NaN values you can use filtering procedures as shown above or use the `interpolate_nan` 
-method, which will linearly interpolate NaNs. Please be careful with these techniques as you might create spurious 
-signals when interpolating. 
+preparing your data for frequency analysis. The `get_gaps` method will analyse the time column and 
+identify any missing time steps for an equally distant time scale. Missing time steps will be filled in and NaNs will 
+be added into the data columns. In order to deal with NaN values you can use filtering procedures as shown above or 
+use the `interpolate_nan` method (section 5.9.2), which will linearly interpolate NaNs. Please be careful with these 
+techniques as you might create spurious signals when interpolating.
 
         data = data.get_gaps()
         data = data.interpolate_nans(['x'])
@@ -1049,11 +1056,13 @@ in MagPy 1.x is the duplication method (option: *method='old'*) which duplicates
 at given times. New methods starting form 2.0 are the *'spline'* technique following 
 [this](https://docs.scipy.org/doc/scipy/tutorial/interpolate/extrapolation_examples.html) approach, a *'linear'* 
 extrapolation and a *'fourier'* technique as described [here](https://gist.github.com/tartakynov/83f3cd8f44208a1856ce).
-You can apply use this methods as follows:
+Please note: the extrapolation method will remove any NaN columns and secondary time columns.
 
-        extdata = data.extrapolate(starttime=datetime(2022,11,22,7), endtime=datetime(2022,11,22,16), method='fourier')
+        data = read(example5)
+        shortdata = data.trim(starttime='2018-08-29T09:00:00', endtime='2018-08-29T14:00:00')
+        extdata = shortdata.extrapolate(starttime=datetime(2018,8,29,7), endtime=datetime(2018,8,29,16), method='fourier')
 
-The different techniques will result in the following diagrams:
+The different techniques will result in schemes as displayed in the following diagrams (not the example above):
 
 1             |  2
 :-------------------------:|:-------------------------:
@@ -1067,8 +1076,8 @@ The different techniques will result in the following diagrams:
 
 MagPy offers the possibility to fit functions to data using a number of different fitting functions:
 
-        func = cleandata.fit(keys=['x','y','z'], fitfunc='spline', knotstep=0.1)
-        mp.tsplot([cleandata],[['x','y','z']],function=[[func,func,func]])
+        func = data.fit(keys=['x','y','z'], fitfunc='spline', knotstep=0.1)
+        mp.tsplot([data],[['x','y','z']],functions=[[func,func,func]])
 
 Supported fitting functions *fitfunc* are polynomial 'poly', 'harmonic', 'least-squares', 'mean', 'spline'. The default 
 fitting method is the cubic spline function 'spline'. You need to specific the option *fitdegree* for polynomial and 
@@ -1083,37 +1092,49 @@ number below 0.5.
 The interpol method uses Numpy's interpolate.interp1d to interpolate values of a timeseries. The option *kind* defines 
 the type of interpolation. Possible options are 'linear' (default), 'slinear ' which is a first order spline, 
 'quadratic' = spline (second order), 'cubic' corresponding to a third order spline, 'nearest' values and 'zero'. The 
-interpolation method can be used to interpolate missing data.
+interpolation method can be used to interpolate missing data. Lets create put some data gaps into our example data set
+for demonstration. We will use `randomdrop` to remove some data lines and then use `get_gaps` to identify this lines and
+insert timesteps, but leaving values as NaN. Finally we can then interpolate missing data 
 
-        func = gapstream.interpol(['x','y'],kind='linear')
+        discontinuousdata_with_gaps = data.randomdrop(percentage=10,fixed_indicies=[0,len(teststream)-1])
+        print("Before: {}, After randdrop: {}".format(len(data), len(discontinuousdata_with_gaps)))
+        continuousdata_with_gaps = discontinuousdata_with_gaps.get_gaps()
+
+        contfunc = continuousdata_with_gaps.interpol(['x','y'],kind='linear')
+        mp.tsplot([continuousdata_with_gaps],[['x','y','z']],functions=[[contfunc,contfunc,None]])
 
 Another simple interpolation method allows for a quick linear interpolation of values, directly modifying the supplied 
-timeseries.
+timeseries (see also section 5.3.4).
 
-        interpolatedts = ts.interpolate_nans(['f'])
+        interpolatedts = continuousdata_with_gaps.interpolate_nans(['f'])
 
 #### 5.9.3 Adopted baselines
 
-Baselines are also treated as functions in MagPy. You can calculate the adopted baseline for a given timerange and a 
-provided fitting function using the following command.
+Baselines are also treated as functions in MagPy. You can calculate the adopted baseline as follows. A more detailed 
+description, also highlighting options for adopted baseline functions and jumps and all other aspects of
+adopted baseline fitting are given in section 7.5. The baseline method will add functional parameter and basevalues
+into the data header of variodata. You find these meta information in header keys 'DataAbsInfo' and
+'DataBaseValues'. 'DataAbsInfo' contains the functional parameters of which the first two elements of each
+function list describe the time range given in numerical matplotlib.dates.
 
-        func = variationdata.baseline(absolutedata, xxx)
-
-Further details on baseline adoption plus examples are summarized in section 7.5.
+        variodata = read(example5)
+        basevalues = read(example3)
+        func = variodata.baseline(basevalues)
 
 #### 5.9.4 Functions within a DataStream object
 
-Functions can be added to the timeseries meta information dictionary and stored along with the data set. Such Object 
+The full function objects can be added to the timeseries meta information dictionary and stored along with the data set. Such Object 
 storage is only supported for MagPy's PYCDF format. To add functions into the timeseries data header use:
 
-        datastream = datastream.func2header(func)
+        variodata = variodata.func2header(func)
 
 When reading PYCDF data files and also INTERMAGNET IBLV data files then functional values (adopted baselines of BLV 
 files) are available in the header. Access it as follows:
 
-        blvdata = read('mmydata.blv')
+        blvdata = read(example7)
         func = blvdata.header.get('DataFunctionObject')
-        mp.tsplot([blvdata],[['dx','dy','dz','df']], symbols=[['.','.','.','.']], padding=[[2,0.005,2,0.1]], symbolcolor=[[0.5, 0.5, 0.5]], functions=[[func,func,func,func]], height=2)
+        mp.tsplot([blvdata],[['dx','dy','dz']], symbols=[['.','.','.']], padding=[[2,0.005,2]], symbolcolor=[[0.5, 0.5, 0.5]], functions=[[func,func,func]], height=2)
+
 
 #### 5.9.5 Applying functions to timeseries
 
@@ -1125,20 +1146,23 @@ you would do the following:
 
         residuals = blvdata.copy()
         residuals = residuals.func2stream(func, keys=['dx','dy','dz','df'],mode='sub')
-        print (" Get the average residual value:", residuals.mean('dy',percentage=90))
-        mp.tsplot([residuals],[['dx','dy','dz','df']], symbols=[['.','.','.','.']], height=2)
+        print(" Get the average residual value:", residuals.mean('dy',percentage=90))
+        mp.tsplot([residuals],[['dx','dy','dz']], symbols=[['.','.','.']], height=2)
 
-Replacing existing data by the interpolated values would work as follows:
+Replacing existing data by interpolated values can be accomplished using the `func2stream` method. Just recall the example
+of 5.9.2, where we filled gaps by interpolation. Know we replace all existing inputs (data and NaNs) 
+by interpolated values
 
-        data = data.func2stream(func, keys=['x','y','z'],mode='values')
+        contfunc = continuousdata_with_gaps.interpol(['x','y','z'],kind='linear')
+        data = data.func2stream(contfunc, keys=['x','y','z'],mode='values')
 
-#### 5.9.6 Saving and reading functions separately 
+#### 5.9.6 Saving and reading functions separatly
 
 It is possible to save the functional parameters (NOT the functions) to a file and reload them for later usage. Please 
 note that you will need to apply the desired fit/interpolation/baseline adoption again based on these parameters to 
 obtain a function object. The parameters will be stored within a json dictionary.
 
-        func_to_file(func, "/tmp/savedparameter.json")
+        func_to_file(contfunc, "/tmp/savedparameter.json")
 
 To read parameters in again 
 

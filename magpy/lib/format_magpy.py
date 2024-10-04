@@ -63,7 +63,8 @@ def isPYSTR(filename):
     Checks whether a file is ASCII PyStr format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     if not temp.startswith(' # MagPy - ASCII'):
@@ -78,7 +79,8 @@ def isPYASCII(filename):
     Checks whether a file is ASCII PyStr format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     if not temp.find('# MagPy ASCII') > -1:
@@ -93,7 +95,9 @@ def isPYBIN(filename):
     Checks whether a file is binary PyStr format.
     """
     try:
-        temp = open(filename, 'r', encoding='utf-8', newline='', errors='ignore').readline()
+        with open(filename, 'r', encoding='utf-8', newline='', errors='ignore') as fi:
+            temp = fi.readline()
+        #temp = open(filename, 'r', encoding='utf-8', newline='', errors='ignore').readline()
     except:
         return False
     if not temp.startswith('# MagPyBin'):

@@ -33,7 +33,7 @@ class | method | since version | until version | runtime test | result verificat
 **core.methods** |  |          |               |              |  |  |
     | ceil_dt         |  2.0.0 |              | yes           |  |  |
     | convert_geo_coordinate | 2.0.0 |        | yes           |  |  |
-    | data_for_di     | 2.0.0 |               | yes*          | yes*                |        | absolutes
+    | data_for_di     | 2.0.0 |               | yes*          | yes*         |        | absolutes
     | dates_to_url    | 2.0.0 |               |               |  |  |
     | deprecated      | 2.0.0 |               | yes           |  |  |
  d  | denoralize      | 2.0.0 |     2.1.0     | no            |  |  |
@@ -42,8 +42,8 @@ class | method | since version | until version | runtime test | result verificat
     | evaluate_function | 2.0.0 |             | yes           |  |  |
     | extract_date_from_string | 2.0.0 |      | yes           |  |  |
     | find_nearby     | 2.0.0 |               | yes           |  |  |
-    | func_from_file  | 2.0.0 |               | yes           |  |  |
-    | func_to_file    | 2.0.0 |               | yes           |  |  |
+    | func_from_file  | 2.0.0 |               | yes           | yes*         |  5.9       |  stream
+    | func_to_file    | 2.0.0 |               | yes           | yes*         |  5.9       |  stream
     | get_chunks      | 2.0.0 |               | yes           |  |  |
     | group_indices   | 2.0.0 |               | yes           |  |  |
     | is_number       | 2.0.0 |               | yes           |  |  |
