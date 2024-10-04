@@ -156,7 +156,9 @@ def isBLV1_2(filename):
         head, tail = os.path.split(filename)
         tail = tail.lower()
         if tail.endswith(".blv"):
-            pass
+            name = tail.replace(".blv",'')
+            if not len(name) == 5:
+                return False
         else:
             return False
     except:
@@ -1483,6 +1485,18 @@ def readBLV1_2(filename, headonly=False, **kwargs):
     mode = kwargs.get('mode')
     debug = kwargs.get('debug')
     getfile = True
+    obscode = ''
+    year = 1900
+
+    head, tail = os.path.split(filename)
+    tail = tail.lower()
+    fname = tail.replace(".blv","")
+    obscode = fname[:3].upper()
+    ye = int(fname[-2:])
+    if ye < 50:
+        year = str(2000+ye)
+    else:
+        year = str(1900+ye)
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -1496,7 +1510,6 @@ def readBLV1_2(filename, headonly=False, **kwargs):
 
     data = []
     key = None
-    year = 1900
 
     # get day from filename (platform independent)
     theday = extract_date_from_string(filename)
@@ -1525,7 +1538,6 @@ def readBLV1_2(filename, headonly=False, **kwargs):
     scalarid = 'Scalar'
     varioid = 'Variometer'
     pierid = 'Pier'
-    obscode = ''
     comments = ''
 
     starfound = []
@@ -1535,9 +1547,10 @@ def readBLV1_2(filename, headonly=False, **kwargs):
             if line.isspace():
                 # blank line
                 continue
-            elif line.startswith('XYZ') or line.startswith('DIF') or line.startswith('HDZ') or line.startswith('UVZ') or line.startswith('DHZ') and not len(starfound) > 0 and len(block) == 4:
+            elif line.startswith('XYZ') or line.startswith('DIF') or line.startswith('HDZ') or line.startswith('UVZ') or line.startswith('DHZ') and not len(starfound) > 0:
                 # data info
-                year = block[-1]
+                if len(block) == 4:
+                    year = block[-1]
                 headers['DataComponents'] = block[0]
                 headers['col-{}'.format(KEYLIST[fpos])] = 'f base'
                 headers['unit-col-{}'.format(KEYLIST[fpos])] = 'nT'
@@ -1553,18 +1566,20 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                      headers['col-{}'.format(KEYLIST[ypos])] = 'y base'
                      headers['unit-col-{}'.format(KEYLIST[ypos])] = 'nT'
                 headers['DataScaleX'] = float(block[1])
-                headers['StationID'] = block[-2]
-                obscode = block[-2]
-                headers['StationIAGAcode'] = block[-2]
+                if len(block) == 4:
+                    obscode = block[-2]
+                headers['StationID'] = obscode
+                headers['StationIAGAcode'] = obscode
             elif headonly:
                 # skip data for option headonly
                 return
-            elif len(block) in [4,5] and len(block[0]) == 3 and not len(starfound) > 0:  # block 1 - basevalues
+            elif len(block) in [4,5] and not len(starfound) > 0 and int(block[0]) < 367:  # block 1 - basevalues
                 # data basevalues
                 if not mode == 'adopted':
                     block = line.split()
                     block = [el if not float(el) > 999998.00 else np.nan for el in block]
-                    dttime = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
+                    doy = str(int(block[0])).zfill(3)
+                    dttime = datetime.strptime(year+'-'+doy, "%Y-%j")+timedelta(hours=12)
                     if dttime in array[0]:
                         dttime = dttime+timedelta(seconds=1)
                     array[0].append(dttime)
@@ -1576,7 +1591,7 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                     array[zpos].append(float(block[3])/10.)
                     if len(block) == 5:
                         array[fpos].append(float(block[4])/10.)
-            elif len(block) == 5 and len(block[0]) == 3 and len(starfound) == 1:  # block 2 - adopted basevalues
+            elif len(block) in [4,5] and len(starfound) == 1 and int(block[0]) < 367:  # block 2 - adopted basevalues
                 # adopted basevalues
                 if float(block[1])>888887.0:
                     block[1] = np.nan
@@ -1584,16 +1599,21 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                     block[2] = np.nan
                 if float(block[3])>888887.0:
                     block[3] = np.nan
-                if float(block[4])>8887.0:
-                    block[4] = np.nan
-                dt = datetime.strptime(year+'-'+block[0], "%Y-%j")+timedelta(hours=12)
+                if len(block) == 5:
+                    if float(block[4])>8887.0:
+                        block[4] = np.nan
+                doy = str(int(block[0])).zfill(3)
+                dt = datetime.strptime(year+'-'+doy, "%Y-%j")+timedelta(hours=12)
                 xval = float(block[1])/10.
                 if headers['DataComponents'][:3] == 'HDZ':
                     yval = float(block[2])/10./60.0
                 else:
                     yval = float(block[2])/10.
                 zval = float(block[3])/10.
-                dfval = float(block[4])/10.
+                if len(block) == 5:
+                    dfval = float(block[4])/10.
+                else:
+                    dfval = 9999
                 if mode == 'adopted':
                     array[0].append(dt)
                     array[xpos].append(xval)
