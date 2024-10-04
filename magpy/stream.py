@@ -3459,6 +3459,8 @@ CALLED BY:
             sp = sp/(ev-sv) # should be the best?
             #sp = (ev-sv)/len(val) # does not work
             x = np.linspace(np.min(nt),np.max(nt),len(fitstream))
+            val = np.asarray(val, dtype=float64)
+            nt = np.asarray(nt, dtype=float64)
 
             if len(val)<=1:
                 logger.warning('Fit: No valid data for key {}'.format(key))
