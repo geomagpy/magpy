@@ -12,7 +12,7 @@ import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
 from magpy.core.methods import testtime, convert_geo_coordinate
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import numpy as np
 import cdflib
