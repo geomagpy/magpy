@@ -490,7 +490,7 @@ if __name__ == '__main__':
     teststream = create_minteststream()
     errors = {}
     try:
-        v1 = datetime.utcnow()
+        v1 = datetime.now(timezone.utc).replace(tzinfo=None)
         v2 = np.datetime64(v1)
         v3 = date2num(v1)
         # can also be used for unittest
@@ -499,7 +499,7 @@ if __name__ == '__main__':
         var3 = testtimestep(v3)
     except Exception as excep:
         errors['testtimestep'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR testing number.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
     try:
         ml = [1,2,3,4,5,6,7,8,9]
         v1 = fill_list(ml, 19, 10)
@@ -507,13 +507,13 @@ if __name__ == '__main__':
         #print (np.sum(v1), np.sum(ml)) # +100 for unittest
     except Exception as excep:
         errors['fill_list'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR testing number.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
     try:
         #v1 = tsplot(testdata)
         pass
     except Exception as excep:
         errors['tsplot'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR testing number.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
 
     print()
     print("----------------------------------------------------------")

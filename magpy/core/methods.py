@@ -59,7 +59,7 @@ class | method | since version | until version | runtime test | result verificat
 
 """
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from matplotlib.dates import num2date, date2num
 import os
 import re
@@ -817,9 +817,9 @@ def func_from_file(functionpath,debug=False):
                             elif value.startswith("now"):
                                 tst=value.split("+")
                                 if len(tst)>1 and isinstance(tst[1],int):
-                                    value = datetime.utcnow()+timedelta(days=int(tst[1]))
+                                    value = datetime.now(timezone.utc).replace(tzinfo=None)+timedelta(days=int(tst[1]))
                                 else:
-                                    value = datetime.utcnow()
+                                    value = datetime.now(timezone.utc).replace(tzinfo=None)
                         except:
                             pass
                     dct[key] = value
@@ -1371,7 +1371,7 @@ if __name__ == '__main__':
         var2 = is_number(testnumber)
     except Exception as excep:
         errors['is_number'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR testing number.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
 
     try:
         var1 = testtime(testdate)
@@ -1380,26 +1380,26 @@ if __name__ == '__main__':
         print("Rounded to hour by ceil_dt", var2)
     except Exception as excep:
         errors['testdate'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR testdate.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testdate.")
 
     try:
         lon, lat = convert_geo_coordinate(-34833.41399,310086.6051,'epsg:31256','epsg:4326')
         print ("Longitude: {}, Latitude: {}".format(lon,lat))
     except Exception as excep:
         errors['convert_geo_coordinate'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR convert_geo_coordinate.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR convert_geo_coordinate.")
 
     try:
         chunks = get_chunks(86400, wl=3600)
     except Exception as excep:
         errors['chunks'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR chunks.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR chunks.")
 
     try:
         datelist = extract_date_from_string("ccc_2022-11-22.txt")
     except Exception as excep:
         errors['extract_date_from_string'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR extract_date_from_string.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR extract_date_from_string.")
 
     try:
         for fill in ['mean', 'interpolate', 'value']:
@@ -1407,20 +1407,20 @@ if __name__ == '__main__':
             print("filling option {}: {}".format(fill, mv))
     except Exception as excep:
         errors['missingvalue'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR with missingvalue.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with missingvalue.")
 
     try:
         a, b = find_nearest(v, 10.3)
         print(a, b)
     except Exception as excep:
         errors['find_nearest'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR with find_nearest.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with find_nearest.")
 
     try:
         group = group_indices(indlist)
     except Exception as excep:
         errors['group_indices'] = str(excep)
-        print(datetime.utcnow(), "--- RUNTIME ERROR group_indices.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- RUNTIME ERROR group_indices.")
     try:
         group = group_indices(indlist)
         # eventually implement the following with unittest
@@ -1428,41 +1428,41 @@ if __name__ == '__main__':
             print (" group_indices: verification failure")
     except Exception as excep:
         errors['group_indices'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR group_indices.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR group_indices.")
     try:
         a = test_timestring(testdate)
     except Exception as excep:
         errors['test_timestring'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR with test_timestring.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with test_timestring.")
     try:
         ar1 = maskNAN(testarray1)
         ar2 = maskNAN(testarray2)
     except Exception as excep:
         errors['mask_nan'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR maskNAN.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR maskNAN.")
     try:
-        dround = round_second(datetime.utcnow())
+        dround = round_second(datetime.now(timezone.utc).replace(tzinfo=None))
     except Exception as excep:
         errors['round_second'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR round_second.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR round_second.")
     try:
         d1 = string2dict('A2_(2017_(deltaD_0.00;deltaI_0.201;deltaF_1.12);2018_(deltaF_1.11))')
         d2 = string2dict('st_736677.0,time_timedelta(seconds=-2.3),et_736846.0', typ='listofdict')
     except Exception as excep:
         errors['string2dict'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR string2dict.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR string2dict.")
     try:
         t1 = dict2string(d1)
         t2 = dict2string(d2, typ='listofdict')
     except Exception as excep:
         errors['dict2string'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR dict2string.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR dict2string.")
     try:
         result = dicgetlast(d1, pier='A2', element='deltaD,deltaI,deltaF')
         print (result)
     except Exception as excep:
         errors['dictgetlast'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR dictgetlast.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR dictgetlast.")
 
     print()
     print("----------------------------------------------------------")

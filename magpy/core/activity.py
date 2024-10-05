@@ -1988,49 +1988,49 @@ if __name__ == '__main__':
     errors = {}
     successes = {}
     testrun = 'streamtestfile'
-    t_start_test = datetime.utcnow()
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
     while True:
         try:
-            ts = datetime.utcnow()
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
             minstream = teststream.filter()
             k = K_fmi(minstream, debug=False)
-            te = datetime.utcnow()
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
             successes['K_fmi'] = (
                 "Version: {}, K_fmi: {}".format(magpyversion, (te - ts).total_seconds()))
             print ('Mean K', k.mean('var1'))
         except Exception as excep:
             errors['K_fmi'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR determining K_fmi.")
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR determining K_fmi.")
         if emdpackage:
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 minstream = teststream.filter()
                 bs = sqbase(minstream, components=['z'], baseline_type='')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['qdbaseline'] = (
                     "Version: {}, qdbaseline: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
                 errors['qdbaseline'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR determining quiet day baseline")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR determining quiet day baseline")
         try:
-            ts = datetime.utcnow()
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
             teststream = teststream.filter(missingdata='interpolate', noresample=True)
             for method in ['AIC','DWT2','MODWT','FDM']:
                 k = seek_storm(teststream.trim(starttime='2022-11-22',endtime='2022-11-23'), satdata_1m=None, satdata_5m=None, verbose=False, method=method)
                 print ("Successfully tested {} for storm detection".format(method))
-            te = datetime.utcnow()
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
             successes['seek_storm'] = (
                 "Version: {}, seek_storm: {}".format(magpyversion, (te - ts).total_seconds()))
         except Exception as excep:
             errors['seek_storm'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR with seek_storm.")
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with seek_storm.")
 
 
         break
 
-    t_end_test = datetime.utcnow()
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
     time_taken = t_end_test - t_start_test
-    print(datetime.utcnow(), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
 
     print()
     print("----------------------------------------------------------")

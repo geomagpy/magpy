@@ -497,17 +497,17 @@ if __name__ == '__main__':
     errors = {}
     successes = {}
     testrun = 'STREAMTESTFILE'
-    t_start_test = datetime.utcnow()
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
 
     while True:
         testset = 'PYCDF'
         try:
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
-            ts = datetime.utcnow()
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
             succ1 = writePYCDF(teststream, filename)
             succ2 = isPYCDF(filename)
             dat = readPYCDF(filename)
-            te = datetime.utcnow()
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
             # validity tests
             diff = subtract_streams(teststream, dat, debug=True)
             xm = diff.mean('x')
@@ -520,13 +520,13 @@ if __name__ == '__main__':
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
             errors[testset] = str(excep)
-            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
 
         break
 
-    t_end_test = datetime.utcnow()
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
     time_taken = t_end_test - t_start_test
-    print(datetime.utcnow(), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
 
     print()
     print("----------------------------------------------------------")

@@ -7,7 +7,7 @@ import pymysql as mysql
 import numpy as np
 import json  # used for storing dictionaries and list in text fields
 import hashlib  # used to create unique database ids
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from magpy.core.methods import testtime, convert_geo_coordinate, string2dict, round_second
 
 mysql.install_as_MySQLdb()
@@ -2919,7 +2919,7 @@ class DataBank(object):
         if mode == 'replace':
             insertmanysql = insertmanysql.replace("INSERT","REPLACE")
 
-        #t1 = datetime.utcnow()
+        #t1 = datetime.now(timezone.utc).replace(tzinfo=None)
 
         ## Alternative upload for very large lists (from 0.4.6 on)
         START_INDEX = 0
@@ -3020,206 +3020,206 @@ if __name__ == '__main__':
     successes = {}
     if ok:
         #testrun = './testflagfile.json' # define a test file later on
-        t_start_test = datetime.utcnow()
+        t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
         while True:
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db = DataBank("localhost","maxmustermann","geheim","testdb")
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['__init__'] = ("Version: {}: __init__ {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['__init__'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with __init__.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with __init__.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.dbinit()
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['dbinit'] = ("Version: {}: dbinit {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['dbinit'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with dbinit.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with dbinit.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.alter()
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['alter'] = ("Version: {}: alter {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['alter'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with alter.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with alter.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.write(teststream1)
                 db.write(teststream2)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['write'] = ("Version: {}, write: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['write'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with write.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with write.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.info('stdout')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['info'] = ("Version: {}, info: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['info'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with info.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with info.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.sensorinfo('Test_0001_0001', {'SensorName': 'BestSensorontheGlobe'})
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['sensorinfo'] = ("Version: {}, sensorinfo: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['sensorinfo'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with sensorinfo.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with sensorinfo.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 stationid = db.get_string('DATAINFO', 'Test_0001_0001', 'StationID')
                 print(stationid)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['get_string'] = ("Version: {}, get_string: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['get_string'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with get_string.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with get_string.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 tablename = db.datainfo(teststream1.header.get('SensorID'), {'DataComment': 'Add something'}, None,
                                         stationid)
                 print(tablename)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['datainfo'] = ("Version: {}, datainfo: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['datainfo'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with datainfo.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with datainfo.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 data = db.get_lines(tablename, 1000)
                 print(len(data))
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['get_lines'] = ("Version: {}, get_lines: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['get_lines'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with get_lines.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with get_lines.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 sr = db.get_float('DATAINFO', teststream1.header.get('SensorID'), 'DataSamplingRate')
                 print (sr)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['get_float'] = ("Version: {}, get_float: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['get_float'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with get_float.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with get_float.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 if db.tableexists('Test_0001_0001_0001'):
                     print (" Yes, this table exists")
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['tableexists'] = ("Version: {}, tableexists: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['tableexists'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with tableexists.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with tableexists.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.update('SENSORS', ['SensorGroup'], ['magnetism'], condition='SensorID="Test_0001_0001"')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['update'] = ("Version: {}, updatet: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['update'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with update.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with update.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 magsenslist = db.select('SensorID', 'SENSORS', 'SensorGroup = "magnetism"')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['select'] = ("Version: {}, select: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['select'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with select.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with select.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 value = db.get_pier('P2','P1','deltaF')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['get_pier'] = ("Version: {}, get_pier: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['get_pier'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with get_pier.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with get_pier.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 (long, lat) = db.coordinates('P1')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['coordinates'] = ("Version: {}, coordinates: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['coordinates'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with coordinates.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with coordinates.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 data = db.read('Test_0001_0001_0001')
                 data = db.read('Test_0001_0001_0001', starttime='2022-11-22T08:00:00', endtime='2022-11-22T10:00:00')
                 # test with all options sql, starttime, endtime
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['read'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with read.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with read.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.update_datainfo('Test_0001_0001_0001', data.header)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['read'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with read.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with read.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.delete('Test_0001_0001_0001', timerange=1)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['read'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with read.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with read.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 from magpy.core import flagging
                 fl = flagging.Flags()
                 fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],operator='RL',debug=False)
                 fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
                 fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T19:56:12.654362",endtime="2022-11-22T19:59:12.654362",components=['x','y','z'],groups={'magnetism':['x','y','z','f'],'LEMI':['x','y','z']}, debug=False)
                 db.flags_to_db(fl)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['flags_to_db'] = ("Version: {}, flags_to_db: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['flags_to_db'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with flags_to_db.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with flags_to_db.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.flags_to_delete(parameter="operator", value="RL")
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['flags_to_delete'] = ("Version: {}, flags_to_delete: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['flags_to_delete'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with flags_to_delete.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with flags_to_delete.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 fl = db.flags_from_db()
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['flags_from_db'] = ("Version: {}, flags_from_db: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['flags_from_db'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with flags_from_db.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with flags_from_db.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 data = read(example5)
                 db.dict_to_fields(data.header)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['dict_to_fields'] = ("Version: {}, dict_to_fields: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['dict_to_fields'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with dict_to_fields.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with dict_to_fields.")
 
             # If end of routine is reached... break.
             break
 
-        t_end_test = datetime.utcnow()
+        t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
         time_taken = t_end_test - t_start_test
-        print(datetime.utcnow(), "- Database runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "- Database runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
 
         print()
         print("----------------------------------------------------------")

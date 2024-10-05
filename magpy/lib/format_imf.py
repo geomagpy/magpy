@@ -439,7 +439,7 @@ def readIAF(filename, headonly=False, **kwargs):
                         pubdate = datetime.strptime(str(head[13]),"%y%m")
                     except:
                         # Publications date not provided within the header - use current
-                        pubdate = datetime.strptime(datetime.strftime(datetime.utcnow(), "%y%m"), "%y%m")
+                        pubdate = datetime.strptime(datetime.strftime(datetime.now(timezone.utc).replace(tzinfo=None), "%y%m"), "%y%m")
 
                     headers['DataPublicationDate'] = pubdate
                     gethead = False
@@ -742,7 +742,7 @@ def writeIAF(datastr, filename, **kwargs):
                         value = datetime.strftime(testtime(da),'%y%m')
                     except:
                         #print("writeIAF: DataPublicationDate --  appending current date")
-                        value = datetime.strftime(datetime.utcnow(),'%y%m')
+                        value = datetime.strftime(datetime.now(timezone.utc).replace(tzinfo=None),'%y%m')
                 elif elem == 'FormatVersion':
                     value = 3
                 elif elem == 'StationK9':
@@ -3097,7 +3097,7 @@ if __name__ == '__main__':
     errors = {}
     successes = {}
     testrun = 'STREAMTESTFILE'
-    t_start_test = datetime.utcnow()
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
     # Testing the following methods
     #writeIYFV()
 
@@ -3106,7 +3106,7 @@ if __name__ == '__main__':
         try:
             # Testing IAF
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
-            ts = datetime.utcnow()
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
             # IAF write
             succ1 = writeIAF(teststream, filename)
             # IAF test
@@ -3114,7 +3114,7 @@ if __name__ == '__main__':
             # IAF read
             dat = readIAF(filename)
             t_a = len(dat)
-            te = datetime.utcnow()
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
             # validity tests
             dat = dat.calc_f()
             diff = subtract_streams(teststream,dat)
@@ -3134,17 +3134,17 @@ if __name__ == '__main__':
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
             errors[testset] = str(excep)
-            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
         testset = 'IMF'
         try:
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
-            ts = datetime.utcnow()
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
             # write
             succ1 = writeIMF(teststream,filename)
             # test
             succ2 = isIMF(filename)
             dat = readIMF(filename)
-            te = datetime.utcnow()
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
             # validity tests
             diff = subtract_streams(teststream,dat)
             xm = diff.mean('x')
@@ -3157,12 +3157,12 @@ if __name__ == '__main__':
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
             errors[testset] = str(excep)
-            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
         testset = 'DKA'
         try:
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
             kstream = K_fmi(teststream)
-            ts = datetime.utcnow()
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
             # write
             print ("Writing")
             succ1 = writeDKA(kstream,filename)
@@ -3171,7 +3171,7 @@ if __name__ == '__main__':
             succ2 = isDKA(filename)
             print ("Reading")
             dat = readDKA(filename)
-            te = datetime.utcnow()
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
             # validity tests
             diff = subtract_streams(kstream,dat)
             km = diff.mean('var1')
@@ -3180,14 +3180,14 @@ if __name__ == '__main__':
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
             errors[testset] = str(excep)
-            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
         testset = 'BLV'
         try:
             from magpy.stream import example3
             filename = os.path.join('/tmp',
                                     '{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test, '%Y%m%d-%H%M')))
             # read basevalue data
-            ts = datetime.utcnow()
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
             base = read(example3)
             # fit adopted baseline
             func1 = base.fit(['dx', 'dy', 'dz'], fitfunc='spline', knotstep=0.33, endtime='2018-07-15')
@@ -3212,18 +3212,18 @@ if __name__ == '__main__':
             ado = readBLV(filename, mode="adopted")
             # mp.tsplot([base,dat,ado], keys=[['dx','dy','dz']], symbols=[['o','o','o'],['o','o','o'],['-','-','-']], padding=[[2,0.02,2]], functions=[[func,func,func],[],[]])
             # ado and func perfectly match in graph find another test
-            te = datetime.utcnow()
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
             errors[testset] = str(excep)
-            print(datetime.utcnow(), "--- ERROR in library {}.".format(testset))
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
 
         break
 
-    t_end_test = datetime.utcnow()
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
     time_taken = t_end_test - t_start_test
-    print(datetime.utcnow(), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
 
     print()
     print("----------------------------------------------------------")

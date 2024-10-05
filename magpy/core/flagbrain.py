@@ -1162,7 +1162,7 @@ if __name__ == '__main__':
         ul = calculate_iqr(amp_curve, f=1.5)
     except Exception as excep:
         errors['calculate_iqr'] = str(excep)
-        print(datetime.utcnow(), "--- ERROR testing number.")
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
 
 
     print("----------------------------------------------------------")

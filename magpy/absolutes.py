@@ -203,7 +203,7 @@ class DILineStruct(object):
             try:
                 self.inputdate = num2date(self.inputdate)
             except:
-                self.inputdate = datetime.utcnow()
+                self.inputdate = datetime.now(timezone.utc).replace(tzinfo=None)
         datalist.append('# Abs-InputDate: {}\n'.format(datetime.strftime(self.inputdate,"%Y-%m-%d")))
 
         datalist.append('Miren:\n')
@@ -1599,7 +1599,7 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
     if endtime:
         endtime = testtime(endtime)
     else:
-        endtime = datetime.utcnow()
+        endtime = datetime.now(timezone.utc).replace(tzinfo=None)
 
     if not didatasource:
         source = None
@@ -2437,148 +2437,148 @@ if __name__ == '__main__':
     successes = {}
     if ok:
         #testrun = './testflagfile.json' # define a test file later on
-        t_start_test = datetime.utcnow()
+        t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
         while True:
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 test = deg2degminsec(270.5)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['deg2degminsec'] = ("Version: {}: deg2degminsec {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['deg2degminsec'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with deg2degminsec.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with deg2degminsec.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 absdist = abs_read(example6a, output='AbsoluteDIStruct')  # should be the default
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['AbsoluteDIStruct'] = ("Version: {}: AbsoluteDIStruct {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['AbsoluteDIStruct'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with AbsoluteDIStruct.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with AbsoluteDIStruct.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 absst = abs_read(example6a)  # should be the default
                 for ab in absst:
                     l1 = ab.get_data_list()
                     abdi = ab.get_abs_distruct()
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['DILineStruct'] = ("Version: {}: DILineStruct {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['DILineStruct'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with DILineStruct.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with DILineStruct.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 data = data_for_di({'file': example5}, starttime='2018-08-29', endtime='2018-08-30', datatype='both',
                                    debug=True)
                 valuetest1 = abdi._check_coverage(data, keys=['f'])
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_check_coverage'] = ("Version: {}: _check_coverage {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_check_coverage'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _check_coverage.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _check_coverage.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 func = data.header.get('DataFunctionObject')[0]
                 abdi = abdi._insert_function_values(func)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_insert_function_values'] = ("Version: {}: _insert_function_values {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_insert_function_values'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _insert_function_values.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _insert_function_values.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 f = 50.
                 h = abdi._h(f,35.)
                 z = abdi._z(f,35.)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_h_z'] = ("Version: {}: _h_z {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_h_z'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _h_z.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _h_z.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 for key in abdi.ABSKEYLIST:
                     t = abdi._get_column(key)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_get_column'] = ("Version: {}: _get_column {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_get_column'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _get_column.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _get_column.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 ma = abdi._get_max('varf')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_get_max'] = ("Version: {}: _get_max {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_get_max'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _get_max.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _get_max.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 mi = abdi._get_min('varf')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_get_min'] = ("Version: {}: _get_min {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_get_min'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _get_min.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _get_min.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 resultline, decmeanx, decmeany, variocorrold = abdi._calcdec(xstart=20000,ystart=1700,hstart=0.0,hbasis=0.0,ybasis=0.0,deltaD=0.0,usestep=0,scalevalue=None,iterator=0,annualmeans=None,meantime=False,xyzorient=False,residualsign=1,debugmode=False)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_calcdec'] = ("Version: {}: _calcdec {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_calcdec'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _calcdec.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _calcdec.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 outline, hstart, hbasis = abdi._calcinc(resultline,scalevalue=None,incstart=0.0,deltaI=0.0,iterator=0,usestep=0,annualmeans=None,xyzorient=False,decmeanx=decmeanx,decmeany=decmeany,variocorrold=variocorrold,residualsign=1,debugmode=True)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_calcinc'] = ("Version: {}: _calcinc {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_calcinc'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _calcinc.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _calcinc.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 angle = abdi._corrangle(386.9)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_corrangle'] = ("Version: {}: _corrangle {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_corrangle'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _corrangle.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _corrangle.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 result = abdi.calcabsolutes(usestep=0, annualmeans=None, printresults=True, debugmode=False,
                               deltaD=0.0, deltaI=0.0, meantime=False, scalevalue=None,
                               variometerorientation='hez', residualsign=1)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['calcabsolutes'] = ("Version: {}: calcabsolutes {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['calcabsolutes'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with calcabsolutes.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with calcabsolutes.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 from magpy.core import database
                 db = database.DataBank("localhost","maxmustermann","geheim","testdb")
                 absst = abs_read(example6a)
                 if db:
                     db.diline_to_db(absst, mode="delete", stationid='WIC')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['diline_to_db'] = ("Version: {}: diline_to_db {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['diline_to_db'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with diline_to_db.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with diline_to_db.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 from magpy.core import database
                 db = database.DataBank("localhost","maxmustermann","geheim","testdb")
                 if db:
                     res = db.diline_from_db()
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['diline_from_db'] = ("Version: {}: diline_from_db {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['diline_from_db'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with diline_from_db.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with diline_from_db.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 from magpy.core import database
                 db = database.DataBank("localhost","maxmustermann","geheim","testdb")
                 absst = abs_read(example6a)  # should be the default
@@ -2587,21 +2587,21 @@ if __name__ == '__main__':
                     t2, fa = _analyse_di_source(example6a, db=db)
                     t3, fa = _analyse_di_source(absst, db=db, debug=True)
                     print ("{} and {} and {} should all be 1".format(len(t1),len(t2),len(t3)))
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_analyse_di_source'] = ("Version: {}: _analyse_di_source {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_analyse_di_source'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _analyse_di_source.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _analyse_di_source.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 data = data_for_di(example5, starttime="2018-08-29", datatype='both',debug=True)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['data_for_di'] = ("Version: {}: data_for_di {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['data_for_di'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with data_for_di.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with data_for_di.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 baseval1 = absolute_analysis(example6a, example5, example5)
                 baseval2 = absolute_analysis([example6a, example6b],
                                                {'file': example5}, example5, db=db,
@@ -2613,18 +2613,18 @@ if __name__ == '__main__':
                     db.write(data)
                     baseval3 = absolute_analysis(example6a, {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
                     baseval4 = absolute_analysis('DIDATA', {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_analyse_di_source'] = ("Version: {}: _analyse_di_source {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_analyse_di_source'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with _analyse_di_source.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _analyse_di_source.")
 
             # If end of routine is reached... break.
             break
 
-        t_end_test = datetime.utcnow()
+        t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
         time_taken = t_end_test - t_start_test
-        print(datetime.utcnow(), "- Database runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "- Database runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
 
         print()
         print("----------------------------------------------------------")

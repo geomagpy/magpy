@@ -477,7 +477,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         if labelid and labelid in self.FLAGLABEL:
             label = self.FLAGLABEL.get(labelid)
         if not modificationtime:
-            modificationtime = datetime.utcnow()
+            modificationtime = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if not isinstance(self.flagdict, dict):
             return ("Provide a flagging dictionary")
@@ -1026,7 +1026,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         return mintime, maxtime
 
 
-    def trim(self, starttime="1769-09-14", endtime=datetime.utcnow(), debug=False):
+    def trim(self, starttime="1769-09-14", endtime=datetime.now(timezone.utc).replace(tzinfo=None), debug=False):
         """
         DESCRIPTION
             trim flag dictionary by given starttime and endtime.
@@ -1178,7 +1178,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                 idlist = newidlist
                 if debug:
                     print("Level 0: ", len(idlist))
-            ts = datetime.utcnow()
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
             div = 1000
             for subids in idlist:  # speed this up
                 print ("Aumout of subids", len(subids))
@@ -1188,7 +1188,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                     if debug:
                         if ik/div > 1:
                             div = div+1000
-                            te = datetime.utcnow()
+                            te = datetime.now(timezone.utc).replace(tzinfo=None)
                             totsec = (te-ts).total_seconds()
                             print (" finished checking of {} IDs in {} seconds - finishing will need {} sec".format(ik, totsec, totsec*((len(subids)-div)/div)))
                     val = flsens.flagdict.get(flagid)
@@ -1447,7 +1447,7 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
     if not groups:
         groups = {}
 
-    cdate = datetime.utcnow().replace(tzinfo=None)
+    cdate = datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None)
     sensorid = data.header.get('SensorID', '')
     stationid = data.header.get('StationID', '')
     flaglist = []
@@ -1870,186 +1870,186 @@ if __name__ == '__main__':
     successes = {}
     if ok:
         testrun = './testflagfile.json' # define a test file later on
-        t_start_test = datetime.utcnow()
+        t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
         while True:
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T23:56:12.654362",endtime="2022-11-22T23:59:12.654362",components=['x','y','z'],debug=False)
                 fl = fl.add(sensorid="LEMI025_X56878_0002_0001",starttime="2022-11-22T21:56:12.654362",endtime="2022-11-22T21:59:12.654362",components=['x','y','z'],debug=False)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['add'] = ("Version: {}: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['add'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR adding new data - will affect all other tests.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR adding new data - will affect all other tests.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 reslist = fl._list(['starttime','endtime'])
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_list'] = ("Version: {}, _list: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['_list'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR extracting _list.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR extracting _list.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 newfl = fl.copy()
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['copy'] = ("Version: {}, copy: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['copy'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR copy stream.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR copy stream.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 trimfl = newfl.trim(starttime='2022-11-22T19:57:12.654362',endtime='2022-11-22T22:59:12.654362')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['trim'] = ("Version: {}, trim: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['trim'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR trim flag dictionary.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR trim flag dictionary.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 nextfl = newfl.add(sensorid="GSM90_Y1112_0001",starttime="2022-11-22T10:56:12.654362",endtime="2022-11-22T10:59:12.654362",components=['f'],labelid='050',debug=False)
                 obt = nextfl.select('labelid',['050'])
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['select'] = ("Version: {}, select: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['select'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR select flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR select flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 fo = Flags()
                 fo = fo.add(sensorid="GSM90_Y1112_0001",starttime="2022-11-22T10:56:12.654362",endtime="2022-11-22T10:59:12.654362",components=['f'],labelid='050',debug=False)
                 combfl = newfl.join(fo)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['join'] = ("Version: {}, join: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['join'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR join flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR join flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 fo = Flags()
                 fo = fo.add(sensorid="GSM90_Y1112_0001",starttime="2022-11-22T10:56:12.654362",endtime="2022-11-22T10:59:12.654362",components=['f'],labelid='050',debug=False)
                 fo.stats()
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['stats'] = ("Version: {}, stats: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['stats'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR stats.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR stats.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 diff = fo.diff(nextfl)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['diff'] = ("Version: {}, diff: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['diff'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR differences of flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR differences of flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 clean = fo.drop(parameter='sensorid', values=['GSM90_Y1112_0001'])
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['drop'] = ("Version: {}, drop: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['drop'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR in drop flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in drop flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 flagsmodified = nextfl.replace('comment','lightning','hell of a lightining strike')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['replace'] = ("Version: {}, replace: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['replace'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR in replace flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in replace flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 flagsmodified.fprint('GSM90_Y1112_0001')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['fprint'] = ("Version: {}, fprint: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['fprint'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR in fprint flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in fprint flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 combfl = nextfl.union(level=0)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['union'] = ("Version: {}, union: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['union'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR in union flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in union flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 mit,mat = nextfl.timerange()
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['timerange'] = ("Version: {}, timerange: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['timerange'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR in timerange flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in timerange flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 combfl = nextfl.rename_nearby(parameter='labelid', values=['001'])
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['rename_nearby'] = ("Version: {}, rename_nearby: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['rename_nearby'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR in rename_nearby flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in rename_nearby flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 trimstream = teststream.trim(starttime="2022-11-22", endtime="2022-11-23")
                 fl = flag_range(trimstream, keys=['x'], above=20990)
                 f1stream = fl.apply_flags(trimstream, mode='insert')
                 f2stream = fl.apply_flags(trimstream, mode='drop')
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['apply_flags'] = ("Version: {}, apply_flags: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['apply_flags'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR in apply_flags flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in apply_flags flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 nextfl.save(path=testrun)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['save'] = ("Version: {}, save: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['save'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR saving flags.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR saving flags.")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 stfl1 = flag_range(teststream, keys=['x'], above=340)
                 stfl2 = flag_range(teststream, keys=['x'], below=340)
                 stfl3 = flag_range(teststream, keys=['x'], starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00',
                                 keystoflag=['z'])
                 stfl4 = flag_range(teststream, keys=['x'], starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00',
                                 keystoflag=['z'])
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['flag_range'] = (
                     "Version: {}, flag_range: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
                 errors['flag_range'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with flag_range")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with flag_range")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 # convertstream = teststream.copy()
                 stfl1 = flag_outlier(teststream)
                 stfl2 = flag_outlier(teststream, keys=['x'], threshold=4, timerange=200)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['flag_outlier'] = (
                     "Version: {}, flag_outlier: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
                 errors['flag_outlier'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with flag_outlier")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with flag_outlier")
             try:
-                ts = datetime.utcnow()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 bifl = flag_binary(teststream, key='var1', keystoflag=['f'], markalloff=True)
-                te = datetime.utcnow()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['flag_binary'] = (
                     "Version: {}, flag_outlier: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
                 errors['flag_binary'] = str(excep)
-                print(datetime.utcnow(), "--- ERROR with flag_binary")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with flag_binary")
 
             # If end of routine is reached... break.
             break
 
-        t_end_test = datetime.utcnow()
+        t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
         time_taken = t_end_test - t_start_test
-        print(datetime.utcnow(), "- Flagging runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "- Flagging runtime testing completed in {} s. Results below.".format(time_taken.total_seconds()))
 
         print()
         print("----------------------------------------------------------")
