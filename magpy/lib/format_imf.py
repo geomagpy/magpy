@@ -2181,7 +2181,7 @@ def writeBLV(datastream, filename, **kwargs):
         print ("writeBLV: baseline functions will be obtained from parameterlist")
         for parameter in parameterlist:
             # check whether timerange is fitting
-            if (parameter[0] >= t1 and parameter[0] <= t2) or (parameter[1] >= t1 and parameter[1] <= t2) or (parameter[0] < t1 and parameter[1] > t2):
+            if (parameter[0] >= t1num and parameter[0] <= t2num) or (parameter[1] >= t1num and parameter[1] <= t2num) or (parameter[0] < t1num and parameter[1] > t2num):
                 keys = parameter[6]
                 print ("writeBLV: calculating baseline .... using line", parameter, backupabsstream.length())
                 basefunctionlist.append(dummystream.baseline(backupabsstream, startabs=parameter[0],endabs=parameter[1],keys=parameter[6], fitfunc=parameter[3],fitdegree=parameter[4],knotstep=parameter[5],extradays=parameter[2]))
@@ -2204,7 +2204,7 @@ def writeBLV(datastream, filename, **kwargs):
         fbasefunclist = []
         for parameter in fbase:
             # check whether timerange is fitting
-            if (parameter[0] >= t1 and parameter[0] <= t2) or (parameter[1] >= t1 and parameter[1] <= t2) or (parameter[0] < t1 and parameter[1] > t2):
+            if (parameter[0] >= t1num and parameter[0] <= t2num) or (parameter[1] >= t1num and parameter[1] <= t2num) or (parameter[0] < t1num and parameter[1] > t2num):
                 fbasefunclist.append(dummystream.baseline(backupabsstream,startabs=parameter[0],endabs=parameter[1],keys=parameter[6], fitfunc=parameter[3],fitdegree=parameter[4],knotstep=parameter[5],extradays=parameter[2]))
         yearstream = yearstream.func2stream(fbasefunclist,mode='values',keys=['df'])
 
@@ -2334,9 +2334,9 @@ def writeBLV(datastream, filename, **kwargs):
         if diff:
             #print ("writeBLV: Here", t, diff.length()[0])
             posdf = KEYLIST.index('df')
-            difft = [int(el) for el in diff.ndarray[0]]
-            if int(t) in difft:
-                ind = difft.index(int(t))
+            difft = [datetime.strftime(el, '%j') for el in diff.ndarray[0]]
+            if day in difft:
+                ind = difft.index(day)
                 df = diff.ndarray[posdf][ind]
                 if np.isnan(df):
                     df = 999.00

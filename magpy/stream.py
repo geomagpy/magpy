@@ -330,89 +330,91 @@ class DataStream(object):
 class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
 -----  |  ------  |  -------------  |  -------------  |  ------------  |  ------------------  |  ------  |  ----------
 **stream**  |             |         |                 |                |                  |    |
-DataStream  |  _aic       |  2.0.0  |                 |  yes*          |                  |    |  aic_calc
+DataStream  |  _aic       |  2.0.0  |                 |  yes*          |                  |         |  aic_calc
 DataStream  |  _convertstream  |  2.0.0  |            |  yes           |  yes             |  5.2    |
-DataStream  |  _copy_column  |  2.0.0  |              |  yes           |  yes             |    |
-DataStream  |  _det_trange  |  2.0.0  |               |  yes*          |                  |    |  filter
-DataStream  |  _drop_column  |  2.0.0  |              |  yes           |  yes             |    |
-DataStream  |  _find_t_limits  |  2.0.0  |  2.1.0     |  yes           |                  |    |
-DataStream  |  _get_column  |  2.0.0  |               |  yes           |  yes             |    |
-DataStream  |  _get_key_headers  |  2.0.0  |          |  yes           |  yes             |    |
-DataStream  |  _get_key_names  |  2.0.0  |            |  yes           |  yes             |    |
-DataStream  |  _get_max  |   2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  _get_min  |  2.0.0  |                  |  yes           |  yes             |    |
-DataStream  |  _get_variance  |  2.0.0  |             |  yes           |  yes             |    |
-DataStream  |  _move_column  |  2.0.0  |              |  yes           |  yes             |    |
-DataStream  |  _print_key_headers  |  2.0.0  |        |  yes           |                  |    |
-DataStream  |  _put_column  |  2.0.0  |               |  yes           |  yes             |    |
-DataStream  |  _remove_nancolumns  |  2.0.0  |        |  yes*          |                  |    |  subtract_streams
-DataStream  |  _select_keys  |  2.0.0  |              |  yes           |                  |    |
-DataStream  |  _select_timerange  |  2.0.0  |         |  yes*          |                  |    |  write
-DataStream  |  _tau  |       2.0.0  |                 |  yes*          |                  |    |  filter
-DataStream  |  apply_deltas  |  2.0.0  |              |  yes           |  yes             |    |  absolute_analysis
-DataStream  |  aic_calc   |  2.0.0  |                 |  yes           |                  |    |
-DataStream  |  amplitude  |  2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  baseline  |   2.0.0  |                 |  yes           |                  |    |
-DataStream  |  bc  |         2.0.0  |                 |  yes           |                  |    |
-DataStream  |  calc_f  |     2.0.0  |                 |  yes           |  yes             |  5.3    |
-DataStream  |  compensation  |  2.0.0  |              |  yes           |                  |    |
-DataStream  |  cut  |        2.0.0  |                 |  yes           |                  |    |
-DataStream  |  dailymeans  |  2.0.0  |                |  yes           |  yes             |    |
-DataStream  |  delta_f  |    2.0.0  |                 |  yes           |                  |  5.3    |
+DataStream  |  _copy_column  |  2.0.0  |              |  yes           |  yes             |  5.1    |
+DataStream  |  _det_trange  |  2.0.0  |               |  yes*          |  yes             |  -      |  filter
+DataStream  |  _drop_column  |  2.0.0  |              |  yes           |  yes             |  5.1    |
+DataStream  |  _find_t_limits  |  2.0.0  |  2.1.0     |  yes           |  -               |  -      |
+DataStream  |  _get_column  |  2.0.0  |               |  yes           |  yes             |  5.1    |
+DataStream  |  _get_key_headers  |  2.0.0  |          |  yes           |  yes             |  5.1    |
+DataStream  |  _get_key_names  |  2.0.0  |            |  yes           |  yes             |  5.1    |
+DataStream  |  _get_max  |   2.0.0  |                 |  yes           |  yes             |  5.5    |
+DataStream  |  _get_min  |  2.0.0  |                  |  yes           |  yes             |  5.5    |
+DataStream  |  _get_variance  |  2.0.0  |             |  yes           |  yes             |  5.5    |
+DataStream  |  _move_column  |  2.0.0  |              |  yes           |  yes             |  5.1    |
+DataStream  |  _print_key_headers  |  2.0.0  |        |  yes           |  -               |  5.1    |
+DataStream  |  _put_column  |  2.0.0  |               |  yes           |  yes             |  5.1    |
+DataStream  |  _remove_nancolumns  |  2.0.0  |        |  yes*          |  yes             |  5.1    |  subtract_streams
+DataStream  |  _select_keys  |  2.0.0  |              |  yes           |  yes             |  5.1    |
+DataStream  |  _select_timerange  |  2.0.0  |         |  yes*          |  yes             |  5.1    |  write
+DataStream  |  _tau  |       2.0.0  |                 |  yes*          |  yes             |  -      |  filter
+DataStream  |  add  |        2.0.0  |                 |  yes*          |  yes*            |  -      |  absolutes
+DataStream  |  apply_deltas  |  2.0.0  |              |  yes           |  yes*            |    |  methods.data_for_di
+DataStream  |  aic_calc   |  2.0.0  |                 |  yes           |                  |  8.2    |
+DataStream  |  amplitude  |  2.0.0  |                 |  yes           |  yes             |  5.5    |
+DataStream  |  baseline  |   2.0.0  |                 |  yes           |  yes             |  5.9,7.5  |
+DataStream  |  bc  |         2.0.0  |                 |  yes           |  yes             |  7.5    |
+DataStream  |  calc_f  |     2.0.0  |                 |  yes           |  yes             |  5.4    |
+DataStream  |  compensation  |  2.0.0  |              |  yes           |  yes             |  5.1    |
+DataStream  |  cut  |        2.0.0  |                 |  yes           |  yes             |  5.1    |
+DataStream  |  dailymeans  |  2.0.0  |                |  yes           |  yes             |  5.3    |
+DataStream  |  delta_f  |    2.0.0  |                 |  yes           |  yes             |  5.4    |
+DataStream  |  derivative   |  2.0.0  |               |  yes           |  yes             |  5.7    |
 DataStream  |  determine_rotationangles  |  2.0.0  |    |  yes         |  yes             |  5.2    |
-DataStream  |  dict2stream  |  2.0.0  |               |  yes*          |                  |    |  baseline
-DataStream  |  differentiate  |  2.0.0  |             |  yes           |                  |    |
-DataStream  |  dropempty  |  2.0.0  |                 |  yes*          |                  |    |  sorting
-DataStream  |  dwt_calc  |   2.0.0  |                 |  yes*          |                  |    |  core.activity
-DataStream  |  end  |        2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  extend  |     2.0.0  |                 |  yes*          |                  |    |  read
-DataStream  |  extract  |    2.0.0  |                 |  yes           |  yes             |    |
+DataStream  |  dict2stream  |  2.0.0  |               |  yes*          |  yes*            |  -      |  baseline
+DataStream  |  dropempty  |  2.0.0  |                 |  yes*          |  yes*            |  -      |  sorting
+DataStream  |  dwt_calc  |   2.0.0  |                 |  yes*          |                  |  8.2    |  core.activity
+DataStream  |  end  |        2.0.0  |                 |  yes           |  yes             |  5.1    |
+DataStream  |  extend  |     2.0.0  |                 |  yes*          |  yes             |  5.10   |  read
+DataStream  |  extract  |    2.0.0  |                 |  yes           |  yes             |  5.1    |
 DataStream  |  extrapolate  |  2.0.0  |               |  yes           |  yes             |  5.8    |
-DataStream  |  filter  |     2.0.0  |                 |  yes           |                  |    |
-DataStream  |  fillempty  |  2.0.0  |                 |  yes*          |                  |    |  sorting
-DataStream  |  findtime  |   2.0.0  |                 |  yes*          |                  |    |  resample
-DataStream  |  fit  |        2.0.0  |                 |  yes           |                  |  5.9    |
-DataStream  |  func2header  |  2.0.0  |               |  yes           |                  |  5.9    |
-DataStream  |  func2stream  |  2.0.0  |               |  yes           |                  |  5.9    |
+DataStream  |  filter  |     2.0.0  |                 |  yes           |  yes             |  5.3    |
+DataStream  |  fillempty  |  2.0.0  |                 |  yes*          |  yes*            |  -      |  sorting
+DataStream  |  findtime  |   2.0.0  |                 |  yes*          |  yes             |  5.1    |  resample
+DataStream  |  fit  |        2.0.0  |                 |  yes           |  yes             |  5.9    |
+DataStream  |  func2header  |  2.0.0  |               |  yes           |  yes             |  5.9    |
+DataStream  |  func2stream  |  2.0.0  |               |  yes           |  yes             |  5.9    |
 DataStream  |  get_fmi_array  |  2.0.0  |             |  yes*          |                  |    |  core.activity
-DataStream  |  get_gaps  |   2.0.0  |                 |  yes           |                  |    |
-DataStream  |  get_key_name  |  2.0.0  |              |  yes           |                  |    |
-DataStream  |  get_key_unit  |  2.0.0  |              |  yes           |                  |    |
-DataStream  |  get_sampling_period  |  2.0.0  |       |  yes*          |                  |    |  samplingrate
-DataStream  |  harmfit  |    2.0.0  |                 |  yes*          |                  |    |  fit
+DataStream  |  get_gaps  |   2.0.0  |                 |  yes           |  yes             |  5.3    |
+DataStream  |  get_key_name  |  2.0.0  |              |  yes           |  yes             |  5.1    |
+DataStream  |  get_key_unit  |  2.0.0  |              |  yes           |  yes             |  5.1    |
+DataStream  |  get_sampling_period  |  2.0.0  |       |  yes*          |  yes             |  -      |  samplingrate
+DataStream  |  harmfit  |    2.0.0  |                 |  yes*          |  yes             |  -      |  fit
 DataStream  |  hdz2xyz  |    2.0.0  |                 |  yes*          |  yes*            |  5.2    |  _convertstream
 DataStream  |  idf2xyz  |    2.0.0  |                 |  yes*          |  yes*            |  5.2    |  _convertstream
-DataStream  |  integrate  |  2.0.0  |                 |  yes           |                  |    |
-DataStream  |  interpol  |   2.0.0  |                 |  yes           |                  |  5.9    |
-DataStream  |  interpolate_nans  |  2.0.0  |          |  yes           |                  |  5.9    |
-DataStream  |  length  |     2.0.0  |                 |  yes*          |  yes             |    |
-DataStream  |  mean  |       2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  modwt_calc  |  2.0.0  |                |  yes*          |                  |    |  core.activity
-DataStream  |  multiply  |   2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  offset  |     2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  randomdrop  |  2.0.0  |                |  yes           |                  |    |
-DataStream  |  remove  |     2.0.0  |                 |  yes           |                  |    |
-DataStream  |  resample  |   2.0.0  |                 |  yes*          |                  |    |  filter
-DataStream  |  rotation  |   2.0.0  |                 |  yes           |  fail            |  5.2    |
-DataStream  |  samplingrate  |  2.0.0  |              |  yes           |  yes             |    |
-DataStream  |  simplebasevalue2stream  |  2.0.0  |    |  yes*          |  yes*            |    | test_absolute_analysis
-DataStream  |  smooth  |     2.0.0  |                 |  yes           |                  |    |
-DataStream  |  sorting  |    2.0.0  |                 |  yes*          |                  |    |  read
-DataStream  |  start  |      2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  steadyrise  |  2.0.0  |                |  yes           |  no              |    |
-DataStream  |  stream2dict  |  2.0.0  |               |  yes*          |                  |    |  baseline
-DataStream  |  timerange  |  2.0.0  |                 |  yes           |                  |    |
-DataStream  |  trim  |       2.0.0  |                 |  yes           |  yes             |    |
-DataStream  |  use_sectime  |  2.0.0  |               |  yes           |                  |    |
-DataStream  |  variables  |  2.0.0  |                 |  yes           |                  |    |
-DataStream  |  write  |      2.0.0  |                 |  yes           |                  |    |
+DataStream  |  integrate  |  2.0.0  |                 |  yes           |  no              |  5.7    |
+DataStream  |  interpol  |   2.0.0  |                 |  yes           |  yes             |  5.9    |
+DataStream  |  interpolate_nans  |  2.0.0  |          |  yes           |  yes             |  5.3,5.9  |
+DataStream  |  length  |     2.0.0  |                 |  yes*          |  yes             |  5.1    |
+DataStream  |  mean  |       2.0.0  |                 |  yes           |  yes             |  5.5    |
+DataStream  |  modwt_calc  |  2.0.0  |                |  yes*          |                  |  -      |  core.activity
+DataStream  |  multiply  |   2.0.0  |                 |  yes           |  yes             |  5.6    |
+DataStream  |  offset  |     2.0.0  |                 |  yes           |  yes             |  5.6    |
+DataStream  |  randomdrop  |  2.0.0  |                |  yes           |  yes             |  5.1    |
+DataStream  |  remove  |     2.0.0  |                 |  yes           |  yes             |  5.1    |
+DataStream  |  resample  |   2.0.0  |                 |  yes*          |  yes             |  5.3    |  filter
+DataStream  |  rotation  |   2.0.0  |                 |  yes           |  yes             |  5.2    |
+DataStream  |  samplingrate  |  2.0.0  |              |  yes           |  yes             |  5.1    |
+DataStream  |  simplebasevalue2stream  |  2.0.0  |    |  yes*          |  yes*            |  !  | test_absolute_analysis
+DataStream  |  smooth  |     2.0.0  |                 |  yes           |  yes             |  5.3    |
+DataStream  |  sorting  |    2.0.0  |                 |  yes*          |  no              |  5.1    |  read
+DataStream  |  start  |      2.0.0  |                 |  yes           |  yes             |  5.1    |
+DataStream  |  steadyrise  |  2.0.0  |                |  yes           |  not yet         |    |
+DataStream  |  stream2dict  |  2.0.0  |               |  yes*          |  yes*            |  -      |  baseline
+DataStream  |  timerange  |  2.0.0  |                 |  yes           |  yes             |  5.1    |
+DataStream  |  trim  |       2.0.0  |                 |  yes           |  yes             |  5.1    |
+DataStream  |  use_sectime  |  2.0.0  |               |  yes           |  yes             |  5.1    |
+DataStream  |  variables  |  2.0.0  |                 |  yes           |  yes             |  5.1    |
+DataStream  |  write  |      2.0.0  |                 |  yes           |  yes*            |  3.x    | in runtime
 DataStream  |  xyz2hdz  |    2.0.0  |                 |  yes*          |  yes*            |  5.2    |  _convertstream
 DataStream  |  xyz2idf  |    2.0.0  |                 |  yes*          |  yes*            |  5.2    |  _convertstream
-    |  determine_time_shift  |  2.0.0  |              |  yes           |                  |  5.10   |
-    |  join_streams  |       2.0.0  |                 |  yes           |                  |  5.10   |
-    |  merge_streams  |      2.0.0  |                 |  yes           |                  |  5.10   |
-    |  subtract_streams  |   2.0.0  |                 |  yes           |                  |  5.10   |
-    |  append_streams  |     2.0.0  |                 |  ...           |                  |  5.10   |
+    |  determine_time_shift  |  2.0.0  |              |  yes           |  yes*            |  5.10   | validity in runtime
+    |  join_streams  |       2.0.0  |                 |  yes           |  yes*            |  5.10   | validity in runtime
+    |  merge_streams  |      2.0.0  |                 |  yes           |  yes*            |  5.10   | validity in runtime
+    |  subtract_streams  |   2.0.0  |                 |  yes           |  yes*            |  5.10   | validity in runtime
+    |  append_streams  |     2.0.0  |                 |  ...           |  yes*            |  5.10   | validity in runtime
+
 
 
 deprecated:
@@ -5738,19 +5740,14 @@ CALLED BY:
             filenameends = middle+publevel+'.cdf'
         if format_type == 'BLV':
             if len(self.ndarray[0]) > 0:
-                lt = max(self.ndarray[0].astype(float))
-            else:
-                lt = self[-1].time
-            if year:
-                blvyear = str(year)
-            else:
-                blvyear = datetime.strftime(num2date(lt).replace(tzinfo=None),"%Y")
-            try:
-                filenamebegins = (self.header['StationID']).upper()+blvyear
-            except:
-                filenamebegins = 'XXX'+blvyear
-            filenameends = '.blv'
-            coverage = 'all'
+                lt = self.end()
+                if year:
+                    blvyear = str(year)
+                else:
+                    blvyear = datetime.strftime(lt.replace(tzinfo=None),"%Y")
+                filenamebegins = self.header.get('StationID','XXX').upper()+blvyear
+                filenameends = '.blv'
+                coverage = 'all'
 
         if not format_type:
             format_type = 'PYCDF'

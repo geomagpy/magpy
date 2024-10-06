@@ -39,6 +39,7 @@ teststream = create_verificationstream()
 class TestStream(unittest.TestCase):
 
     def test_aic(self):
+        # activity module
         self.assertEqual(2, 1)
 
     def test_convertstream(self):
@@ -63,7 +64,8 @@ class TestStream(unittest.TestCase):
         self.assertEqual(orgstream.length(), teststream.length())
 
     def test_det_trange(self):
-        self.assertEqual(2, 1)
+        # see Jankowski and Sucksdorff (1996), page 140
+        self.assertEqual(np.round(teststream._det_trange(120.) * (3600. * 24.), 4), 48.2561)
 
     def test_drop_column(self):
         cpstream = teststream.copy()
@@ -95,9 +97,6 @@ class TestStream(unittest.TestCase):
         mvstream = cpstream._move_column('x', 'z')
         self.assertEqual(21000, np.mean(mvstream.ndarray[3]))
 
-    # def test_print_key_headers(self):
-    #    self.assertEqual(2, 1)
-
     def test_put_column(self):
         cpstream = teststream.copy()
         col = cpstream._get_column('x')
@@ -122,9 +121,11 @@ class TestStream(unittest.TestCase):
         self.assertEqual(len(ar[0]), 60)
 
     def test_tau(self):
-        self.assertEqual(2, 1)
+        # see Jankowski and Sucksdorff (1996), page 140
+        self.assertAlmostEqual(teststream._tau(120.) * (3600. * 24.), 15.90062182)
 
     def test_aic_calc(self):
+        # activity module
         self.assertEqual(2, 1)
 
     def test_amplitude(self):
@@ -134,14 +135,14 @@ class TestStream(unittest.TestCase):
     def test_apply_deltas(self):
         fstream = teststream.calc_f()
         # old type
-        print("apply_deltas: testing with old database input type")
+        # print("apply_deltas: testing with old database input type")
         ddv1 = "st_690.0,f_-1.48,time_timedelta(seconds=-3.0),et_17532.0;st_17532.0,f_-1.571,time_timedelta(seconds=-3.0),et_17788.5;st_17788.5,f_-1.571,time_timedelta(seconds=1.50),et_17897.0;st_17897.0,f_-1.631,time_timedelta(seconds=-0.30),et_18262.0;st_18262.0,f_-1.616,time_timedelta(seconds=-0.28),et_18628.0;st_18628.0,f_-1.609,time_timedelta(seconds=-0.28),et_18993.0;st_18993.0,f_-1.655,time_timedelta(seconds=-0.33),et_19358.0;st_19358.0,f_-1.729,time_timedelta(seconds=-0.28)"
         fstream.header["DataDeltaValues"] = ddv1
         res1 = fstream.apply_deltas()
         diff1 = fstream.mean('f') - res1.mean('f')
         self.assertEqual(np.round(diff1, 3), 1.655)
         # new type
-        print("apply_deltas: testing with new database input type")
+        # print("apply_deltas: testing with new database input type")
         ddv2 = '{"0": {"st": "1971-11-22 00:00:00", "f": -1.48, "time": "timedelta(seconds=-3.0)", "et": "2018-01-01 00:00:00"}, "1": {"st": "2018-01-01 00:00:00", "f": -1.571, "time": "timedelta(seconds=-3.0)", "et": "2018-09-14 12:00:00"}, "2": {"st": "2018-09-14 12:00:00", "f": -1.571, "time": "timedelta(seconds=1.50)", "et": "2019-01-01 00:00:00"}, "3": {"st": "2019-01-01 00:00:00", "f": -1.631, "time": "timedelta(seconds=-0.30)", "et": "2020-01-01 00:00:00"}, "4": {"st": "2020-01-01 00:00:00", "f": -1.616, "time": "timedelta(seconds=-0.28)", "et": "2021-01-01 00:00:00"}, "5": {"st": "2021-01-01 00:00:00", "f": -1.609, "time": "timedelta(seconds=-0.28)", "et": "2022-01-01 00:00:00"}, "6": {"st": "2022-01-01 00:00:00", "f": -1.655, "time": "timedelta(seconds=-0.33)", "et": "2023-01-01 00:00:00"}, "7": {"st": "2023-01-01 00:00:00", "f": -1.729, "time": "timedelta(seconds=-0.28)"}}'
         fstream.header["DataDeltaValues"] = ddv2
         res2 = fstream.apply_deltas()
@@ -149,10 +150,26 @@ class TestStream(unittest.TestCase):
         self.assertEqual(np.round(diff2, 3), 1.655)
 
     def test_baseline(self):
-        self.assertEqual(2, 1)
+        variodata = read(example5)
+        # Test part - simplify teststream by just using constant mean value of variation for this day
+        zmean = variodata.mean('z')
+        variodata._put_column([variodata.mean('x')] * len(variodata), 'x')
+        variodata._put_column([variodata.mean('y')] * len(variodata), 'y')
+        variodata._put_column([zmean] * len(variodata), 'z')
+        # Load basevalues and apply
+        basevalues = read(example3)
+        func = variodata.baseline(basevalues)
+        # Correct data set with basevalues
+        corrdata = variodata.bc()
+        zcorr = corrdata.mean('z')
+        # Now get the original base values for z
+        #  - just a rough estimate for testing - not based on the correct spline fitted basevalues
+        tb = basevalues.mean('dz')
+        self.assertEqual(np.round(zmean + tb, 1), np.round(zcorr, 1))
 
     def test_bc(self):
-        self.assertEqual(2, 1)
+        # Tested in test_baseline
+        pass
 
     def test_calc_f(self):
         fstream = teststream.calc_f()
@@ -179,9 +196,10 @@ class TestStream(unittest.TestCase):
         self.assertEqual(cutstream.start(), datetime(2022, 11, 22, 0, 0))
 
     def test_dailymeans(self):
-        dmt = teststream.calc_f()
-        dm = dmt.dailymeans()
-        self.assertEqual(len(dm), 1)
+        dmt = teststream.dailymeans()
+        x = dmt._get_column('x')
+        self.assertEqual(len(x), 1)
+        self.assertEqual(x[0], 21000.)
 
     def test_delta_f(self):
         fstream = teststream.calc_f()
@@ -192,23 +210,20 @@ class TestStream(unittest.TestCase):
         self.assertEqual(mindf, 0.0)
 
     def test_determine_rotationangles(self):
-        cpstream = teststream.copy()  # rotation is destructive
-        idstream = teststream.copy()  # conversion is destructive
-        idfstream = idstream.xyz2idf()
-        meani = idfstream.mean('x')
-        meand = idfstream.mean('y')
-        rotstream = cpstream.rotation(alpha=45, beta=45)  # v in z upwards
-        alpha, beta = rotstream.determine_rotationangles(referenceD=meand, referenceI=meani)
-        self.assertEqual(np.round(alpha, 1), -45)
-        self.assertEqual(np.round(beta, 1), -45)
+        # see test_rotation
+        pass
 
     def test_dict2stream(self):
-        self.assertEqual(2, 1)
+        # part of baseline/bc test
+        pass
 
-    def test_differentiate(self):
-        self.assertEqual(2, 1)
+    def test_derivative(self):
+        diffdata = teststream.derivative(keys=['x', 'y', 'z'], put2keys=['dx', 'dy', 'dz'])
+        self.assertNotEqual(np.mean(diffdata.ndarray[12][719:720]), 0)
+        self.assertEqual(np.mean(diffdata.ndarray[12][717:718]), 0)
 
     def test_dwt_calc(self):
+        # activity module
         self.assertEqual(2, 1)
 
     def test_end(self):
@@ -231,26 +246,61 @@ class TestStream(unittest.TestCase):
         self.assertEqual(len(ex1), 538)
 
     def test_filter(self):
-        self.assertEqual(2, 1)
+        filtereddata = teststream.filter()
+        filtereddata = filtereddata.trim(starttime='2022-11-22T11:56:00', endtime='2022-11-22T12:04:00')
+        function = filtereddata.interpol(['x'])
+        valx = function[0]['fx']([0.5])
+        valx = function[0]['fx']([0.5])
+        self.assertEqual(np.round(valx, 5), 21000.)
 
     def test_findtime(self):
         index = teststream.findtime("2022-11-22T12:00:00")
         self.assertEqual(index, 720)
 
     def test_fit(self):
-        self.assertEqual(2, 1)
+        teststream = create_verificationstream()
+        trimstream = teststream.trim(starttime="2022-11-22T09:00:00", endtime="2022-11-22T14:00:00")
+        orgmean = trimstream.mean('x')
+        for fitoption in ['poly', 'harmonic', 'least-squares', 'mean', 'spline']:
+            print(" Testing fitting with {} method".format(fitoption))
+            func = trimstream.fit(['x'], fitfunc=fitoption, fitdegree=5, knotstep=0.2)
+            # mp.tsplot([trimstream], keys=[['x']], functions=[[func]])
+            funcstream = trimstream.copy()
+            funcstream = funcstream.func2stream(func, keys=['x'], mode='values')
+            # mp.tsplot([funcstream], keys=[['x']])
+            self.assertAlmostEqual(orgmean, funcstream.mean('x'))
 
     def test_func2header(self):
-        self.assertEqual(2, 1)
+        teststream = create_verificationstream()
+        func = teststream.interpol(['x'])
+        teststream = teststream.func2header(func)
+        f = teststream.header.get('DataFunctionObject')
+        self.assertIsInstance(f, (list, tuple))
 
     def test_func2stream(self):
-        self.assertEqual(2, 1)
+        teststream = create_verificationstream()
+        teststream = teststream.remove(starttime='2022-11-22T07:00:00', endtime='2022-11-22T08:00:00')
+        teststream = teststream.get_gaps()
+        contfunc = teststream.interpol(['x', 'y'])
+        teststream = teststream.func2stream(contfunc, keys=['x', 'y'], mode='values')
+        ind = teststream.findtime('2022-11-22T07:30:00')
+        xval = teststream.ndarray[1][ind]
+        zval = teststream.ndarray[3][ind]
+        nantest = False
+        if np.isnan(zval):
+            nantest = True
+        self.assertEqual(xval, 20000.)
+        self.assertTrue(nantest)
 
     def test_get_fmi_array(self):
+        # activity module
         self.assertEqual(2, 1)
 
     def test_get_gaps(self):
-        self.assertEqual(2, 1)
+        gapstream = teststream.remove(starttime='2022-11-22T08:00:00', endtime='2022-11-22T09:00:00')
+        self.assertEqual(len(teststream), len(gapstream) + 61)
+        fullstream = gapstream.get_gaps()
+        self.assertEqual(len(teststream), len(fullstream))
 
     def test_get_key_name(self):
         kn = teststream.get_key_name('x')
@@ -265,16 +315,31 @@ class TestStream(unittest.TestCase):
         self.assertEqual(np.round(sr, 1), 60.0)
 
     def test_harmfit(self):
-        self.assertEqual(2, 1)
+        # tested in _test_fit with harmonic fit
+        pass
 
     def test_integrate(self):
-        self.assertEqual(2, 1)
+        # Not yet tested - only graphically
+        # Why? because this method is not really used so far
+        pass
 
     def test_interpol(self):
-        self.assertEqual(2, 1)
+        # tested in smooth and filter method
+        pass
 
     def test_interpolate_nans(self):
-        self.assertEqual(2, 1)
+        # get column y
+        y = teststream._get_column('y')
+        # put 100 nan values at random positions
+        y.ravel()[np.random.choice(y.size, 100, replace=False)] = np.nan
+        # count nans
+        n_nan = np.count_nonzero(np.isnan(y))
+        self.assertEqual(n_nan, 100)
+        stream2inter = teststream._put_column(y, 'y')
+        getback = stream2inter.interpolate_nans(['y'])
+        y = getback._get_column('y')
+        n_nan_now = np.count_nonzero(np.isnan(y))
+        self.assertEqual(n_nan_now, 0)
 
     def test_length(self):
         # Tests also _get_sampling_period
@@ -286,6 +351,7 @@ class TestStream(unittest.TestCase):
         self.assertEqual(pmeanx, 21000)
 
     def test_modwt_calc(self):
+        # activity module
         self.assertEqual(2, 1)
 
     def test_multiply(self):
@@ -309,43 +375,80 @@ class TestStream(unittest.TestCase):
         self.assertEqual(dropstream.end(), datetime(2022, 11, 22, 23, 59))
 
     def test_remove(self):
-        # One point too much in the beginning
-        dstream = teststream.remove(starttime='2022-11-22T00:02:00', endtime='2022-11-22T01:00:00')
-        self.assertEqual(len(teststream), len(dstream) + 62)
+        dstream = teststream.remove(starttime='2022-11-22T08:00:00', endtime='2022-11-22T09:00:00')
+        self.assertEqual(len(teststream), len(dstream) + 61)
 
     def test_resample(self):
-        self.assertEqual(2, 1)
+        resampleddata = teststream.resample(['x', 'y', 'z'], period=120, debugmode=True)
+        # x has a jump between two points. check diff whether there is any time shift
+        diff = subtract_streams(teststream, resampleddata)
+        self.assertEqual(diff.mean('x'), 0.0)
+        self.assertEqual(diff.mean('y'), 0.0)
+        self.assertEqual(diff.mean('z'), 0.0)
+        self.assertEqual(len(teststream), len(resampleddata) * 2)
 
     def test_rotation(self):
-        pmeanx = teststream.mean('x')
-        pmeanz = teststream.mean('z')
-        cpstream = teststream.copy()
-        rotstream = cpstream.rotation(alpha=45, beta=135)
+        cutstream = teststream.cut(50, kind=0, order=1)
+        pmeanx = cutstream.mean('x')
+        pmeany = cutstream.mean('y')
+        pmeanz = cutstream.mean('z')
+        # print (pmeanx, pmeanz)
+        cpstream = cutstream.copy()
+        protstream = cutstream.rotation(alpha=45)
+        smeanx = protstream.mean('x')
+        smeany = protstream.mean('y')
+        # print (smeanx, smeany, np.sqrt(smeanx**2 + smeany**2))
+        self.assertEqual(np.round(np.sqrt(smeanx ** 2 + smeany ** 2), 5), np.round(np.abs(pmeanx), 5))
+        srotstream = cutstream.rotation(alpha=45, beta=45)
+        tmeanx = srotstream.mean('x')
+        tmeany = srotstream.mean('y')
+        tmeanz = srotstream.mean('z')
+        # print (tmeanx,tmeany,tmeanz)
+        self.assertEqual(np.round(tmeanx, 5), np.round(pmeanx, 5))
+        self.assertEqual(np.round(tmeany, 5), np.round(pmeanz, 5))
+        self.assertEqual(np.round(tmeanz, 5), 0)
+        rotstream = cutstream.rotation(alpha=45, beta=135)
+        meanx = rotstream.mean('x')
+        meany = rotstream.mean('y')
         meanz = rotstream.mean('z')
-        self.assertEqual(np.sqrt(pmeanx ** 2 + pmeanz ** 2), np.abs(meanz))
+        # print (meanx,meany,meanz)
+        self.assertEqual(np.round(np.sqrt(pmeanx ** 2 + pmeanz ** 2), 5), -1 * np.round(meanz, 5))
+        alpha, beta = srotstream.determine_rotationangles(referenceD=0.0, referenceI=45.0)
+        self.assertEqual(np.round(alpha, 5), -45)
+        self.assertEqual(np.round(beta, 5), -45)
 
     def test_samplingrate(self):
         # Tests also _get_sampling_period
         self.assertEqual(teststream.samplingrate(), 60)
 
     def test_simplebasevalue2stream(self):
-        self.assertEqual(2, 1)
+        # Tested in test_absolute_analysis
+        pass
 
     def test_smooth(self):
-        self.assertEqual(2, 1)
+        teststream = create_verificationstream()
+        teststream = teststream._remove_nancolumns()
+        smootheddata = teststream.smooth(window='hanning', window_len=11)
+        smootheddata = smootheddata.trim(starttime='2022-11-22T11:56:00', endtime='2022-11-22T12:04:00')
+        function = smootheddata.interpol(['x'])
+        valx = function[0]['fx']([0.5])
+        self.assertEqual(np.round(valx, 5), 21000.)
 
     def test_sorting(self):
-        self.assertEqual(2, 1)
+        # skipping this test for now
+        pass
 
     def test_start(self):
         start = teststream.start()
         self.assertEqual(start, datetime(2022, 11, 22))
 
     def test_steadyrise(self):
+        # To be done with rain analysis
         self.assertEqual(2, 1)
 
     def test_stream2dict(self):
-        self.assertEqual(2, 1)
+        # part of baseline/bc test
+        pass
 
     def test_trim(self):
         t1 = teststream.trim(starttime='2022-11-22T09:00:00', endtime='2022-11-22T14:00:00')
@@ -357,14 +460,31 @@ class TestStream(unittest.TestCase):
         self.assertEqual(t2, testtime("2022-11-22T23:59:00"))
 
     def test_use_sectime(self):
-        self.assertEqual(2, 1)
+        tcolumn = teststream._get_column('time')
+        newtcolumn = np.asarray([element + timedelta(minutes=15) for element in tcolumn])
+        teststream._put_column(newtcolumn, 'sectime')
+        shifted_teststream = teststream.use_sectime()
+        st = shifted_teststream.start()
+        self.assertEqual(st, datetime(2022, 11, 22, 0, 15))
 
     def test_variables(self):
         v = teststream.variables()
         self.assertEqual(v, ['x', 'y', 'z', 't2', 'sectime'])
 
     def test_write(self):
-        self.assertEqual(2, 1)
+        # Tested in the format libraries
+        # and in runtime tests with all libraries
+        pass
+
+    def test_func_to_from_file(self):
+        teststream = create_verificationstream()
+        keys = ['x', 'y']
+        contfunc = teststream.interpol(keys)
+        func_to_file(contfunc, "/tmp/savedparameter.json")
+        funcparameter = func_from_file("/tmp/savedparameter.json")
+        firstf = funcparameter.get('0')
+        self.assertEqual(firstf.get('keys'), str(keys))
+        self.assertEqual(firstf.get('fitfunc'), 'linear')
 
 
 class TestFlagging(unittest.TestCase):

@@ -89,7 +89,7 @@ AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |       
            | abs_read            |  2.0.0     |           |  yes        |               |  7.1    | 
            | _abs_read           |  2.0.0     |           |  yes        |               |  -      | 
     d      | absoluteAnalysis    |  2.0.0     |  2.1.0    |             |               |  -      | 
-           | absolute_analysis   |  2.0.0     |           |             |               |  7.2    | 
+           | absolute_analysis   |  2.0.0     |           |  yes        |  yes          |  7.2    | 
          
 """
 
