@@ -1129,19 +1129,22 @@ CALLED BY:
         array = [[] for key in self.KEYLIST]
         if len(self.ndarray[0]) > 0:
             for idx, elem in enumerate(self.ndarray):
-                if len(self.ndarray[idx]) > 0 and KEYLIST[idx] in self.NUMKEYLIST:
+                if len(self.ndarray[idx]) > 0 and self.KEYLIST[idx] in self.NUMKEYLIST:
                     lst = list(self.ndarray[idx])
                     if np.isnan(float(lst[0])) and np.isnan(float(lst[-1])):
                         nanlen = np.count_nonzero(np.isnan(lst))
                         if nanlen == len(lst):
                             array[idx] = np.asarray([])
+                        else:
+                            array[idx] = self.ndarray[idx]
                     else:
                         array[idx] = self.ndarray[idx]
-                else:
+                elif len(self.ndarray[idx]) > 0:
                     array[idx] = self.ndarray[idx]
         else:
             pass
-        return DataStream(header=self.header,ndarray=np.asarray(array,dtype=object))
+        res = DataStream(header=self.header,ndarray=np.asarray(array,dtype=object))
+        return res
 
 
     # ------------------------------------------------------------------------
@@ -1766,14 +1769,13 @@ CALLED BY:
         if len(absolutestream.ndarray[0]) > 0:
             #print ("HERE1: adopting time range absolutes - before {} {}".format(startabs, endabs))
             absndtype = True
-            print (absolutestream.ndarray[0][0], endtime)
             if not absolutestream.ndarray[0][0] < endtime:
                 logger.warning("Baseline: Last measurement prior to beginning of absolute measurements ")
             abst = absolutestream.ndarray[0]
             if not startabs or startabs < np.min(absolutestream.ndarray[0]):
-                startabs = np.min(absolutestream.ndarray[0])
+                startabs = absolutestream.start()
             if not endabs or endabs > np.max(absolutestream.ndarray[0]):
-                endabs = np.max(absolutestream.ndarray[0])
+                endabs = absolutestream.end()
         else:
             print ("decrepated")
             # 1) test whether absolutes are in the selected absolute data stream
@@ -1793,12 +1795,12 @@ CALLED BY:
             orgendabs = endabs
 
         if debug:
-            print (" baseline: Time range absolutes  - {} {} {} {}".format(startabs, endabs, num2date(startabs), num2date(endabs)))
+            print (" baseline: Time range absolutes  - {} {} {} {}".format(startabs, endabs, startabs, endabs))
             print (" baseline: Time range datastream - {} {}".format(starttime, endtime))
 
         # 3) check time ranges of stream and absolute values:
         if startabs > starttime:
-            logger.info('Baseline: %d days without absolutes at the beginning of the stream' % int(np.floor(np.min(abst)-starttime)))
+            logger.info('Baseline: {} days without absolutes at the beginning of the stream'.format((startabs-starttime).total_seconds()/86400.))
         if endabs < endtime:
             logger.info("Baseline: Last absolute measurement before end of stream - extrapolating baseline")
             if (endabs + timedelta(days=extradays)) < endtime:
@@ -1839,9 +1841,8 @@ CALLED BY:
             if baseendtime - timedelta(days=(366.+2*extradays)) > startabs:
                 # time range long enough
                 basestarttime =  baseendtime-timedelta(days=(366.+2*extradays))
-
-        basarray = absolutestream._select_timerange(starttime=basestarttime,endtime=baseendtime)
-        bas = DataStream(header=absolutestream.header,ndarray=basarray)
+        tabs = absolutestream.copy()
+        bas = tabs.trim(starttime=basestarttime,endtime=baseendtime)
 
         if extrapolate: # and not extradays == 0:
             if debug:
@@ -2939,7 +2940,7 @@ CALLED BY:
         if not len(self) > 0:
             print ("extrapolate: Empty stream provided - aborting")
             return self
-        stst, etst = self._find_t_limits()
+        stst, etst = self.timerange()
         duration = (etst - stst).total_seconds()
         dist1 = (stst - starttime).total_seconds()
         if starttime >= etst or endtime <= stst:

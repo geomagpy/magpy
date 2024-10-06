@@ -665,7 +665,7 @@ simple numpy array:
 Now we create a new data column filled with random values and insert it into key 'x'
 
         xcolumn = np.random.uniform(20950, 21000, size=len(fcolumn))
-        fdata = fdata._put_column(x,'x')
+        fdata = fdata._put_column(xcolumn,'x')
 
 Assign some variable name and unit to the new column and plot the new data set as shown in 
 Figure ![5.1.2](./magpy/doc/ts_512.png "Adding a additional data column to a datastream")
@@ -698,7 +698,7 @@ Columns consisting solely of NaN values con be dropped using
 A random sub-selection of data can be obtained using `randomdrop`. The percentage defines the amount of data to be 
 removed. You can also define indices which cannot be randomly dropped, the first and last point in our example below.
 
-        dropstream = data.randomdrop(percentage=50,fixed_indicies=[0,len(teststream)-1])
+        dropstream = data.randomdrop(percentage=50,fixed_indicies=[0,len(data)-1])
 
 As an example and for later we will add a secondary time column with a time shift to fdata
 
@@ -816,8 +816,8 @@ degree.decimals.
 
 If you have a measurement (XYZ data) and would like to obtain the rotation values regarding and expected reference 
 direction defined by *referenceD* reference declination and *referenceI* inclination, both given in degree.decimals 
-you can use the following method. Let us apply this method to the original rotdata, which contains the HEZ data set 
-rotated by alpha and beta of 45 degree. The HEZ data has an expected decliation of 0 and and expected inclination
+you can use the following method. Let us apply this method to the original rotdata stream, which contains the HEZ data set 
+rotated by alpha and beta of 45 degree. The HEZ data has an expected declination of 0 and and expected inclination
 of 64.4 degree. Please note that these values are not exact:
 
         alpha, beta = rotdata.determine_rotationangles(referenceD=0.0,referenceI=64.4)
@@ -934,7 +934,7 @@ Then plot timeseries of the selected data and psd.
 
 Another method which belongs basically to the filter section is the the `dailymeans` method which allow you to 
 quickly obtain dailymean values according to IAGA standards from any given data set covering at least one day.
-Acceptable sind all data resolutions as the dailymeans will filter the data stepwise until daily mean values.
+Acceptable are all data resolutions as the dailymeans will filter the data stepwise until daily mean values.
 
         dailymeans = data.dailymeans()
 
@@ -1156,7 +1156,7 @@ by interpolated values
         contfunc = continuousdata_with_gaps.interpol(['x','y','z'],kind='linear')
         data = data.func2stream(contfunc, keys=['x','y','z'],mode='values')
 
-#### 5.9.6 Saving and reading functions separatly
+#### 5.9.6 Saving and reading functions separately
 
 It is possible to save the functional parameters (NOT the functions) to a file and reload them for later usage. Please 
 note that you will need to apply the desired fit/interpolation/baseline adoption again based on these parameters to 
@@ -1173,6 +1173,9 @@ time ranges and specific parameters for each value. Extract these values by stan
 stream. 
 
 ### 5.10 Multiple timeseries
+
+Unlike in the previous sections, the following multiple timeseries method descriptions are only accompanied by 
+hypothetical data sets which are not part of the examples data sets.
 
 #### 5.10.1 join
 
@@ -1229,17 +1232,7 @@ individual data sets and want to combine them.
 
         long_stream = append_streams([list,with,many,streams])
 
-#### 5.10.5 average (TODO)
-
-Average stream is different from the other methods as it ignores the time steps of all except the first stream. You 
-provide a list of streams, which all should cover the same time range and contain the same amount of data (i.e. daily 
-records). All these signals are them averaged and assigned to the time steps of the first stream.
-
-        average_stream = append_streams([list,with,many,streams,covering,similar,time,ranges])
-
-TODO: method to split a datastream into subsets of equal length
-
-#### 5.10.6 determine_time_shift
+#### 5.10.5 determine_time_shift
 
 The method 'determine_time_shift' allows for determining phase shifts between to input signale. The shift can be 
 obtained by two two different methods. Cross correlation based on scipy.signal.correlate is used when selecting method 
@@ -1430,7 +1423,7 @@ You can get a formated output of the flagging contents by
 
         fl.fprint(sensorid="LEMI025_X56878_0002_0001")
 
-You might want to limit the output to specific sensorids by providing the Sensor ID as option. If you want to modify 
+You might want to limit the output to specific sensor IDs by providing the Sensor ID as option. If you want to modify 
 flags and keep the original state in the memory use the copy method
 
         orgfl = fl.copy()
@@ -1799,7 +1792,7 @@ baseline corrected results using P(alt) data correspond to BCR of P(ref)
 
 + **basevalues** : delta values obtained fro each DI analysis which describe the momentary difference between a 
 continuously measuring systems and the DI determination. MagPy determines basevalues either in cylindrical 
-(dH, dD, dZ, dF, default, dH is delta of horizontal component) or carthesian (dX, dY, dZ, dF) coordinates.
+(dH, dD, dZ, dF, default, dH is delta of horizontal component) or cartesian (dX, dY, dZ, dF) coordinates.
 
 + **baseline/adopted baseline** : a best fit of any kind (linear, spline, polynomial , step function) to multiple basevalues.
 
@@ -1813,14 +1806,14 @@ In this section we will describe in detail how a DI analysis is preformed and wh
 productive data analysis, however, there is a single method implemented, which comprises all of the following
 procedures. Please move to section 7.2 for a description of the productive method.
 
-Lets first import the required modules for DI/absolute analysis and some exanmple files and helper methods:
+Lets first import the required modules for DI/absolute analysis and some example files and helper methods:
 
         import magpy.absolutes as di
         from magpy.stream import read, DataStream(), example6a, example5
         from magpy.core.methods import *
 
 
-#### Data structure of DI measurements
+#### 7.1.1 Data structure of DI measurements
 
 Please check `example6a` or  `example6b` , which are example DI files. You can create these DI files by using the 
 input sheet from xmagpy or the online input sheet provided by the Conrad Observatory. If you want to use this service, 
@@ -1841,7 +1834,7 @@ For our analysis we will extract data from the loaded *abslist* and convert to i
         absdata = ab.get_abs_distruct()
 
 
-#### Adding data from continuously measuring instruments 
+#### 7.1.2 Adding data from continuously measuring instruments 
 
 DI is used to calculate basevalues for specific instruments. The above defined DI-structure allows to add variometer
 and scalar information to it. Let us assume you have variometer data from an HEZ 
@@ -1857,11 +1850,11 @@ the timerange of the DI measurement (absdata) then you can use the following hel
         vario_rangetest = absdata._check_coverage(variodata,keys=['x','y','z'])
 
 Please note: the variometers H E and Z data is stored at the data keys x, y, z. Do not mix up data keys
-used for naming predefined columns and data values asociated with these keys.
+used for naming predefined columns and data values associated with these keys.
 As variometer data might not contain individual measurements exactly at the same time as DI measurements were performed
 i.e. in case of one-minute variometer data, the variometer data is linearly interpolated and variation data
 at times of DI  measurements are extracted at the DI timesteps. Please note: if variation data contains exactly the
-timesteps of DI data then exactly the truely measured variation signals are used as linear interpolation only affects
+timesteps of DI data then exactly the truly measured variation signals are used as linear interpolation only affects
 time ranges inbetween variometer data points.  Variation data is then inserted into the absdata structure
 
         if vario_rangetest:
@@ -1892,12 +1885,12 @@ in section 7.2.
            absdata = absdata._insert_function_values(func)
 
 
-#### Considering F differences between reference pier and continuous measurement position
+#### 7.1.3 Considering F differences between reference pier and continuous measurement position
 
 
 
 
-#### Considering pier differences for non-reference pier measurements
+#### 7.1.4 Considering pier differences for non-reference pier measurements
 
 If you perform DI measurements on multiple piers you might want to consider the pier differences in respect
 respect to a reference pier. This pier  differences can either be provided directly or can be organized in 
@@ -1916,7 +1909,7 @@ to the calcabsolute method. You can also organize these values in a MagPy databa
        if not pdD:
            pdI = db.get_pier('A7', 'A2', value='deltaI', year=starttime.year)
 
-#### Analyzing DI data
+#### 7.1.5 Analyzing DI data
 
 After reading DI data and associating continuous measurements to its time steps it is now time to determine the 
 absolute values of D and I, and eventually F if not already measured at the main DI pier. DI analysis makes use of a 
@@ -1934,7 +1927,7 @@ active option *meantime=True*. You can also supply *annualmeans* which will be u
 is available. *residualsign* of either +1 or -1 is related to the orientation of the fluxgate probe on the theodolite
 where +1 denotes an inline-orientation. Finally, *usestep* defines the measurement to be used. Currently MagPy 
 DI analysis supports up to two repeated measurement for each position. You can analyse the first one *usestep=1* or the 
-seocnd *usestep=2* or the average of both with *uesestep=0*.
+second *usestep=2* or the average of both with *uesestep=0*.
 
 The output looks as follows:
 
@@ -1993,7 +1986,7 @@ Variometer and Scalar data can be obtained from files, directories, databases an
 data sources for th DI data. You might even want to define i.e. both a database source and a file archive. In this 
 case first the database will be searched for valid data and if not found than the file path will be used
 
-In the following some axamples for different data sources are shown:
+In the following some examples for different data sources are shown:
 
        from magpy.core import database
        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
