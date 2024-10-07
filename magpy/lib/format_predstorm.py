@@ -13,13 +13,15 @@ from io import open
 
 from magpy.stream import *
 
+KEYLIST = DataStream().KEYLIST
 
 def isPREDSTORM(filename, debug=False):
     """
     Checks whether a file is ASCII IAGA 2002 format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
         if debug:
             print ("First line:", temp)
     except:
@@ -77,7 +79,7 @@ def readPREDSTORM(filename, headonly=False, **kwargs):
                 datalist = line.split()
                 datestring = "-".join(datalist[:6])
                 d = datetime.strptime(datestring,"%Y-%m-%d-%H-%M-%S")
-                array[0].append(date2num(d))
+                array[0].append(d)
                 valuelist = datalist[6:]
                 for idx,key in enumerate(KEYLIST):
                     if idx > 0 and idx < len(valuelist):

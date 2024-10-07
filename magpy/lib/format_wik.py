@@ -53,13 +53,12 @@ def isPMAG2(filename):
     Leading blank lines are likely
     """
     try:
-        fh = open(filename, 'rt')
-        temp = fh.readline()
-        if temp == "":
+        with open(filename, "rt") as fh:
             temp = fh.readline()
-        if temp == "":
-            temp = fh.readline()
-        fh.close()
+            if temp == "":
+                temp = fh.readline()
+            if temp == "":
+                temp = fh.readline()
     except:
         return False
     try:
@@ -310,7 +309,7 @@ def readPMAG2(filename, headonly=False, **kwargs):
                     addyear = 1
                     strtime = datetime.strptime(str(int(day.split("-")[0])+addyear)+elem[1],"%Y%m%d%H%M%S")
                 #row.time=date2num(strtime)
-                array[0].append(date2num(strtime))
+                array[0].append(strtime)
                 try:
                     strval = elem[0].replace(',','.')
                 except:

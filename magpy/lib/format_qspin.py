@@ -7,13 +7,17 @@ Written by Roman Leonhardt, Tim White June 2018
 from __future__ import print_function
 
 from magpy.stream import *
+from magpy.core.methods import *
+KEYLIST = DataStream().KEYLIST
+
 
 def isQSPIN(filename):
     """
     Checks whether a file is GSM19 format.
     """
     try:
-        temp = open(filename, 'rt') #, encoding='utf-8', errors='ignore'
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -97,9 +101,7 @@ Line Format: <Data in nT>,<valid>,<counter>,<strength>
             data = line.split(',')
             #48613.0368106664,True,,99
             ctime = ctime+timedelta(seconds=delta)
-            numtime = date2num(ctime)
-            if numtime > 0:
-                array[0].append(numtime)
+            array[0].append(ctime)
             for idx,el in enumerate(data):
                 pos = 4+idx # start with f column
                 try:

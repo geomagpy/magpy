@@ -6,6 +6,9 @@ Written by Roman Leonhardt June 2012
 """
 
 from magpy.stream import *
+from magpy.core.methods import *
+KEYLIST = DataStream().KEYLIST
+
 
 def isPOS1(filename):
     """
@@ -14,7 +17,8 @@ def isPOS1(filename):
     # MagPyBin %s %s %s %s %s %s %d" % ('POS1', '[f,df,var1,sectime]', '[f,df,var1,GPStime]', '[nT,nT,none,none]', '[1000,1000,1,1]
     """
     try:
-        temp = open(filename, 'rb').readline()
+        with open(filename, "rb") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -31,7 +35,8 @@ def isPOS1TXT(filename):
     Checks whether a file is text POS-1 file format.
     """
     try:
-        temp = open(filename, 'rb').readline()
+        with open(filename, "rb") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -54,7 +59,8 @@ def isPOSPMB(filename):
     # MagPyBin %s %s %s %s %s %s %d" % ('POS1', '[f,df,var1,sectime]', '[f,df,var1,GPStime]', '[nT,nT,none,none]', '[1000,1000,1,1]
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -91,13 +97,13 @@ def readPOS1(filename, headonly=False, **kwargs):
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
-            if not theday >= datetime.date(stream._testtime(starttime)):
+            if not theday >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday <= datetime.date(stream._testtime(endtime)):
+            if not theday <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
-        logging.warning("readPOS1BIN: Could not identify date in %s. Reading all ..." % daystring)
+        logging.warning("readPOS1BIN: Could not identify date in %s. Reading all ..." % filename)
         getfile = True
 
     if getfile:
@@ -119,7 +125,7 @@ def readPOS1(filename, headonly=False, **kwargs):
             row = LineStruct()
 
             time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-            row.time = date2num(time)
+            row.time = time
             row.f = float(data[7])/1000.
             row.df = float(data[8])/1000.
             row.var1 = int(data[9])
@@ -171,7 +177,7 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
             row = LineStruct()
 
             time = datetime.strptime(data[0], "%Y-%m-%dT%H:%M:%S.%f")
-            row.time = date2num(time)
+            row.time = time
             row.f = float(data[1])/1000.
             row.df = float(data[3])/1000.
             stream.add(row)
@@ -214,8 +220,8 @@ def readPOSPMB(filename, headonly=False, **kwargs):
             #'48607466', '00011', '80', '06.28.18', '15:05:27,00'
             time = data[4].split(',')[0].split('.')[0]
             date = data[3]+'T'+time
-            numtime = date2num(datetime.strptime(date,"%m.%d.%yT%H:%M:%S"))
-            if numtime > 0:
+            numtime = datetime.strptime(date,"%m.%d.%yT%H:%M:%S")
+            if numtime:
                 array[0].append(numtime)
                 array[4].append(float(data[0])/1000.)
 

@@ -101,7 +101,6 @@ def isIMF(filename):
     try:
         with open(filename, "rt") as fi:
             temp = fi.readline()
-        #temp = open(filename, 'rt').readline()
     except:
         return False
     try:
@@ -126,7 +125,6 @@ def isIAF(filename):
     try:
         with open(filename, 'rb') as fi:
             temp = fi.read(64)
-        #temp = open(filename, 'rb').read(64)
         data= struct.unpack('<4s4l4s4sl4s4sll4s4sll', temp)
     except:
         return False
@@ -200,10 +198,9 @@ def isBLV(filename):
     Checks whether a file is ASCII IBFV 2.0 format.
     """
     try:
-        fi = open(filename, 'rt')
-        temp1 = fi.readline()
-        temp2 = fi.readline()
-        fi.close()
+        with open(filename, "rt") as fi:
+            temp1 = fi.readline()
+            temp2 = fi.readline()
     except:
         return False
     if temp1.startswith('XYZ') or temp1.startswith('DIF') or temp1.startswith('HDZ') or temp1.startswith('UVZ') or temp1.startswith('DHZ'):
@@ -279,14 +276,13 @@ def isDKA(filename):
     """
     ok = False
     try:
-        fh = open(filename, 'rt')
-        temp1 = fh.readline()
-        temp2 = fh.readline()
-        temp3 = fh.readline()
-        temp4 = fh.readline()
-        temp5 = fh.readline()
-        temp6 = fh.readline()
-        fh.close()
+        with open(filename, "rt") as fh:
+            temp1 = fh.readline()
+            temp2 = fh.readline()
+            temp3 = fh.readline()
+            temp4 = fh.readline()
+            temp5 = fh.readline()
+            temp6 = fh.readline()
     except:
         return False
     try:

@@ -10,7 +10,10 @@ ToDo: Filter for minute data
 from __future__ import print_function
 
 from magpy.stream import *
+from magpy.core.methods import test_timestring
 import json
+
+KEYLIST = DataStream().KEYLIST
 
 def isGFZINDEXJSON(filename):
     """
@@ -55,7 +58,7 @@ def readGFZINDEXJSON(filename, headonly=False, **kwargs):
                     header['col-'+posskeys[ind]] = key
                     header['unit-col-'+posskeys[ind]] = ''
                 ind += 1
-        timecol = [date2num(testTimeString(str(x))) for x in datetime]
+        timecol = [test_timestring(str(x)) for x in datetime]
         array[0] = timecol
         if len(status) == len(timecol):
             array[KEYLIST.index('str1')] = status
@@ -81,7 +84,8 @@ def isGFZKP(filename):
     containing the GFZ Kp values
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -178,7 +182,7 @@ def readGFZKP(filename, headonly=False, **kwargs):
                     adderval = +0.33333333
                 array[indvar1].append(float(elements[i][:1])+adderval)
                 dt = i*3-1.5
-                array[0].append(date2num(day + timedelta(hours=dt)))
+                array[0].append(day + timedelta(hours=dt))
                 array[indvar2].append(cum)
                 array[indvar3].append(num)
                 array[indvar4].append(fum)

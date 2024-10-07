@@ -12,7 +12,8 @@ def isAUTODIF_FREAD(filename):
     Checks whether a file is text POS-1 file format.
     """
     try:
-        line = open(filename, 'r').readline()
+        with open(filename, "r") as fi:
+            line = fi.readline()
     except:
         return False
     try:
