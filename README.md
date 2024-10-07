@@ -2049,88 +2049,116 @@ Basevalues as obtained section 7.2 are stored in a normal data stream object, th
 above can be applied to this data. The `diresult` object contains D, I, and F values for each measurement in columns
 x,y,z. Basevalues for H, D and Z related to the selected variometer are stored in columns dx,dy,dz. In `example3`, you
 will find some example DI analysis results. To plot these basevalues we can use the following plot command, where we
-specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 5 nT for H 
-and Z, +/- 0.05 deg for D.
+specify the columns, filled circles as plotsymbols and also define a minimum spread of each y-axis of +/- 2 nT for H 
+and Z, +/- 0.02 deg for D.
 
-        basevalues = read(example3)
-        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5])
+       basevalues = read(example3)
+       mp.tsplot(basevalues, keys=['dx','dy','dz'], symbols=[['o','o','o']], padding=[[2,0.02,2]])
 
-Fitting a baseline can be easily accomplished with the `fit` method. First we test a linear fit to the data by fitting a polynomial function with degree 1.
+Fitting a baseline can be easily accomplished with the `fit` method. First we test a linear fit to the data by fitting 
+a polynomial function with degree 1. We will apply that fir for all data before 2018-05-17
 
-        func = basevalues.fit(['dx','dy','dz'],fitfunc='poly', fitdegree=1)
-        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=func)
+       func1 = basevalues.fit(['dx','dy','dz'],fitfunc='poly', fitdegree=1, endtime="2018-05-17")
+       mp.tsplot([basevalues], keys=[['dx','dy','dz']], symbols=[['o','o','o']], padding=[[2,0.02,2]], functions=[[func1,func1,func1]])
 
-We then fit a spline function using 3 knotsteps over the timerange (the knotstep option is always related to the given timerange).
+We then fit a spline function using 3 knotsteps over the remaining timerange (the knotstep option is always related 
+to the given timerange normalized to 1).
 
-        func = basevalues.fit(['dx','dy','dz'],fitfunc='spline', knotstep=0.33)
-        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=func)
+       func2 = basevalues.fit(['dx','dy','dz'],fitfunc='spline', knotstep=0.33, starttime="2018-05-16")
+       func = [func1,func2]
+       mp.tsplot([basevalues], keys=[['dx','dy','dz']], symbols=[['o','o','o']], padding=[[2,0.02,2]], functions=[[func,func,func]])
 
-Hint: a good estimate on the necessary fit complexity can be obtained by looking at delta F values. If delta F is mostly constant, then the baseline should also not be very complex.
+Any functional parameters can be added to the meta information of the data set, which can either holf a function or list
+of functions
 
+       basevalues.header['DataFunctionObject'] = func
+
+Hint: a good estimate on the necessary fit complexity can be obtained by looking at delta F values. If delta F is mostly 
+constant, then the baseline should also not be very complex.
 
 ### 7.5 Applying baselines
 
 
-The baseline method provides a number of options to assist the observer in determining baseline corrections and realted issues. The basic building block of the baseline method is the fit function as discussed above. Lets first load raw vectorial geomagnetic data, the absevalues of which are contained in above example:
+The baseline method provides a number of options to assist the observer in determining baseline corrections and realted issues. 
+The basic building block of the baseline method is the fit function as discussed above. Lets first load raw vectorial 
+geomagnetic data, the absolute DI values of which are contained in above example:
 
-        rawdata = read(example5)
+       rawdata = read(example5)
 
 Now we can apply the basevalue information and the spline function as tested above:
 
-        func = rawdata.baseline(basevalues, extradays=0, fitfunc='spline',
-                                knotstep=0.33,startabs='2015-09-01',endabs='2016-01-22')
+       func = rawdata.baseline(basevalues, extradays=0, fitfunc='spline',
+                                knotstep=0.33,startabs='2018-01-01',endabs='2019-01-01')
 
-The `baseline` method will determine and return a fit function between the two given timeranges based on the provided basevalue data `blvdata`. The option `extradays` allows for adding days before and after start/endtime for which the baseline function will be extrapolated. This option is useful for providing quasi-definitive data. When applying this method, a number of new meta-information attributes will be added, containing basevalues and all functional parameters to describe the baseline. Thus, the stream object still contains uncorrected raw data, but all baseline correction information is now contained within its meta data. To apply baseline correction you can use the `bc` method:
+The `baseline` method will determine and return a fit function between the two given timeranges based on the provided 
+basevalue data `blvdata`. The option `extradays` allows for adding days before and after start/endtime for which the 
+baseline function will be extrapolated. This option is useful for providing quasi-definitive data. When applying 
+this method, a number of new meta-information attributes will be added, containing basevalues and all functional 
+parameters to describe the baseline. Thus, the stream object still contains uncorrected raw data, but all baseline 
+correction information is now contained within its meta data. To apply baseline correction you can use the `bc` method:
 
-        corrdata = rawdata.bc()
+       corrdata = rawdata.bc()
 
+Please note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues 
+the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also 
+use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain
+the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt).
 
-Please note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt).
+If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent 
+segment and combine the resulting baseline functions to  a list. Please note that if no measured data is available at
+the time of the baseline jump then extrapolation based on duplication is used or calculating the baseline fit in that
+segment.
 
+       data = read(example5)
+       basevalues = read(example3)
+       adoptedbasefunc = []
+       adoptedbasefunc.append(data.baseline(basevalues, extradays=0, fitfunc='poly', fitdegree=1,startabs='2018-01-01',endabs='2018-05-30'))
+       adoptedbasefunc.append(data.baseline(basevalues, extradays=0, fitfunc='spline', knotstep=0.33,startabs='2018-05-30',endabs='2019-01-01'))
 
-If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent segment and combine the resulting baseline functions to  a list:
-
-        stream = read(mydata,starttime='2016-01-01',endtime='2016-03-01')
-        basevalues = read(mybasevalues)
-        adoptedbasefunc = []
-        adoptedbasefunc.append(stream.baseline(basevalues, extradays=0, fitfunc='poly', fitdegree=1,startabs='2016-01-01',endabs='2016-02-01')
-        adoptedbasefunc.append(stream.baseline(basevalues, extradays=0, fitfunc='spline', knotstep=0.33,startabs='2016-01-02',endabs='2016-01-03')
-
-        corr = stream.bc()
+       corr = data.bc()
+       mp.tsplot(corr)
 
 The combined baseline can be plotted accordingly. Extend the function parameters with each additional segment.
 
-        mp.plot(basevalues, variables=['dx','dy','dz'], symbollist=['o','o','o'], padding=[5,0.05,5], function=adoptedbasefunc)
+       mp.tsplot([basevalues], keys=[['dx','dy','dz']], symbols=[['o','o','o']], padding=[[5,0.05,5]], functions=[[adoptedbasefunc,adoptedbasefunc,adoptedbasefunc]])
 
 Adding a baseline for scalar data, which is determined from the delta F values provided within the basevalue data stream:
 
-        scalarbasefunc = []
-        scalarbasefunc.append(basevalues.baseline(basevalues, keys=['df'], extradays=0, fitfunc='poly', fitdegree=1,startabs='2016-01-01',endabs='2016-03-01'))
-        plotfunc = adoptedbasefunc
-        plotfunc.extend(scalarbasefunc)
-        mp.plot(basevalues, variables=['dx','dy','dz','df'], symbollist=['o','o','o','o'], padding=[5,0.05,5,5], function=plotfunc)
+       scalarbasefunc = basevalues.baseline(basevalues, keys=['df'], extradays=0, fitfunc='poly', fitdegree=1, startabs='2018-01-01', endabs='2019-01-01')
+       mp.tsplot([basevalues], keys=[['dx','dy','dz','df']], symbols=[['o','o','o','o']], padding=[[5,0.05,5,5]], functions=[[adoptedbasefunc,adoptedbasefunc,adoptedbasefunc,scalarbasefunc]])
 
-Getting dailymeans and correction for scalar baseline can be acomplished by:
 
-        meanstream = stream.dailymeans()
-        meanstream = meanstream.func2stream(scalarbasefunc,mode='sub',keys=['f'],fkeys=['df'])
-        meanstream = meanstream.delta_f()
+Getting dailymeans and correction for scalar baseline can be accomplished by:
 
-Please note that here the function originally determined from the deltaF (df) values of the basevalue data needs to be applied to the F column (f) from the data stream. Before saving we will also extract the baseline parameters from the meta information, which is automatically generated by the `baseline` method.
+       meandata = data.dailymeans()
+       meandata = meandata.func2stream(scalarbasefunc,mode='sub',keys=['f'],fkeys=['df'])
+       meandata = meandata.delta_f()
 
-        absinfo = stream.header.get('DataAbsInfo','')
-        fabsinfo = basevalues.header.get('DataAbsInfo','')
+Please note that here the function originally determined from the deltaF (df) values of the basevalue data needs to be 
+applied to the F column (f) from the data stream. Before saving we will also extract the baseline parameters from the 
+meta information, which is automatically generated by the `baseline` method.
 
+       absinfo = data.header.get('DataAbsInfo','')
+       fabsinfo = basevalues.header.get('DataAbsInfo','')
 
 ### 7.6 Saving basevalue and baseline information
 
 The following will create a BLV file:
 
-        basevalues.write('/my/path', coverage='all', format_type='BLV', diff=meanstream, year='2016', absinfo=absinfo, deltaF=fabsinfo)
+       basevalues.write('/tmp/', coverage='all', format_type='BLV', diff=meandata, year='2018', absinfo=absinfo, deltaF=fabsinfo)
 
-Information on the adopted baselines will be extracted from option `absinfo`. If several functions are provided, baseline jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is configured by option `deltaF`. If a number is provided, this value is assumed to represent the adopted scalar baseline. If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in a `DataAbsInfo` meta information field, as shown above, will calculate and use the scalar baseline function. The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline adoption data in the meta-information. You can, however, provide all this information manually as well. The typical way to obtain such a `meanstream` is sketched above.
+Information on the adopted baselines will be extracted from option `absinfo`. If several functions are provided, 
+baseline jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is 
+configured by option `deltaF`. If a number is provided, this value is assumed to represent the adopted scalar baseline. 
+If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in 
+the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in 
+a `DataAbsInfo` meta information field, as shown above, will calculate and use the scalar baseline function. 
+The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline 
+adoption data in the meta-information. You can, however, provide all this information manually as well. The typical 
+way to obtain such a `meanstream` is sketched above.
 
- ### 7.7 Details on DI-flux analysis and calculation of basevalues
+
+### 7.7 Details on DI-flux analysis and calculation of basevalues
 
 Basevalues, often also referred to as **(component) baseline values**, are commonly obtained from DI-flux measurements, which are analyzed in combination with an independent fluxgate variometer. 
 Dependent on the DI-flux measurement technique, the variometer orientation and the source of also required scalar data varying analysis procedures have been suggested. In the following we outline the analysis technique of MagPy specifically related to different orientations and measurement techniques.
