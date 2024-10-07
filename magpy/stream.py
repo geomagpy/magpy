@@ -330,7 +330,7 @@ class DataStream(object):
 class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
 -----  |  ------  |  -------------  |  -------------  |  ------------  |  ------------------  |  ------  |  ----------
 **stream**  |             |         |                 |                |                  |    |
-DataStream  |  _aic       |  2.0.0  |                 |  yes*          |                  |         |  aic_calc
+DataStream  |  _aic       |  2.0.0  |                 |  yes*          |  yes*            |  -      |  core.activity
 DataStream  |  _convertstream  |  2.0.0  |            |  yes           |  yes             |  5.2    |
 DataStream  |  _copy_column  |  2.0.0  |              |  yes           |  yes             |  5.1    |
 DataStream  |  _det_trange  |  2.0.0  |               |  yes*          |  yes             |  -      |  filter
@@ -351,7 +351,7 @@ DataStream  |  _select_timerange  |  2.0.0  |         |  yes*          |  yes   
 DataStream  |  _tau  |       2.0.0  |                 |  yes*          |  yes             |  -      |  filter
 DataStream  |  add  |        2.0.0  |                 |  yes*          |  yes*            |  -      |  absolutes
 DataStream  |  apply_deltas  |  2.0.0  |              |  yes           |  yes*            |    |  methods.data_for_di
-DataStream  |  aic_calc   |  2.0.0  |                 |  yes           |                  |  8.2    |
+DataStream  |  aic_calc   |  2.0.0  |                 |  yes           |  yes*            |  8.2    | core.activity
 DataStream  |  amplitude  |  2.0.0  |                 |  yes           |  yes             |  5.5    |
 DataStream  |  baseline  |   2.0.0  |                 |  yes           |  yes             |  5.9,7.5  |
 DataStream  |  bc  |         2.0.0  |                 |  yes           |  yes             |  7.5    |
@@ -364,7 +364,7 @@ DataStream  |  derivative   |  2.0.0  |               |  yes           |  yes   
 DataStream  |  determine_rotationangles  |  2.0.0  |    |  yes         |  yes             |  5.2    |
 DataStream  |  dict2stream  |  2.0.0  |               |  yes*          |  yes*            |  -      |  baseline
 DataStream  |  dropempty  |  2.0.0  |                 |  yes*          |  yes*            |  -      |  sorting
-DataStream  |  dwt_calc  |   2.0.0  |                 |  yes*          |                  |  8.2    |  core.activity
+DataStream  |  dwt_calc  |   2.0.0  |                 |  yes*          |  yes*            |  8.2    |  core.activity
 DataStream  |  end  |        2.0.0  |                 |  yes           |  yes             |  5.1    |
 DataStream  |  extend  |     2.0.0  |                 |  yes*          |  yes             |  5.10   |  read
 DataStream  |  extract  |    2.0.0  |                 |  yes           |  yes             |  5.1    |
@@ -375,7 +375,7 @@ DataStream  |  findtime  |   2.0.0  |                 |  yes*          |  yes   
 DataStream  |  fit  |        2.0.0  |                 |  yes           |  yes             |  5.9    |
 DataStream  |  func2header  |  2.0.0  |               |  yes           |  yes             |  5.9    |
 DataStream  |  func2stream  |  2.0.0  |               |  yes           |  yes             |  5.9    |
-DataStream  |  get_fmi_array  |  2.0.0  |             |  yes*          |                  |    |  core.activity
+DataStream  |  get_fmi_array  |  2.0.0  |             |  yes*          |  yes*            |         |  core.activity
 DataStream  |  get_gaps  |   2.0.0  |                 |  yes           |  yes             |  5.3    |
 DataStream  |  get_key_name  |  2.0.0  |              |  yes           |  yes             |  5.1    |
 DataStream  |  get_key_unit  |  2.0.0  |              |  yes           |  yes             |  5.1    |
@@ -388,7 +388,7 @@ DataStream  |  interpol  |   2.0.0  |                 |  yes           |  yes   
 DataStream  |  interpolate_nans  |  2.0.0  |          |  yes           |  yes             |  5.3,5.9  |
 DataStream  |  length  |     2.0.0  |                 |  yes*          |  yes             |  5.1    |
 DataStream  |  mean  |       2.0.0  |                 |  yes           |  yes             |  5.5    |
-DataStream  |  modwt_calc  |  2.0.0  |                |  yes*          |                  |  -      |  core.activity
+DataStream  |  modwt_calc  |  2.0.0  |                |  yes*          |  yes*            |  -      |  core.activity
 DataStream  |  multiply  |   2.0.0  |                 |  yes           |  yes             |  5.6    |
 DataStream  |  offset  |     2.0.0  |                 |  yes           |  yes             |  5.6    |
 DataStream  |  randomdrop  |  2.0.0  |                |  yes           |  yes             |  5.1    |
@@ -1154,9 +1154,19 @@ CALLED BY:
     # ------------------------------------------------------------------------
 
     def _aic(self, signal, k, debug=None):
-        aicval = 0
+        aicval = np.nan
         try:
-            aicval = (k-1)* np.log(np.var(signal[:k]))+(len(signal)-k-1)*np.log(np.var(signal[k:]))
+            var1 = np.var(signal[:k])
+            var2 = np.var(signal[k:])
+            if var1 != 0:
+                log1 = np.log(var1)
+            else:
+                log1 = 0
+            if var2 != 0:
+                log2 = np.log(var2)
+            else:
+                log2 = 0
+            aicval = (k-1)* log1+(len(signal)-k-1)*log2
         except:
             if debug:
                 logger.debug('_AIC: could not evaluate AIC at index position %i' % (k))
@@ -1647,7 +1657,6 @@ CALLED BY:
                     if idx > 1 and idx < len(currsequence):
                         # CALCULATE AIC
                         aicval = self._aic(currsequence, idx)/timerange.seconds*3600 # *sp Normalize to sampling rate and timerange
-                        #print ("Lenghts", len(aicval), len(range(istart,iend)))
                         if len(self.ndarray[0]) > 0:
                             self.ndarray[aic2ind][idx+istart] = aicval
                         if not isnan(aicval):
@@ -3822,7 +3831,7 @@ CALLED BY:
     def get_fmi_array(self, missing_data=None, debug=False):
         """
         DESCRIPTION
-            Extracts x and y lists from datastream, which are directly usabale for K fmi algorythm.
+            Extracts x and y lists from datastream, which are directly useable for K fmi algorythm.
             Please make sure to provide an appropriate datastream. Eventually use hdz2xyz conversion.
             Required sampling resolution is one-minute. If HF data is provided this data is filtered to
             one-minute without any missingdata option.

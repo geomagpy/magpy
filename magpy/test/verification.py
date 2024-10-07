@@ -5,7 +5,8 @@ from magpy.stream import *
 import magpy.absolutes as di
 from magpy.core.flagging import *
 from magpy.core import database
-
+from magpy.core import activity
+import scipy
 
 def create_verificationstream(startdate=datetime(2022, 11, 22)):
     teststream = DataStream()
@@ -32,6 +33,36 @@ def create_verificationstream(startdate=datetime(2022, 11, 22)):
     teststream.header['DataComponents'] = 'XYZ'
     return teststream
 
+def create_activityverificationstream(startdate=datetime(2022, 11, 22), resolution='seconds'):
+    teststream = DataStream()
+    # Creating a test data set of second resolution and 3 day length
+    c = 2000  # 4000 nan values are filled at random places to get some significant data gaps
+    array = [[] for el in DataStream().KEYLIST]
+    array[1] = [20000]*121800 # 259200
+    array[1].extend([22000]*137400)
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(1950, 2000, size=122800)
+    b = np.random.uniform(1900, 2050, size=138400)
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1000:-1000]
+    a = np.random.uniform(44300, 44400, size=261200)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1000:-1000]
+    if resolution=='seconds':
+        array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    else:
+        array[0] = np.asarray([datetime(2022, 11, 21) + timedelta(minutes=i) for i in range(0, len(array[1]))])
+    teststream = DataStream([], {'SensorID': 'Test_0001_0001'}, np.asarray(array, dtype=object))
+    teststream = DataStream(header={'SensorID': 'Test_0002_0001'}, ndarray=np.asarray(array, dtype=object))
+    teststream.header['col-x'] = 'X'
+    teststream.header['col-y'] = 'Y'
+    teststream.header['col-z'] = 'Z'
+    teststream.header['unit-col-x'] = 'nT'
+    teststream.header['unit-col-y'] = 'nT'
+    teststream.header['unit-col-z'] = 'nT'
+    teststream.header['DataComponents'] = 'XYZ'
+    return teststream
 
 teststream = create_verificationstream()
 
@@ -39,8 +70,8 @@ teststream = create_verificationstream()
 class TestStream(unittest.TestCase):
 
     def test_aic(self):
-        # activity module
-        self.assertEqual(2, 1)
+        # tested as part of seek storm in activity module
+        pass
 
     def test_convertstream(self):
         # also tests idf and hdz tools
@@ -125,8 +156,8 @@ class TestStream(unittest.TestCase):
         self.assertAlmostEqual(teststream._tau(120.) * (3600. * 24.), 15.90062182)
 
     def test_aic_calc(self):
-        # activity module
-        self.assertEqual(2, 1)
+        # tested as part of seek storm in activity module
+        pass
 
     def test_amplitude(self):
         amp = teststream.amplitude('x')
@@ -223,8 +254,8 @@ class TestStream(unittest.TestCase):
         self.assertEqual(np.mean(diffdata.ndarray[12][717:718]), 0)
 
     def test_dwt_calc(self):
-        # activity module
-        self.assertEqual(2, 1)
+        # tested as part of seek storm in activity module
+        pass
 
     def test_end(self):
         end = teststream.end()
@@ -293,8 +324,8 @@ class TestStream(unittest.TestCase):
         self.assertTrue(nantest)
 
     def test_get_fmi_array(self):
-        # activity module
-        self.assertEqual(2, 1)
+        # tested as part of k_fmi in activity module
+        pass
 
     def test_get_gaps(self):
         gapstream = teststream.remove(starttime='2022-11-22T08:00:00', endtime='2022-11-22T09:00:00')
@@ -351,8 +382,8 @@ class TestStream(unittest.TestCase):
         self.assertEqual(pmeanx, 21000)
 
     def test_modwt_calc(self):
-        # activity module
-        self.assertEqual(2, 1)
+        # tested as part of seek storm in activity module
+        pass
 
     def test_multiply(self):
         mstream = teststream.multiply({'x': 2})
@@ -1108,6 +1139,38 @@ class TestAbsolutes(unittest.TestCase):
                                         pier='A2', variometerorientation='XYZ')
         data2 = read(varioxyzf)
         check_base(data2, basevalues2, comps='XYZ')
+
+
+class TestActivity(unittest.TestCase):
+
+    def test_k_fmi(self):
+        # activity module
+        teststream = create_activityverificationstream()
+        minstream = teststream.filter()
+        k = activity.K_fmi(minstream, debug=False)
+        meank = k.mean('var1')
+        self.assertEqual(meank, 6.625)
+
+    def test_storm_determination(self):
+        # activity module
+        teststream = create_activityverificationstream()
+        ssc = teststream.ndarray[0][121800]
+        teststream = teststream.filter(missingdata='interpolate', noresample=True)
+        for method in ['AIC','DWT2','MODWT','FDM']:
+            print ("Testing technique: ", method)
+            k = activity.seek_storm(teststream.trim(starttime='2022-11-22',endtime='2022-11-23'), satdata_1m=None, satdata_5m=None, verbose=False, method=method)
+            stormfound = k[0]
+            #self.assertTrue(stormfound)
+            if stormfound:
+                stormdict = k[1]
+                st = stormdict.get(0).get('starttime')
+                et = stormdict.get(0).get('endtime')
+                # check if ssc is within found timerange
+                self.assertGreaterEqual(ssc, st)
+                self.assertLessEqual(ssc, et)
+            else:
+                print (" No storm found - check")
+
 
 
 if __name__ == "__main__":

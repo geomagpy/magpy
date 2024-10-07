@@ -1411,7 +1411,7 @@ class StormDet(object):
             AIC_dkey = 'var3'
             a_aic, b_aic, minlin = 5., 4., 20
             magdata = magdata.aic_calc('x',timerange=timedelta(hours=0.5),aic2key=AIC_key)
-            magdata = magdata.differentiate(keys=[AIC_key],put2keys=[AIC_dkey])
+            magdata = magdata.derivative(keys=[AIC_key],put2keys=[AIC_dkey])
             detection, ssc_list = findSSC_AIC(magdata, AIC_key, AIC_dkey, a_aic, b_aic, minlen,
                     useACE=ACE_detection, ACE_results=ACE_results)
         '''
@@ -1900,7 +1900,7 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
         trange = 30
 
         magdata = magdata.aic_calc('x', timerange=timedelta(minutes=trange), aic2key=AIC_key, delete=True)
-        magdata = magdata.differentiate(keys=[AIC_key], put2keys=[AIC_dkey])
+        magdata = magdata.derivative(keys=[AIC_key], put2keys=[AIC_dkey])
 
         minlen = variables[2]
         detection, ssc_list = stdt.findSSC_AIC(magdata, AIC_key, AIC_dkey, a, p, minlen,
@@ -1934,7 +1934,7 @@ def seek_storm(magdata, satdata_1m=None, satdata_5m=None, method='AIC', variable
     # -----------------------------
     elif method == 'FDM':
         FDM_key = 'dx'
-        magdata = magdata.differentiate(keys=['x'], put2keys=[FDM_key])
+        magdata = magdata.derivative(keys=['x'], put2keys=[FDM_key])
         magdata.multiply({FDM_key: 2}, square=True)
         detection, ssc_list = stdt.findSSC(magdata, FDM_key, a, p, useACE=useACE, ACE_results=ACE_results,
                                            verbose=verbose)
