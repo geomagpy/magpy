@@ -7,13 +7,13 @@ class | method | since version | until version | runtime test | result verificat
 ----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
 **core.activity** |  |         |               |              |                    |        |
 core.conversions |  |          |               |              |                    |        |
-decompose |    | 2.0.0         |               | yes*         |                    |        | sqbase
-k_fmi |        | 2.0.0         |               | yes*         |                    |        | K_fmi
-stormdet |     | 2.0.0         |               | yes*         |                    |        | seek_storm
-      | emd_decompose | 2.0.0  |               | yes*         |                    |        | sqbase
-      | K_fmi | 2.0.0          |               | yes          |                    |        |
-      | seek_storm | 2.0.0     |               | yes          |                    |        |
-      | sqbase | 2.0.0         |               | yes          |                    |        |
+decompose |    | 2.0.0         |               | yes*         |                    |  8.3   | sqbase
+k_fmi |        | 2.0.0         |               | yes*         |  yes*              |  8.1   | K_fmi
+stormdet |     | 2.0.0         |               | yes*         |  yes*              |  8.2   | seek_storm
+      | emd_decompose | 2.0.0  |               | yes*         |                    |  8.3   | sqbase
+      | K_fmi | 2.0.0          |               | yes          |  yes               |  8.1   |
+      | seek_storm | 2.0.0     |               | yes          |  yes               |  8.2   |
+      | sqbase | 2.0.0         |               | yes          |  no                |  8.3   | requires long test set
 
 
 """
