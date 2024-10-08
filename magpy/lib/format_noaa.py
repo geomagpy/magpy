@@ -1,8 +1,8 @@
 """
 MagPy
-IAGA02 input filter
-Written by Roman Leonhardt June 2012
-- contains test, read and write function
+NOAA ACE  input filter
+Updated by Roman Leonhardt October 2024
+- contains test and read function
 """
 
 from magpy.stream import *
@@ -69,6 +69,9 @@ def readNOAAACE(filename, headonly=False, **kwargs):
     # Use only clean data (status var S = 0)
     cleandata = kwargs.get('cleandata')
     getfile = True
+    tmpdaystring = ''
+    daystring = ''
+    KEYLIST = DataStream().KEYLIST
 
     if cleandata == None:
         cleandata = True
@@ -82,8 +85,6 @@ def readNOAAACE(filename, headonly=False, **kwargs):
         headers = {}
     else:
         headers = stream.header
-    #data = []
-    #key = None
 
     # get day from filename (platform independent)
     splitpath = os.path.split(filename)
@@ -119,7 +120,6 @@ def readNOAAACE(filename, headonly=False, **kwargs):
         getfile = True
 
     if getfile:
-
         array = [[] for key in KEYLIST]
         indtime = KEYLIST.index('time')
         indx = KEYLIST.index('x')

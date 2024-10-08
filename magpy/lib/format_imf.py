@@ -19,7 +19,7 @@ from magpy.stream import LineStruct
 from magpy.core.activity import K_fmi
 from magpy.core.methods import testtime, convert_geo_coordinate, is_number, extract_date_from_string
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 import numpy as np
 import sys
