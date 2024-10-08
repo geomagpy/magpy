@@ -11,6 +11,7 @@ from magpy.core.methods import testtime
 import dateutil.parser as dparser
 import csv
 
+
 def isNEIC(filename):
     """
     Checks whether a file is ASCII NEIC format.
@@ -41,6 +42,7 @@ time,latitude,longitude,depth,mag,magType,nst,gap,dmin,rms,net,id,updated,place,
 
     """
     getfile = True
+    KEYLIST = DataStream().KEYLIST
 
     array = [[] for key in KEYLIST]
     stream = DataStream([],{},np.asarray(array))

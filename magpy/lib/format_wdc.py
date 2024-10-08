@@ -3,12 +3,7 @@ MagPy
 WDC (BGS version) input filter
 Written by Roman Leonhardt October 2012
 - contains test, read and write function for hour data
-ToDo: Filter for minute data
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import division
 from io import open
 
 from magpy.stream import *
@@ -49,6 +44,7 @@ def readWDC(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
+    KEYLIST = DataStream().KEYLIST
 
     fh = open(filename, 'rt')
 
@@ -72,7 +68,6 @@ def readWDC(filename, headonly=False, **kwargs):
     oldformat = False
     kind = '' # To store Q, D in all data format (Quiet, Disturbed)
     for line in fh:
-        #print (line)
         if line.isspace():
             # blank line
             pass
@@ -205,7 +200,7 @@ def readWDC(filename, headonly=False, **kwargs):
             for i in range(0, 60*6, 6):
                 if var == firstvar:
                     timestr = hr+':%02d:00' % (i/6)
-                    array[tind].append(date2num(datetime.strptime(datestr+'T'+timestr, "%Y-%m-%dT%H:%M:%S")))
+                    array[tind].append(datetime.strptime(datestr+'T'+timestr, "%Y-%m-%dT%H:%M:%S"))
                 val = float(line[34+i:40+i])
                 if var in ['x','i','h']:
                     complist[0] = var
@@ -283,6 +278,7 @@ def writeWDC(datastream, filename, **kwargs):
 
     mode = kwargs.get('mode')
     #createlatex = kwargs.get('createlatex')
+    KEYLIST = DataStream().KEYLIST
 
     try:
         datastream.header['DataComponents'] = datastream.header.get('DataComponents','').upper()
@@ -310,11 +306,11 @@ def writeWDC(datastream, filename, **kwargs):
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
-            exst = pmRead(path_or_url=filename)
+            exst = read(path_or_url=filename)
             datastream = mergeStreams(exst,datastream,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'replace': # replace existing inputs
-            exst = pmRead(path_or_url=filename)
+            exst = read(path_or_url=filename)
             datastream = mergeStreams(datastream,exst,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'append':
