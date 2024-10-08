@@ -4,15 +4,11 @@ MagPy input/output filters
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
 from io import open
 
 # Specify what methods are really needed
 from magpy.stream import *
-
+from magpy.core.methods import testtime, extract_date_from_string
 import logging
 logger = logging.getLogger(__name__)
 
@@ -102,13 +98,13 @@ def readACECDF(filename, headonly=False, **kwargs):
     else:
         headskip = True
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files

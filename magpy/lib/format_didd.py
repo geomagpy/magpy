@@ -4,13 +4,9 @@ dIdD input filter
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-
 from magpy.stream import *
 from io import open
+from magpy.core.methods import testtime, extract_date_from_string
 
 
 def isDIDD(filename):
@@ -62,16 +58,16 @@ def readDIDD(filename, headonly=False, **kwargs):
 
     if fi: # in flist:
         if starttime:
-            startdate = datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d')
+            startdate = datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d')
         if endtime:
-            enddate = datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d')
+            enddate = datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d')
         #for fi in flist:
         daystring = fi.split('.')
         try:
             day = datetime.strftime(datetime.strptime(daystring[0], "%b%d%y"),"%Y-%m-%d")
         except:
             logging.warning("format-DIDD: Unusual dateformat in Filename %s" % daystring[0])
-            day = datetime.strftime(extractDateFromString(filename)[0],"%Y-%m-%d")
+            day = datetime.strftime(extract_date_from_string(filename)[0],"%Y-%m-%d")
             pass
             #return stream
         # Select only files within eventually defined time range

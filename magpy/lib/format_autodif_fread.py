@@ -6,6 +6,7 @@ Written by Rachel Bailey
 """
 
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
 
 def isAUTODIF_FREAD(filename):
     """
@@ -55,15 +56,15 @@ def readAUTODIF_FREAD(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
         logging.warning("Could not identify date in %s. Reading all ..." % daystring)

@@ -368,6 +368,7 @@ DataStream  |  dwt_calc  |   2.0.0  |                 |  yes*          |  yes*  
 DataStream  |  end  |        2.0.0  |                 |  yes           |  yes             |  5.1    |
 DataStream  |  extend  |     2.0.0  |                 |  yes*          |  yes             |  5.10   |  read
 DataStream  |  extract  |    2.0.0  |                 |  yes           |  yes             |  5.1    |
+DataStream  |  extract_headerlist |    2.0.0  |       |  yes           |  -               |  8.2    |  core.activity
 DataStream  |  extrapolate  |  2.0.0  |               |  yes           |  yes             |  5.8    |
 DataStream  |  filter  |     2.0.0  |                 |  yes           |  yes             |  5.3    |
 DataStream  |  fillempty  |  2.0.0  |                 |  yes*          |  yes*            |  -      |  sorting
@@ -425,8 +426,6 @@ deprecated:
     - stream.flag()  -> core.flagging.apply_flags
     - stream.bindetector(self,key,text=None,**kwargs):
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
-    - stream.add
-    - stream.extract_headerlist
 
 
 removed:
@@ -2890,7 +2889,6 @@ CALLED BY:
         return stream
 
 
-    @deprecated("Still in use anywhere - better use string2dict or switch to json.loads")
     def extract_headerlist(self, element, parameter=1, year=None):
         """
         DESCRIPTION
@@ -2903,6 +2901,7 @@ CALLED BY:
             parameter          (int) : defines the column from which the value is taken
             year               (int) : if provided, data of this year is takes, else man(year) is chosen
         APPLICATION
+            used for core.activity for seek_storm application
             alpha = magdata.extract_headerlist('DataRotationAlpha')
         """
         content = self.header.get(element)

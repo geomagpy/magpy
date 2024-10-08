@@ -4,9 +4,9 @@ Auxiliary input filter - WIC/WIK
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
 
 def isDTU1(filename):
     """
@@ -80,10 +80,10 @@ def readDTU1(filename, headonly=False, **kwargs):
         return []
     # Select only files within eventually defined time range
     if starttime:
-        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
             getfile = False
     if endtime:
-        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
             getfile = False
 
     if getfile:

@@ -20,13 +20,10 @@ DEPENDENCIES:
 CALLED BY:
         magpy.lib.magpy_formats
 '''
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
 from io import open
 
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
 
 def h2d(x):
     '''
@@ -149,10 +146,10 @@ def readLEMIHF(filename, headonly=False, **kwargs):
         day = datetime.strftime(datetime.strptime(daystring, '%Y%m%d'),'%Y-%m-%d')
         # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
         loggerlib.warning("readLEMIHF: Wrong dateformat in Filename %s." % filename)
@@ -308,13 +305,13 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         getfile = True
@@ -453,13 +450,13 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files

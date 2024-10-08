@@ -5,14 +5,11 @@ Supports USB temperature loggers, RCS files, old Caesium data and SG data
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import division
 
 from io import open
 
 from magpy.stream import *
+from magpy.core.methods import *
 
 
 def OpenFile(filename, mode='w'):
@@ -90,11 +87,12 @@ def isMETEO(filename):
 
     try:
         with open(filename, "rb") as fi:
-            temp = fi.readline()
+            temp1 = fi.readline()
+            temp2 = fi.readline()
     except:
         return False
     try:
-        comp = temp.split()
+        comp = temp1.split()
     except:
         return False
 
@@ -104,8 +102,7 @@ def isMETEO(filename):
         if not comp[3].decode('utf-8').startswith('AP23'):
             return False
 
-        temp = fh.readline()
-        comp = temp.split()
+        comp = temp2.split()
         date = comp[0].decode('utf-8') + '-' + comp[1].decode('utf-8')
         test = datetime.strptime(date,"%Y%m%d-%H%M%S")
     except:
@@ -241,13 +238,13 @@ def readRMRCS(filename, headonly=False, **kwargs):
 
     # try to get day from filename (platform independent)
     # --------------------------------------
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -362,13 +359,13 @@ def readLNM(filename, headonly=False, **kwargs):
                  "89":"Hagel"}
 
     # get day from filename (platform independent)
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -572,14 +569,14 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
     # Check whether header infromation is already present
     headers = {}
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
 
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         print("Did not recognize the date format")
@@ -707,14 +704,14 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
     # Check whether header infromation is already present
     headers = {}
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
 
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         print("Did not recognize the date format")
@@ -799,14 +796,14 @@ def readIWT(filename, headonly=False, **kwargs):
     # Check whether header infromation is already present
     headers = {}
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
 
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         if debug:
@@ -892,13 +889,13 @@ def readCS(filename, headonly=False, **kwargs):
     # get day from filename (platform independent)
     getfile = True
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -976,14 +973,14 @@ def readGRAVSG(filename, headonly=False, **kwargs):
     # Check whether header infromation is already present
     headers = {}
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
 
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files

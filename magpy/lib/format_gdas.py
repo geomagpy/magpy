@@ -6,6 +6,7 @@ Written by Roman Leonhardt June 2012
 """
 
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
 
 
 def isGDASA1(filename):
@@ -103,10 +104,10 @@ def readGDASA1(filename, headonly=False, **kwargs):
         return []
     # Select only files within eventually defined time range
     if starttime:
-        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
             getfile = False
     if endtime:
-        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
             getfile = False
 
     if getfile:
@@ -245,17 +246,17 @@ def readGDASB1(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
 
     getfile = True
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
-            #if not theday >= datetime.date(stream._testtime(starttime)):
+            #if not theday >= datetime.date(testtime(starttime)):
             #    getfile = False
         if endtime:
-            #if not theday <= datetime.date(stream._testtime(endtime)):
+            #if not theday <= datetime.date(testtime(endtime)):
             #    getfile = False
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files

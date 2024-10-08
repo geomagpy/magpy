@@ -6,6 +6,7 @@ Written by Roman Leonhardt June 2012
 """
 
 from magpy.stream import *
+from magpy.core.methods import testtime
 
 
 def isNOAAACE(filename):
@@ -13,10 +14,10 @@ def isNOAAACE(filename):
     Checks whether a file is NOAA ACE format.
     """
     try:
-        tempf = open(filename, 'rt')
-        temp1= tempf.readline()
-        temp2= tempf.readline()
-        temp3= tempf.readline()
+        with open(filename, "rt") as fi:
+            temp1= fi.readline()
+            temp2= fi.readline()
+            temp3= fi.readline()
     except:
         return False
     try:
@@ -104,10 +105,10 @@ def readNOAAACE(filename, headonly=False, **kwargs):
         day = datetime.strftime(datetime.strptime(daystring, "%Y%m%d"),"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
         if splitpath[0] == '/tmp':

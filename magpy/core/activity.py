@@ -332,9 +332,9 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
         fulldataarray, sr, k9 = datastream.get_fmi_array(missing_data=missing_data, debug=debug)  # return [],[]
 
     # If defaults then check and eventually override by header content
-    if K9_limit == 750:
+    if K9_limit == 750 and datastream:
         K9_limit = int(datastream.header.get('StationK9', 750))
-    if longitude == 15.0:
+    if longitude == 15.0 and datastream:
         longitude = float(datastream.header.get('DataAcquisitionLongitude', 15.0))
 
     tresult = []
@@ -342,7 +342,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
     sq_k_t = []
     sq_k_x = []
     sq_k_y = []
-    array = [np.array([]) for el in datastream.KEYLIST]
+    array = [np.array([]) for el in DataStream().KEYLIST]
     for threedayarray in fulldataarray:
         times = threedayarray[0]
         X_data = np.asarray(threedayarray[1], dtype=int)
@@ -416,7 +416,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
 
     if not return_sq:
         array[0] = np.asarray(tresult)
-        ind = datastream.KEYLIST.index('var1')
+        ind = DataStream().KEYLIST.index('var1')
         array[ind] = np.asarray(kresult)
         header = copy.deepcopy(datastream.header)
         header['DataSamplingRate'] = 10800
@@ -425,9 +425,9 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
         header['col-var1'] = 'K'
     else:
         array[0] = np.asarray(sq_k_t)
-        ind = datastream.KEYLIST.index('x')
+        ind = DataStream().KEYLIST.index('x')
         array[ind] = np.asarray(sq_k_x)
-        ind = datastream.KEYLIST.index('y')
+        ind = DataStream().KEYLIST.index('y')
         array[ind] = np.asarray(sq_k_y)
         header = {}
         header['DataSamplingRate'] = 3600

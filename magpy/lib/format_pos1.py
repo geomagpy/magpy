@@ -92,7 +92,7 @@ def readPOS1(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
@@ -152,15 +152,15 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
         loggerlib.warning("readPOS1TXT: Could not identify date in %s. Reading all ..." % daystring)

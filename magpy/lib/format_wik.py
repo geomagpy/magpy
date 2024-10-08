@@ -4,9 +4,10 @@ PMAG input filter (specific for WIK - Elsec)
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
+from magpy.core.methods import *
+
 
 def isOPT(filename):
     """
@@ -190,10 +191,10 @@ def readPMAG1(filename, headonly=False, **kwargs):
     try:
         day = datetime.strftime(datetime.strptime(daystring, "%Y_%m_%d"),"%Y-%m-%d")
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= stream._testtime(starttime):
+            if not datetime.strptime(day,'%Y-%m-%d') >= testtime(starttime):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= stream._testtime(endtime):
+            if not datetime.strptime(day,'%Y-%m-%d') <= testtime(endtime):
                 getfile = False
     except:
         logging.warning("Wrong dateformat in Filename %s" % daystring)

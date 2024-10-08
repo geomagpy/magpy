@@ -88,7 +88,7 @@ def readCOMMATXT(filename, headonly=False, **kwargs):
             print (elem)
             try:
                 if timeconv:
-                    ti = date2num(stream._testtime(elem[timecol]))
+                    ti = date2num(testtime(elem[timecol]))
                 else:
                     ti = elem[timecol]
                 array[0].append(ti)
