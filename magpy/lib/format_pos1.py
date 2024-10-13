@@ -35,7 +35,7 @@ def isPOS1TXT(filename):
     Checks whether a file is text POS-1 file format.
     """
     try:
-        with open(filename, "rb") as fi:
+        with open(filename, "rt") as fi:
             temp = fi.readline()
     except:
         return False
@@ -55,8 +55,6 @@ def isPOS1TXT(filename):
 def isPOSPMB(filename):
     """
     Checks whether a file is binary POS-1 file format.
-    Header:
-    # MagPyBin %s %s %s %s %s %s %d" % ('POS1', '[f,df,var1,sectime]', '[f,df,var1,GPStime]', '[nT,nT,none,none]', '[1000,1000,1,1]
     """
     try:
         with open(filename, "rt") as fi:
@@ -103,7 +101,7 @@ def readPOS1(filename, headonly=False, **kwargs):
             if not theday <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
-        logging.warning("readPOS1BIN: Could not identify date in %s. Reading all ..." % filename)
+        loggerlib.warning("readPOS1BIN: Could not identify date in %s. Reading all ..." % filename)
         getfile = True
 
     if getfile:
@@ -163,7 +161,7 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        loggerlib.warning("readPOS1TXT: Could not identify date in %s. Reading all ..." % daystring)
+        loggerlib.warning("readPOS1TXT: Could not identify date in {}. Reading all ...".format(filename))
         getfile = True
 
     fh = open(filename, 'rb')

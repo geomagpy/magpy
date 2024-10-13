@@ -83,19 +83,19 @@ def roman_to_int(input):
        print r == ints
        1
 
-   >>> roman_to_int('VVVIV')
+   roman_to_int('VVVIV')
    Traceback (most recent call last):
     ...
    ValueError: input is not a valid roman numeral: VVVIV
-   >>> roman_to_int(1)
+   roman_to_int(1)
    Traceback (most recent call last):
     ...
    TypeError: expected string, got <type 'int'>
-   >>> roman_to_int('a')
+   roman_to_int('a')
    Traceback (most recent call last):
     ...
    ValueError: input is not a valid roman numeral: A
-   >>> roman_to_int('IL')
+   roman_to_int('IL')
    Traceback (most recent call last):
     ...
    ValueError: input is not a valid roman numeral: IL
@@ -217,13 +217,13 @@ def readGSM19(filename, headonly=False, **kwargs):
  
     """
 
-    #print "Found GEM format"
-    #print "-------------------------------------"
+    #print ("Found GSM19 format")
 
     timestamp = os.path.getmtime(filename)
     creationdate = datetime.fromtimestamp(timestamp)
     daytmp = datetime.strftime(creationdate,"%Y-%m-%d")
     YeT = daytmp[:2]
+    KEYLIST = DataStream().KEYLIST
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -351,7 +351,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                     second = elem[6][4:]
                     # add day
                     strtime = datetime.strptime(day+"T"+str(hour)+":"+str(minute)+":"+str(second),"%Y-%m-%dT%H:%M:%S.%f")
-                    array[0].append(date2num(strtime))
+                    array[0].append(strtime)
                     array[indf].append(float(elem[2]))
                     array[inddf].append(float(elem[3]))
                     array[indvar5].append(float(elem[4]))
@@ -423,7 +423,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                        valdf = float(elem[4])
                        if dist:
                            array[indz].append(valf-(valdf*dist))
-                       array[0].append(date2num(strtime))
+                       array[0].append(strtime)
                        array[indf].append(float(elem[3]))
                        array[inddf].append(float(elem[4]))
                        array[indvar5].append(float(elem[5]))

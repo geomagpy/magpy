@@ -20,7 +20,8 @@ def isAUTODIF_FREAD(filename):
     try:
         temp = line.split()
         if len(temp) == 5:
-            if len(temp[0]) == 8 and len(temp[1]) == 5 and len(temp[2]) == 2:
+            # exactly the same as pmb POS1 files
+            if len(temp[0]) == 8 and len(temp[1]) == 5 and len(temp[2]) == 2 and not filename.endswith(".pmb"):
                 logging.debug("lib - format_autodif: Found Autodif Text file %s" % filename)
                 return True
             else:

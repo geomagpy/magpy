@@ -24,6 +24,7 @@ from io import open
 
 from magpy.stream import *
 from magpy.core.methods import testtime, extract_date_from_string
+import struct
 
 def h2d(x):
     '''
@@ -117,6 +118,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
+    KEYLIST = DataStream().KEYLIST
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -167,7 +169,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
             else:
                 #row = LineStruct()
                 elem = line.split()
-                tim = date2num(datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2]+'T'+elem[3]+':'+elem[4]+':'+elem[5],'%Y-%m-%dT%H:%M:%S.%f'))
+                tim = datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2]+'T'+elem[3]+':'+elem[4]+':'+elem[5],'%Y-%m-%dT%H:%M:%S.%f')
                 #row.time = tim
                 array[0].append(tim)
                 array[xpos].append(float(elem[6]))
@@ -254,6 +256,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     timeshift = kwargs.get('timeshift')
     gpstime = kwargs.get('gpstime')
     sectime = kwargs.get('sectime')
+    KEYLIST = DataStream().KEYLIST
 
     #print "Reading LEMIBIN -- careful --- check time shifts and used time column (used during acquisition and read????)"
     timediff = []
@@ -395,7 +398,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             str1pos = KEYLIST.index('str1')
             secpos = KEYLIST.index('sectime')
             for i in range(10):
-                tim = date2num(time+timedelta(microseconds=(100000.*i)))
+                tim = time+timedelta(microseconds=(100000.*i))
                 array[0].append(tim)
                 array[xpos].append((data[20+i*3])*1000.)
                 array[ypos].append((data[21+i*3])*1000.)
@@ -440,6 +443,7 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     debug = kwargs.get('debug')
     getfile = True
+    KEYLIST = DataStream().KEYLIST
 
     fh = open(filename, 'rb')
     # read file and split text into channels
@@ -510,7 +514,7 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
                 newtime[-2] = currsec+secadd
                 time = datetime(2000+newtime[0],newtime[1],newtime[2],newtime[3],newtime[4],int(newtime[5]),int(newtime[6]*1000000))
 
-                array[0].append(date2num(time))
+                array[0].append(time)
                 array[xpos].append((data[0])*1000.)
                 array[ypos].append((data[1])*1000.)
                 array[zpos].append((data[2])*1000.)
