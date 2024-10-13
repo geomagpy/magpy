@@ -57,7 +57,7 @@ def readPHA(filename, headonly=False, **kwargs):
         with open(filename) as f:
             data = json.load(f)
     stream = DataStream()
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     if stream.header is None:
         headers = {}
     else:

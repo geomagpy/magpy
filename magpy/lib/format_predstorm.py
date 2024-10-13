@@ -85,7 +85,7 @@ def readPREDSTORM(filename, headonly=False, **kwargs):
                     if idx > 0 and idx < len(valuelist):
                         array[idx].append(float(valuelist[idx]))
     
-    nparray = np.array([np.array(ar).astype(object) for ar in array])
+    nparray = np.array([np.array(ar).astype(object) for ar in array],dtype=object)
     code = os.path.basename(filename).replace('predstorm','').replace('.txt','').replace('_','')
     header['SensorName'] = "PREDSTORM"
     header['SensorSerialNum'] = "HELIO{}".format(code.upper())
@@ -93,7 +93,7 @@ def readPREDSTORM(filename, headonly=False, **kwargs):
     if debug:
         print (header)
         print (nparray)
-    stream = DataStream([LineStruct()],header,nparray)
+    stream = DataStream([],header,nparray)
     if starttime:
         stream = stream.trim(starttime=starttime)
     if endtime:

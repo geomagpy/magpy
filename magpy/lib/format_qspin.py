@@ -2,9 +2,8 @@
 MagPy
 QSPIN input filter
 Written by Roman Leonhardt, Tim White June 2018
-- contains test and read function, toDo: write function
+- contains test and read function,
 """
-from __future__ import print_function
 
 from magpy.stream import *
 from magpy.core.methods import *
@@ -20,11 +19,7 @@ def isQSPIN(filename):
             temp = fi.readline()
     except:
         return False
-    try:
-        li = temp.readline()
-    except:
-        return False
-    if not li.startswith('*Start Header*'):
+    if not temp.startswith('*Start Header*'):
         return False
     return True
 
@@ -121,4 +116,4 @@ Line Format: <Data in nT>,<valid>,<counter>,<strength>
     headers['DataFormat'] = 'QSpin'
     array = [np.asarray(el) for el in array]
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream([], headers, np.asarray(array, dtype=object))
