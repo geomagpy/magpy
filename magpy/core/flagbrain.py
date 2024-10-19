@@ -824,7 +824,7 @@ def plot_flag_patches(data, components=['x'], imfflagdict={}, title=None, starti
 
 # Save flagging information to a file (dictionary)
 def convert_imfflagdict_to_flaglist(sensorid, imfflagdict, starttime=None, sample_rate=1, stationid=None, groups=None):
-    flaglist = flagging.flags()
+    flaglist = flagging.Flags()
     for line in imfflagdict:
         l = imfflagdict.get(line)
         winmin = l.get('start')

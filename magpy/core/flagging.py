@@ -1181,7 +1181,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             ts = datetime.now(timezone.utc).replace(tzinfo=None)
             div = 1000
             for subids in idlist:  # speed this up
-                print ("Aumout of subids", len(subids))
+                if debug:
+                    print ("Amount of subids", len(subids))
                 for ik, flagid in enumerate(subids):
                     # get start and endtime for all ids and select ids with overlapping/consecutive time ranges
                     # remember combined ids to remove them at the end

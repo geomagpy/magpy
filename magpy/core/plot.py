@@ -141,7 +141,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
     amount = len(data)
     # check for available keys - do that only for the primary dataset if not provided
     if keys:
-        keysdepth = len(np.array(keys).shape)
+        keysdepth = len(np.array(keys, dtype=object).shape)
         if keysdepth == 1 and amount == 1:
             keys = [keys]
     if keys and keys[0][0] == 'dummy':
