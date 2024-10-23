@@ -7151,10 +7151,12 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
 
     APPLICATION:
     """
+    t1 = datetime.now()
 
     flag = kwargs.get('flag')
     comment = kwargs.get('comment')
     flagid = kwargs.get('flagid')
+    debug = kwargs.get('debug')
 
     if not keys:
         keys = DataStream().KEYLIST
@@ -7248,14 +7250,35 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
         print (" Time steps are apparently not fitting")
         return stream_a
 
+    if debug:
+        t1b = datetime.now()
+        print("needed", (t1b - t1).total_seconds())
+
     # fill sb to the length of sa with np.nan or ''
     # get the indices of stream_b in stream_a
-    indices = np.nonzero(np.in1d(timea, timeb))[0]
+    if debug:
+        print (len(timea), len(timeb))
+    way = 2 # much quicker
     # get the first index of stream_b in stream_a
+    if way == 1:
+        indices = np.nonzero(np.in1d(timea, timeb))[0]
+    else:
+        index = np.argsort(timea)
+        sorted_x = timea[index]
+        sorted_index = np.searchsorted(sorted_x, timeb)
+        yindex = np.take(index, sorted_index, mode="clip")
+        mask = timea[yindex] != timeb
+        indices = np.ma.array(yindex, mask=mask)
 
     array = [[] for key in DataStream().KEYLIST]
     array[0] = timea
+    t2 = datetime.now()
+    if debug:
+        print("needed", (t2 - t1).total_seconds())
     for i,key in enumerate(DataStream().KEYLIST):
+        if debug:
+            print ("Dealing with ", key)
+            t3 = datetime.now()
         if not 'time' in key:
             array[i] = sa._get_column(key)
             colb = sb._get_column(key)
@@ -7294,6 +7317,9 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
                 pass
             else:
                 array[i] = np.asarray([])
+        if debug:
+            t4 = datetime.now()
+            print ("needed", (t4-t3).total_seconds())
 
     array = np.asarray(array, dtype=object)
     return DataStream(header=header,ndarray=array)
