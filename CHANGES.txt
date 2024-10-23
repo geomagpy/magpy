@@ -2,18 +2,20 @@ MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
 
-####v<1.1.8>, <2024-xx-xx> --
+####v<1.1.8>, <2024-10-23> --
 
 1.1.8 general:
     - speed issues
 
 1.1.8 additions:
     - csv import more flexible regarding header
+    - tsf file support with channels
 
 1.1.8 fixes:
     - json format library supports GFZ index data and DSCVR, conflict solved
     - resample method - indexing
     - format iaga write method failed if DataSamplingRate could not be interpreted
+    - deprecate error
 
 
 ####v<1.1.7>, <2023-11-30> --
