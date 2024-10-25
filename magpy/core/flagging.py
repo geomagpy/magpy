@@ -1433,9 +1433,12 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
     fl = Flags()
     sr = data.samplingrate()
     if not timerange:
-        window = sr * 600
+        window = 600.
     else:
         window = timerange / sr
+    if debug:
+        print ("samplingrate", sr)
+        print ("window", window)
     if not window > 30:
         print(" timerange to small for a proper outlier detection")
         return fl
@@ -1471,7 +1474,12 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
             break
 
         endchunk = len(col)
+        if window > int(endchunk/2.):
+            window = int(endchunk/2.)
+            print(window)
         chunks = get_chunks(endchunk, wl=window)
+        if debug:
+            print (chunks)
         for chunk in chunks:
             selcol = col[chunk].astype(float)
             seltcol = tcol[chunk]
