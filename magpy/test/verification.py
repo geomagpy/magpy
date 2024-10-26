@@ -518,6 +518,12 @@ class TestStream(unittest.TestCase):
         self.assertEqual(firstf.get('fitfunc'), 'linear')
 
 
+class TestMethods(unittest.TestCase):
+    def test_find_nth(self):
+        i = find_nth("Hello_World_I_am_here","_", 3)
+        self.assertEqual(i, 13)
+
+
 class TestFlagging(unittest.TestCase):
     def test_add(self):
         fl = Flags()

@@ -14,6 +14,7 @@ the following methods are contained:
 - evaluate_function(component, function, samplingrate, starttime=None, endtime=None, debug=False)
 - extract_date_from_string(datestring)
 - find_nearby(array, value)
+- find_nth(string, substring, nth occurrence)   : returns index of nth occurrence of substring in string
 - func_from_file(functionpath,debug=False)   :    read functional parameters from file
 - func_to_file(funcparameter,functionpath,debug=False)  :    read function parameters (NOT the function) to file
 - group_indices(indexlist)   :  identify successiv indices and return a list with start,end pairs
@@ -42,6 +43,7 @@ class | method | since version | until version | runtime test | result verificat
     | evaluate_function | 2.0.0 |             | yes           |  |  |
     | extract_date_from_string | 2.0.0 |      | yes           |  |  |
     | find_nearby     | 2.0.0 |               | yes           |  |  |
+    | find_nth        | 2.0.0 |               | yes           | yes          |            |  flagbrain
     | func_from_file  | 2.0.0 |               | yes           | yes*         |  5.9       |  stream
     | func_to_file    | 2.0.0 |               | yes           | yes*         |  5.9       |  stream
     | get_chunks      | 2.0.0 |               | yes           |  |  |
@@ -788,6 +790,18 @@ def find_nearest(array, value):
     return array[idx], idx
 
 
+def find_nth(haystack: str, needle: str, n: int) -> int:
+    """
+    DESCRIPTION
+        Find the nth occurrence of a substring in a string
+        #https://stackoverflow.com/questions/1883980/find-the-nth-occurrence-of-substring-in-a-string
+    """
+    start = haystack.find(needle)
+    while start >= 0 and n > 1:
+        start = haystack.find(needle, start+len(needle))
+        n -= 1
+    return start
+
 
 def func_from_file(functionpath,debug=False):
         """
@@ -1415,6 +1429,13 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['find_nearest'] = str(excep)
         print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with find_nearest.")
+
+    try:
+        i = find_nth("Hello_World_I_am_here","_", 3)
+        print(i)
+    except Exception as excep:
+        errors['find_nth'] = str(excep)
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with find_nth.")
 
     try:
         group = group_indices(indlist)
