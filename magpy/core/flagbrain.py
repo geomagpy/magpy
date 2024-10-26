@@ -890,6 +890,7 @@ def extract_flagids(imfflagdict, flagids=['001']):
     return nimfflagdict
 
 
+@deprecated("replaced by convert_flags_to_imfflagdict")
 def convert_flaglist_to_imfflagdict(name, flaglist, starttime=None, sample_rate=1):
     nfl = flaglist.flagdict.get(name)
     mdic = {}
@@ -935,6 +936,49 @@ def convert_flaglist_to_imfflagdict(name, flaglist, starttime=None, sample_rate=
         dic['description'] = desc
         if not dic.get('description'):
             dic['description'] = 'not in flagid list'
+        mdic[ind] = dic
+    return mdic
+
+
+def convert_flags_to_imfflagdict(name, flags, starttime=None, sample_rate=1):
+    """
+    DESCRIPTION
+        converts a flagging dictionary structure into the imf dictionary version
+        Both structures are actually similar except for time.
+        Please note the difference to the old "convert_flaglist_.." which is based
+        based on MaPy1.1.8 flagging class and its list element
+    """
+    nfl = flags.select('sensorid', [name])
+
+    mdic = {}
+    if not nfl:
+        return mdic
+    if not len(nfl) > 0:
+        return mdic
+
+    fulldic = nfl.flagdict
+    for ind,subdic in enumerate(fulldic):
+        el = fulldic[subdic]
+        #{'sensorid': 'LEMI036_1_0002', 'starttime': datetime.datetime(2020, 5, 23, 17, 30, 58, 999988),
+        #'endtime': datetime.datetime(2020, 5, 23, 17, 30, 59), 'components': ['x', 'y', 'z'], 'flagtype': 1,
+        #'labelid': '001', 'label': 'lightning strike', 'comment': 'lightning RL', 'groups': None,
+        #'probabilities': None, 'stationid': '', 'validity': '', 'operator': 'rename_nearby', 'color': '',
+        #'modificationtime': datetime.datetime(2021, 3, 3, 10, 56, 25, 800338), 'flagversion': '2.0'}
+        dic = {}
+        dic['component'] = el.get("components")
+        if starttime:
+            # convert winmin and winmax to datetime
+            winmin = int(np.round((el.get("starttime") - starttime).total_seconds() / sample_rate))
+            winmax = int(np.round((el.get("endtime") - starttime).total_seconds() / sample_rate))
+            # print ((el[0]-starttime).total_seconds()/sample_rate)
+            # print ((el[1]-starttime).total_seconds()/sample_rate)
+        else:
+            break
+        dic['start'] = winmin
+        dic['end'] = winmax
+        dic['flag'] = el.get("flagtype")
+        dic['flagid'] = el.get("labelid")
+        dic['description'] = el.get("label")
         mdic[ind] = dic
     return mdic
 
@@ -1158,11 +1202,25 @@ if __name__ == '__main__':
 
     amp_curve = np.asarray([1.,2.,3.,4.,5.,6.,6.,5.,3.,2.,1.,4.,5.,6.,7.])
     errors = {}
+
+    fl = flagging.Flags()
+    fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T23:56:12.654362",
+                endtime="2022-11-22T23:59:12.654362", components=['x', 'y', 'z'], debug=False)
+    fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T21:56:12.654362",
+                endtime="2022-11-22T21:59:12.654362", components=['x', 'y', 'z'], debug=False)
+
     try:
         ul = calculate_iqr(amp_curve, f=1.5)
     except Exception as excep:
         errors['calculate_iqr'] = str(excep)
         print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
+    try:
+        st = datetime(2022,11,22)
+        d = convert_flags_to_imfflagdict("LEMI025_X56878_0002_0001", fl, starttime=st, sample_rate=1)
+        print(d)
+    except Exception as excep:
+        errors['convert_flags_to_imfflagdict'] = str(excep)
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with convert_flags_to_imfflagdict.")
 
 
     print("----------------------------------------------------------")
