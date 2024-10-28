@@ -406,8 +406,8 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                     if not isinstance(mygrid, dict):
                         mygrid = {}
                     gridvisible = mygrid.get("visible", True)
-                    gridwhich = mygrid.get("axis", "major")
-                    gridaxis = mygrid.get("visible", "both")
+                    gridwhich = mygrid.get("which", "major")
+                    gridaxis = mygrid.get("axis", "both")
                     gridcolor = mygrid.get("color", [0.9, 0.9, 0.9])
                     plt.grid(visible=gridvisible, which=gridwhich, axis=gridaxis, color=gridcolor)
                 # Remove offsets on y-axes

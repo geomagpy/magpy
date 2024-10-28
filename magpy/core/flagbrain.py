@@ -536,6 +536,53 @@ def determine_external_features(startindex=0, endindex=7200, sample_rate=1, star
     return featurelist
 
 
+def create_feature_list(signal, max_imfs=9, disturbed_region=False, cstart=None,  sample_rate=1, externalconfig={}, debug=False):
+    # Produce a full dictionary with imf information and features for each disturbed window
+    featurelist = []
+    comp = signal-np.mean(signal)
+    imf = emd.sift.mask_sift(comp, max_imfs=max_imfs)
+    extfeat=[]
+    if externalconfig:
+        #cstart fehlt um die external features zu rechnen
+        extfeat = determine_external_features(startindex=0, endindex=len(comp), sample_rate=sample_rate, starttime=cstart,externalconfig=externalconfig)
+        pass
+    imfdict = create_n_imf_layer(imf,factor=f, determine_disturbed_region=disturbed_region, extfeatures=extfeat, debug=debug)
+    for el in imfdict:
+        #print ("Getting feature for", el) #, imfdict.get('imfcontent').get(el)).get('peakfrequency')
+        feat = imfdict.get(el).get('disturbed_regions').get(0).get('features')
+        feat = [0 if np.isnan(x) else x for x in feat]
+        featurelist += feat
+    #print (len(featurelist))
+    return featurelist
+
+
+def get_obs_features(obs_data, obs_labels, starttimes_obs=None, sample_rate=1, externalconfig={}):
+    list_features = []
+    st = None
+    list_unique_labels = list(set(obs_labels))
+    list_labels = [list_unique_labels.index(elem) for elem in obs_labels]
+    for i,signal in enumerate(obs_data):
+        if starttimes_obs:
+            st = starttimes_obs[i]
+        features = create_feature_list(signal, max_imfs=7, disturbed_region=False, cstart=st, sample_rate=1, externalconfig=externalconfig, debug=False)
+        list_features.append(features)
+    return list_features, list_labels
+
+def get_unkown_features(data, components=['x'], externalconfig={}):
+    udata_obs = []
+    ulabels_obs = []
+    ucstart_obs = []
+    print (" Got {} data points".format(len(data)))
+    sample_rate = data.samplingrate()   # obtain sampling rate
+    for c in components:
+        comp = data._get_column(c)
+        size = get_chunks(len(comp), wl=3600)
+        for s in size:
+            ucstart_obs.append(data.start()+timedelta(seconds=sample_rate*s[0]))
+            udata_obs.append(comp[s])
+    X_unknown_obs, Y_unknown_obs = get_obs_features(udata_obs, ulabels_obs, ucstart_obs, externalconfig=externalconfig)
+    return X_unknown_obs
+
 # Create the full dictionary
 def create_feature_dictionary(data, factor=5, max_imfs=15, config=None, externalconfig=None, debug=False):
     # Produce a full dictionary with imf information and features for each disturbed window
