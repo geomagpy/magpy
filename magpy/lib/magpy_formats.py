@@ -97,6 +97,7 @@ try:
     ##  -> format_imf ImagCDF method in case of cdflib available
     ##  -> format_magpy PYCDF method in case of cdflib available
     from magpy.lib.format_imagcdf import *
+    from magpy.lib.format_gfzcdf import *
     from magpy.lib.format_magpycdf import *
     from magpy.lib.format_acecdf import *
     # please note: magpycdf and acecdf replace the earlier combined method in magpy
@@ -226,6 +227,9 @@ def isFormat(filename, format_type):
     elif (format_type == "DKA"): # Intermagnet K-value Format
         if (isDKA(filename)):
             return True
+    elif (format_type == "GFZCDF"):
+        if (isGFZCDF(filename)):
+            return True
     elif (format_type == "ACECDF"):
         if (isACECDF(filename)):
             return True
@@ -348,6 +352,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPYASCII(filename, headonly, **kwargs)
     elif (format_type == "IMAGCDF"):
         return readIMAGCDF(filename, headonly, **kwargs)
+    elif (format_type == "GFZCDF"):
+        return readGFZCDF(filename, headonly, **kwargs)
     elif (format_type == "ACECDF"): # cdf ACE
         return readACECDF(filename, headonly, **kwargs)
     elif (format_type == "PYCDF"):

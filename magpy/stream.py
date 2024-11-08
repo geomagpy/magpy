@@ -269,6 +269,7 @@ PYMAG_SUPPORTED_FORMATS = {
                 'PREDSTORM':['r','PREDSTORM space weather prediction data format'],
                 'CSV':['rw','comma-separated CSV data'],
                 'IMAGCDF':['rw','Intermagnet CDF Format'],
+                'GFZCDF':['r', 'GFZ CDF variant'],
                 'PYCDF':['rw', 'MagPy CDF variant'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
                 'NETCDF':['r', 'NetCDF4 format, NOAA DSCOVR satellite data archive format'],
