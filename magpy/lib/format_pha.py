@@ -1,10 +1,8 @@
 """
 MagPy
 PHA input filter
-supports Kp values from the qlyymm.tab
 
 Written by Roman Leonhardt October 2018
-- contains test, read and write function for hour data
 """
 from __future__ import print_function
 
@@ -13,8 +11,8 @@ import json
 
 def isPHA(filename):
     """
-    Checks whether a file is ASCII Data format
-    containing the GFZ Kp values
+    Checks whether a file is JSON Data format
+    containing the Pha values
     """
     try:
         if filename.endswith('gz'):
