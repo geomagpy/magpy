@@ -392,6 +392,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         """
         DESCRIPTION
             create a list from flagdict consisting of desired parameters and main key
+        APPLICATION:
+            flaglist = fl._list(parameter=['starttime','endtime','components','flagtype','comment','sensorid',
+                                           'modificationtime'])
         """
         if not parameter:
             return []

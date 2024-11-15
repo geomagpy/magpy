@@ -228,12 +228,13 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         #"Single time axis found in file"
         newdatalist.append(['time',tllist[0][1]])
 
-    def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion,stationid=None):
+    def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion,stationid=None, debug=False):
+        if debug:
+            print ("Rules", rulesettype, rulesetversion)
         if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy'] and len(flagginglist) > 0:
-            if rulesetversion in ['1.0','1',1]:
+            if rulesetversion in ['1.0','1',1,'2.0',2]:
                 flagcolsconrad = [flagginglist[0],flagginglist[1],flagginglist[3],flagginglist[4],flagginglist[5],flagginglist[6],flagginglist[2]]
                 flaglisttmp = []
-                print ("HERE", flagcolsconrad)
                 #'FlagBeginTimes', 'FlagEndTimes', 'FlagComponents', 'FlagCode', 'FlagDescription', 'FlagSystemReference', 'FlagModificationTimes']
                 #add(self, sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000',
                 #    label='',
@@ -266,7 +267,10 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                         newel = [el[0],el[1],el[3],el[4],el[5],el[6]]
                         if un == newel:
                             comps.append(el[2])
-                    flags.add(sensorid=un[4], starttime=un[0], endtime=un[1], components=comps, flagtype=un[2], labelid='099', comment=un[3], modificationtime=un[5])
+                    if len(comps) == 1 and comps[0].find(",") >= 0:
+                        # In case comps already consists of a comma separated string with individual components
+                        comps = comps[0].split(",")
+                    flags.add(sensorid=un[4], starttime=un[0], endtime=un[1], components=comps, flagtype=int(un[2]), labelid='099', comment=un[3], modificationtime=un[5])
                 return flags
             else:
                 return {}
@@ -281,7 +285,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             print ("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         logger.info("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         flagginglist = [elem for elem in datalist if elem.startswith('Flag')]
-        flags = Ruleset2Flaglist(flagginglist,headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion',''), stationid=headers.get("StationID",None))
+        flags = Ruleset2Flaglist(flagginglist,headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion',''), stationid=headers.get("StationID",None), debug=debug)
         if debug:
             print ("readIMAGCDF: Flagging information extracted")
 
@@ -322,7 +326,6 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     delrow = False
     index = 0
     for elem in newdatalist:
-        print (elem)
         if elem[0] == 'time':
             if cdfversion < 1.0:
                 ttdesc = cdfdat.varinq(elem[1]).get('Data_Type_Description')
@@ -390,7 +393,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     result = DataStream(header=headers,ndarray=ndarray)
 
     if not headers.get('FlagRulesetType','') == '' and flags:
-        print (flags)
+        result.header["DataFlags"] = flags
         #result = result.flag(flaglist)
 
     return result
@@ -407,6 +410,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     addflags = kwargs.get('addflags')
     skipcompression = kwargs.get('skipcompression')
 
+    flags = {}
     logger.info("Writing IMAGCDF Format {}".format(filename))
     if debug:
         print (" Writing CDF data based on cdflib")
@@ -421,6 +425,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         ms = my_dt_ob.microsecond/1000.  # fraction
         date_list = [my_dt_ob.year, my_dt_ob.month, my_dt_ob.day, my_dt_ob.hour, my_dt_ob.minute, my_dt_ob.second, ms]
         return date_list
+
+    datastream = datastream._remove_nancolumns()
 
     main_cdf_spec = {}
     main_cdf_spec['Compressed'] = False
@@ -525,9 +531,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     ## 3. Optional flagging information
     ##    identify flags within the data set and if they are present then add an attribute to the header
     if addflags:
-        flaglist = datastream.extractflags()
-        if len(flaglist) > 0:
-            globalAttrs['FlagRulesetVersion'] = { 0 : '1.0'}
+        flags = datastream.header.get("DataFlags", {})
+        if flags:
+            globalAttrs['FlagRulesetVersion'] = { 0 : '2.0'}
             globalAttrs['FlagRulesetType'] = { 0 : 'Conrad'}
 
     if not headers.get('DataPublicationDate','') == '':
@@ -869,7 +875,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     success = filename
 
-    if len(flaglist) > 0 and addflags == True:
+    if flags and addflags == True:
         flagstart = 'FlagBeginTimes'
         flagend = 'FlagEndTimes'
         flagcomponents = 'FlagComponents'
@@ -879,8 +885,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         flagsystemreference = 'FlagSystemReference'
         flagobserver = 'FlagObserver'
 
-
-        trfl = np.transpose(flaglist)
+        flaglist = flags._list(parameter=['starttime','endtime','components','flagtype','comment','sensorid','operator','modificationtime'])
+        trfl = np.transpose(flaglist)[1:]
         #print ("Transposed flaglist", trfl)
         try:
             print ("Writing flagging information ...")
@@ -901,19 +907,24 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
 
             # Here we can select between different content
-            if len(flaglist[0]) == 7:
+            fllist=[]
+            ll=[]
+            if len(flaglist[0]) == 8:
                 #[st,et,key,flagnumber,commentarray[idx],sensorid,now]
                 # eventually change flagcomponent in the future
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference] # , flagobserver]
-            elif len(flaglist[0]) == 8:
+            elif len(flaglist[0]) == 9:
                 # Future version ??
                 fllist = [flagcomponents,flagcode,flagcomment, flagsystemreference, flagobserver]
-            #print (fllist)
             for idx, cdfkey in enumerate(fllist):
                 var_attrs = {}
                 var_spec = {}
-                if not cdfkey == flagcode:
-                    ll = [str(el) for el in trfl[idx+2]]
+                if cdfkey == flagcomponents:
+                    ll = [",".join(el) for el in trfl[idx+2]]
+                elif not cdfkey in [flagcode,flagcomponents]:
+                    ll = [str(el) if el else "-"  for el in trfl[idx+2]]
+                elif cdfkey in [flagcode]:
+                    ll = [int(el) for el in trfl[idx + 2]]
                 else:
                     ll = trfl[idx+2]
                 #mycdf[cdfkey] = ll
@@ -1013,6 +1024,37 @@ if __name__ == '__main__':
             succ1 = writeIMAGCDF(teststream, filename)
             succ2 = isIMAGCDF(filename)
             dat = readIMAGCDF(filename)
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
+                 raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        testset = 'IMAGCDFflags'
+        try:
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            fl = flagging.Flags()
+            fl = fl.add(sensorid="Test_0001_0002", starttime="2022-11-01T09:00:00",
+                        endtime="2022-11-01T10:00:00", components=['x', 'y', 'z'], labelid='099', debug=False)
+            fl = fl.add(sensorid="Test_0001_0002", starttime="2022-11-22T21:56:12.654362",
+                        endtime="2022-11-22T21:59:12.654362", components=['x', 'y', 'z'], labelid='099', debug=False)
+            teststream.header['DataFlags'] = fl
+            succ1 = writeIMAGCDF(teststream, filename, addflags=True)
+            succ2 = isIMAGCDF(filename)
+            dat = readIMAGCDF(filename)
+            flafter = dat.header.get('DataFlags')
+            print ("Flags before", fl)
+            print ("Flags after", flafter)
             te = datetime.now(timezone.utc).replace(tzinfo=None)
             # validity tests
             diff = subtract_streams(teststream, dat, debug=True)
