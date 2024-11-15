@@ -303,6 +303,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     delrow = False
     index = 0
     for elem in newdatalist:
+        print (elem)
         if elem[0] == 'time':
             if cdfversion < 1.0:
                 ttdesc = cdfdat.varinq(elem[1]).get('Data_Type_Description')
@@ -366,13 +367,15 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     headers['col-z'] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                     headers['unit-col-z'] = cdfdat.varattsget(elem[1]).get('UNITS')
 
+    print ("HERE", array)
     ndarray = np.asarray(array, dtype=object)
 
 
     result = DataStream(header=headers,ndarray=ndarray)
 
     if not headers.get('FlagRulesetType','') == '' and len(flaglist) > 0:
-        result = result.flag(flaglist)
+        print (flaglist)
+        #result = result.flag(flaglist)
 
     return result
 

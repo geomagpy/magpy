@@ -390,7 +390,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
     def _list(self, parameter=None):
         """
         DESCRIPTION
-            create a list from flagdict consting of desired parameters and main key
+            create a list from flagdict consisting of desired parameters and main key
         """
         if not parameter:
             return []
