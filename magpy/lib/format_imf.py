@@ -1838,8 +1838,9 @@ def readBLV(filename, headonly=False, **kwargs):
                 strval = block[6]
                 if mode == 'adopted':
                     if strval in ['d','D']:
-                        print ("Found break at {}".format(block[0]))
-                        print ("Adding nan column for jumps in plot")
+                        if debug:
+                            print ("Found break at {}".format(block[0]))
+                            print ("Adding nan column for jumps in plot")
                         array[0].append(dt-timedelta(days=0.5))
                         array[xpos].append(np.nan)
                         array[ypos].append(np.nan)
@@ -1862,8 +1863,13 @@ def readBLV(filename, headonly=False, **kwargs):
                             if debug:
                                 print ("Fitting from {} to {}".format(farray[0][0],farray[0][-1]))
                             tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
-                            func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
-                            func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
+                            tempstream = tempstream._remove_nancolumns()
+                            if 1. / len(tempstream) < 0.01:
+                                knotstep = 0.01
+                            else:
+                                knotstep = 1. / len(tempstream) + 0.01
+                            func1 = tempstream.fit([KEYLIST[xpos], KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline',knotstep=knotstep)
+                            func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline',knotstep=knotstep)
                             funclist.append(func1)
                             funclist.append(func2)
                             farray = [[] for key in KEYLIST]
@@ -1879,17 +1885,25 @@ def readBLV(filename, headonly=False, **kwargs):
             elif line.startswith('*'):
                 # data info
                 starfound.append('*')
-                if len(starfound) > 1: # Comment section starts here
+                if len(starfound) > 1 and not mode == 'adopted': # adopted values
                     if debug:
                         print("Fitting from {} to {}".format(farray[0][0], farray[0][-1]))
                     tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
                     tempstream = tempstream._remove_nancolumns()
-                    func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline')
+                    if 1./len(tempstream) < 0.01:
+                        knotstep = 0.01
+                    else:
+                        knotstep = 1./len(tempstream) + 0.01
+                    func1 = tempstream.fit([KEYLIST[xpos],KEYLIST[ypos], KEYLIST[zpos]],fitfunc='spline',knotstep=knotstep)
                     funclist.append(func1)
                     if len(tempstream.ndarray[fpos]) > 0:
-                        func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
+                        func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline',knotstep=knotstep)
                         funclist.append(func2)
+                    if debug:
+                        print("Done")
             elif len(starfound) > 1: # Comment section starts here
+                if debug:
+                    print ("Found comment section")
                 logger.debug("Found comment section", starfound)
                 block = line.split()
                 if block[0].startswith('Scalar') and len(block) > 1:

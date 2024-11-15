@@ -227,7 +227,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                           '052': 'nearby static disturbing source',
                           '053': 'train',
                           '070': 'switch',
-                          '090': 'unknown disturbance'
+                          '090': 'unknown disturbance',
+                          '099': 'unlabeled signature'
                           }
 
     def __str__(self):

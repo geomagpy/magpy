@@ -12,6 +12,7 @@ import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
 from magpy.core.methods import testtime, convert_geo_coordinate
+from magpy.core import flagging
 from datetime import datetime, timedelta, timezone
 import os
 import numpy as np
@@ -58,6 +59,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     multipletimedict = {}
     newdatalist = []
     tllist = []
+    flags = {}
     referencetimecol = None
     indexarray = np.asarray([])
     cdfversion=0.9
@@ -226,12 +228,17 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         #"Single time axis found in file"
         newdatalist.append(['time',tllist[0][1]])
 
-
-    def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion):
+    def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion,stationid=None):
         if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy'] and len(flagginglist) > 0:
             if rulesetversion in ['1.0','1',1]:
                 flagcolsconrad = [flagginglist[0],flagginglist[1],flagginglist[3],flagginglist[4],flagginglist[5],flagginglist[6],flagginglist[2]]
                 flaglisttmp = []
+                print ("HERE", flagcolsconrad)
+                #'FlagBeginTimes', 'FlagEndTimes', 'FlagComponents', 'FlagCode', 'FlagDescription', 'FlagSystemReference', 'FlagModificationTimes']
+                #add(self, sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000',
+                #    label='',
+                #    comment='', groups=None, probabilities=None, stationid='', validity='', operator='', color='',
+                #    modificationtime=None, flagversion='2.0', debug=False)
                 for elem in flagcolsconrad:
                     flaglisttmp.append(cdfdat[elem][...])
                 try:
@@ -248,13 +255,25 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(flaglisttmp[-1])
                 flaglist = np.transpose(flaglisttmp)
                 flaglist = [list(elem) for elem in flaglist]
-                return list(flaglist)
+                unique = []
+                for el in flaglist:
+                    if [el[0],el[1],el[3],el[4],el[5],el[6]] not in unique:
+                        unique.append([el[0],el[1],el[3],el[4],el[5],el[6]])
+                flags = flagging.Flags()
+                for un in unique:
+                    comps = []
+                    for el in flaglist:
+                        newel = [el[0],el[1],el[3],el[4],el[5],el[6]]
+                        if un == newel:
+                            comps.append(el[2])
+                    flags.add(sensorid=un[4], starttime=un[0], endtime=un[1], components=comps, flagtype=un[2], labelid='099', comment=un[3], modificationtime=un[5])
+                return flags
             else:
-                return []
+                return {}
         else:
-            print ("readIMAGCDF: Could  not interprete flagging ruleset or flagginglist is empty")
-            logger.warning("readIMAGCDF: Could  not interprete Ruleset")
-            return []
+            print ("readIMAGCDF: Could  not interpret flagging ruleset or flagging object is empty")
+            logger.warning("readIMAGCDF: Could  not interpret Ruleset")
+            return {}
 
 
     if not headers.get('FlagRulesetType','') == '':
@@ -262,7 +281,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             print ("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         logger.info("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         flagginglist = [elem for elem in datalist if elem.startswith('Flag')]
-        flaglist = Ruleset2Flaglist(flagginglist,headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion',''))
+        flags = Ruleset2Flaglist(flagginglist,headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion',''), stationid=headers.get("StationID",None))
         if debug:
             print ("readIMAGCDF: Flagging information extracted")
 
@@ -367,14 +386,11 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     headers['col-z'] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                     headers['unit-col-z'] = cdfdat.varattsget(elem[1]).get('UNITS')
 
-    print ("HERE", array)
     ndarray = np.asarray(array, dtype=object)
-
-
     result = DataStream(header=headers,ndarray=ndarray)
 
-    if not headers.get('FlagRulesetType','') == '' and len(flaglist) > 0:
-        print (flaglist)
+    if not headers.get('FlagRulesetType','') == '' and flags:
+        print (flags)
         #result = result.flag(flaglist)
 
     return result
