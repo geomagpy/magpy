@@ -45,7 +45,7 @@ def readTSF(filename, headonly=False, **kwargs):
     getfile = True
     stream = DataStream()
     array = [[] for key in KEYLIST]
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     headers = {}
 
     def get_channels(c, debug=False):
@@ -247,12 +247,12 @@ def readTSF(filename, headonly=False, **kwargs):
                     dind = 0
                     # Read data - select according to channels
                     colsstr = line.split()
-                    row = LineStruct()
                     datatime = colsstr[0]+'-'+colsstr[1]+'-'+colsstr[2]+'T'+colsstr[3]+':'+colsstr[4]+':'+colsstr[5]
                     array[0].append(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S"))
                     for n in channellist:
                         dind += 1
-                        array[dind].append(float(colsstr[n+5]))
+                        if n < len(colsstr)-5:
+                            array[dind].append(float(colsstr[n+5]))
                 else:
                     # some header lines not noted above found
                     pass

@@ -69,13 +69,13 @@ def isIWT(filename):
     except:
         return False
     try:
-        comp = temp.split()
+        comp = temp.split("     ")
         if not len(comp) == 4:
             return False
     except:
         return False
     try:
-        test = datetime.strptime(comp[0],"%Y%m%dT%H%M%S.%f")
+        test = datetime.strptime(comp[0].replace(" ",""),"%Y%m%dT%H%M%S.%f")
     except:
         return False
     return True
@@ -152,24 +152,6 @@ def isLIPPGRAV(filename):
             test = datetime.strptime(comp[0],"%Y%m%d%H%M%S.%f")
         except:
             return False
-    return True
-
-
-def isGRAVSG(filename):
-    """
-    Checks whether a file is ASCII SG file format.
-    """
-
-    try:
-        with open(filename, "rt") as fi:
-            temp = fi.readline()
-    except:
-        return False
-    try:
-        if not temp.startswith('[TSF-file]'):
-            return False
-    except:
-        return False
     return True
 
 
@@ -793,7 +775,7 @@ def readIWT(filename, headonly=False, **kwargs):
 
     stream = DataStream()
 
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     headers = {}
 
     theday = extract_date_from_string(filename)
@@ -824,21 +806,21 @@ def readIWT(filename, headonly=False, **kwargs):
             elif line.startswith(' '):
                 continue
             else:
-                colsstr = line.split()
+                colsstr = line.split("     ")
                 try:
                     try:
-                        t = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f"))
+                        t = date2num(datetime.strptime(colsstr[0].replace(" ",""),"%Y%m%dT%H%M%S.%f"))
                     except:
                         try:
-                            t = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S"))
+                            t = date2num(datetime.strptime(colsstr[0].replace(" ",""),"%Y%m%dT%H%M%S"))
                         except:
                             if debug:
                                 print("IWT: Could not interprete time in line {}".format(cnt))
                             skipline = True
                     if not skipline:
-                        x = float(colsstr[1])
-                        y = float(colsstr[2])
-                        z = float(colsstr[3])
+                        x = float(colsstr[1].strip())
+                        y = float(colsstr[2].strip())
+                        z = float(colsstr[3].strip())
                         ta.append(t)
                         xa.append(x)
                         ya.append(y)
@@ -903,7 +885,7 @@ def readCS(filename, headonly=False, **kwargs):
 
     # Select only files within eventually defined time range
     if getfile:
-        print ("REading", theday[0])
+        print ("Reading", theday[0])
         logging.info(' Read: %s Format: CS (txt) ' % (filename))
         for elem in csvReader:
             #print (elem)
@@ -955,204 +937,3 @@ def readCS(filename, headonly=False, **kwargs):
     array = np.asarray([np.asarray(el) for el in array],dtype=object)
     stream = [LineStruct()]
     return DataStream(stream, headers, array)
-
-
-def readGRAVSG(filename, headonly=False, **kwargs):
-    """
-    Reading SG-Gravity data files.
-    """
-
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
-    getfile = True
-
-    stream = DataStream()
-
-    array = [[] for key in KEYLIST]
-
-    # Check whether header infromation is already present
-    headers = {}
-
-    theday = extract_date_from_string(filename)
-
-    try:
-        if starttime:
-            if not theday[-1] >= datetime.date(testtime(starttime)):
-                getfile = False
-        if endtime:
-            if not theday[0] <= datetime.date(testtime(endtime)):
-                getfile = False
-    except:
-        # Date format not recognized. Need to read all files
-        getfile = True
-
-    fh = open(filename, 'rt')
-
-    ncol = 0
-    ucol = 0
-    getchannel = False
-    getunit = False
-    if getfile:
-        datablogstarts = False
-        for line in fh:
-            if line.isspace():
-                # blank line
-                continue
-            #elif line.startswith(' '):
-            #    continue
-            elif line.startswith('[TSF-file]'):
-                contline = line.split()
-                stream.header['DataFormat'] = "GRAVSG{}".format(contline[1])
-            elif line.startswith('[TIMEFORMAT]'):
-                contline = line.split()
-                val = contline[1]
-            elif line.startswith('[INCREMENT]'):
-                contline = line.split()
-                stream.header['DataSamplingRate'] = contline[1]
-            elif line.startswith('[CHANNELS]'):
-                getchannel = True
-                #line = fh.readline()
-                #while not line.startswith('['):
-                #    #except:
-                #    #    pass
-                #    # eventually do ot like that
-                #
-                #CO:SG025:Grav-1
-                #CO:SG025:Grav-2
-                #CO:SG025:Baro-1
-                #CO:SG025:Baro-2
-                pass
-            elif line.startswith('   ') and getchannel:
-                ncol += 1
-                #line = fh.readline()
-                #try:
-                if ncol <= 15:
-                    colnames = line.split(':')[2]
-                    key = KEYLIST[ncol]
-                    stream.header['col-'+key] = colnames.strip()
-                else:
-                    ncol = 15
-            elif line.startswith('[UNITS]'):
-                getchannel = False
-                getunit = True
-            elif line.startswith('   ') and getunit:
-                ucol += 1
-                if ucol <= 15:
-                    unitnames = line.strip()
-                    key = KEYLIST[ucol]
-                    stream.header['unit-col-'+key] = unitnames
-                else:
-                    ucol = 15
-                #VOLT
-                #VOLT
-                #mbar
-                #mbar
-            elif line.startswith('[UNDETVAL]'):
-                getunit = False
-                pass
-            elif line.startswith('[PHASE_LAG_1_DEG_CPD]'):
-                #0.0390
-                pass
-            elif line.startswith('[PHASE_LAG_1_DEG_CPD_ERROR]'):
-                #0.0001
-                pass
-            elif line.startswith('[N_LATITUDE_DEG]'):
-                #47.9288
-                contline = line.split()
-                stream.header['DataAcquisitionLatitude'] = contline[1]
-            elif line.startswith('[N_LATITUDE_DEG_ERROR]'):
-                #0.0005
-                pass
-            elif line.startswith('[E_LONGITUDE_DEG]') :
-                #015.8609
-                contline = line.split()
-                stream.header['DataAcquisitionLongitude'] = contline[1]
-            elif line.startswith('[E_LONGITUDE_DEG_ERROR]'):
-                #0.0005
-                pass
-            elif line.startswith('[HEIGHT_M_1]'):
-                #1045.00
-                contline = line.split()
-                stream.header['DataElevation'] = contline[1]
-            elif line.startswith('[HEIGHT_M_1_ERROR]'):
-                #0.10
-                pass
-            elif line.startswith('[GRAVITY_CAL_1_UGAL_V]'):
-                #-77.8279
-                contline = line.split()
-                stream.header['DataScaleX'] = contline[1]
-            elif line.startswith('[GRAVITY_CAL_1_UGAL_V_ERROR]'):
-                #0.5000
-                pass
-            elif line.startswith('[PRESSURE_CAL_MBAR_V]'):
-                #1.0000
-                contline = line.split()
-                stream.header['DataScaleY'] = contline[1]
-            elif line.startswith('[PRESSURE_CAL_MBAR_V_ERROR]'):
-                #0.0001
-                pass
-            elif line.startswith('[AUTHOR]'):
-                #(bruno.meurers@univie.ac.at)
-                contline = line.split()
-                stream.header['SensorDecription'] = contline[1]
-            elif line.startswith('[PHASE_LAG_2_DEG_CPD]'):
-                #0.0000
-                pass
-            elif line.startswith('[PHASE_LAG_2_DEG_CPD_ERROR]'):
-                #0.0000
-                pass
-            elif line.startswith('[HEIGHT_M_2]'):
-                #00.00
-                pass
-            elif line.startswith('[HEIGHT_M_2_ERROR]'):
-                #0.00
-                pass
-            elif line.startswith('[GRAVITY_CAL_2_UGAL_V]'):
-                #-77.8279
-                contline = line.split()
-                stream.header['DataScaleZ'] = contline[1]
-            elif line.startswith('[GRAVITY_CAL_2_UGAL_V_ERROR]'):
-                #0.5000
-                pass
-            elif line.startswith('[PRESSURE_ADMIT_HPA_NMS2]'):
-                #03.5300
-                pass
-            elif line.startswith('[PRESSURE_MEAN_HPA]'):
-                #1000.0
-                pass
-            elif line.startswith('[COMMENT]'):
-                pass
-                #SG CT-025 Moved from Vienna to Conrad Observatory 2007/11/07
-                #Institute of Meteorology and Geophysics Vienna, Austria
-                #Instrument owner Central Institute for Meteorology and Geodynamics
-                #Geology Limestone
-                #Calibration method LSQ fit to absolute gravity measurements
-                #Installation by Eric Brinton (GWR) November 7, 2007
-                #Installation Team N.Blaumoser, S.Haden, P.Melichar, B.Meurers, R.Steiner
-                #Maintenance by N.Blaumoser, M.Goeschke, S.Haden, B.Meurers
-                #date           time       Grav_1     Grav_2    Baro_1    Baro_2
-            elif line.startswith('[DATA]'):
-                datablogstarts = True
-                if headonly:
-                    # skip data for option headonly
-                    return stream
-            else:
-                if datablogstarts:
-                    # Read data - select according to channels
-                    colsstr = line.split()
-                    row = LineStruct()
-                    datatime = colsstr[0]+'-'+colsstr[1]+'-'+colsstr[2]+'T'+colsstr[3]+':'+colsstr[4]+':'+colsstr[5]
-                    array[0].append(date2num(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S")))
-                    for n in range(ncol):
-                        array[n+1].append(float(colsstr[n+6]))
-                else:
-                    # some header lines not noted above found
-                    pass
-
-    for idx, elem in enumerate(array):
-        array[idx] = np.asarray(array[idx])
-
-    stream = DataStream([LineStruct()],stream.header,np.asarray(array,dtype=object))
-
-    fh.close()
-    return stream

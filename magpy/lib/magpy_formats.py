@@ -176,9 +176,6 @@ def isFormat(filename, format_type):
     elif (format_type == "TSF"):  # Data from the iGrav and SG gravity system
         if (isTSF(filename)):
             return True
-    elif (format_type == "GRAVSG"): # Data from the Conrad Observatory SG gravity system
-        if (isGRAVSG(filename)):
-            return True
     elif (format_type == "IWT"): # Data from the Conrad Observatory tiltmeter system
         if (isIWT(filename)):
             return True
@@ -390,8 +387,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "TSF"):
         return readTSF(filename, headonly, **kwargs)
-    elif (format_type == "GRAVSG"):
-        return readGRAVSG(filename, headonly, **kwargs)
     elif (format_type == "IWT"):
         return readIWT(filename, headonly, **kwargs)
     elif (format_type == "LIPPGRAV"):

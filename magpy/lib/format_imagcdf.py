@@ -279,7 +279,6 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             logger.warning("readIMAGCDF: Could  not interpret Ruleset")
             return {}
 
-
     if not headers.get('FlagRulesetType','') == '':
         if debug:
             print ("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))

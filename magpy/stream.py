@@ -243,7 +243,6 @@ PYMAG_SUPPORTED_FORMATS = {
                 'IWT':['r', 'IWT Tiltmeter data'],
                 'LIPPGRAV':['r', 'Lippmann Tiltmeter data'],
                 'TSF':['r', 'iGrav and GWR TSF data - new'],
-                'GRAVSG':['r', 'GWR TSF data'],
                 'CR800':['r', 'CR800 datalogger'],
                 'IONO':['r', 'IM806 Ionometer'],
                 'RADON':['r', 'single channel analyser gamma data'],
