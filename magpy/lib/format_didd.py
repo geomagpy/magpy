@@ -4,9 +4,15 @@ dIdD input filter
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from magpy.stream import *
-from io import open
+from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
+from datetime import datetime, timedelta, timezone
+import os
+import numpy as np
 from magpy.core.methods import testtime, extract_date_from_string
+import logging
+logger = logging.getLogger(__name__)
+
+KEYLIST = DataStream().KEYLIST
 
 
 def isDIDD(filename):
@@ -43,16 +49,7 @@ def readDIDD(filename, headonly=False, **kwargs):
     getfile = True
 
     array = [[] for key in KEYLIST]
-    stream = DataStream([],{},np.asarray(array))
-
-    ### Speed up test - not faster as traditional method (at least not for small DIDD files)
-    # 1. get a filelist
-    #    and limit the filelist to matching date ranges
-    #dirname = os.path.dirname(filename)
-    #flist = []
-    #for (dirpath, dirnames, filenames) in os.walk(dirname):
-    #    flist.extend(filenames)
-    #    break
+    stream = DataStream()
 
     fi = os.path.split(filename)[1]
 
@@ -77,13 +74,13 @@ def readDIDD(filename, headonly=False, **kwargs):
         if endtime:
             if not datetime.strptime(day,'%Y-%m-%d') <= enddate:
                 getfile = False
-        #print daystring, day, startdate, enddate, getfile
     else:
         print("read DIDD Format: no files found in choosen directory")
         return stream
 
     if getfile:
         fh = open(filename, 'rt')
+        orient=[]
         headers = {}
 
         for line in fh:
@@ -102,26 +99,25 @@ def readDIDD(filename, headonly=False, **kwargs):
                     headers[colname] = elem
                     unitstr =  'unit-%s' % colname
                     headers[unitstr] = 'nT'
+                    orient.append(KEYLIST[idx+1].upper())
             elif headonly:
                 # skip data for option headonly
                 continue
             else:
-                row = LineStruct()
                 elem = line.split()
                 if len(elem) < 6:
-                    #fval = 9999  # why 9999 ??
-                    fval = float('nan')
+                    fval = np.nan
                 else:
                     try:
                         fval = float(elem[5])
-                        if np.isnan(fval):
-                            fval = 88888.0
+                        if np.isnan(fval) or fval > 88887:
+                            fval = np.nan
                     except:
                         logging.warning("Fomat-DIDD: error while reading data line: %s from %s" % (line, filename))
-                        fval = float('nan')
+                        fval = np.nan
                 if not np.isnan(fval):
                     try:
-                        array[0].append(date2num(datetime.strptime(day+'T'+elem[0]+':'+elem[1],"%Y-%m-%dT%H:%M")))
+                        array[0].append(datetime.strptime(day+'T'+elem[0]+':'+elem[1],"%Y-%m-%dT%H:%M"))
                         array[1].append(float(elem[2]))
                         array[2].append(float(elem[3]))
                         array[3].append(float(elem[4]))
@@ -134,18 +130,15 @@ def readDIDD(filename, headonly=False, **kwargs):
         array[3] = np.asarray(array[3])
         array[4] = np.asarray(array[4])
 
-        headers['DataSensorOrientation'] = 'xyz'
+        headers['DataSensorOrientation'] = "".join(orient)
         stream.header['SensorElements'] = ','.join(colsstr)
         stream.header['SensorKeys'] = ','.join(colsstr)
         headers['unit-col-f'] = 'nT'
         fh.close()
     else:
         headers = stream.header
-        stream = []
 
-    stream = [LineStruct()]
-
-    return DataStream(stream, headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 
