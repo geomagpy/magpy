@@ -82,7 +82,6 @@ from magpy.lib.format_gfz import *
 from magpy.lib.format_gfztmp import *
 from magpy.lib.format_neic import *
 from magpy.lib.format_rcs import *
-from magpy.lib.format_pha import *
 from magpy.lib.format_predstorm import *
 from magpy.lib.format_basiccsv import *
 
@@ -281,9 +280,6 @@ def isFormat(filename, format_type):
     elif (format_type == "NEIC"): # NEIC USGS data
         if (isNEIC(filename)):
             return True
-    elif (format_type == "PHA"): # Potentially Hazardous Objects (This research has made use of data and/or services provided by the International Astronomical Union's Minor Planet Center.)
-        if (isPHA(filename)):
-            return True
     elif (format_type == "PREDSTORM"): # PREDSTORM space weather data
         if (isPREDSTORM(filename)):
             return True
@@ -419,8 +415,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readNETCDF(filename, headonly, **kwargs)
     elif (format_type == "NEIC"):
         return readNEIC(filename, headonly, **kwargs)
-    elif (format_type == "PHA"):
-        return readPHA(filename, headonly, **kwargs)
     elif (format_type == "PREDSTORM"):
         return readPREDSTORM(filename, headonly, **kwargs)
     elif (format_type == "CSV"):
