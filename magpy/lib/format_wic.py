@@ -6,7 +6,7 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 
-from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
+from magpy.stream import DataStream
 from datetime import datetime, timedelta, timezone
 import csv
 import numpy as np
@@ -24,7 +24,7 @@ def isUSBLOG(filename):
     Extend that code for CO logger as well
     """
     try:
-        with open(filename, "rt") as fi:
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
             temp = fi.readline()
         #temp = open( filename, "r", newline='', encoding='utf-8', errors='ignore' ).readline()
     except:
@@ -46,7 +46,7 @@ def isIWT(filename):
     """
 
     try:
-        with open(filename, "rt") as fi:
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
             temp = fi.readline()
     except:
         return False
@@ -66,9 +66,8 @@ def isMETEO(filename):
     """
     Checks whether a file is ASCII METEO format provided by the Cobs RCS system.
     """
-
     try:
-        with open(filename, "rt") as fi:
+        with open(filename, "rb") as fi:
             temp1 = fi.readline()
             temp2 = fi.readline()
     except:
@@ -99,7 +98,7 @@ def isLNM(filename):
     """
 
     try:
-        with open(filename, "rt") as fi:
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
             temp = fi.readline()
     except:
         return False
@@ -117,7 +116,7 @@ def isLIPPGRAV(filename):
     """
 
     try:
-        with open(filename, "rt") as fi:
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
             temp = fi.readline()
     except:
         return False
@@ -143,7 +142,7 @@ def isCS(filename):
     should be called as one of the last options
     """
     try:
-        with open(filename, "rt") as fi:
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
             temp = fi.readline()
     except:
         return False
@@ -395,6 +394,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
     takehelium = kwargs.get('takehelium')
     debug = kwargs.get('debug')
     getfile = True
+    cols=[]
 
     heliumcols = []
 
@@ -428,7 +428,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
 
     if getfile:
         for line in fh:
-            #line = line.decode('utf-8',errors='ignore')
+            line = line.decode('utf-8',errors='ignore')
             if line.isspace():
                 # blank line
                 continue
@@ -537,7 +537,7 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
 
     stream = DataStream()
 
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     headers = {}
 
     theday = extract_date_from_string(filename)
@@ -561,51 +561,49 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
     posvar1 = KEYLIST.index('var1')
     posvar2 = KEYLIST.index('var2')
 
-    fh = open(filename, 'rt')
-
-    if getfile:
-        for line in fh:
-            if line.isspace():
-                # blank line
-                continue
-            elif line.startswith(' '):
-                continue
-            else:
-                colsstr = line.split()
-                row = LineStruct()
-                try:
-                    date = colsstr[0]+'-'+colsstr[1]
+    with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fh:
+        if getfile:
+            for line in fh:
+                if line.isspace():
+                    # blank line
+                    continue
+                elif line.startswith(' '):
+                    continue
+                else:
+                    colsstr = line.split()
                     try:
-                        array[0].append(date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S")))
+                        date = colsstr[0]+'-'+colsstr[1]
+                        try:
+                            array[0].append(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S"))
+                        except:
+                            array[0].append(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S.%f"))
+                        array[posx].append(float(colsstr[1]))
+                        array[posy].append(float(colsstr[2]))
+                        array[post1].append(float(colsstr[3]))
+                        array[posvar1].append(float(colsstr[4]))
+                        array[posvar2].append(float(colsstr[5]))
                     except:
-                        array[0].append(date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S.%f")))
-                    array[posx].append(float(colsstr[1]))
-                    array[posy].append(float(colsstr[2]))
-                    array[post1].append(float(colsstr[3]))
-                    array[posvar1].append(float(colsstr[4]))
-                    array[posvar2].append(float(colsstr[5]))
-                except:
-                    pass
+                        pass
 
-        headers['unit-col-x'] = 'lambda'
-        headers['col-x'] = 'tilt'
-        headers['unit-col-y'] = 'lambda'
-        headers['col-y'] = 'tilt'
-        headers['unit-col-t1'] = 'deg C'
-        headers['col-t1'] = 'T'
-        headers['unit-col-var1'] = 'percent'
-        headers['col-var1'] = 'rh'
-        headers['unit-col-var2'] = 'hPa'
-        headers['col-var2'] = 'p'
-        headers['SensorDescription'] = 'Lippmann: Tiltmeter system'
-        headers['SensorName'] = 'Lippmann Tiltmeter'
-        headers['SensorType'] = 'Tiltmeter'
-        headers['SensorID'] = 'Lippmann_Tilt'
+            headers['unit-col-x'] = 'lambda'
+            headers['col-x'] = 'tilt'
+            headers['unit-col-y'] = 'lambda'
+            headers['col-y'] = 'tilt'
+            headers['unit-col-t1'] = 'deg C'
+            headers['col-t1'] = 'T'
+            headers['unit-col-var1'] = 'percent'
+            headers['col-var1'] = 'rh'
+            headers['unit-col-var2'] = 'hPa'
+            headers['col-var2'] = 'p'
+            headers['SensorDescription'] = 'Lippmann: Tiltmeter system'
+            headers['SensorName'] = 'Lippmann Tiltmeter'
+            headers['SensorType'] = 'Tiltmeter'
+            headers['SensorID'] = 'Lippmann_Tilt'
 
-        for idx,el in enumerate(array):
-            array[idx] = np.asarray(el)
+            for idx,el in enumerate(array):
+                array[idx] = np.asarray(el)
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 def readIWT(filename, headonly=False, **kwargs):
     """
@@ -626,6 +624,7 @@ def readIWT(filename, headonly=False, **kwargs):
     sensorid = kwargs.get('sensorid')
     debug = kwargs.get('debug')
     getfile = True
+    ndarray=np.array([])
 
     stream = DataStream()
 
@@ -647,65 +646,59 @@ def readIWT(filename, headonly=False, **kwargs):
         # Date format not recognized. Need to read all files
         getfile = True
 
-    fh = open(filename, 'rt')
-
-    if getfile:
-        ta,xa,ya,za = [],[],[],[]
-        cnt = 0
-        for line in fh:
-            skipline = False
-            if line.isspace():
-                # blank line
-                continue
-            elif line.startswith(' '):
-                continue
-            else:
-                colsstr = line.split("     ")
-                try:
+    with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fh:
+        if getfile:
+            ta,xa,ya,za = [],[],[],[]
+            cnt = 0
+            for line in fh:
+                skipline = False
+                if line.isspace():
+                    # blank line
+                    continue
+                elif line.startswith(' '):
+                    continue
+                else:
+                    colsstr = line.split("     ")
                     try:
-                        t = date2num(datetime.strptime(colsstr[0].replace(" ",""),"%Y%m%dT%H%M%S.%f"))
-                    except:
                         try:
-                            t = date2num(datetime.strptime(colsstr[0].replace(" ",""),"%Y%m%dT%H%M%S"))
+                            t = datetime.strptime(colsstr[0].replace(" ",""),"%Y%m%dT%H%M%S.%f")
                         except:
-                            if debug:
-                                print("IWT: Could not interprete time in line {}".format(cnt))
-                            skipline = True
-                    if not skipline:
-                        x = float(colsstr[1].strip())
-                        y = float(colsstr[2].strip())
-                        z = float(colsstr[3].strip())
-                        ta.append(t)
-                        xa.append(x)
-                        ya.append(y)
-                        za.append(z)
-                except:
-                    if debug:
-                        print("IWT: Could not interprete values in line {}: Found {}".format(cnt,line))
-                    pass
-                cnt += 1
-        array = [np.asarray(ta),np.asarray(xa),np.asarray(ya),np.asarray(za)]
+                            try:
+                                t = datetime.strptime(colsstr[0].replace(" ",""),"%Y%m%dT%H%M%S")
+                            except:
+                                if debug:
+                                    print("IWT: Could not interprete time in line {}".format(cnt))
+                                skipline = True
+                        if not skipline:
+                            x = float(colsstr[1].strip())
+                            y = float(colsstr[2].strip())
+                            z = float(colsstr[3].strip())
+                            ta.append(t)
+                            xa.append(x)
+                            ya.append(y)
+                            za.append(z)
+                    except:
+                        if debug:
+                            print("IWT: Could not interprete values in line {}: Found {}".format(cnt,line))
+                        pass
+                    cnt += 1
+            array = [np.asarray(ta),np.asarray(xa),np.asarray(ya),np.asarray(za)]
 
+            ndarray = np.asarray(array,dtype=object)
 
-        ndarray = np.asarray(array,dtype=object)
+            headers['unit-col-x'] = 'nrad'
+            headers['col-x'] = 'tilt'
+            headers['unit-col-y'] = 'lambda'
+            headers['col-y'] = 'phase'
+            headers['unit-col-z'] = 'arb'
+            headers['col-z'] = 'val3'
+            headers['SensorDescription'] = 'iWT: Tiltmeter system'
+            headers['SensorName'] = 'Tiltmeter'
+            headers['SensorType'] = 'Tiltmeter'
+            if sensorid:
+                headers['SensorID'] = sensorid
 
-        stream = DataStream()
-        stream = [LineStruct()]
-
-
-        headers['unit-col-x'] = 'nrad'
-        headers['col-x'] = 'tilt'
-        headers['unit-col-y'] = 'lambda'
-        headers['col-y'] = 'phase'
-        headers['unit-col-z'] = 'arb'
-        headers['col-z'] = 'val3'
-        headers['SensorDescription'] = 'iWT: Tiltmeter system'
-        headers['SensorName'] = 'Tiltmeter'
-        headers['SensorType'] = 'Tiltmeter'
-        if sensorid:
-            headers['SensorID'] = sensorid
-
-    return DataStream(stream,headers,ndarray)
+    return DataStream(header=headers,ndarray=ndarray)
 
 
 def readCS(filename, headonly=False, **kwargs):
