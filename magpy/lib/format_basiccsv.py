@@ -20,7 +20,7 @@ import numpy as np
 import os
 import string
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import dateutil.parser
 
 KEYLIST = DataStream().KEYLIST
