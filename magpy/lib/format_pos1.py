@@ -5,8 +5,13 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 
-from magpy.stream import *
-from magpy.core.methods import *
+from magpy.stream import DataStream
+from datetime import datetime
+import os
+import numpy as np
+from magpy.core.methods import testtime, extract_date_from_string
+import logging
+logger = logging.getLogger(__name__)
 KEYLIST = DataStream().KEYLIST
 
 
@@ -22,12 +27,21 @@ def isPOS1(filename):
     except:
         return False
     try:
-        if not 'POS1' in temp:
+        if not filename.find('POS') >= 0:
+            return False
+    except:
+        return False
+    try:
+        temp = temp.decode()
+        comp = temp.split()
+        if len(comp) == 7 and float(comp[6]) > 18000:
+            pass
+        else:
             return False
     except:
         return False
 
-    loggerlib.info("format_pos1: Found POS-1 Binary file %s" % filename)
+    logger.info("format_pos1: Found POS-1 Binary file %s" % filename)
     return True
 
 def isPOS1TXT(filename):
@@ -35,20 +49,23 @@ def isPOS1TXT(filename):
     Checks whether a file is text POS-1 file format.
     """
     try:
-        with open(filename, "rt") as fi:
-            temp = fi.readline()
+        with open(filename, 'r', encoding='utf-8', newline='', errors='ignore') as fh:
+            temp = fh.readline()
     except:
         return False
     try:
-        linebit = (temp.split())[2]
+        #linebit = (temp.split())[2]
+        comp = temp.split(",")
+        if len(comp)==2:
+            pass
     except:
         return False
     try:
-        if not linebit == '+-':
-            return False
+        time = datetime.strptime(comp[0], "%Y-%m-%dT%H:%M:%S")
+        val = float(comp[1])
     except:
         return False
-    loggerlib.info("format_pos1: Found POS-1 Text file %s" % filename)
+    logger.info("format_pos1: Found POS-1 Text file %s" % filename)
     return True
 
 
@@ -72,7 +89,7 @@ def isPOSPMB(filename):
     except:
         return False
 
-    loggerlib.info("format_pos1: Found POS-1 pmb file {}".format(filename))
+    logger.info("format_pos1: Found POS-1 pmb file {}".format(filename))
     return True
 
 
@@ -82,13 +99,8 @@ def readPOS1(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
-
-    fh = open(filename, 'rb')
-    # read file and split text into channels
-    stream = DataStream([],{})
-
-    data = []
-    key = None
+    array = [[] for key in KEYLIST]
+    headers= {}
 
     theday = extract_date_from_string(filename)
     try:
@@ -101,40 +113,28 @@ def readPOS1(filename, headonly=False, **kwargs):
             if not theday <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
-        loggerlib.warning("readPOS1BIN: Could not identify date in %s. Reading all ..." % filename)
+        logger.warning("readPOS1BIN: Could not identify date in %s. Reading all ..." % filename)
         getfile = True
 
     if getfile:
+        logger.info('readPOS1BIN: Reading %s' % (filename))
+        headers['col-f'] = 'F'
+        headers['unit-col-f'] = 'nT'
+        with open(filename, "rb") as fi:
+            for line in fi:
+                line = line.decode()
+                data = line.split()
+                time = datetime(int(data[0]),int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5]))
+                array[0].append(time)
+                array[4].append(float(data[6])/1000.)
+                try:
+                    array[KEYLIST.index('df')].append(float(data[8])/1000.)
+                    array[KEYLIST.index('var1')].append(int(data[9]))
+                except:
+                    pass
 
-        line = fh.readline()
-
-        loggerlib.info('readPOS1BIN: Reading %s' % (filename))
-        stream.header['col-f'] = 'F'
-        stream.header['unit-col-f'] = 'nT'
-        stream.header['col-df'] = 'dF'
-        stream.header['unit-col-df'] = 'nT'
-        stream.header['col-var1'] = 'ErrorCode'
-        stream.header['unit-col-var1'] = ''
-
-        line = fh.read(45)
-        while line != "":
-            data= struct.unpack("6hLLLh6hL",line.strip())
-
-            row = LineStruct()
-
-            time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-            row.time = time
-            row.f = float(data[7])/1000.
-            row.df = float(data[8])/1000.
-            row.var1 = int(data[9])
-
-            stream.add(row)
-
-            line = fh.read(45)
-
-    fh.close()
-
-    return stream
+    array = [np.asarray(el) for el in array]
+    return DataStream(header=headers,ndarray=np.asarray(array, dtype=object))
 
 def readPOS1TXT(filename, headonly=False, **kwargs):
     # Reading POS-1 text format data.
@@ -147,6 +147,7 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
     stream = DataStream()
     # Check whether header infromation is already present
     headers = {}
+    array = [[] for key in KEYLIST]
     data = []
     key = None
 
@@ -161,33 +162,24 @@ def readPOS1TXT(filename, headonly=False, **kwargs):
             if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
-        loggerlib.warning("readPOS1TXT: Could not identify date in {}. Reading all ...".format(filename))
+        logger.warning("readPOS1TXT: Could not identify date in {}. Reading all ...".format(filename))
         getfile = True
 
-    fh = open(filename, 'rb')
-
     if getfile:
-        line = fh.readline()
-        loggerlib.info('readPOS1TXT: Reading %s' % (filename))
+        with open(filename, 'r', encoding='utf-8', newline='', errors='ignore') as fh:
+            for line in fh:
+                data = line.split(",")
+                time = datetime.strptime(data[0], "%Y-%m-%dT%H:%M:%S")
+                array[0].append(time)
+                array[4].append(float(data[1])/1000.)
+                try:
+                    array[KEYLIST.index('df')].append(float(data[3])/1000.)
+                except:
+                    pass
 
-        while line != "":
-            data = line.split()
-            row = LineStruct()
+    array = [np.asarray(el) for el in array]
+    return DataStream(header=headers,ndarray=np.asarray(array, dtype=object))
 
-            time = datetime.strptime(data[0], "%Y-%m-%dT%H:%M:%S.%f")
-            row.time = time
-            row.f = float(data[1])/1000.
-            row.df = float(data[3])/1000.
-            stream.add(row)
-
-            line = fh.readline()
-
-        #print "Finished file reading of %s" % filename
-
-    fh.close()
-
-
-    return DataStream(stream, headers)
 
 def readPOSPMB(filename, headonly=False, **kwargs):
     # Reading POS-1 Binary format data.
@@ -233,4 +225,4 @@ def readPOSPMB(filename, headonly=False, **kwargs):
     headers['DataFormat'] = 'PMB'
     array = [np.asarray(el) for el in array]
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))

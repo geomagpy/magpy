@@ -5,13 +5,10 @@ Written by Roman Leonhardt April 2022
 - contains test and read function
 - testet for py3 only
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-from io import open
-
-from magpy.stream import *
+from magpy.stream import DataStream
+from datetime import datetime
+import os
+import numpy as np
 
 KEYLIST = DataStream().KEYLIST
 

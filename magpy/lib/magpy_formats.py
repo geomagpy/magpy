@@ -191,9 +191,6 @@ def isFormat(filename, format_type):
     elif (format_type == "RADON"): # Data from the CR800 datalogger
         if (isRADON(filename)):
             return True
-    elif (format_type == "CS"):
-        if (isCS(filename)):
-            return True
     elif (format_type == "GSM19"): # Data from the GEM GSM 19 Overhauzer sensor
         if (isGSM19(filename)):
             return True
@@ -397,8 +394,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readIONO(filename, headonly, **kwargs)
     elif (format_type == "RADON"):
         return readRADON(filename, headonly, **kwargs)
-    elif (format_type == "CS"):
-        return readCS(filename, headonly, **kwargs)
     # Observatory specific
     elif (format_type == "OPT"):
         return readOPT(filename, headonly, **kwargs)

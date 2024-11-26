@@ -69,7 +69,7 @@ def readRCS(filename, headonly=False, **kwargs):
     print ("Hi Richard, this is the skeleton to insert your code")
 
     ndarray = np.asarray(ndlist)
-    return DataStream([LineStruct()], headers, ndarray)
+    return DataStream(header=headers, ndarray=ndarray)
 
 def readRMRCS(filename, headonly=False, **kwargs):
     """

@@ -7,7 +7,9 @@ Written by Roman Leonhardt June 2012/updated March 2024
 
 #from io import open
 
-from magpy.stream import *
+from magpy.stream import DataStream
+from datetime import datetime
+import numpy as np
 from magpy.core.methods import testtime, extract_date_from_string
 
 KEYLIST = DataStream().KEYLIST

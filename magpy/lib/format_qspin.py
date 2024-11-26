@@ -5,8 +5,13 @@ Written by Roman Leonhardt, Tim White June 2018
 - contains test and read function,
 """
 
-from magpy.stream import *
-from magpy.core.methods import *
+from magpy.stream import DataStream
+from datetime import datetime, timedelta
+import os
+import numpy as np
+import logging
+logger = logging.getLogger(__name__)
+
 KEYLIST = DataStream().KEYLIST
 
 
@@ -53,6 +58,7 @@ Line Format: <Data in nT>,<valid>,<counter>,<strength>
     daytmp = datetime.strftime(creationdate,"%Y-%m-%d")
     YeT = daytmp[:2]
     ctime = creationdate
+    lineformat=False
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -116,4 +122,4 @@ Line Format: <Data in nT>,<valid>,<counter>,<strength>
     headers['DataFormat'] = 'QSpin'
     array = [np.asarray(el) for el in array]
 
-    return DataStream([], headers, np.asarray(array, dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array, dtype=object))

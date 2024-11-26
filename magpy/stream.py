@@ -273,7 +273,6 @@ PYMAG_SUPPORTED_FORMATS = {
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
                 'NETCDF':['r', 'NetCDF4 format, NOAA DSCOVR satellite data archive format'],
                 'LATEX':['w','LateX data'],
-                'CS':['r','Cesium G823'],
                 #'SFDMI':['r', 'San Fernando variometer'],
                 #'SFGSM':['r', 'San Fernando GSM90'],
                 'UNKOWN':['-','Unknown']

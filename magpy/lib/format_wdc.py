@@ -4,10 +4,16 @@ WDC (BGS version) input filter
 Written by Roman Leonhardt October 2012
 - contains test, read and write function for hour data
 """
-from io import open
-
-from magpy.stream import *
-from datetime import timedelta
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
+from magpy.stream import DataStream, read, merge_streams
+from datetime import datetime, timedelta, timezone
+import os
+import numpy as np
+from magpy.core.methods import testtime, extract_date_from_string
+import logging
+logger = logging.getLogger(__name__)
+KEYLIST = DataStream().KEYLIST
 
 def isWDC(filename):
     """
@@ -64,7 +70,7 @@ def readWDC(filename, headonly=False, **kwargs):
     itest = 0
     minute = False
     complist = ['','','','']
-    nanval = float(NaN)
+    nanval = np.nan
     oldformat = False
     kind = '' # To store Q, D in all data format (Quiet, Disturbed)
     for line in fh:
@@ -105,7 +111,7 @@ def readWDC(filename, headonly=False, **kwargs):
                     date = year + '-' + mo + '-' + day + 'T' + hour + ':30:00'
                     #print date
                     if co == firstco:
-                        time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
+                        time=datetime.strptime(date,"%Y-%m-%dT%H:%M:%S")
                         array[tind].append(time)
                         if not kind == '':
                             array[str1ind].append(kind)
@@ -113,7 +119,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             x = float(base) + float(elem)/600
                         else:
-                            x = float(NaN)
+                            x = np.nan
                         complist[0] = co
                         array[xind].append(x)
                         headers['col-x'] = 'i'
@@ -122,7 +128,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             y = float(base) + float(elem)/600
                         else:
-                            y = float(NaN)
+                            y = np.nan
                         complist[1] = co
                         array[yind].append(y)
                         headers['col-y'] = 'd'
@@ -131,7 +137,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             x = float(base)*100 + float(elem)
                         else:
-                            x = float(NaN)
+                            x = np.nan
                         complist[0] = co
                         array[xind].append(x)
                         headers['col-x'] = co
@@ -140,7 +146,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             y = float(base)*100 + float(elem)
                         else:
-                            y = float(NaN)
+                            y = np.nan
                         complist[1] = co
                         array[yind].append(y)
                         headers['col-y'] = 'y'
@@ -149,7 +155,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             z = float(base)*100 + float(elem)
                         else:
-                            z = float(NaN)
+                            z = np.nan
                         complist[2] = co
                         array[zind].append(z)
                         headers['col-z'] = 'z'
@@ -158,7 +164,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             f = float(base)*100 + float(elem)
                         else:
-                            f = float(NaN)
+                            f = np.nan
                         complist[3] = co
                         array[find].append(f)
                         headers['col-f'] = 'f'
@@ -167,7 +173,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             dst = float(elem)
                         else:
-                            dst = float(NaN)
+                            dst = np.nan
                         complist[3] = co
                         array[KEYLIST.index('var1')].append(dst)
                         headers['col-var1'] = "DST"
@@ -266,7 +272,7 @@ def readWDC(filename, headonly=False, **kwargs):
     if oldformat:
         print ("readWDC: found old WDC format - assuming 20th century")
 
-    stream = DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    stream = DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
     return stream
 
@@ -293,10 +299,7 @@ def writeWDC(datastream, filename, **kwargs):
 
 
     def OpenFile(filename, mode='w'):
-        if sys.version_info >= (3,0,0):
-            f = open(filename, mode, newline='')
-        else:
-            f = open(filename, mode+'b')
+        f = open(filename, mode, newline='')
         return f
 
     keylst = datastream._get_key_headers()
@@ -307,11 +310,11 @@ def writeWDC(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = merge_streams(exst,datastream,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = merge_streams(datastream,exst,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'append':
             myFile= OpenFile(filename,mode='a')
@@ -417,10 +420,10 @@ def writeWDC(datastream, filename, **kwargs):
             for key in KEYLIST:
                 if key == 'time':
                     try:
-                        year = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%Y")
-                        month = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%m")
-                        day = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%d")
-                        hour = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%H")
+                        year = datetime.strftime(timeval.replace(tzinfo=None), "%Y")
+                        month = datetime.strftime(timeval.replace(tzinfo=None), "%m")
+                        day = datetime.strftime(timeval.replace(tzinfo=None), "%d")
+                        hour = datetime.strftime(timeval.replace(tzinfo=None), "%H")
                         ye = year[2:]
                         ar = year[:-2]
                     except:
@@ -438,12 +441,12 @@ def writeWDC(datastream, filename, **kwargs):
                         cl = f
                     cl.name = "{}{}{}{}{}  {}{}".format(iagacode,ye,month,header.get('col-{}'.format(key),key).upper()[:1],day,arb,ar)
                     if cl.row[:16] == cl.name:
-                        if not isnan(cl.elem):
+                        if not np.isnan(cl.elem):
                             cl.el.append(cl.elem)
                             cl.hourel.append(int(hour))
                     elif cl.row == '':
                         cl.row = cl.name
-                        if not isnan(cl.elem):
+                        if not np.isnan(cl.elem):
                             cl.el = [cl.elem]
                             cl.hourel = [int(hour)]
                         else:
@@ -473,7 +476,7 @@ def writeWDC(datastream, filename, **kwargs):
                         line.append(cl.row)
                         cl.row = cl.name
                         cl.el, cl.hourel = [], []
-                        if not isnan(cl.elem):
+                        if not np.isnan(cl.elem):
                             cl.el.append(cl.elem)
                             cl.hourel.append(int(hour))
 
@@ -566,6 +569,7 @@ COLUMNS   FORMAT   DESCRIPTION
         for key in write_KEYLIST:
             min_dict[key] = ''
         day, hour = '0', '0'
+        year = '2024'
 
         for day in range(1,32):         # TODO: make this exact for given month
             day_dict[str(day).zfill(2)] = ''
@@ -595,11 +599,11 @@ COLUMNS   FORMAT   DESCRIPTION
                 elemz = datastream.ndarray[zind][i]
                 elemf = datastream.ndarray[find][i]
                 timeval = datastream.ndarray[0][i]
-            timestamp = num2date(timeval).replace(tzinfo=None)
+            timestamp = timeval.replace(tzinfo=None)
             minute = datetime.strftime(timestamp, "%M")
             if minute == '00':
                 if len(min_dict['x']) != 360:
-                    loggerlib.error('format_wdc: Error in formatting data for %s.' % datetime.strftime(timestamp,'%Y-%m-%d %H:%M'))
+                    logger.error('format_wdc: Error in formatting data for %s.' % datetime.strftime(timestamp,'%Y-%m-%d %H:%M'))
                 minutedata = dict(min_dict)
                 hour_dict[hour] = minutedata
                 for key in write_KEYLIST:
@@ -615,7 +619,7 @@ COLUMNS   FORMAT   DESCRIPTION
             for key in write_KEYLIST:
                 #exec('value = elem'+key)
                 value = eval('elem'+key)
-                if not isnan(value):
+                if not np.isnan(value):
                     if len(str(value)) > 6:
                         if value >= 10000:
                             value = int(round(value))
@@ -646,33 +650,33 @@ COLUMNS   FORMAT   DESCRIPTION
             if str(predef) == '2' or predef[0].upper == 'P': # Preliminary data
                 data_predef = 'P'
             elif str(predef) in ['1','3']: # Raw (1) or quasi-definitive (3) data
-                loggerlib.warning("format_WDC: DataPublicationLevel as 1 or 3 are not supported by WDC. Assuming P (preliminary).")
+                logger.warning("format_WDC: DataPublicationLevel as 1 or 3 are not supported by WDC. Assuming P (preliminary).")
                 data_predef = 'P'
             elif str(predef) == '4' or predef[0].upper == 'D': # Definitive data
                 data_predef = 'D'
             elif predef == ' ':
-                loggerlib.warning("format_WDC: No DataPublicationLevel defined in header! Assuming P (preliminary).")
+                logger.warning("format_WDC: No DataPublicationLevel defined in header! Assuming P (preliminary).")
                 data_predef = 'P'
         except:
             data_predef = 'P'
         try:
             iagacode = header.get('StationIAGAcode'," ").upper()
             if iagacode == ' ':
-                loggerlib.warning("format_WDC: No StationIAGAcode defined in header!")
+                logger.warning("format_WDC: No StationIAGAcode defined in header!")
                 iagacode = 'XXX'
         except:
             iagacode = 'WIC'
         try:
             station_lat = header.get('DataAcquisitionLatitude'," ")
             if station_lat == ' ':
-                loggerlib.warning("format_WDC: No DataAcquisitionLatitude defined in header!")
+                logger.warning("format_WDC: No DataAcquisitionLatitude defined in header!")
                 station_lat = 00.00
         except:
             station_lat = 00.00 # 47.93
         try:
             station_long = header.get('DataAcquisitionLongitude'," ")
             if station_long == ' ':
-                loggerlib.warning("format_WDC: No DataAcquisitionLongitude defined in header!")
+                logger.warning("format_WDC: No DataAcquisitionLongitude defined in header!")
                 station_long = 00.00
         except:
             station_long = 00.00 # 15.865
@@ -719,17 +723,17 @@ COLUMNS   FORMAT   DESCRIPTION
                                 hourly_mean = round(hourly_mean,2)
                         hourly_mean = str(hourly_mean).rjust(6)
                     except KeyError:
-                        loggerlib.warning('format_wdc: key It appears there is missing data for date %s. Replacing with 999999.'
+                        logger.warning('format_wdc: key It appears there is missing data for date %s. Replacing with 999999.'
                                 % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
                         data = '999999'*60
                         hourly_mean = '999999'
                     except TypeError:
-                        loggerlib.warning('format_wdc: type It appears there is missing data for date %s. Replacing with 999999.'
+                        logger.warning('format_wdc: type It appears there is missing data for date %s. Replacing with 999999.'
                                 % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
                         data = '999999'*60
                         hourly_mean = '999999'
                     if len(data) != 360:
-                        loggerlib.warning('format_wdc: It appears there is missing data for date %s. Replacing with 999999.'
+                        logger.warning('format_wdc: It appears there is missing data for date %s. Replacing with 999999.'
                                 % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
                         data = '999999'*60
                         hourly_mean = '999999'
