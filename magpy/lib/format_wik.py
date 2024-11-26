@@ -5,8 +5,15 @@ Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
 
-from magpy.stream import *
-from magpy.core.methods import *
+from magpy.stream import DataStream
+from datetime import datetime, timedelta
+import os
+import numpy as np
+from magpy.core.methods import testtime, extract_date_from_string
+import logging
+logger = logging.getLogger(__name__)
+
+KEYLIST = DataStream().KEYLIST
 
 
 def isOPT(filename):
@@ -85,6 +92,7 @@ def readOPT(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
+    array = [[] for elem in KEYLIST]
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -134,30 +142,37 @@ def readOPT(filename, headonly=False, **kwargs):
             i=0
             for i in range(24):
                 try:
-                    row = LineStruct()
                     date = year + '-' + month + '-' + str(day).strip('.') + 'T' + str(i) + ':30:00'
-                    row.time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
+                    array[0].append(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
                     if comp=='d':
                         # minutes to seconds
-                        row.y = offset + float(elem[i+1])/60.
+                        array[2].append(offset + float(elem[i+1])/60.)
                     if comp=='z':
                         # minutes to seconds
-                        row.z = offset + float(elem[i+1])
+                        array[3].append(offset + float(elem[i+1]))
                     if comp=='h':
                         # minutes to seconds
-                        row.x = offset + float(elem[i+1])
+                        array[1].append(offset + float(elem[i+1]))
                     if comp=='f':
                         # minutes to seconds
                         if (offset + float(elem[i+1])) < 100000: # empty values get 100000 as input in data file
-                            row.f = offset + float(elem[i+1])
-                    row.typ = 'hdzf'
-                    stream.add(row)
+                            array[4].append(offset + float(elem[i+1]))
                 except:
                     pass
 
     fh.close()
 
-    return DataStream(stream, headers)
+    headers['col-x'] = 'H'
+    headers['unit-col-x'] = 'nT'
+    headers['col-y'] = 'D'
+    headers['unit-col-y'] = 'deg'
+    headers['col-z'] = 'Z'
+    headers['unit-col-z'] = 'nT'
+    headers['col-f'] = 'F'
+    headers['unit-col-f'] = 'nT'
+
+    array = np.asarray([np.asarray(el) for el in array], dtype=object)
+    return DataStream(header=headers, ndarray=array)
 
 
 
@@ -216,7 +231,6 @@ def readPMAG1(filename, headonly=False, **kwargs):
             else:
                 # data entry - may be written in multiple columns
                 # row beinhaltet die Werte eine Zeile
-                row=LineStruct()
                 # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
                 elem = line.split()
                 try:
@@ -228,7 +242,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
                     elif int(hour) == 0:
                         regularfound = True
                     #row.time=date2num(strtime + timedelta(days=subday))
-                    array[0].append(date2num(strtime + timedelta(days=subday)))
+                    array[0].append(strtime + timedelta(days=subday))
                     try:
                         strval = elem[1].replace(',','.')
                     except:
@@ -236,7 +250,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
                         pass
                     #row.f = float(strval)
                     array[find].append(float(strval))
-                    array[secind].append(date2num(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S")))
+                    array[secind].append(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S"))
                     #row.sectime=date2num(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S"))
                     #stream.add(row)
                 except:
@@ -244,12 +258,11 @@ def readPMAG1(filename, headonly=False, **kwargs):
                     pass
         fh.close()
 
-    headers['col-f'] = 'f'
+    headers['col-f'] = 'F'
     headers['unit-col-f'] = 'nT'
 
-    array = np.asarray([np.asarray(el) for el in array])
-    stream = [LineStruct()]
-    return DataStream(stream, headers, array)
+    array = np.asarray([np.asarray(el) for el in array], dtype=object)
+    return DataStream(header=headers, ndarray=array)
 
 
 
@@ -324,12 +337,11 @@ def readPMAG2(filename, headonly=False, **kwargs):
                 pass
 
     if len(array[0]) > 0:
-        headers['col-f'] = 'f'
+        headers['col-f'] = 'F'
         headers['unit-col-f'] = 'nT'
 
     fh.close()
 
-    array = np.asarray([np.asarray(el) for el in array])
-    stream = [LineStruct()]
-    return DataStream(stream, headers, array)
+    array = np.asarray([np.asarray(el) for el in array], dtype=object)
+    return DataStream(header=headers, ndarray=array)
 

@@ -8,14 +8,14 @@ Written by Roman Leonhardt June 2012
 
 from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
 from datetime import datetime, timedelta, timezone
-import os
+import csv
 import numpy as np
 from magpy.core.methods import testtime, extract_date_from_string
 import logging
 logger = logging.getLogger(__name__)
 
 KEYLIST = DataStream().KEYLIST
-
+NUMKEYLIST = DataStream().NUMKEYLIST
 
 def isUSBLOG(filename):
     """
@@ -174,7 +174,7 @@ def readLNM(filename, headonly=False, **kwargs):
     getfile = True
 
     array = [[] for key in KEYLIST]
-    stream = DataStream([],{},np.asarray(array))
+    stream = DataStream()
 
     if debug:
         print("Found LNM file")
@@ -268,7 +268,7 @@ def readLNM(filename, headonly=False, **kwargs):
                 elif len(elem) == 527:
                     cnt += 1
                     #print datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")
-                    array[0].append(date2num(datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")))
+                    array[0].append(datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f"))
                     array[indx].append(elem[17])
                     array[indy].append(elem[18])
                     array[indz].append(elem[19])
@@ -315,7 +315,7 @@ def readLNM(filename, headonly=False, **kwargs):
 
     headers['DataFormat'] = 'Theiss-LaserNiederschlagsMonitor'
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 def readUSBLOG(filename, headonly=False, **kwargs):
@@ -359,15 +359,10 @@ def readUSBLOG(filename, headonly=False, **kwargs):
             elif len(elem) == 6 and not elem[1] == 'Time':
                 headers['SensorSerialNum'] = '%s' % elem[5]
             else:
-                array[0].append(date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S")))
+                array[0].append(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S"))
                 array[t1ind].append(float(elem[2]))
                 array[t2ind].append(float(elem[4]))
                 array[var1ind].append(float(elem[3]))
-                #row.time = date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S"))
-                #row.t1 = float(elem[2])
-                #row.var1 = float(elem[3])
-                #row.t2 = float(elem[4])
-                #stream.add(row)
         except:
             pass
     qFile.close()
@@ -379,8 +374,7 @@ def readUSBLOG(filename, headonly=False, **kwargs):
 
 
     array = np.asarray([np.asarray(el) for el in array],dtype=object)
-    stream = [LineStruct()]
-    return DataStream(stream, headers, array)
+    return DataStream(header=headers, ndarray=array)
 
 
 def readMETEO(filename, headonly=False, **kwargs):
@@ -434,7 +428,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
 
     if getfile:
         for line in fh:
-            line = line.decode('utf-8',errors='ignore')
+            #line = line.decode('utf-8',errors='ignore')
             if line.isspace():
                 # blank line
                 continue
@@ -468,10 +462,9 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
                         print("Found error in data sequence", filename)
                         #print colsstr
                         break
-                row = LineStruct()
                 try:
                     date = colsstr[0]+'-'+colsstr[1]
-                    array[0].append(date2num(datetime.strptime(date,"%Y%m%d-%H%M%S")))
+                    array[0].append(datetime.strptime(date,"%Y%m%d-%H%M%S"))
                     #row.time = date2num(datetime.strptime(date,"%Y%m%d-%H%M%S"))
                     for i in range(2,len(colsstr)):
                         key = KEYLIST[i-1]
@@ -515,7 +508,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
 
     if debug:
         print ("METEO: Successfully loaded METEO data")
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 def readLIPPGRAV(filename, headonly=False, **kwargs):
