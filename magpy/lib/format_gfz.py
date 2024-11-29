@@ -2,16 +2,18 @@
 MagPy
 GFZ input filter
 supports Kp values from the qlyymm.tab
-
-Written by Roman Leonhardt October 2012
-- contains test, read and write function for hour data
-ToDo: Filter for minute data
 """
-from __future__ import print_function
 
-from magpy.stream import *
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
+from magpy.stream import DataStream, read, magpyversion
+from datetime import datetime, timedelta, timezone
+import numpy as np
 from magpy.core.methods import test_timestring
 import json
+import logging
+logger = logging.getLogger(__name__)
+KEYLIST = DataStream().KEYLIST
 
 KEYLIST = DataStream().KEYLIST
 
@@ -35,6 +37,12 @@ def isGFZINDEXJSON(filename):
 def readGFZINDEXJSON(filename, headonly=False, **kwargs):
     """
     Reading JSON format data.
+    Example:
+    data=read('https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp&status=def')
+    Options: start=2024-11-01T00:00:00Z
+             end=2024-11-02T23:59:59Z
+             index=Kp  # one of 'Kp', 'ap', 'Ap', 'Cp', 'C9', 'Hp30', 'Hp60', 'ap30', 'ap60', 'SN', 'Fobs', 'Fadj'
+             status=def # for definitive or leave
     """
     stream = DataStream()
     header = {}
@@ -44,13 +52,14 @@ def readGFZINDEXJSON(filename, headonly=False, **kwargs):
 
     with open(filename, 'r') as jsonfile:
         dataset = json.load(jsonfile)
-        loggerlib.info('Read: %s, Format: %s ' % (filename, "GFZINDEXJSON"))
-
-        metadata = dataset.get('metadata')
+        logger.info('Read: %s, Format: %s ' % (filename, "GFZINDEXJSON"))
+        metadata = dataset.get('metadata',{})
+        if not metadata:
+            metadata = dataset.get('meta')
         datetime = dataset.get('datetime')
         status = dataset.get('status',[])
         for key in dataset:
-            if not key in ["datetime","metadata","status"]:
+            if not key in ["datetime","metadata","meta","status"]:
                 datacol = dataset.get(key)
                 data = [np.nan if x is None else float(x) for x in datacol]
                 if ind < 5:
@@ -73,7 +82,7 @@ def readGFZINDEXJSON(filename, headonly=False, **kwargs):
     header["DataTerms"] = metadata.get("license")
     header['DataReferences'] = 'https://kp.gfz-potsdam.de/'
 
-    stream = DataStream([],header,np.asarray(array,dtype=object))
+    stream = DataStream(header=header,ndarray=np.asarray(array,dtype=object))
 
     return stream
 
@@ -99,7 +108,6 @@ def isGFZKP(filename):
             return False
     except:
         return False
-    print('Found GFZ Kp format')
     return True
 
 
@@ -164,9 +172,9 @@ def readGFZKP(filename, headonly=False, **kwargs):
                 num = int(elements[10])
                 fum = float(elements[11])
             else:
-                cum = float(NaN)
-                num = float(NaN)
-                fum = float(NaN)
+                cum = np.nan
+                num = np.nan
+                fum = np.nan
             if len(elements)>9:
                 endcount = 9
             else:
@@ -214,5 +222,76 @@ def readGFZKP(filename, headonly=False, **kwargs):
     headers['DataFormat'] = 'MagPyK'
     headers['DataReferences'] = 'http://www-app3.gfz-potsdam.de/kp_index/'
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream(header=headers, ndarray=np.asarray(array, dtype=object))
     #return DataStream(stream, headers, np.asarray(array))
+
+
+if __name__ == '__main__':
+
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: GFZ FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE GFZ Indices LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+
+    errors = {}
+    successes = {}
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    while True:
+        testset = "GFZINDEXJSON"
+        try:
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            data = read('https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp')
+            m = data.mean("var1")
+            # agreement should be better than 0.01 nT as resolution is 0.1 nT in file
+            if not m == 1.77075:
+                 raise Exception("ERROR within data validity test")
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        testset = "GFZKP"
+        try:
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            data = read(r'http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
+            kp = data._get_column("var1")
+            # agreement should be better than 0.01 nT as resolution is 0.1 nT in file
+            if not len(kp) > 0:
+                 raise Exception("ERROR within data validity test")
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
+    time_taken = t_end_test - t_start_test
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")

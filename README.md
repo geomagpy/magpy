@@ -372,7 +372,7 @@ Several example data sets are provided within the MagPy package:
    - `flagging_example`: [MagPy] FlagDictionary (JSON) flagging info to be used with example1
    - `recipe1_flags`: [MagPy] FlagDictionary (JSON) to be used with cookbook recipe 1
 
-### 3.1 Reading
+### 3.1 Reading data from files
 
 For a file in the same directory:
 
@@ -386,42 +386,69 @@ For a file in the same directory:
 
         data = read(r'c:\path\to\file\myfile.min')
 
-Pathnames are related to your operating system. Hereinafter we will assume a Linux system in this guide. Files that are read in are uploaded to the memory and each data column (or piece of header information) is assigned to an internal variable (key). To get a quick overview of the assigned keys in any given stream (`data`) you can use the following method:
+Getting data for a specific time window for local files:
+
+#### 3.1.1 Selecting timerange
+
+        data = read(r'/path/to/files/*.min', starttime="2014-01-01", endtime="2014-05-01")
+
+Alternatively the stream can be trimmed to a specific time interval after reading by applying the trim method, 
+e.g. for a specific month:
+
+        data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
+
+
+Pathnames are related to your operating system. Hereinafter we will assume a Linux system in this guide. Files that
+are read in are uploaded to the memory and each data column (or piece of header information) is assigned to an
+internal variable (key). To get a quick overview of the assigned keys in any given stream (`data`) you can use the
+following method:
 
         print(data._get_key_headers() )
 
-### 3.2 Other possibilities for reading files
+No format specifications are required for reading. If MagPy can handle the format, it will be automatically recognized.
+
+
+### 3.2 Reading data from other sources
 
 To read all local files ending with .min within a directory (creates a single stream of all data):
 
         data = read(r'/path/to/file/*.min')
 
-Getting magnetic data directly from an online source such as the WDC:
 
-        data = read(r'ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
+#### 3.2.1 Reading data from the INTERMAGNET Webservice
 
-Getting *kp* data from the GFZ Potsdam:
+        data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?request=GetData&observatoryIagaCode=WIC&dataStartDate=2021-03-10T00:00:00Z&dataEndDate=2021-03-11T23:59:59Z&Format=iaga2002&elements=&publicationState=adj-or-rep&samplesPerDay=minute')
+
+
+DST
+
+Conrad Observatory Webservice
+
+USGS webservice
+
+#### 3.2.2 Getting Index data from the GFZ Potsdam
+
+Getting Index data from the GFZ Potsdam:
+
+        data=read('https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp')
+
+The following options are available:
+
+Getting *kp* data from the GFZ Potsdam (old variant):
 
         data = read(r'http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
 
 (Please note: data access and usage is subjected to the terms and conditions of the individual data provider. Please make sure to read them before accessing any of these products.)
 
-No format specifications are required for reading. If MagPy can handle the format, it will be automatically recognized.
 
-Getting data for a specific time window for local files:
+#### 3.2.5 Accessing the WDC FTP Server
 
-        data = read(r'/path/to/files/*.min',starttime="2014-01-01", endtime="2014-05-01")
+Getting magnetic data directly from an online source such as the WDC:
 
-... and remote files:
-
-        data = read(r'ftp://address/fur2013.wdc',starttime="2013-01-01", endtime="2013-02-01")
-
-Reading data from the INTERMAGNET Webservice:
-
-        data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?request=GetData&observatoryIagaCode=WIC&dataStartDate=2021-03-10T00:00:00Z&dataEndDate=2021-03-11T23:59:59Z&Format=iaga2002&elements=&publicationState=adj-or-rep&samplesPerDay=minute')
+        data = read(r'ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
 
 
-### 3.3 Writing
+### 3.2 Writing
 
 After loading data from a file, we can save the data in the standard IAGA02 and IMAGCDF formats with the following commands.
 
@@ -440,11 +467,11 @@ To get an overview about possible write options use:
         help(DataStream().write)
 
 
-### 3.4 Format-specific options
+#### 3.3 Format-specific write options
 
 Some file formats contain multiple data sources and when writing certain archive formats, additional information will bve save in separate files. Below you will find descriptions for such format-specific pecularities.
 
-#### 3.4.1 IAF format
+#### 3.3.1 IAF format
 
 The IAF (INTERMAGNET archive format) contains 1-minute data along with filtered 1-hour data and daily averages. Typically components X,Y,Z and delta F (G) values are provided. Beside the geomagnetic components, the K indicies (3 hour resolution) are also contained within  the IAF structure.
 When reading IAF data, by default only the 1-minute data is loaded. If you want to access other resolutions data or K values you can use the following "resolution" options (hour, day, k) while reading (please note: XMagPy only allows for reading minute data):
@@ -457,13 +484,13 @@ When writing IAF data, you need to provide 1-minute geomagnetic data covering at
 
 Additionally a README.IMO file will be created and filled with existing meta information. If at least on year of 1-minute data is written, then also a DKA file will be created containing K values separatly. Please checkout INTERMAGNET format specifications for further details on DKA, README and IAF formats.   
 
-#### 3.4.2 IMF format
+#### 3.3.2 IMF format
 
 The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute data products. The IMF format can be created from basically and data set in 1-minute resolution. Individual files cover one day. The data header of the IMF file contains an abbrevation of the geomagnetic information node GIN which by default is set to EDI (for Edinbourgh). To change that use the "gin" option.
 
         data.write('/path/to/export/IMF/', gin="GOL")
 
-#### 3.4.3 IMAGCDF format
+#### 3.3.3 IMAGCDF format
 
 The IMAGCDF format can contain several data sets from different instruments represented by different time columns. Typical examples are scalar data with lower sampling resolution as vector data and/or temperature data in lower resolution.
 MagPy's IMAGCDF library will read all those data sets and, by default, will only use the most detailed time column which typically is GeomagneticVectorTimes. Low resolution data will refer to this new time column and "missing values" will be represented as NaN.
@@ -481,7 +508,7 @@ MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy
 
 Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varying sampling rates the plots of the lower resolution data are apparently empty. Got to "Plot Options" on the Data panel and use "plottype" -> "continuous" to display graphs of low resolution data sets.  
 
-#### 3.4.4 IBFV baseline data
+#### 3.3.4 IBFV baseline data
 
 Baseline data can be read as any other timeseries data set in MagPy. Supported versions of IBFV are versions 1.2 and 
 2.0 and  both are automatically recognized. When just loading the blv file without any additional options. Then the 
@@ -516,13 +543,6 @@ of this information is not contained in the blv comment section then the read co
 VariometerIAGACODE, or SalarIAGACODE. The comment section can also be found in the data header. Give it a quick look
 
         print(basevalues.header)
-
-### 3.5 Selecting timerange
-
-The stream can be trimmed to a specific time interval after reading by applying the trim method, e.g. for a specific
-month:
-
-        data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
 
 
 ### 3.6 An overview of all format libraries
