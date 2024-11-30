@@ -345,93 +345,148 @@ any other desired format or meta information from the input data. MagPy contains
 methods as shown in sections 4 to 10. You can, however, also convert the MagPy data structure 
 into other commonly used time series data structures and use methods of these packages i.e. 
 
+- MagPy, this package here
 - ObsPy, a seismological python package, which was actually an initial trigger for the development of MagPy
 - pandas, a powerful python package specifically designed for time series analysis
 
-When writing/exporting data structures MagPy supports again the most commonly used data types of the geomagnetic
-community bit also a few other. Details on writing data are summarized in section 3.2.
+When writing/exporting data structures MagPy supports the most commonly used data types of the geomagnetic
+community bit also a few other. Details on writing data and many examples are summarized in section 3.2.
 
 As mentioned above MagPy supports many different data formats and thus also any possible conversions between them. 
-To get a full list, use:
+To get a full list including read/write support, use:
 
-        from magpy.stream import *
-        print(PYMAG_SUPPORTED_FORMATS)
+        from magpy.stream import read, SUPPORTED_FORMATS
+        print(SUPPORTED_FORMATS)
 
+Section 3 contains all information about accessing data in files and from remote and web services. MagPy also 
+supports MariaDB/MySQL databases including data base read and write methods. Data base specific information can be
+found in section 9.
 
+### 3.1 Reading data
 
-You will find several example files provided with MagPy. The `cdf` file is stored along with meta information 
-in NASA's common data format (cdf). Reading this file requires a working installation of Spacepy cdf.
+In order to read data from any local or remote data source the `read` method is used. This method is imported as 
+follows:
 
-If you do not have any geomagnetic data file you can access example data by using the following command (after `import *`):
+        from magpy.stream import read
 
-        data = read(example1)
+Then you can access data sources using the following command
 
-The data from `example1` has been read into a MagPy *DataStream* (or *stream*) object. Most data processing routines in MagPy are applied to data streams.
+        data = read(datasource)
 
-Several example data sets are provided within the MagPy package:
+#### 3.1.1 General read options
 
-   - `example1`: [IAGA] ZIP (IAGA2002, zip compressed) file with 1 second HEZ data
-   - `example2`: [MagPy] Archive (CDF) file with 1 sec F data
-   - `example3`: [MagPy] Basevalue (TXT) ascii file with DI and baseline data
-   - `example4`: [INTERMAGNET] ImagCDF (CDF) file with one week of 1 second data
-   - `example5`: [MagPy] Archive (CDF) raw data file with xyz and supporting data
-   - `example6a`: [MagPy] DI (txt) raw data file with DI measurement
-   - `example6b`: [MagPy] like 6a to be used with example4
+The read command supports a number of general and format specific options. If you open a large data set and want to
+restrict the imported time range you can use the optional *starttime* and *endtime* parameters. Times should be either be
+provided as datetime objects or as strings similar to "2022-11-22T22:22:22". 
 
-   - `flagging_example`: [MagPy] FlagDictionary (JSON) flagging info to be used with example1
-   - `recipe1_flags`: [MagPy] FlagDictionary (JSON) to be used with cookbook recipe 1
+        data = read(datasource, starttime="2014-01-01", endtime="2014-05-01")
 
-### 3.1 Reading data from files
+Another helpful option is the *debug* which might give you some hints in case you face problems when read data.
 
-For a file in the same directory:
+        data = read(datasource, debug=True)
 
-        data = read(r'myfile.min')
+#### 3.1.2 Possible data sources
 
-... or for specific paths in Linux:
+One of the basic design principles of MagPy is that you do not need to care about input formats and data sources. Just
+provide the source and the `read` method will automatically check whether the underlying format is supported and, if 
+yes, import the data accordingly. 
 
-        data = read(r'/path/to/file/myfile.min')
+Reading a file within the current directory:
 
-... or for specific paths in Windows:
+        data = read('myfile.min')
 
-        data = read(r'c:\path\to\file\myfile.min')
+Reading a file for specific paths in Linux/MacOS:
 
-Getting data for a specific time window for local files:
+        data = read('/path/to/file/myfile.min')
 
-#### 3.1.1 Selecting timerange
+Reading data from a specific path in Windows. Path names are related to your operating system. Hereinafter we will 
+assume a Linux system in this guide.
+
+        data = read('c:\path\to\file\myfile.min')
+
+Reading multiple files from a directory using wildcards:
+
+        data = read('/path/to/file/*.min')
+
+Reading a zip/gz compressed data file is as simple as everything else. The archive will be unzipped automatically and
+data will be extracted and read:
+
+        data = read('/path/to/file/myfile.zip')
+
+Reading data from a remote source (i.e. FTP):
+
+        data = read('ftp://thewellknownaddressofwdc/single_year/2011/fur2011.wdc')
+
+Reading data from a remote webservice:
+
+        data = read('https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC')
+
+#### 3.1.3 Selecting timerange
+
+The most effective way of selecting a specific time range is by already defining it when importing the data:
 
         data = read(r'/path/to/files/*.min', starttime="2014-01-01", endtime="2014-05-01")
 
 Alternatively the stream can be trimmed to a specific time interval after reading by applying the trim method, 
 e.g. for a specific month:
 
-        data = data.trim(starttime="2013-01-01", endtime="2013-02-01")
+        data = read(r'/path/to/files/*.min')
+        data = data.trim(starttime="2014-01-01", endtime="2014-05-01")
 
 
-Pathnames are related to your operating system. Hereinafter we will assume a Linux system in this guide. Files that
-are read in are uploaded to the memory and each data column (or piece of header information) is assigned to an
-internal variable (key). To get a quick overview of the assigned keys in any given stream (`data`) you can use the
-following method:
+#### 3.1.4 Example files contained in MagPy
 
-        print(data._get_key_headers() )
+You will find several example files provided with together with the MagPy package. In order to use the example files 
+it is recommended to import all methods of the `stream` package as follows:
 
-No format specifications are required for reading. If MagPy can handle the format, it will be automatically recognized.
+        from magpy.stream import *
+
+Then you can access all example files by just reading them as follows:
+
+        data = read(example1)
+
+Time series example data sets are contained in the following example files:
+
+- `example1`: [IAGA] ZIP (IAGA2002, zip compressed) file with 1 second HEZ data
+- `example2`: [MagPy] Archive (CDF) file with 1 sec F data
+- `example3`: [MagPy] Basevalue (TXT) ascii file with DI and baseline data
+- `example4`: [INTERMAGNET] ImagCDF (CDF) file with one week of 1 second data
+- `example5`: [MagPy] Archive (CDF) raw data file with xyz and supporting data
+
+Other examples which are NOT supported by the stream.read are wither DI data sets (section 7) and flagging examples
+(section 6):
+
+- `example6a`: [MagPy] DI (txt) raw data file with DI measurement (requires magpy.absolutes)
+- `example6b`: [MagPy] like 6a to be used with example4 (requires magpy.absolutes)
+- `flagging_example`: [MagPy] FlagDictionary (JSON) flagging info to be used with example1 (requires magpy.core.flagging)
+- `recipe1_flags`: [MagPy] FlagDictionary (JSON) to be used with cookbook recipe 1 (requires magpy.core.flagging)
 
 
-### 3.2 Reading data from other sources
+### 3.2 Specific read commands and options for geomagnetic data sources
 
-To read all local files ending with .min within a directory (creates a single stream of all data):
+#### 3.2.1 Reading a compressed IAGA 2002 data file
 
-        data = read(r'/path/to/file/*.min')
+#### 3.2.1 Reading an INTERMAGNET archive format (IAF)
 
+options hour, k values etc
+
+#### 3.2.1 Reading baseline information from BLV
+
+options adopted, baseline function 
 
 #### 3.2.1 Reading data from the INTERMAGNET Webservice
 
         data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?request=GetData&observatoryIagaCode=WIC&dataStartDate=2021-03-10T00:00:00Z&dataEndDate=2021-03-11T23:59:59Z&Format=iaga2002&elements=&publicationState=adj-or-rep&samplesPerDay=minute')
 
+#### 3.2.1 Reading DST data
 
 DST
 
+#### 3.2.1 The Conrad Observatory webservice
+
 Conrad Observatory Webservice
+
+#### 3.2.1 The USGS webservice
 
 USGS webservice
 
@@ -455,6 +510,20 @@ Getting *kp* data from the GFZ Potsdam (old variant):
 Getting magnetic data directly from an online source such as the WDC:
 
         data = read(r'ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
+
+### 3.3 Specific read commands and options for other data sources
+
+#### 3.3.1 NEIC data
+
+#### 3.3.1 NOAA data
+
+#### 3.3.1 GOES data
+
+#### 3.3.1 TSF data
+
+
+### 3.4 Converting the internal data structure
+
 
 
 ### 3.2 Writing
