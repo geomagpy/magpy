@@ -329,29 +329,38 @@ The logger can also be configured to print to shell (stdout, without formatting)
 
 ## 3. Reading and writing data
 
-MagPy supports many different data formats and thus conversions between them. For geomagnetic purposes
-the most important are listed below.
+When working with MagPy usually the first step of any data analysis is to open/read a data set. MagPy is specifically
+designed for geomagnetic data analysis but also supports a wide range of other applications and the most important 
+data formats in the respective disciplines. When reading data, this provided data is internally treated as an numpy
+array, the meta information will be converted into a python dictionary. The array contains predefined columns with 
+fixed column keys. Any vectorial data will be assigned to column keys "x","y" and "z". Please note: these are only
+the column key names, not the actually contained information. The actually contained information, i.e. 
+key "x" contains the horizontal component "H", key "y" contains declination "D"  and key "z" contains the vertical
+component "Z" is defined with the meta information of the file. Temperature data will usually be assigned to column 
+keys "t1" and/or "t2", scalar data to key "f". Details on the reading process and a number of examples
+with different formats and options are presented in section 3.1.
+ 
+Due to the very general character of the internally used data structure it is easily possible to produce basically 
+any other desired format or meta information from the input data. MagPy contains a number of visualization and analysis 
+methods as shown in sections 4 to 10. You can, however, also convert the MagPy data structure 
+into other commonly used time series data structures and use methods of these packages i.e. 
 
-   - WDC: 	World Data Centre format
-   - JSON: 	JavaScript Object Notation
-   - IMF: 	Intermagnet Format
-   - IAF: 	Intermagnet Archive Format
-   - IAGA: 	IAGA 2002 text format
-   - IMAGCDF: 	Intermagnet CDF Format
-   - GFZKP: 	GeoForschungsZentrum KP-Index format
-   - GSM19/GSM90: 	Output formats from GSM magnetometers
-   - POS1: 	POS-1 binary output
-   - LEMI: 	LEMIXXX binary output
-   - BLV: 	Baseline format Intermagnet
-   - IYFV: 	Yearly mean format Intermagnet
-   - DKA: 	K Value file
+- ObsPy, a seismological python package, which was actually an initial trigger for the development of MagPy
+- pandas, a powerful python package specifically designed for time series analysis
 
-... and many others. To get a full list, use:
+When writing/exporting data structures MagPy supports again the most commonly used data types of the geomagnetic
+community bit also a few other. Details on writing data are summarized in section 3.2.
+
+As mentioned above MagPy supports many different data formats and thus also any possible conversions between them. 
+To get a full list, use:
 
         from magpy.stream import *
         print(PYMAG_SUPPORTED_FORMATS)
 
-You will find several example files provided with MagPy. The `cdf` file is stored along with meta information in NASA's common data format (cdf). Reading this file requires a working installation of Spacepy cdf.
+
+
+You will find several example files provided with MagPy. The `cdf` file is stored along with meta information 
+in NASA's common data format (cdf). Reading this file requires a working installation of Spacepy cdf.
 
 If you do not have any geomagnetic data file you can access example data by using the following command (after `import *`):
 

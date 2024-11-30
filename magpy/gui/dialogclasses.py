@@ -430,7 +430,7 @@ class ExportDataDialog(wx.Dialog):
     def __init__(self, parent, title, path, stream, defaultformat):
         super(ExportDataDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
-        self.WriteFormats = [ key for key in PYMAG_SUPPORTED_FORMATS if 'w' in PYMAG_SUPPORTED_FORMATS[key][0]]
+        self.WriteFormats = [ key for key in SUPPORTED_FORMATS if 'w' in SUPPORTED_FORMATS[key][0]]
 
         #print ("STREAM content:", stream.header.get('DataType'))
         #print ("Too be used to limit selection possible formats")

@@ -86,8 +86,8 @@ def main(argv):
     database = ''
     intensive = False
     fmts = ['']
-    for fmt in PYMAG_SUPPORTED_FORMATS:
-        if 'w' in (PYMAG_SUPPORTED_FORMATS[fmt][0]):
+    for fmt in SUPPORTED_FORMATS:
+        if 'w' in (SUPPORTED_FORMATS[fmt][0]):
             fmts.append(fmt)
     try:
         opts, args = getopt.getopt(argv,"hp:s:o:f:d:i",["path=","source=","destination=","fmtlist=","database=",])

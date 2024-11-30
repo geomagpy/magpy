@@ -2232,7 +2232,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
     def OnHelpWriteFormats(self, event):
 
-        WriteFormats = [ "{}: \t{}".format(key, PYMAG_SUPPORTED_FORMATS[key][1]) for key in PYMAG_SUPPORTED_FORMATS if 'w' in PYMAG_SUPPORTED_FORMATS[key][0]]
+        WriteFormats = [ "{}: \t{}".format(key, SUPPORTED_FORMATS[key][1]) for key in SUPPORTED_FORMATS if 'w' in SUPPORTED_FORMATS[key][0]]
 
         message = "\n".join(WriteFormats)
         dlg = ScrolledMessageDialog(self, message, 'Write formats:')
@@ -2240,7 +2240,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
     def OnHelpReadFormats(self, event):
 
-        ReadFormats = [ "{}: \t{}".format(key, PYMAG_SUPPORTED_FORMATS[key][1]) for key in PYMAG_SUPPORTED_FORMATS if 'r' in PYMAG_SUPPORTED_FORMATS[key][0]]
+        ReadFormats = [ "{}: \t{}".format(key, SUPPORTED_FORMATS[key][1]) for key in SUPPORTED_FORMATS if 'r' in SUPPORTED_FORMATS[key][0]]
 
         message = "\n".join(ReadFormats)
         dlg = ScrolledMessageDialog(self, message, 'Read formats:')

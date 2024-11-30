@@ -213,7 +213,7 @@ KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':f
                 'sectime':float('nan')}
 
 # Formats supported by MagPy read function:
-PYMAG_SUPPORTED_FORMATS = {
+SUPPORTED_FORMATS = {
                 'IAGA':['rw','IAGA 2002 text format'],
                 'WDC':['rw','World Data Centre format'],
                 'IMF':['rw', 'Intermagnet Format'],
@@ -5915,14 +5915,14 @@ CALLED BY:
 
         t1 = datetime.now(timezone.utc).replace(tzinfo=None)
 
-        if not format_type in PYMAG_SUPPORTED_FORMATS:
+        if not format_type in SUPPORTED_FORMATS:
             if not format_type:
                 format_type = 'PYSTR'
             else:
                 logger.warning('write: Output format not supported.')
                 return False
         else:
-            if not 'w' in PYMAG_SUPPORTED_FORMATS[format_type][0]:
+            if not 'w' in SUPPORTED_FORMATS[format_type][0]:
                 logger.warning('write: Selected format does not support write methods.')
                 return False
 
@@ -6750,7 +6750,7 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     foundapproptiate = False
     if not dataformat:
         # auto detect format - go through all known formats in given sort order
-        for format_type in PYMAG_SUPPORTED_FORMATS:
+        for format_type in SUPPORTED_FORMATS:
             # check format
             if debug:
                 print("_read: Testing format: {} ...".format(format_type))
@@ -6773,12 +6773,12 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
         # format given via argument
         dataformat = dataformat.upper()
         try:
-            formats = [el for el in PYMAG_SUPPORTED_FORMATS if el == dataformat]
+            formats = [el for el in SUPPORTED_FORMATS if el == dataformat]
             format_type = formats[0]
         except IndexError:
             msg = "Format \"%s\" is not supported. Supported types: %s"
-            logger.error(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
-            raise TypeError(msg % (dataformat, ', '.join(PYMAG_SUPPORTED_FORMATS)))
+            logger.error(msg % (dataformat, ', '.join(SUPPORTED_FORMATS)))
+            raise TypeError(msg % (dataformat, ', '.join(SUPPORTED_FORMATS)))
 
     stream = readFormat(filename, format_type, headonly=headonly, **kwargs)
 
