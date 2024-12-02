@@ -360,7 +360,7 @@ To get a full list including read/write support, use:
 
 Section 3 contains all information about accessing data in files and from remote and web services. MagPy also 
 supports MariaDB/MySQL databases including data base read and write methods. Data base specific information can be
-found in section 9. Finally, a table of of current supported formats and developments is to be found in the appendix. 
+found in section 9. Finally, a table of currently supported formats and developments is to be found in the appendix A1. 
 
 ### 3.1 Reading data
 
@@ -473,15 +473,24 @@ The write function has a number of options which are highlighted in the followin
 some data formats which will be discussed in section 3.3.
 
 
+format_type, mode, coverage, 
+
+By default, daily files are created 
+
+filenamebegins, filenameends, dateformat, 
+
+
+
 To create an [INTERMAGNET] CDF (ImagCDF) file:
 
         data.write(r'/path/to/diretory/',format_type='IMAGCDF')
 
-The filename will be created automatically according to the defined format. By default, daily files are created and the
+The filename will be created automatically according to the defined format, which specifically applies for IAF, IAGA
+and ImagCDF files. and the
 date is added to the filename in-between the optional parameters `filenamebegins` and `filenameends`. If `filenameends`
 is missing, `.txt` is used as default.
 
-To get an overview about possible write options use:
+To get an overview about possible write options, also for specific ones, use:
 
         help(DataStream().write)
 
@@ -509,13 +518,11 @@ averages and, if not provided, k values are automatically determined using IAGA/
 IAF structure. You can however provide k values by using option *kvals* and an independent data source:
 
         kdata = read('file_with_K_values.dat')
-        data.write('/path/to/export/IAF/', kvals=kdata)
+        data.write('/path/to/export/IAF/', format_type='IAF', kvals=kdata)
 
 Additionally a README.IMO file will be created and filled with existing meta information. If at least one year of 
 1-minute data is written, then also a DKA file will be created containing K values separately. Please check the
 INTERMAGNET format specifications for further details on DKA, README and IAF formats.
-
-The option *mode* TODO
 
 #### 3.3.3 IMAGCDF
 
@@ -531,18 +538,16 @@ like scalar or temperature readings.
 When writing IMAGCDF files MagPy is using np.nan as fill value for missing data. You can change that by providing a 
 different fill value using the option fillvalue:
 
-        data.write('/path/to/export/IMAGCDF/', fillvalue=99999.0)
+        data.write('/path/to/export/', format_type='IMAGCDF', fillvalue=99999.0)
 
 MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy is also supports flagging information
 to be added into the IMAGCDF structure (IMAGCDF version 1.3, work in progress):
 
-        data.write('/path/to/export/IMAGCDF/', addflags=True)
+        data.write('/path/to/export/', format_type='IMAGCDF', addflags=True)
 
+By default CDF files are compressed. If you do not want that then set option *skipcompression* to True.
 
-    fillval = kwargs.get('fillvalue')
-    mode = kwargs.get('mode')
-    addflags = kwargs.get('addflags')
-    skipcompression = kwargs.get('skipcompression')
+        data.write('/path/to/export/', format_type='IMAGCDF', skipcompression=True)
 
 
 Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varying sampling rates the plots of the
@@ -586,6 +591,7 @@ VariometerIAGACODE, or SalarIAGACODE. The comment section can also be found in t
         print(basevalues.header)
 
 Writing BLV data has many more options to define the corrected content and structure of the BLV data file:
+
     absinfo = kwargs.get('absinfo')   # new in v0.3.95
     fitfunc = kwargs.get('fitfunc')   # replaced by absinfo
     fitdegree = kwargs.get('fitdegree')   # replaced by absinfo
@@ -602,7 +608,6 @@ Writing BLV data has many more options to define the corrected content and struc
 
 #### 3.3.5 IMF format
 
-    mode = kwargs.get('mode')
     version = kwargs.get('version')
     gin = kwargs.get('gin')
     datatype = kwargs.get('datatype')
@@ -612,7 +617,7 @@ created from basically and data set in 1-minute resolution. Individual files cov
 IMF file contains an abbrevation of the geomagnetic information node GIN which by default is set to EDI
 (for Edinburgh). To change that use the "gin" option.
 
-        data.write('/path/to/export/IMF/', gin="GOL")
+        data.write('/path/to/export/IMF/', format_type='IMF', gin="GOL")
 
 
 #### 3.3.6 Yearly mean files (IYFV)
@@ -620,12 +625,14 @@ IMF file contains an abbrevation of the geomagnetic information node GIN which b
 When adding values to a yearly mean files you can provide the option *kind*, which can have the following values:
 'A' (default), 'Q' for quiet, and 'D' for disturbed.
 
-        data.write('/path/to/export/I/XXX2022.ymf', kind='Q')
+        data.write('/path/to/export/IYFV/XXX2022.ymf', format_type='IYFV', kind='Q')
 
 #### 3.3.7 MagPyCDF - the MagPy archive format (PYCDF)
 
-Writing MagPyCDFs supports the *compression* option with values between 0 (no compression) and 9 (maximum compression). 
-The default value is 5.
+By default CDF files are compressed. If you do not want that then set option *skipcompression* to True.
+
+        data.write('/path/to/export/PYCDF/', format_type='PYCDF', skipcompression=True)
+
 
 #### 3.3.8 T-Soft format files (TSF)
 
@@ -647,12 +654,12 @@ loaded into one data structure.
                                &publicationState=adj-or-rep
                                &samplesPerDay=minute')
 
-(Please note: data access and usage is subjected to the terms and conditions of the individual data provider. Please 
+(IMPORTANT note for all remote data sources. Data access and usage is subjected to the terms and conditions of the individual data provider. Please 
 make sure to read them before accessing any of these products.)
 
 #### 3.3.10 Reading DST data
 
-DST
+Disturbed storm time indices are provided by in a world data center (WDC) related format. DST
 
 #### 3.3.11 The Conrad Observatory webservice
 
@@ -693,14 +700,17 @@ Getting magnetic data directly from an online source such as the WDC:
 
 ### 3.4 Converting the internal data structure
 
+Besides writing data using MagPy's functionality , you can also convert internal data structures to commonly used
+structures of other python packages and work with their functionality. 
 
+#### 3.4.1 pandas support
 
+[Pandas]() is a ...
 
+#### 3.4.2 ObsPy support
 
+[ObsPy]() ...
 
-### 3.5 An overview of all format libraries
-
-Can be found in appendix A1.
 
 ## 4. Figures
 
@@ -1196,10 +1206,10 @@ Please note: the extrapolation method will remove any NaN columns and secondary 
 
 The different techniques will result in schemes as displayed in the following diagrams (not the example above):
 
-1             |  2
-:-------------------------:|:-------------------------:
-![5.8.1](./magpy/doc/ms_extrapolate1.png)  |  ![5.8.3](./magpy/doc/ms_extrapolate3.png)
-![5.8.2](./magpy/doc/ms_extrapolate2.png)  |  ![5.8.4](./magpy/doc/ms_extrapolate4.png)
+|                     1                      |  2 |
+|:------------------------------------------:|:-------------------------: |
+| ![5.8.1](./magpy/doc/ms_extrapolate1.png)  |  ![5.8.3](./magpy/doc/ms_extrapolate3.png) |
+| ![5.8.2](./magpy/doc/ms_extrapolate2.png)  |  ![5.8.4](./magpy/doc/ms_extrapolate4.png) |
 
 
 ### 5.9 Functions
@@ -1410,24 +1420,24 @@ identifier and a human readable description of the label. The following table co
 currently included in MagPy. Please note that additional labels can be easily incorporated into the processing scheme. 
 Some details on specific labels are discussed later in this manual. 
 
-FlagID   |  Description | LabelGroup
--------- | -------- | -------- 
-000 | normal | 0
-001 | lightning strike | 1
-002 | spike | 1
-012 | pulsation pc 2 | 2
-013 | pulsation pc 3 | 2
-014 | pulsation pc 4 | 2 
-015 | pulsation pc 5 | 2
-016 | pulsation pi 2 | 2
-020 | ssc geomagnetic storm | 2
-021 | geomagnetic storm |  2
-022 | crochete | 2
-030 | earthquake | 1
-050 | vehicle passing above | 1
-051 | nearby disturbing source | 1
-052 | train | 1
-090 | unknown disturbance |  1
+| FlagID |  Description | LabelGroup |
+| --------| -------- | --------  |
+|  000    | normal | 0 |
+|  001    | lightning strike | 1 |
+|  002    | spike | 1 |
+|  012    | pulsation pc 2 | 2 |
+|  013    | pulsation pc 3 | 2 |
+|  014    | pulsation pc 4 | 2  |
+|  015    | pulsation pc 5 | 2 |
+|  016    | pulsation pi 2 | 2 |
+|  020    | ssc geomagnetic storm | 2 |
+|  021    | geomagnetic storm |  2 |
+|  022    | crochete | 2 |
+|  030    | earthquake | 1 |
+|  050    | vehicle passing above | 1 |
+|  051    | nearby disturbing source | 1 |
+|  052    | train | 1 |
+|  090    | unknown disturbance |  1 |
 
 LabelGroups: 0 - normal data, 1 - disturbance to be removed, 2 - signal to be kept
 
