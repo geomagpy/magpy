@@ -1087,6 +1087,7 @@ def comp_decode(type, value)-> float:
         return value/6000
     else:
         return value/10
+
 def comp_encode(type, value)-> float:
     """
     type : variable is deg or nT

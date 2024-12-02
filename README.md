@@ -360,7 +360,7 @@ To get a full list including read/write support, use:
 
 Section 3 contains all information about accessing data in files and from remote and web services. MagPy also 
 supports MariaDB/MySQL databases including data base read and write methods. Data base specific information can be
-found in section 9.
+found in section 9. Finally, a table of of current supported formats and developments is to be found in the appendix. 
 
 ### 3.1 Reading data
 
@@ -461,148 +461,111 @@ Other examples which are NOT supported by the stream.read are wither DI data set
 - `flagging_example`: [MagPy] FlagDictionary (JSON) flagging info to be used with example1 (requires magpy.core.flagging)
 - `recipe1_flags`: [MagPy] FlagDictionary (JSON) to be used with cookbook recipe 1 (requires magpy.core.flagging)
 
-
-### 3.2 Specific read commands and options for geomagnetic data sources
-
-#### 3.2.1 Reading a compressed IAGA 2002 data file
-
-#### 3.2.1 Reading an INTERMAGNET archive format (IAF)
-
-options hour, k values etc
-
-#### 3.2.1 Reading baseline information from BLV
-
-options adopted, baseline function 
-
-#### 3.2.1 Reading data from the INTERMAGNET Webservice
-
-        data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?request=GetData&observatoryIagaCode=WIC&dataStartDate=2021-03-10T00:00:00Z&dataEndDate=2021-03-11T23:59:59Z&Format=iaga2002&elements=&publicationState=adj-or-rep&samplesPerDay=minute')
-
-#### 3.2.1 Reading DST data
-
-DST
-
-#### 3.2.1 The Conrad Observatory webservice
-
-Conrad Observatory Webservice
-
-#### 3.2.1 The USGS webservice
-
-USGS webservice
-
-#### 3.2.2 Getting Index data from the GFZ Potsdam
-
-Getting Index data from the GFZ Potsdam:
-
-        data=read('https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp')
-
-The following options are available:
-
-Getting *kp* data from the GFZ Potsdam (old variant):
-
-        data = read(r'http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
-
-(Please note: data access and usage is subjected to the terms and conditions of the individual data provider. Please make sure to read them before accessing any of these products.)
-
-
-#### 3.2.5 Accessing the WDC FTP Server
-
-Getting magnetic data directly from an online source such as the WDC:
-
-        data = read(r'ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
-
-### 3.3 Specific read commands and options for other data sources
-
-#### 3.3.1 NEIC data
-
-#### 3.3.1 NOAA data
-
-#### 3.3.1 GOES data
-
-#### 3.3.1 TSF data
-
-
-### 3.4 Converting the internal data structure
-
-
-
 ### 3.2 Writing
 
-After loading data from a file, we can save the data in the standard IAGA02 and IMAGCDF formats with the following commands.
-
-To create an IAGA-02 format file, use:
+After loading data from a file, we can save data in any of the supported formats. In order to save data to a IAGA 2002
+data file simply choose the command. This command will create daily files depending on the time coverage of the 
+data set.
 
         data.write(r'/path/to/diretory/',format_type='IAGA')
+
+The write function has a number of options which are highlighted in the following. Further options are available to 
+some data formats which will be discussed in section 3.3.
+
 
 To create an [INTERMAGNET] CDF (ImagCDF) file:
 
         data.write(r'/path/to/diretory/',format_type='IMAGCDF')
 
-The filename will be created automatically according to the defined format. By default, daily files are created and the date is added to the filename in-between the optional parameters `filenamebegins` and `filenameends`. If `filenameends` is missing, `.txt` is used as default.
+The filename will be created automatically according to the defined format. By default, daily files are created and the
+date is added to the filename in-between the optional parameters `filenamebegins` and `filenameends`. If `filenameends`
+is missing, `.txt` is used as default.
 
 To get an overview about possible write options use:
 
         help(DataStream().write)
 
 
-#### 3.3 Format-specific write options
+### 3.3 Specific commands and options for read and write
 
-Some file formats contain multiple data sources and when writing certain archive formats, additional information will bve save in separate files. Below you will find descriptions for such format-specific pecularities.
+#### 3.3.1 Supported geomagnetic data formats 
 
-#### 3.3.1 IAF format
+The `read` and `write` method all methods listed not specifically in the following sections 3.3.x support only basic 
+read commands, as listed in 3.1 and  basic write options as listed in 3.2.
 
-The IAF (INTERMAGNET archive format) contains 1-minute data along with filtered 1-hour data and daily averages. Typically components X,Y,Z and delta F (G) values are provided. Beside the geomagnetic components, the K indicies (3 hour resolution) are also contained within  the IAF structure.
-When reading IAF data, by default only the 1-minute data is loaded. If you want to access other resolutions data or K values you can use the following "resolution" options (hour, day, k) while reading (please note: XMagPy only allows for reading minute data):
+#### 3.3.2 The INTERMAGNET archive format (IAF)
 
-        data = read('/path/to/IAF/*.bin', resolution='hour')
+When reading IAF data the additional *resolution* option is available. *resolution* can have the following values, of 
+which 'minute' is the default option: 'day','hour','minute','k'.
 
-When writing IAF data, you need to provide 1-minute geomagnetic data covering at least one month. Hourly means, daily averages and, if not provided, k values are automatically determined using IAGA/IM recommendations and saved within the IAF structure. You can however provide k values also using an independent data stream with such data:
+        data = read('XXX.bin', resolution='k')
 
-        data.write('/path/to/export/IAF/', kvals=k_datastream)
+will load k values from the IAF arvchive. the following command only hourly mean values.
 
-Additionally a README.IMO file will be created and filled with existing meta information. If at least on year of 1-minute data is written, then also a DKA file will be created containing K values separatly. Please checkout INTERMAGNET format specifications for further details on DKA, README and IAF formats.   
+        data = read('XXX.bin', resolution='hour')
 
-#### 3.3.2 IMF format
+When writing IAF data, you need to provide 1-minute geomagnetic data covering at least one month. Hourly means, daily
+averages and, if not provided, k values are automatically determined using IAGA/IM recommendations and saved within the
+IAF structure. You can however provide k values by using option *kvals* and an independent data source:
 
-The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute data products. The IMF format can be created from basically and data set in 1-minute resolution. Individual files cover one day. The data header of the IMF file contains an abbrevation of the geomagnetic information node GIN which by default is set to EDI (for Edinbourgh). To change that use the "gin" option.
+        kdata = read('file_with_K_values.dat')
+        data.write('/path/to/export/IAF/', kvals=kdata)
 
-        data.write('/path/to/export/IMF/', gin="GOL")
+Additionally a README.IMO file will be created and filled with existing meta information. If at least one year of 
+1-minute data is written, then also a DKA file will be created containing K values separately. Please check the
+INTERMAGNET format specifications for further details on DKA, README and IAF formats.
 
-#### 3.3.3 IMAGCDF format
+The option *mode* TODO
 
-The IMAGCDF format can contain several data sets from different instruments represented by different time columns. Typical examples are scalar data with lower sampling resolution as vector data and/or temperature data in lower resolution.
-MagPy's IMAGCDF library will read all those data sets and, by default, will only use the most detailed time column which typically is GeomagneticVectorTimes. Low resolution data will refer to this new time column and "missing values" will be represented as NaN.
-The select options allows you to specifically load lower resolution data like scalar or temperature readings.  
+#### 3.3.3 IMAGCDF
+
+The IMAGCDF format can contain several data sets from different instruments represented by different time columns. 
+Typical examples are scalar data with lower sampling resolution as vector data and/or temperature data in lower 
+resolution. MagPy's IMAGCDF library will read all those data sets and, by default, will only use the most detailed 
+time column which typically is GeomagneticVectorTimes. Low resolution data will refer to this new time column and 
+"missing values" will be represented as NaN. The select options allows you to specifically load lower resolution data 
+like scalar or temperature readings.  
 
         data = read('/path/to/IMAGCDF/*.cdf', select='scalar')
 
-When writing IMAGCDF files MagPy is using np.nan as fill value for missing data. You can change that by providing a different fill value using the option fillvalue:
+When writing IMAGCDF files MagPy is using np.nan as fill value for missing data. You can change that by providing a 
+different fill value using the option fillvalue:
 
         data.write('/path/to/export/IMAGCDF/', fillvalue=99999.0)
 
-MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy is also supports flagging information to be added into the IMAGCDF structure (IMAGCDF version 1.3, work in progress):
+MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy is also supports flagging information
+to be added into the IMAGCDF structure (IMAGCDF version 1.3, work in progress):
 
         data.write('/path/to/export/IMAGCDF/', addflags=True)
 
-Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varying sampling rates the plots of the lower resolution data are apparently empty. Got to "Plot Options" on the Data panel and use "plottype" -> "continuous" to display graphs of low resolution data sets.  
 
-#### 3.3.4 IBFV baseline data
+    fillval = kwargs.get('fillvalue')
+    mode = kwargs.get('mode')
+    addflags = kwargs.get('addflags')
+    skipcompression = kwargs.get('skipcompression')
 
-Baseline data can be read as any other timeseries data set in MagPy. Supported versions of IBFV are versions 1.2 and 
-2.0 and  both are automatically recognized. When just loading the blv file without any additional options. Then the 
-basevalue data will be stored within the datastream columns. Adopted baseline, as contained in the blv files, will not 
-be read as data, but will extracted as well, approximated by simple spline functions, actually separate splines for all 
+
+Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varying sampling rates the plots of the
+lower resolution data are apparently empty. Got to "Plot Options" on the Data panel and use "plottype" -> "continuous"
+to display graphs of low resolution data sets.  
+
+#### 3.3.4 Baseline information in IBFV files (BLV)
+
+Baseline data can be read as as any other data set in MagPy. Supported versions of IBFV are versions 1.2 and 2.0 and 
+both are automatically recognized. When just loading the blv file without any additional options. Then the basevalue 
+data will be stored within the datastream columns. Adopted baseline, as contained in the blv files, will not be read 
+as data, but will extracted as well, approximated by simple spline functions, actually separate splines for all 
 components, and the resulting adopted baseline function will be stored in the data sets header 'DataFunctionObject'. 
-Discontinuities are considered in IBVF version 2.0. Please be aware, although this is a reasonable approximation of the
-adopted baseline function, it not necessarily the an exact reproduction of the originally used adopted baseline. The
-comment section of blv files is also extracted and stored in the data sets header. How to access and plot such 
-basevalues and the adopted functions is shown here
+Discontinuities are considered in IBVF version 2.0. Please be aware, although this is a reasonable approximation of 
+the adopted baseline function, it not necessarily the an exact reproduction of the originally used adopted baseline. 
+The comment section of blv files is also extracted and stored in the data sets header. How to access and plot such 
+basevalues and the adopted  functions is shown here
 
         basevalues = read("/home/leon/Cloud/Daten/MagPyTestFiles/abk95.blv")
         func = basevalues.header.get('DataFunctionObject')
         mp.tsplot(basevalues, ['dx','dy','dz'], symbols=[['o','o','o']], functions=[[func,func,func]])
 
-If you are mainly interested in the adopted baseline data you can use the read mode 'adopted'. This will then load only 
+If you are mainly interested in the adopted baseline data you can use the read *mode* 'adopted'. This will then load only 
 the adopted baseline data into the data columns. Function header will remain empty and measured basevalues will be 
 ignored. This mode will give you an exact reproduction of the contained adopted baseline values.
 
@@ -615,58 +578,129 @@ If you want to plot data and original adopted basevalues use
 
 The meta information is accessible within the data header. MagPy is designed to be strongly related to underlying 
 instruments, as defined by SensorID's and PierID's. BLV files are strongly instrument related as the baseline is always
-referring to a variometer and eventually also a scalar sensor. Another essential aspect is the pier at which DI
-measurements are performed. MagPy's BLV DataID therefore typically look like BLV_VariometerID_ScalarID_PierID. If any
-of this information is not contained in the blv comment section then the read command will assign dummy values like
+referring to a variometer and eventually also a scalar sensor. Another essential aspect is the pier at which DI 
+measurements are performed. MagPy's BLV DataID therefore typically look like BLV_VariometerID_ScalarID_PierID. If any 
+of this information is not contained in the blv comment section then the read command will assign dummy values like 
 VariometerIAGACODE, or SalarIAGACODE. The comment section can also be found in the data header. Give it a quick look
 
         print(basevalues.header)
 
+Writing BLV data has many more options to define the corrected content and structure of the BLV data file:
+    absinfo = kwargs.get('absinfo')   # new in v0.3.95
+    fitfunc = kwargs.get('fitfunc')   # replaced by absinfo
+    fitdegree = kwargs.get('fitdegree')   # replaced by absinfo
+    knotstep = kwargs.get('knotstep')   # replaced by absinfo
+    extradays = kwargs.get('extradays')   # replaced by absinfo
+    mode = kwargs.get('mode')
+    year = kwargs.get('year')
+    meanh = kwargs.get('meanh')
+    meanf = kwargs.get('meanf')
+    keys = kwargs.get('keys')   # replaced by absinfo
+    deltaF = kwargs.get('deltaF')
+    diff = kwargs.get('diff')
 
-### 3.6 An overview of all format libraries
 
-| library                 | formats                      | since version | read/write | internal tests | requirements   |
-|-------------------------|------------------------------|---------------|------------|----------------|----------------|
-| format_abs_magpy.py     |                              |               |            |                |                |
-| format_acecdf.py        |                              | 1.x           |            |                |                |
-| format_autodif.py       |                              |               |            |                |                |
-| format_autodif_fread.py |                              |               |            |                |                |
-| format_basiccsv.py      | CSV                          | 2.0.0         | rw         | yes            | csv            |
-| format_bdv.py           |                              | 1.x           |            |                |                |
-| format_covjson.py       |                              |               |            |                |                |
-| format_cr800.py         |                              | 1.x           |            |                |                |
-| format_didd.py          |                              |               |            |                |                |
-| format_dtu.py           |                              | 1.x           |            |                |                |
-| format_gdas.py          |                              | 1.x           |            |                |                |
-| format_gfz.py           |                              |               |            |                |                |
-| format_gfztmp.py        |                              | 1.x           |            |                |                |
-| format_gsm19.py         | GSM19                        | 2.0.0         | r          | untested       |                |
-| format_hapijson.py      |                              |               |            |                |                |
-| format_iaga02.py        | IAGA                         | 2.0.0         | rw         | yes            | pyproj         |
-| format_imagcdf.py       | IMAGCDF                      | 2.0.0         | rw         | yes            | pyproj, cdflib |
-| format_imf.py           | IAF, IMF, DKA, *BLV*, *IYFV* | 2.0.0         | rw         | yes            | pyproj         |
-| format_iono.py          |                              |               |            |                |                |
-| format_json.py          |                              |               |            |                |                |
-| format_latex.py         |                              |               |            |                |                |
-| format_lemi.py          |                              |               |            |                |                |
-| format_magpy.py         | PYASCII, PYSTR, PYBIN        | 2.0.0         | rw,rw,r    | yes            | csv            |
-| format_magpycdf.py      | PYCDF                        | 2.0.0         | rw         | yes            | cdflib         |
-| format_nc.py            |                              | 1.x           | r          | defunc         | netcdf         |
-| format_neic.py          | NEIC                         | 2.0.0         | r          | untested       |                |
-| format_noaa.py          | NOAAACE                      | 2.0.0         | r          | no             |                |
-| format_pha.py           |                              |               |            |                |                |
-| format_pos1.py          |                              |               |            |                |                |
-| format_predstorm.py     |                              |               |            |                |                |
-| format_qspin.py         |                              | 1.x           |            |                |                |
-| format_rcs.py           |                              |               | r          | defunc         |                |
-| format_sfs.py           |                              |               |            |                |                |
-| format_simpletable.py   |                              | 1.x           |            |                |                |
-| format_tsf.py           | TSF                          | 2.0.0         | r          | untested       |                |
-| format_wdc.py           |                              |               | rw         |                |                |
-| format_wic.py           |                              |               |            |                |                |
-| format_wik.py           |                              | 1.x           |            |                |                |
-| magpy_absformats.py     |                              |               |            |                |                |
-| magpy_formats.py        |                              |               |            |                |                |
+#### 3.3.5 IMF format
+
+    mode = kwargs.get('mode')
+    version = kwargs.get('version')
+    gin = kwargs.get('gin')
+    datatype = kwargs.get('datatype')
+
+The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute data products. The IMF format can be
+created from basically and data set in 1-minute resolution. Individual files cover one day. The data header of the
+IMF file contains an abbrevation of the geomagnetic information node GIN which by default is set to EDI
+(for Edinburgh). To change that use the "gin" option.
+
+        data.write('/path/to/export/IMF/', gin="GOL")
+
+
+#### 3.3.6 Yearly mean files (IYFV)
+
+When adding values to a yearly mean files you can provide the option *kind*, which can have the following values:
+'A' (default), 'Q' for quiet, and 'D' for disturbed.
+
+        data.write('/path/to/export/I/XXX2022.ymf', kind='Q')
+
+#### 3.3.7 MagPyCDF - the MagPy archive format (PYCDF)
+
+Writing MagPyCDFs supports the *compression* option with values between 0 (no compression) and 9 (maximum compression). 
+The default value is 5.
+
+#### 3.3.8 T-Soft format files (TSF)
+
+When reading tsf files, mainly used in gravity studies, you can use the *channels* option to select the specific data
+channels using a comma separated list. Because of the internal key/column structure a maximum of 15 channels can be
+loaded into one data structure.
+
+        data = read("file.tsf", channels='A,B,C')
+
+#### 3.3.9 Reading data from the INTERMAGNET Webservice
+
+        data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices
+                               ?request=GetData
+                               &observatoryIagaCode=WIC
+                               &dataStartDate=2021-03-10T00:00:00Z
+                               &dataEndDate=2021-03-11T23:59:59Z
+                               &Format=iaga2002
+                               &elements=
+                               &publicationState=adj-or-rep
+                               &samplesPerDay=minute')
+
+(Please note: data access and usage is subjected to the terms and conditions of the individual data provider. Please 
+make sure to read them before accessing any of these products.)
+
+#### 3.3.10 Reading DST data
+
+DST
+
+#### 3.3.11 The Conrad Observatory webservice
+
+Conrad Observatory Webservice
+
+#### 3.3.12 The USGS webservice
+
+USGS webservice
+
+#### 3.3.13 Getting Index data from the GFZ Potsdam
+
+Getting Index data from the GFZ Potsdam:
+
+        data=read('https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp')
+
+The following options are available:
+
+Getting *kp* data from the GFZ Potsdam (old variant):
+
+        data = read(r'http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
+
+(Please note: data access and usage is subjected to the terms and conditions of the individual data provider. Please 
+make sure to read them before accessing any of these products.)
+
+
+#### 3.3.14 Accessing the WDC FTP Server
+
+Getting magnetic data directly from an online source such as the WDC:
+
+        data = read(r'ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
+
+#### 3.3.15 NEIC data
+
+#### 3.3.16 NOAA data
+
+#### 3.3.17 GOES data
+
+
+### 3.4 Converting the internal data structure
+
+
+
+
+
+
+### 3.5 An overview of all format libraries
+
+Can be found in appendix A1.
 
 ## 4. Figures
 
@@ -1349,91 +1383,7 @@ calculations result in
 
 ### 5.12 All methods at a glance
 
-For a summary of all supported methods, see the section **List of all MagPy methods** below.
-
-class  |  method  |  variables  |  description
------  |  ------  |  ---------  |  -----------
-**stream**  |    |    |  
-DataStream  |  _aic  |  self, signal, k, debugmode=None  |  determines Akaki Information Criterion for a specific index k
-DataStream  |  _convertstream  |  self, coordinate, **kwargs  |  Convert coordinates of x,y,z columns in stream
-DataStream  |  _copy_column  |  self, key, put2key  |  copy one column to another key
-DataStream  |  _det_trange  |  self, period  |  starting with coefficients above 1%
-DataStream  |  _drop_column  |  self, key  |  drop contents of a column from a stream
-DataStream  |  _get_column  |  self, key  |  Helper to drop lines with NaNs in any of the selected keys
-DataStream  |  _get_key_headers  |  self  |  return times of first and last stream data points
-DataStream  |  _get_key_names  |  self, key  |  returns a numpy array of selected columns from Stream
-DataStream  |  _get_max  |  self,**kwargs  |  Returns keys in datastream
-DataStream  |  _get_min  |  self, key, returntime=False  |  returns float
-DataStream  |  _get_variance  |  self, key, returntime=False  |  returns float
-DataStream  |  _move_column  |  self, key, put2key  |  moves one column to another key
-DataStream  |  _print_key_headers  |  self  |  Prints keys in datastream with variable and unit
-DataStream  |  _put_column  |  self, column, key, columnname, columnunit  |  adds a column to a Stream
-DataStream  |  _remove_nancolumns  |    |  
-DataStream  |  _select_keys  |    |  
-DataStream  |  _select_timerange  |  self, start, end  |  
-DataStream  |  _tau  |  self, period  |  low pass filter with
-DataStream  |  add  |  self, datlst)  |  
-DataStream  |  aic_calc  |  self, key, **kwargs  |  returns stream
-DataStream  |  amplitude  |    |  
-DataStream  |  baseline  |  self, absolutestream, **kwargs  |  calculates baseline correction for input stream
-DataStream  |  bc  |  self, ??, **kwargs  |  applies baseline correction based on header information
-DataStream  |  calc_f  |  self, **kwargs  |  
-DataStream  |  compensation  |  self,**kwargs  |  applies compensation field values from header to x,y,z
-DataStream  |  cut  |  self,length,kind=0,order=0  |  
-DataStream  |  dailymeans  |  self  |  for DI stream
-DataStream  |  delta_f  |  self, **kwargs  |  Calculates the difference of x+y+z to f
-DataStream  |  determine_rotationangles  |    |  
-DataStream  |  dict2stream  |    |  
-DataStream  |  differentiate  |  self, **kwargs  |  returns stream
-DataStream  |  dropempty  |    |  
-DataStream  |  dwt_calc  |  self,key='x',wavelet='db4',level=3,plot=False,outfile=None, window=5  |  helper method for storm detection
-DataStream  |  end  |  self  |  return endtime
-DataStream  |  extend  |  self,datlst,header  |  Extends stream object
-DataStream  |  extract  |  self, key, value, compare=None, debugmode=None  |  
-DataStream  |  extract_headerlist  |  self, element, parameter=1, year=None  |  
-DataStream  |  extrapolate  |  self, start, end  |  read absolute stream and extrapolate the data
-DataStream  |  filter  |  self, **kwargs  |  returns filtered stream
-DataStream  |  fillempty  |    |  
-DataStream  |  findtime  |  self,time  |  returns index of given time
-DataStream  |  fit  |  self, keys, **kwargs  |  returns fitting function
-DataStream  |  func2header  |    |  
-DataStream  |  func2stream  |    |  
-DataStream  |  get_fmi_array  |  self, missing_data=None, debug=False  |  helper method for K_fmi determination
-DataStream  |  get_gaps  |  self, **kwargs  |  determines gaps in time axis and fills them with NaN
-DataStream  |  get_key_name  |    |  
-DataStream  |  get_key_unit  |    |  
-DataStream  |  get_sampling_period  |  self  |  sampling perid in seconds
-DataStream  |  harmfit  |    |  
-DataStream  |  hdz2xyz  |    |  
-DataStream  |  idf2xyz  |    |  
-DataStream  |  integrate  |  self, **kwargs  |  returns stream
-DataStream  |  interpol  |  self, keys, **kwargs  |  returns interpolation function
-DataStream  |  interpolate_nans  |    |  
-DataStream  |  mean  |  self, key, **kwargs  |  Calculates mean values for the specified key, Nan's are regarded for
-DataStream  |  modwt_calc  |  self,key='x',wavelet='haar',level=1,plot=False,outfile=None,window=5  |  helper method for storm detection
-DataStream  |  multiply  |  self, factors  |  
-DataStream  |  offset  |  self, offsets  |  Apply constant offsets to elements of the datastream
-DataStream  |  randomdrop  |  self, percentage=None, fixed_indicies=None  |  
-DataStream  |  remove  |  self, starttime=starttime, endtime=endtime  |  
-DataStream  |  resample  |  self, keys, **kwargs  |  Resample stream to given sampling period
-DataStream  |  rotation  |  self,**kwargs  |  Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs
-DataStream  |  samplingrate  |  self, **kwargs  |  sampling period in seconds, rounded
-DataStream  |  simplebasevalue2stream  |    |  
-DataStream  |  smooth  |  self, keys, **kwargs  |  smooth the data using a window with requested size
-DataStream  |  sorting  |  self  |  Sorts object
-DataStream  |  start  |  self  |  return starttime
-DataStream  |  steadyrise  |    |  
-DataStream  |  stream2dict  |  self,dictkey='DataBaseValues'  |  
-DataStream  |  trim  |  self, starttime=None, endtime=None, newway=False  |  returns stream within new time frame
-DataStream  |  use_sectime  |  self  |  Swap between primary and secondary time (if sectime is available)
-DataStream  |  write  |  self, filepath, **kwargs  |  Writing Stream to a file
-DataStream  |  xyz2hdz  |    |  
-DataStream  |  xyz2idf  |    |  
-  |  determine_time_shift  |    |  find time shift between two streams
-  |  join_streams  |    |  join all contents from provided streams including length extension
-  |  merge_streams  |    |  merge contents from different streams, eventually fill gaps with data of subsequent streams
-  |  subtract_streams  |    |  differences of two stream
-
+For a summary of all supported methods can be found in appendix A2.
 
 ## 6. Annotating data and flagging
 
@@ -1893,8 +1843,8 @@ using a non-magnetic theodolite. DI measurements will provide absolute values D(
 
 + **alternative pier (P(alt)** : any other pier where once in a while DI measurements are performed
 
-+ **pier deltaD,deltaI and deltaF (pdD, pdI, pdF)** : differences between P(ref) and P(alt) which can be applied to P(alt) data, so that 
-baseline corrected results using P(alt) data correspond to BCR of P(ref)
++ **pier deltaD,deltaI and deltaF (pdD, pdI, pdF)** : differences between P(ref) and P(alt) which can be applied to 
+P(alt) data, so that baseline corrected results using P(alt) data correspond to BCR of P(ref)
 
 + **deltaF (dF)** : the difference in F between a continuously measuring scalar sensor and the reference pier (P(ref))
 
@@ -2792,7 +2742,8 @@ associated value. Parameter "all" will delete all existing flags in the database
 
 Text
 
-## 10. Additional methods and functions
+
+## 10. Additional methods and functions - TODO
 
 ### 10.1 Testing data validity before submissions to IM and IAGA
 
@@ -2897,418 +2848,186 @@ The meta-information fields can hold much more information than required by most
 
 
 
-### 11 Data transfer
+## Appendix
+
+### A1 - supported data formats and developments state
+
+
+| library                 | formats                      | version | read/write | runtime tests | RW | requirements |
+|-------------------------|------------------------------|---------|------------|---------------|----|--------------|
+| format_abs_magpy.py     |                              |         |            |           |        |              |
+| format_acecdf.py        | ACECDF*                      | 1.x     | r          |           |        |              |
+| format_autodif.py       |                              |         |            |           |        |              |
+| format_autodif_fread.py |                              |         |            |           |        |              |
+| format_basiccsv.py      | CSV                          | 2.0.0   | rw         | yes       | X      | csv          |
+| format_bdv.py           | BDV1**                       | 0.x     |            |           |        |              |
+| format_covjson.py       | COVJSON*                     |         | rw         |           |        | json         |
+| format_cr800.py         | CR800*,RADON                 | 2.0.0   | r          | no        | X      | csv          |
+| format_didd.py          | DIDD                         | 2.0.0   | rw         | yes       | X      | csv          |
+| format_dtu.py           | DTU1**                       | 0.x     |            |           |        |              |
+| format_gdas.py          |                              | 1.x     |            |           |        |              |
+| format_gfz.py           | GFZKP,GFZINDEXJSON           | 2.0.0   | r          | yes       | -,-    | json         |
+| format_gfzcdf.py        | GFZCDF                       | 2.0.0   | r          | no        | X      |              |
+| format_gfztmp.py        | GFZTMP                       | 2.0.0   | r          | -         | -      |              |
+| format_gsm19.py         | GSM19 (b,wg)                 | 2.0.0   | r          | no        | X      |              |
+| format_hapijson.py      |                              | -.-.-   | rw         | future    |        | json         |
+| format_iaga02.py        | IAGA                         | 2.0.0   | rw         | yes       | X      | pyproj       |
+| format_imagcdf.py*      | IMAGCDF                      | 2.0.0   | rw         | yes       | X      | pyproj,cdflib |
+| format_imf.py           | IAF,IMF,DKA,BLV(1,2),IYFV*   | 2.0.0   | rw         | yes       | X,X,X,X,X | pyproj    |
+| format_iono.py          | IONO                         | 2.0.0   | r          | no        | X      | csv          |
+| format_json.py          |                              |         | rw         |           |        |              |
+| format_latex.py         |                              |         | w          |           |   ,    |              |
+| format_lemi.py          | LEMIHF*,LEMIBIN*,LEMIBIN1    | 2.0.0   | r,r,r      | no        | -,-,X  | struct       |
+| format_magpy.py         | PYASCII,PYSTR,PYBIN          | 2.0.0   | rw,rw,r    | yes       |        | csv          |
+| format_magpycdf.py***   | PYCDF                        | 2.0.0   | rw         | yes       |        | cdflib       |
+| format_nc.py            | NETCDF*                      | -.-.-   | rw         | future    |        | netcdf       |
+| format_neic.py          | NEIC                         | 2.0.0   | r          | no        | X      |              |
+| format_noaa.py          | NOAAACE                      | 2.0.0   | r          | no        | X      |              |
+| format_pos1.py          | POSMPB,POS1TXT,POS1          | 2.0.0   | r,r,r      | no        | X,X,X  |              |
+| format_predstorm.py     | PREDSTORM                    | 2.0.0   | r          | no        | X      |              |
+| format_qspin.py         | QSPIN                        | 2.0.0   | r          | no        | X      |              |
+| format_rcs.py           | RMRCS,RCS*                   | 2.0.0   | r          | no        | X,-    |              |
+| format_sfs.py           | SFDMI**,SFGSM**              | 0.x     | r,r        |           |        |              |
+| format_tsf.py           | TSF                          | 2.0.0   | r          | no        | X      |              |
+| format_wdc.py           | WDC*                         | 2.0.0   | rw*        | to be done    | X  |              |
+| format_wic.py           | IWT,METEO,USBLOG*,LIPPGRAV,LNM* | 2.0.0 | r,r,r,r,r | no        | X,X,-,X,- | csv       |
+| format_wik.py           | PMAG1,PMAG2,OPT**            | 2.0.0   | r,r        | no        | X,X    |              |
+
+Runtime tests: internal testing routines contained within each library file, only available for rw libraries
+RW: a local read/(write) test based on various example files. Only available on dedicated testing machines
+Write tests are also included in stream.write which stores dummy data in all file types supporting write_format commands. 
+
+
+*  incomplete formats or tests:
+   CR800 - not yet written completely plus no data
+   NETCDF - not yet written
+   RCS - not yet written
+   WDC - test with minute data, write test of minute and hour missing
+   IYFV - read and write tests missing
+   GFZTMP - untested but principally useable
+
+** deprecated formats:
+   OPT (in wik, old excel import from optical data readout)
+   DTU1 (in dtu, text format used when jürgen was at dtu, still in linestruct version)
+   BDV1 (in bdv, Budkov data format)
+   SFDMI,SFGSM (in sfs, San Fernando data format)
+   removed in 2.0.0:
+   CS (in wic, was never included properly - CS data is creating binary files)
+   PHA (in format_pha.py, deleted, potentially hazarduous asteroids)
+   COMMATXT - (in format_simpletable.py) replaced by basiccsv, CSV
+
+*** PYCDF writing with flags still missing
+
+**** add ebro event data into the library
+
+### A2 - supported data formats and developments state
+
+| class                |  method  |  since version  |  until version  |  runtime test  |  result verification  | manual  |  *tested by | 
+| ----------------------|  ------  |  -------------  |  -------------  |  ------------  |  ------------------  |---------|  ---------- |
+|  **stream**           |             |         |                 |                |                  |         | |
+|  DataStream           |  _aic       |  2.0.0  |                 |  yes*          |  yes*            | -       |  core.activity |
+|  DataStream           |  _convertstream  |  2.0.0  |            |  yes           |  yes             | 5.2     | |
+|  DataStream           |  _copy_column  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  _det_trange  |  2.0.0  |               |  yes*          |  yes             | -       |  filter |
+|  DataStream           |  _drop_column  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  _find_t_limits  |  2.0.0  |  2.1.0     |  yes           |  -               | -       | |
+|  DataStream           |  _get_column  |  2.0.0  |               |  yes           |  yes             | 5.1     | |
+|  DataStream           |  _get_key_headers  |  2.0.0  |          |  yes           |  yes             | 5.1     | |
+|  DataStream           |  _get_key_names  |  2.0.0  |            |  yes           |  yes             | 5.1     | |
+|  DataStream           |  _get_max  |   2.0.0  |                 |  yes           |  yes             | 5.5     | |
+|  DataStream           |  _get_min  |  2.0.0  |                  |  yes           |  yes             | 5.5     | |
+|  DataStream           |  _get_variance  |  2.0.0  |             |  yes           |  yes             | 5.5     | |
+|  DataStream           |  _move_column  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  _print_key_headers  |  2.0.0  |        |  yes           |  -               | 5.1     | |
+|  DataStream           |  _put_column  |  2.0.0  |               |  yes           |  yes             | 5.1     | |
+|  DataStream           |  _remove_nancolumns  |  2.0.0  |        |  yes*          |  yes             | 5.1     |  subtract_streams |
+|  DataStream           |  _select_keys  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  _select_timerange  |  2.0.0  |         |  yes*          |  yes             | 5.1     |  write |
+|  DataStream           |  _tau  |       2.0.0  |                 |  yes*          |  yes             | -       |  filter |
+|  DataStream           |  add  |        2.0.0  |                 |  yes*          |  yes*            | -       |  absolutes |
+|  DataStream           |  apply_deltas  |  2.0.0  |              |  yes           |  yes*            |         |  methods.data_for_di |
+|  DataStream           |  aic_calc   |  2.0.0  |                 |  yes           |  yes*            | 8.2     | core.activity |
+|  DataStream           |  amplitude  |  2.0.0  |                 |  yes           |  yes             | 5.5     | |
+|  DataStream           |  baseline  |   2.0.0  |                 |  yes           |  yes             | 5.9,7.5 | |
+|  DataStream           |  bc  |         2.0.0  |                 |  yes           |  yes             | 7.5     | |
+|  DataStream           |  calc_f  |     2.0.0  |                 |  yes           |  yes             | 5.4     | |
+|  DataStream           |  compensation  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  cut  |        2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  dailymeans  |  2.0.0  |                |  yes           |  yes             | 5.3     | |
+|  DataStream           |  delta_f  |    2.0.0  |                 |  yes           |  yes             | 5.4     | |
+|  DataStream           |  derivative   |  2.0.0  |               |  yes           |  yes             | 5.7     | |
+|  DataStream           |  determine_rotationangles |  2.0.0  |    |  yes         |  yes             | 5.2     | |
+|  DataStream           |  dict2stream  |  2.0.0  |               |  yes*          |  yes*            | -       |  baseline |
+|  DataStream           |  dropempty  |  2.0.0  |                 |  yes*          |  yes*            | -       |  sorting |
+|  DataStream           |  dwt_calc  |   2.0.0  |                 |  yes*          |  yes*            | 8.2     |  core.activity |
+|  DataStream           |  end  |        2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  extend  |     2.0.0  |                 |  yes*          |  yes             | 5.10    |  read |
+|  DataStream           |  extract  |    2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  extract_headerlist |    2.0.0  |       |  yes           |  -               | 8.2     |  core.activity |
+|  DataStream           |  extrapolate  |  2.0.0  |               |  yes           |  yes             | 5.8     | |
+|  DataStream           |  filter  |     2.0.0  |                 |  yes           |  yes             | 5.3     | |
+|  DataStream           |  fillempty  |  2.0.0  |                 |  yes*          |  yes*            | -       |  sorting |
+|  DataStream           |  findtime  |   2.0.0  |                 |  yes*          |  yes             | 5.1     |  resample |
+|  DataStream           |  fit  |        2.0.0  |                 |  yes           |  yes             | 5.9     | |
+|  DataStream           |  func2header  |  2.0.0  |               |  yes           |  yes             | 5.9     | |
+|  DataStream           |  func2stream  |  2.0.0  |               |  yes           |  yes             | 5.9     | |
+|  DataStream           |  get_fmi_array  |  2.0.0  |             |  yes*          |  yes*            |         |  core.activity |
+|  DataStream           |  get_gaps  |   2.0.0  |                 |  yes           |  yes             | 5.3     | |
+|  DataStream           |  get_key_name  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  get_key_unit  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  get_sampling_period |  2.0.0  |       |  yes*          |  yes             | -       |  samplingrate |
+|  DataStream           |  harmfit  |    2.0.0  |                 |  yes*          |  yes             | -       |  fit |
+|  DataStream           |  hdz2xyz  |    2.0.0  |                 |  yes*          |  yes*            | 5.2     |  _convertstream |
+|  DataStream           |  idf2xyz  |    2.0.0  |                 |  yes*          |  yes*            | 5.2     |  _convertstream |
+|  DataStream           |  integrate  |  2.0.0  |                 |  yes           |  no              | 5.7     | |
+|  DataStream           |  interpol  |   2.0.0  |                 |  yes           |  yes             | 5.9     | |
+|  DataStream           |  interpolate_nans  |  2.0.0  |          |  yes           |  yes             | 5.3,5.9 | |
+|  DataStream           |  length  |     2.0.0  |                 |  yes*          |  yes             | 5.1     | |
+|  DataStream           |  mean  |       2.0.0  |                 |  yes           |  yes             | 5.5     | |
+|  DataStream           |  modwt_calc  |  2.0.0  |                |  yes*          |  yes*            | -       |  core.activity |
+|  DataStream           |  multiply  |   2.0.0  |                 |  yes           |  yes             | 5.6     | |
+|  DataStream           |  offset  |     2.0.0  |                 |  yes           |  yes             | 5.6     | |
+|  DataStream           |  randomdrop  |  2.0.0  |                |  yes           |  yes             | 5.1     | |
+|  DataStream           |  remove  |     2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  resample  |   2.0.0  |                 |  yes*          |  yes             | 5.3     |  filter |
+|  DataStream           |  rotation  |   2.0.0  |                 |  yes           |  yes             | 5.2     | |
+|  DataStream           |  samplingrate  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  simplebasevalue2stream |  2.0.0  |    |  yes*          |  yes*            | !       | test_absolute_analysis |
+|  DataStream           |  smooth  |     2.0.0  |                 |  yes           |  yes             | 5.3     | |
+|  DataStream           |  sorting  |    2.0.0  |                 |  yes*          |  no              | 5.1     |  read |
+|  DataStream           |  start  |      2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  steadyrise  |  2.0.0  |                |  yes           |  not yet         |         | |
+|  DataStream           |  stream2dict  |  2.0.0  |               |  yes*          |  yes*            | -       |  baseline |
+|  DataStream           |  timerange  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  trim  |       2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  use_sectime  |  2.0.0  |               |  yes           |  yes             | 5.1     | |
+|  DataStream           |  variables  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  write  |      2.0.0  |                 |  yes           |  yes*            | 3.x     | in runtime |
+|  DataStream           |  xyz2hdz  |    2.0.0  |                 |  yes*          |  yes*            | 5.2     |  _convertstream |
+|  DataStream           |  xyz2idf  |    2.0.0  |                 |  yes*          |  yes*            | 5.2     |  _convertstream |
+|     | determine_time_shift |  2.0.0  |              |  yes           |  yes*            | 5.10    | validity in runtime |
+|     | join_streams         |       2.0.0  |                 |  yes           |  yes*            | 5.10    | validity in runtime |
+|     | merge_streams        |      2.0.0  |                 |  yes           |  yes*            | 5.10    | validity in runtime |
+|     | subtract_streams     |   2.0.0  |                 |  yes           |  yes*            | 5.10    | validity in runtime |
+|     | append_streams       |     2.0.0  |                 |  ...           |  yes*            | 5.10    | validity in runtime |
+
+
+deprecated:
+    - stream._find_t_limits()
+    - stream.flag_range()   -> moved to core.flagging
+    - stream.flag_outlier(self, **kwargs)   -> moved to core.flagging
+    - stream.remove_flagged(self, **kwargs)  -> core.flagging.apply_flags
+    - stream.flag()  -> core.flagging.apply_flags
+    - stream.bindetector(self,key,text=None,**kwargs):
+    - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
+
+
+removed:
+    - stream.extractflags()  -> not useful any more
+    - stream.flagfast()      -> not useful any more - used for previous flagging plots outside xmagpy
+    - stream.flaglistadd()   -> core.flagging add
 
-MagPy contains a number of methods to simplify data transfer for observatory applications. Methods within the basic Python functionality can also be very useful. Using the implemented methods requires:
 
-        from magpy import transfer as mt
-
-#### 11.10.1 Downloads
-
-Use the `read` method as outlined above. No additional imports are required.
-
-#### 11.10.2 FTP upload
-
-Files can also be uploaded to an FTP server:
-
-        mt.ftpdatatransfer(localfile='/path/to/data.cdf',ftppath='/remote/directory/',myproxy='ftpaddress or address of proxy',port=21,login='user',passwd='passwd',logfile='/path/mylog.log')
-
-The upload methods using FTP, SCP and GIN support logging. If the data file failed to upload correctly, the path is added to a log file and, when called again, upload of the file is retried. This option is useful for remote locations with unstable network connections.
-
-#### 11.10.3 Secure communication protocol (SCP)
-
-To transfer via SCP:
-
-        mt.scptransfer('user@address:/remote/directory/','/path/to/data.cdf',passwd,timeout=60)
-
-#### 11.10.4 Upload data to GIN
-
-Use the following command:
-
-        mt.ginupload('/path/to/data.cdf', ginuser, ginpasswd, ginaddress, faillog=True, stdout=True)
-
-#### 11.10.5 Avoiding real-text passwords in scripts
-
-In order to avoid using real-text password in scripts, MagPy comes along with a simple encryption routine.
-
-        from magpy.opt import cred as mpcred
-
-Credentials will be saved to a hidden file with encrypted passwords. To add information for data transfer to a machine called 'MyRemoteFTP' with an IP of 192.168.0.99:
-
-        mpcred.cc('transfer', 'MyRemoteFTP', user='user', passwd='secure', address='192.168.0.99', port=21)
-
-Extracting passwd information within your data transfer scripts:
-
-        user = mpcred.lc('MyRemoteFTP', 'user')
-        password = mpcred.lc('MyRemoteFTP','passwd')
-
-
-##### Citations
-
-To be added
-
-
-
-### 12.13 Monitoring scheduled scripts
-
-Automated analysis can e easily accomplished by adding a series of MagPy commands into a script. A typical script could be:
-
-        # read some data and get means
-        data = read(example1)
-        mean_f = data.mean('f')
-
-        # import monitor method
-        from magpy.opt import Analysismonitor
-        analysisdict = Analysismonitor(logfile='/var/log/anamon.log')
-        analysisdict = analysisdict.load()
-        # check some arbitray threshold
-        analysisdict.check({'data_threshold_f_GSM90': [mean_f,'>',20000]})
-
-If provided criteria are invalid, then the logfile is changed accordingly. This method can assist you particularly in checking data actuality, data contents, data validity, upload success, etc. In combination with an independent monitoring tool like [Nagios], you can easily create mail/SMS notfications of such changes, in addition to monitoring processes, live times, disks etc. [MARCOS] comes along with some instructions on how to use Nagios/MagPy for data acquisition monitoring.
-
-### 12.14 Data acquisition support
-
-MagPy contains a couple of modules which can be used for data acquisition, collection and organization. These methods are primarily contained in two applications: [MARTAS] and [MARCOS]. MARTAS (Magpy Automated Realtime Acquisition System) supports communication with many common instruments (e.g. GSM, LEMI, POS1, FGE, and many non-magnetic instruments) and transfers serial port signals to [WAMP] (Web Application Messaging Protocol), which allows for real-time data access using e.g. WebSocket communication through the internet. MARCOS (Magpy's Automated Realtime Collection and Organistaion System) can access such real-time streams and also data from many other sources and supports the observer by storing, analyzing, archiving data, as well as monitoring all processes. Details on these two applications can be found elsewhere.
-
-
-### 12.15 Graphical user interface
-
-Many of the above mentioned methods are also available within the graphical user interface of MagPy.
-To use this check the installation instructions for your operating system. You will find Video Tutorials online (to be added) describing its usage for specific analyses.
-
-
-### 12.16 Current developments
-
-#### 12.16.1 Exchange data objects with [ObsPy]
-
-MagPy supports the exchange of data with ObsPy, the seismological toolbox. Data objects of both python packages are very similar. Note: ObsPy assumes regular spaced time intervals. Please be careful if this is not the case with your data. The example below shows a simple import routine, on how to read a seed file and plot a spectrogram (which you can identically obtain from ObsPy as well). Conversions to MagPy allow for vectorial analyses, and geomagnetic applications. Conversions to ObsPy are useful for effective high frequency analysis, requiring evenly spaced time intervals, and for exporting to seismological data formats.
-
-        from obspy import read as obsread
-        seeddata = obsread('/path/to/seedfile')
-        magpydata = obspy2magpy(seeddata,keydict={'ObsPyColName': 'x'})
-        mp.plotSpectrogram(magpydata,['x'])
-
-Possible issues with MagPy and ObsPy on the same machine as obspy requires specific, eventually conflicting scipy/numpy modules:
-If you observe such problems, consider installing ObsPy via APT
-
-  https://github.com/obspy/obspy/wiki/Installation-on-Linux-via-Apt-Repository
-
-Afterwards you can install magpy as described above.
-Using essential python3 packages from apt is also useful, if dependency problems are observerd:
-
-        sudo apt install python3-scipy, python3-matplotlib, python3-numpy
-
-
-#### 12.16.2 Flagging in ImagCDF
-
-        datawithspikes = read(example1)
-        flaggeddata = datawithspikes.flag_outlier(keys=['f'],timerange=timedelta(minutes=1),threshold=3)
-        mp.plot(flaggeddata,['f'],annotate=True)
-        flaggeddata.write(tmpdir,format_type='IMAGCDF',addflags=True)
-
-The `addflags` option denotes that flagging information will be added to the ImagCDF format. Please note that this is still under development and thus content and format specifications may change. So please use it only for test purposes and not for archiving. To read and view flagged ImagCDF data, just use the normal read command, and activate annotation for plotting.
-
-        new = read('/tmp/cnb_20120802_000000_PT1S_1.cdf')
-        mp.plot(new,['f'],annotate=True)
-
-
-## 13. Predefined scripts
-
-MagPy comes with a steadily increasing number of applications for various purposes. These applications can be run from some command prompt and allow to simplify/automize some commonly used applications of MagPy. All applications have the same syntax, consisting of the name of application and options. The option -h is available for all applications and provides an overview about purpose and options of the application:
-
-        $> application -h
-
-
-### 13.1 Running applications in Linux/MacOs
-
-On Linux Systems all applications are added the bin directory and can be run directly from any command interface/terminal after installation of MagPy:
-
-        $> application -h
-
-### 13.2 Running applications in Windows
-
-After installing MagPy/GeomagPy on Windows, three executables are found in the MagPy program folder. For running applications you have to start the MagPy "command prompt". In this terminal you will have to go to the Scripts directory:
-
-        .../> cd Scripts
-
-And here you now can run the application of your choice using the python environment:
-
-        .../Scripts>python application -h
-
-
-### 13.3 Applications
-
-The available applications are briefly intruduced in the following. Please refer to "application -h" for all available options for each application.
-
-#### 13.3.1 mpconvert
-
-mpconvert converts bewteen data formats based on MagPy.
-Typical applications are the conversion of binary data formats
-to readable ASCII data sets or the conversion.
-
-Typical applications include
-
-a) Convert IAGA seconds to IMAGCDF and include obligatory meta information:
-
-        mpconvert -r "/iagaseconds/wic201701*" -f IMAGCDF -c month -w "/tmp"
-                     -m "DataStandardLevel:Full,IAGACode:WIC,DataReferences:myref"
-
-b) Convert IMAGCDF seconds to IAF minute (using IAGA/IM filtering procedures):
-
-        mpconvert -r "/imagcdf/wic_201701_000000_PT1S_4.cdf" -f IAF -i -w "/tmp"
-
-
-mpconvert -r "/srv/products/data/magnetism/definitive/wic2017/ImagCDF/wic_201708_000000_PT1S_4.cdf" -f IAF -i -w "/tmp"
-
-#### 13.3.2 addcred
-
-Used to store encrypted credential information for automatic data transfer. So that sensitive information has not to be written in plain text in scripts or cron jobs.
-
-
-a) Add information for ftp data transfer. This information is encrypted and can be accessed by referring to the shortcut "zamg".
-
-        addcred -t transfer -c zamg -u max -p geheim
-                  -a "ftp://ftp.remote.ac.at" -l 21
-
-## 14. List of all MagPy methods
-
-Please use the help method (section 2.3) for descriptions and return values.
-
-| group | method | parameter |
-| ----- | ------ | --------- |
-| - | **findpath** | name, path |
-| - | **_pickle_method** | method |
-| - | **_unpickle_method** | func_name, obj, cls |
-| stream | **__init__** | self, container=None, header={},ndarray=None |
-| stream | **ext** | self, columnstructure |
-| stream | **add** | self, datlst |
-| stream | **length** | self |
-| stream | **replace** | self, datlst |
-| stream | **copy** | self |
-| stream | **__str__** | self |
-| stream | **__repr__** | self |
-| stream | **__getitem__** | self, index |
-| stream | **__len__** | self |
-| stream | **clear_header** | self |
-| stream | **extend** | self,datlst,header,ndarray |
-| stream | **union** | self,column |
-| stream | **removeduplicates** | self |
-| stream | **start** | self, dateformt=None |
-| stream | **end** | self, dateformt=None |
-| stream | **findtime** | self,time,**kwargs |
-| stream | **_find_t_limits** | self |
-| stream | **_print_key_headers** | self |
-| stream | **_get_key_headers** | self,**kwargs |
-| stream | **_get_key_names** | self |
-| stream | **dropempty** | self |
-| stream | **fillempty** | self, ndarray, keylist |
-| stream | **sorting** | self |
-| stream | **_get_line** | self, key, value |
-| stream | **_take_columns** | self, keys |
-| stream | **_remove_lines** | self, key, value |
-| stream | **_get_column** | self, key |
-| stream | **_put_column** | self, column, key, **kwargs |
-| stream | **_move_column** | self, key, put2key |
-| stream | **_drop_column** | self,key |
-| stream | **_clear_column** | self, key |
-| stream | **_reduce_stream** | self, pointlimit=100000 |
-| stream | **_remove_nancolumns** | self |
-| stream | **_aic** | self, signal, k, debugmode=None |
-| stream | **harmfit** | self,nt, val, fitdegree |
-| stream | **_get_max** | self, key, returntime=False |
-| stream | **_get_min** | self, key, returntime=False |
-| stream | **amplitude** | self,key |
-| stream | **_gf** | self, t, tau |
-| stream | **_hf** | self, p, x |
-| stream | **_residual_func** | self, func, y |
-| stream | **_tau** | self, period, fac=0.83255461 |
-| stream | **_convertstream** | self, coordinate, **kwargs |
-| stream | **_delete** | self,index |
-| stream | **_append** | self,stream |
-| stream | **_det_trange** | self, period |
-| stream | **_is_number** | self, s |
-| stream | **_normalize** | self, column |
-| stream | **_testtime** | self, time |
-| stream | **_drop_nans** | self, key |
-| stream | **_select_keys** | self, keys |
-| stream | **_select_timerange** | self, starttime=None, endtime=None, maxidx=-1 |
-| stream | **aic_calc** | self, key, **kwargs |
-| stream | **baseline** | self, absolutedata, **kwargs |
-| stream | **stream2dict** | self, keys=['dx','dy','dz'], dictkey='DataBaseValues' |
-| stream | **dict2stream** | self,dictkey='DataBaseValues' |
-| stream | **baselineAdvanced** | self, absdata, baselist, **kwargs |
-| stream | **bc** | self, function=None, ctype=None, alpha=0.0,level='preliminary' |
-| stream | **bindetector** | self,key,flagnum=1,keystoflag=['x'],sensorid=None,text=None,**kwargs |
-| stream | **calc_f** | self, **kwargs |
-| stream | **dailymeans** | self, keys=['x','y','z','f'], **kwargs |
-| stream | **date_offset** | self, offset |
-| stream | **delta_f** | self, **kwargs |
-| stream | **f_from_df** | self, **kwargs |
-| stream | **differentiate** | self, **kwargs |
-| stream | **DWT_calc** | self,key='x',wavelet='db4',level=3,plot=False,outfile=None,
-| stream | **eventlogger** | self, key, values, compare=None, stringvalues=None, addcomment=None, debugmode=None |
-| stream | **extract** | self, key, value, compare=None, debugmode=None |
-| stream | **extract2** | self, keys, get='>', func=None, debugmode=None |
-| stream | **extrapolate** | self, start, end |
-| stream | **filter** | self,**kwargs |
-| stream | **fit** | self, keys, **kwargs |
-| stream | **extractflags** | self |
-| stream | **flagfast** | self,indexarray,flag, comment,keys=None |
-| stream | **flag_range** | self, **kwargs |
-| stream | **flag_outlier** | self, **kwargs |
-| stream | **flag** | self, flaglist, removeduplicates=False, debug=False |
-| stream | **flagliststats** | self,flaglist |
-| stream | **flaglistclean** | self,flaglist |
-| stream | **stream2flaglist** | self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None |
-| stream | **flaglistmod** | self, mode='select', flaglist=[], parameter='key', value=None, newvalue=None |
-| stream | **flaglistadd** | self, flaglist, sensorid, keys, flagnumber, comment, startdate, enddate=None |
-| stream | **flag_stream** | self, key, flag, comment, startdate, enddate=None, samplingrate=0., debug=False |
-| stream | **simplebasevalue2stream** | self,basevalue,**kwargs |
-| stream | **func2stream** | self,function,**kwargs |
-| stream | **func_add** | self,function,**kwargs |
-| stream | **func_subtract** | self,function,**kwargs |
-| stream | **get_gaps** | self, **kwargs |
-| stream | **get_rotationangle** | self, xcompensation=0,keys=['x','y','z'],**kwargs |
-| stream | **get_sampling_period** | self |
-| stream | **samplingrate** | self, **kwargs |
-| stream | **integrate** | self, **kwargs |
-| stream | **interpol** | self, keys, **kwargs |
-| stream | **k_extend** | self, **kwargs |
-| stream | **k_fmi** | self, **kwargs |
-| stream | **linestruct2ndarray** | self |
-| stream | **mean** | self, key, **kwargs |
-| stream | **missingvalue** | self,v,window_len,threshold=0.9,fill='mean' |
-| stream | **MODWT_calc** | self,key='x',wavelet='haar',level=1,plot=False,outfile=None |
-| stream | **multiply** | self, factors, square=False |
-| stream | **offset** | self, offsets, **kwargs |
-| stream | **plot** | self, keys=None, debugmode=None, **kwargs |
-| stream | **powerspectrum** | self, key, debugmode=None, outfile=None, fmt=None, axes=None, title=None,**kwargs |
-| stream | **randomdrop** | self,percentage=None,fixed_indicies=None |
-| stream | **remove** | self, starttime=None, endtime=None |
-| stream | **remove_flagged** | self, **kwargs |
-| stream | **remove_outlier** | self, **kwargs |
-| stream | **resample** | self, keys, **kwargs |
-| stream | **rotation** | self,**kwargs |
-| stream | **scale_correction** | self, keys, scales, **kwargs |
-| stream | **selectkeys** | self, keys, **kwargs |
-| stream | **smooth** | self, keys=None, **kwargs |
-| stream | **spectrogram** | self, keys, per_lap=0.9, wlen=None, log=False,
-| stream | **steadyrise** | self, key, timewindow, **kwargs |
-| stream | **stereoplot** | self, **kwargs |
-| stream | **trim** | self, starttime=None, endtime=None, newway=False |
-| stream | **variometercorrection** | self, variopath, thedate, **kwargs |
-| stream | **_write_format** | self, format_type, filenamebegins, filenameends, coverage, dateformat,year |
-| stream | **write** | self, filepath, compression=5, **kwargs |
-| stream | **idf2xyz** | self,**kwargs |
-| stream | **xyz2idf** | self,**kwargs |
-| stream | **xyz2hdz** | self,**kwargs |
-| stream | **hdz2xyz** | self,**kwargs |
-| - | **coordinatetransform** | u,v,w,kind |
-| - | **isNumber** | s |
-| - | **find_nearest** | array,value |
-| - | **ceil_dt** | dt,seconds |
-| - | **read** | path_or_url=None, dataformat=None, headonly=False, **kwargs |
-| - | **_read** | filename, dataformat=None, headonly=False, **kwargs |
-| - | **saveflags** | mylist=None,path=None |
-| - | **loadflags** | path=None,sensorid=None,begin=None, end=None |
-| - | **joinStreams** | stream_a,stream_b, **kwargs |
-| - | **appendStreams** | streamlist |
-| - | **mergeStreams** | stream_a, stream_b, **kwargs |
-| - | **dms2d** | dms |
-| - | **find_offset** | stream1, stream2, guess_low=-60., guess_high=60. |
-| - | **diffStreams** | stream_a, stream_b, **kwargs |
-| - | **subtractStreams** | stream_a, stream_b, **kwargs |
-| - | **stackStreams** | streamlist, **kwargs |
-| - | **compareStreams** | stream_a, stream_b |
-| - | **array2stream** | listofarrays, keystring,starttime=None,sr=None |
-| - | **obspy2magpy** | opstream, keydict={} |
-| - | **extractDateFromString** | datestring |
-| - | **testTimeString** | time |
-| - | **denormalize** | column, startvalue, endvalue |
-| - | **find_nearest** | array, value |
-| - | **maskNAN** | column |
-| - | **nan_helper** | y |
-| - | **nearestPow2** | x |
-| - | **test_time** | time |
-| - | **convertGeoCoordinate** | lon,lat,pro1,pro2 |
-| mpplot | **ploteasy** | stream |
-| mpplot | **plot_new** | stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=False |
-| mpplot | **plot** | stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=False |
-| mpplot | **plotStreams** | streamlist,variables,padding=None,specialdict={},errorbars=None |
-| mpplot | **toggle_selector** | event |
-| mpplot | **addFlag** | data, flagger, indeciestobeflagged, variables |
-| mpplot | **plotFlag** | data,variables=None,figure=False |
-| mpplot | **plotEMD** | stream,key,verbose=False,plottitle=None |
-| mpplot | **plotNormStreams** | streamlist, key, normalize=True, normalizet=False |
-| mpplot | **plotPS** | stream,key,debugmode=False,outfile=None,noshow=False |
-| mpplot | **plotSatMag** | mag_stream,sat_stream,keys,outfile=None,plottype='discontinuous' |
-| mpplot | **plotSpectrogram** | stream, keys, NFFT=1024, detrend=mlab.detrend_none |
-| mpplot | **magpySpecgram** | x, NFFT=256, Fs=2, Fc=0, detrend=mlab.detrend_none |
-| mpplot | **plotStereoplot** | stream,focus='all',colorlist = ['b','r','g','c','m','y','k'] |
-| mpplot | **_plot** | data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False |
-| mpplot | **_confinex** | ax, tmax, tmin, timeunit |
-| mpplot | **_extract_data_for_PSD** | stream, key |
-| database | **dbgetPier** | db,pierid, rp, value, maxdate=None, l=False, dic='DeltaDictionary' |
-| database | **dbgetlines** | db, tablename, lines |
-| database | **dbupdate** | db,tablename, keys, values, condition=None |
-| database | **dbgetfloat** | db,tablename,sensorid,columnid,revision=None |
-| database | **dbgetstring** | db,tablename,sensorid,columnid,revision=None |
-| database | **dbupload** | db, path,stationid,**kwargs |
-| database | **dbinit** | db |
-| database | **dbdelete** | db,datainfoid,**kwargs |
-| database | **dbdict2fields** | db,header_dict,**kwargs |
-| database | **dbfields2dict** | db,datainfoid |
-| database | **dbalter** | db |
-| database | **dbselect** | db, element, table, condition=None, expert=None, debug=False |
-| database | **dbcoordinates** | db, pier, epsgcode='epsg:4326' |
-| database | **dbsensorinfo** | db,sensorid,sensorkeydict=None,sensorrevision = '0001' |
-| database | **dbdatainfo** | db,sensorid,datakeydict=None,tablenum=None,defaultstation='WIC',updatedb=True |
-| database | **writeDB** | db, datastream, tablename=None, StationID=None, mode='replace', revision=None, debug=False, **kwargs |
-| database | **dbsetTimesinDataInfo** | db, tablename,colstr,unitstr |
-| database | **dbupdateDataInfo** | db, tablename, header |
-| database | **stream2db** | db, datastream, noheader=None, mode=None, tablename=None, **kwargs |
-| database | **readDB** | db, table, starttime=None, endtime=None, sql=None |
-| database | **db2stream** | db, sensorid=None, begin=None, end=None, tableext=None, sql=None |
-| database | **diline2db** | db, dilinestruct, mode=None, **kwargs |
-| database | **db2diline** | db,**kwargs |
-| database | **applyDeltas** | db, stream |
-| database | **getBaseline** | db,sensorid, date=None |
-| database | **flaglist2db** | db,flaglist,mode=None,sensorid=None,modificationdate=None |
-| database | **db2flaglist** | db,sensorid, begin=None, end=None, comment=None, flagnumber=-1, key=None, removeduplicates=False |
-| database | **string2dict** | string |
-| tranfer | **_checklogfile** | logfile |
-| tranfer | **ftpdatatransfer** | **kwargs |
-| tranfer | **_missingvals** | myproxy, port, login, passwd, logfile |
-| tranfer | **scptransfer** | src,dest,passwd,**kwargs |
-| tranfer | **ssh_remotefilelist** | remotepath, filepat, user, host, passwd |
-| tranfer | **ginupload** | filename=None, user=None, password=None, url=None,**kwargs |
-| tranfer | **ftpdirlist** | **kwargs |
-| tranfer | **ftpremove** | **kwargs |
-| tranfer | **ftpget** | ftpaddress,ftpname,ftppasswd,remotepath,localpath,identifier,port=None,**kwargs |
-
-
-## 15. Appendix
-
-
-### 15.1 Extended installation instructions
-
-
-        $ sudo apt-get install libproj-dev proj-data proj-bin
-
-On Linux this will look like:
-
-        $ sudo apt-get install python-matplotlib python-scipy python-h5py cython python-pip  
-        $ sudo apt-get install python-wxgtk3.0 # or python-wxgtk2.8 (Debian Stretch)  
-        $ sudo apt-get install python-twisted  
-        $ sudo pip install ffnet
-        $ sudo pip install pyproj==1.9.5
-        $ sudo pip install pyserial
-        $ sudo pip install service_identity
-        $ sudo pip install ownet
-        $ sudo pip install spacepy
-        $ sudo pip install geomagpy  
-
-On Mac and Windows you need to download a python interpreter like [Anaconda] or [WinPython] and then install similar packages, particluarly the old wxpython 3.x.
 
    [magpy-git]: <https://github.com/geomagpy/magpy>
    [magpy_win]: <http://www.conrad-observatory.at>
