@@ -3153,7 +3153,7 @@ CALLED BY:
         EXAMPLE:
             nice_data = bad_data.filter(keys=['x','y','z'])
             or
-            nice_data = bad_data.filter(filter_type='gaussian',filter_width=timedelta(hours=1))
+            nice_data = bad_data.filter(filter_type='gaussian',filter_width=timedelta(hours=1),resampleoffset=timedelta(minutes=30))
 
         APPLICATION:
 
