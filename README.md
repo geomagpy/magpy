@@ -471,29 +471,29 @@ data set.
 
 The write function has a number of options which are highlighted in the following. Further options are available to 
 some data formats which will be discussed in section 3.3.
-
-
-format_type, mode, coverage, 
-
-By default, daily files are created 
-
-filenamebegins, filenameends, dateformat, 
-
-
-
-To create an [INTERMAGNET] CDF (ImagCDF) file:
-
-        data.write(r'/path/to/diretory/',format_type='IMAGCDF')
-
-The filename will be created automatically according to the defined format, which specifically applies for IAF, IAGA
-and ImagCDF files. and the
-date is added to the filename in-between the optional parameters `filenamebegins` and `filenameends`. If `filenameends`
-is missing, `.txt` is used as default.
-
+The most important option will probably be *format_type* to select the data format of the created file. See 
+SUPPORTED_FORMATS (beginning of section 3) for available types. The option *mode* is used to define 'append' (append 
+content when existing), 'overwrite' (overwrite already existing contents), 'skip' (do nothing when existing) or 'remove'
+(delete existing file and replace with new one). And by *coverage* you can select the amount of data stored within
+individual data files. Select between 'hour', 'day' (default), 'month', 'year', and 'all'. Except when selecting 'all'
+the filename will always contain an appropriate datetime format to express the coverage. The default *dateformat* is
+'%Y-%m-%d'. You can change this by any datetime supported other format. If you want to change the filename before the
+date input use the option *filenamebegins*. Filename parts after the datetime input are modified using
+option *filenameends*. Some fileformats have very specific filename and dateformats which will be automatically
+selected based on your data set and its header information to fit the requirements, like IAGA, IMAGCDF, etc. 
+The option *subdirectory* allows you to automatically create subdirectories when storing data. Values can be 'Y', or 
+'Ym' or 'Yj', default is none. This option will create subdirectories with year (Y) plus month (m) or day-of-year (j).
+Finally the option *keys* let you define the data columns to be stored. *keys* expects a list of key names like 
+['x','y','z']. 
 To get an overview about possible write options, also for specific ones, use:
 
         help(DataStream().write)
 
+Let's create a quick example by loading some example data set and store it a CSV file. 
+
+        data = read(example4)
+        data.write('/tmp/', format_type='CSV', mode='replace', coverage='hour', filenamebegins='MYTEST_',
+                           filenameends='.csv', dateformat='%Y%m%d%h', subdirectory='Yj', keys=['x'])
 
 ### 3.3 Specific commands and options for read and write
 
@@ -549,8 +549,7 @@ By default CDF files are compressed. If you do not want that then set option *sk
 
         data.write('/path/to/export/', format_type='IMAGCDF', skipcompression=True)
 
-
-Hint for XMagPy: When reading a IMAGCDF file with mutiple data contents of varying sampling rates the plots of the
+Hint for XMagPy: When reading a IMAGCDF file with multiple data contents of varying sampling rates the plots of the
 lower resolution data are apparently empty. Got to "Plot Options" on the Data panel and use "plottype" -> "continuous"
 to display graphs of low resolution data sets.  
 
@@ -622,10 +621,35 @@ IMF file contains an abbrevation of the geomagnetic information node GIN which b
 
 #### 3.3.6 Yearly mean files (IYFV)
 
-When adding values to a yearly mean files you can provide the option *kind*, which can have the following values:
-'A' (default), 'Q' for quiet, and 'D' for disturbed.
+For IYFV read and write methods are not complimentary as read is used to open full yearmean files whereas write is 
+applied on datastreams covering single year to create single input lines form IYFV files.
 
-        data.write('/path/to/export/IYFV/XXX2022.ymf', format_type='IYFV', kind='Q')
+Although the format specification of yearly mean files is clearly defined within the [INTERMAGNET Technical Manual](https://tech-man.intermagnet.org/stable/appendices/archivedataformats.html#intermagnet-format-for-yearmean-file-iyf-v1-02)
+the existing files in the INTERMAGNET archive interpret these specifications rather flexible. Nonetheless MagPy tries
+to read and import such data structures even if they deviate from the format description. By default only 'A' (all days)
+data is imported, considering 'J' (jumps). If you want to also include 'I' (incomplete) data in addition to 'A' then use
+option *kind*='I'. The *kind* option further supports to select 'Q' (quiet days) or 'D' (disturbed days). When reading 
+data sets with jumps, the jump values will be applied. The jump value is defined as 'J' = old-value - new-value. 
+Pre-jump data values are corrected by old-value - jump. Hereby the full data set is corrected always towards the newest
+values within the selected time series. Please note: this treatment differs from previous MagPy 1.x where values were
+corrected towards the oldest values in the time series. Additional options are *starttime* and *endtime*.
+
+        data = read('/path/to/export/IYFV/yearmean.xxx', kind='Q')
+
+The write method of IYFV has two special conditions: (1) always only writes a single line of either 'A', 'I', 'Q' or
+'D' data. (2) The source data must be a data set covering one year, except D or Q is selected. Yearmean values will be
+automatically determined.
+Either a new file is created if not existing or the new line is appended to an existing file. Overwrite and remove 
+are not working. For complex data sets including Q and D types it is recommended to store just single yearmean values 
+and then use a text editor to copy new data into the complex full yearmean file. Jump lines cannot be created, although
+the content of the jump lines can be determined with methods listed in section 5.
+The write method to add values to a yearly mean has the option *kind*, which can have the following values:
+'A' (default), 'I' for incomplete, 'Q' for quiet, and 'D' for disturbed. Jump values 'J' have to be inserted manually
+in the file. In the following example we calculate the yearmean value of a minute data set and then add this value 
+into either an existing or new yearmean file.
+
+        data = read('/path/to/IAFminute/*.bin')
+        data.write('/path/to/export/IYFV/yearmean.xxx', format_type='IYFV', kind='A')
 
 #### 3.3.7 MagPyCDF - the MagPy archive format (PYCDF)
 
@@ -689,7 +713,7 @@ make sure to read them before accessing any of these products.)
 
 Getting magnetic data directly from an online source such as the WDC:
 
-        data = read(r'ftp://thewellknownaddress/single_year/2011/fur2011.wdc')
+        data = read('ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc')
 
 #### 3.3.15 NEIC data
 

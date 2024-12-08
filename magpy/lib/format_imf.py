@@ -227,22 +227,17 @@ def isIYFV(filename):
     _YYYY.yyy_DDD_dd.d_III_ii.i_HHHHHH_XXXXXX_YYYYYY_ZZZZZZ_FFFFFF_A_EEEE_NNNCrLf
     """
     # Search for identifier in the first three line
-    if sys.version_info >= (3, 0):
-        code = 'rt'
-        try:
-            fi = open(filename, code, errors='replace')
-        except:
-            return False
-    else:
-        code = 'rb'
-        try:
-            fi = open(filename, code)
-        except:
-            return False
+    code = 'rt'
+    try:
+        fi = open(filename, code, errors='replace')
+    except:
+        return False
 
     for ln in range(0,2):
         try:
             temp = fi.readline()
+            if not temp:
+                temp = fi.readline()
         except UnicodeDecodeError as e:
             print ("Found an unicode error whene reading:",e)
             fi.close()
@@ -251,7 +246,7 @@ def isIYFV(filename):
             fi.close()
             return False
         try:
-            searchstr = ['ANNUAL MEAN VALUES', 'Annual Mean Values', 'annual mean values']
+            searchstr = ['ANNUAL MEAN VALUES', 'Annual Mean Values', 'annual mean values', 'ANNUAL MEANS VALUES']
             for elem in searchstr:
                 if temp.find(elem) > 0:
                     logger.debug("isIYFV: Found IYFV data")
@@ -2441,28 +2436,43 @@ def readIYFV(filename, headonly=False, **kwargs):
     """
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
+    kind = kwargs.get('kind')
     debug = kwargs.get('debug')
 
     if debug:
         print ("readIYVF: Reading yearmean file {}".format(filename))
 
-    getfile = True
-
+    if not starttime:
+        starttime = datetime(1516,1,1)
+    else:
+        starttime = testtime(starttime)
+    if not endtime:
+        endtime = datetime.now()
+    else:
+        endtime = testtime(endtime)
     stream = DataStream()
     headers = {}
-    data = []
-    key = None
+    dataarray = []
 
     array = [[] for key in KEYLIST]
 
     cnt = 0
+    ln = 0 # line number
+    comm = '' # comment
     paracnt = 999998
     roworder=['d','i','h','x','y','z','f']
     jumpx,jumpy,jumpz,jumpf=0,0,0,0
-    tsel = 'A' # Use only all days rows
-    tprev = tsel # For jump treatment
+    if not kind or not kind in ['I','Q','D']:
+        tsel = ['A'] # Use only all days rows
+    else:
+        tsel = [kind]
+    if kind == 'I':
+        tsel = ['A','I'] # Use only all days rows
+    tprev = tsel[0] # For jump treatment
     lc = KEYLIST.index('var5')  ## store the line number of each loaded line here
                                 ## this is used by writeIYFV to add at the correct position
+    mainele = KEYLIST.index('str1')  ## store the recording elements
+    stkind = KEYLIST.index('str2')  ## store the kind
     newarray = []
     units = []
     para = []
@@ -2478,169 +2488,139 @@ def readIYFV(filename, headonly=False, **kwargs):
     if debug:
         print ("readIYVF: Reading data (only lines with {}) ...".format(tsel))
 
-
-    if sys.version_info >= (3, 0):
-        code = 'rt'
-        fh = open(filename, code, errors='ignore')  # python3
-    else:
-        code = 'rb'
-        fh = open(filename, code)  #
-
-    if debug:
-        print ("readIYVF: sysinfo = {}".format(sys.version_info))
+    code = 'rt'
+    fh = open(filename, code, errors='ignore')  # python3
 
     for line in fh:
-            line = dropnonascii(line)
-            line = line.rstrip()
+        ln = ln+1
+        line = dropnonascii(line)
+        line = line.rstrip()
+        try:
+            tyear = int(line[:5])
+        except:
+            tyear = 99999
+        cnt = cnt+1
+        #if debug:
+        #    print(line)
+        if line.isspace():
+            # blank line
+            pass
+        elif line.find('ANNUAL') > 0 or line.find('annual') > 0:
+            headfound = True
+            pass
+        elif headfound and not latitudefound and cnt >= 3 and cnt < 6 and not line.find('COLATITUDE') > 0 and len(line) > 0:
+            # station info
+            block = line.split(',')
             try:
-                tyear = int(line[:5])
+                headers['StationName'] = block[0].strip()
             except:
-                tyear = 99999
-            cnt = cnt+1
-            #print ("Line", line)
-            #line = line.lstrip()  # delete leading spaces
-            if line.isspace():
-                # blank line
                 pass
-            elif line.find('ANNUAL') > 0 or line.find('annual') > 0:
-                headfound = True
+            try:
+                headers['StationID'] = block[1].strip()
+                headers['StationIAGAcode'] = block[1].strip()
+            except:
                 pass
-            elif headfound and not latitudefound and cnt >= 3 and cnt < 6 and not line.find('COLATITUDE') > 0 and len(line) > 0:
-                # station info
-                block = line.split(',')
-                try:
-                    headers['StationName'] = block[0].strip()
-                except:
-                    pass
-                try:
-                    headers['StationID'] = block[1].strip()
-                    headers['StationIAGAcode'] = block[1].strip()
-                except:
-                    pass
-                try:
-                    headers['StationCountry'] = block[2].strip()
-                except:
-                    pass
-            elif line.find('COLATITUDE') > 0 and not latitudefound:
-                latitudefound = True
-                loc = line.split()
-                headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
-                headers['DataAcquisitionLongitude'] = float(loc[3])
-                ele = line.split('ELEVATION:')[1]
-                headers['DataElevation'] = float(ele.split()[0])
-                #elif line.find('COLATITUDE') > 0:
-                #    loc = line.split()
-                #    headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
-                #    headers['DataAcquisitionLongitude'] = float(loc[3])
-                #    headers['DataElevation'] = float(loc[3])
-
-            elif line.find(' YEAR ') > 0:
-                paracnt = cnt
-                para = line.split()
-                para = [elem.lower() for elem in para[1:8]]
-            elif cnt == paracnt+1:
-                units = line.split()
-                tmp = ['deg','deg']
-                tmp.extend(units[4:10])
-                units = tmp
-            elif tyear < 3000: # Upcoming year 3k problem ;)
-              try:
+            try:
+                headers['StationCountry'] = block[2].strip()
+            except:
+                pass
+        elif line.find('COLATITUDE') > 0 and not latitudefound:
+            latitudefound = True
+            loc = line.split()
+            headers['DataAcquisitionLatitude'] = 90.0-float(loc[1])
+            headers['DataAcquisitionLongitude'] = float(loc[3])
+            ele = line.split('ELEVATION:')[1]
+            headers['DataElevation'] = float(ele.split()[0])
+        elif line.find(' YEAR ') > 0:
+            paracnt = cnt
+            para = line.split()
+            para = [elem.lower() for elem in para[1:8]]
+        elif cnt == paracnt+1:
+            units = line.split()
+            tmp = ['deg','deg']
+            tmp.extend(units[4:10])
+            units = tmp
+        elif tyear < 3000 and tyear > 1516: # Upcoming year 3k problem ;)
+            try:
                 if not headonly:
-                    #if debug:
-                    # get data
-                    data = line.split()
-                    getdata = True
                     if line.find('J') > 0: # JUMP
                         line = line.replace('     0.0','  0  0.0')
-                        data = line.split()
-                        num = data.index('J')
-                        if len(data) >= 12 and num == 10:
-                            getdata = True
-                        else:
-                            logger.warning("readIYFV: could not interprete jump line")
-                            getdata = False
-                    if not len(data) >= 12:
-                        getdata = False
-                        logger.warning("readIYFV: apparent inconsistency in file format - {}".format(len(data)))
-                    if getdata:
-                        #try:
-                        ye = data[0].split('.')
-                        dat = ye[0]+'-06-01'
-                        row = []
-                        ti = date2num(datetime.strptime(dat,"%Y-%m-%d"))
-                        row.append(dms2d(data[1]+':'+data[2]))
-                        row.append(dms2d(data[3]+':'+data[4]))
-                        row.append(float(data[5]))
-                        row.append(float(data[6]))
-                        row.append(float(data[7]))
-                        row.append(float(data[8]))
-                        row.append(float(data[9]))
-                        t =  data[10]
-                        ele =  data[11]
-                        headers['DataComponents'] = ele
-                        # transfer
-                        #print ("Check", t, tsel)
-                        if len(data) == 13:
-                            note =  data[12]
-                        if t == tsel:
-                            array[0].append(ti)
-                            array[lc].append(cnt)
-                            headers['col-x'] = 'x'
-                            headers['unit-col-x'] = units[para.index('x')]
-                            headers['col-y'] = 'y'
-                            headers['unit-col-y'] = units[para.index('y')]
-                            headers['col-z'] = 'z'
-                            headers['unit-col-z'] = units[para.index('z')]
-                            headers['col-f'] = 'f'
-                            headers['unit-col-f'] = units[para.index('f')]
-                            array[1].append(row[para.index('x')]-jumpx)
-                            array[2].append(row[para.index('y')]-jumpy)
-                            array[3].append(row[para.index('z')]-jumpz)
-                            array[4].append(row[para.index('f')]-jumpf)
-                            #print ("here", array)
-                            checklist = coordinatetransform(array[1][-1],array[2][-1],array[3][-1],'xyz')
-                            #print ("checks")
-                            diffs = (np.array(row) - np.array(checklist))
-                            #print ("diffs")
-                            for idx,el in enumerate(diffs):
-                                goodval = True
-                                if idx in [0,1]: ## Angular values
-                                    if el > 0.008:
-                                        goodval = False
-                                else:
-                                    if el > 0.8:
-                                        goodval = False
-                            if not goodval:
-                                logger.warning("readIYFV: verify conversions between components !")
-                                logger.warning("readIYFV: found: {}".format(np.array(row)))
-                                logger.warning("readIYFV: expected: {}".format(np.array(checklist)))
-                        elif t == 'J' and tprev == tsel:
-                            jumpx = jumpx + row[para.index('x')]
-                            jumpy = jumpy + row[para.index('y')]
-                            jumpz = jumpz + row[para.index('z')]
-                            jumpf = jumpf + row[para.index('f')]
-                        tprev = tsel
-              except:
+                    data = line.split()
+                    ye = data[0].split('.')
+                    dat = ye[0] + '-06-01'
+                    ti = datetime.strptime(dat, "%Y-%m-%d")
+                    t = data[10] # only successful if long enough
+                    if t in tsel or t == 'J':
+                        if ti >= starttime and ti <= endtime: # and not len(data) >= 12:
+                            if t == 'J' and tprev in tsel: # otherwise it will also add jumps in Q and D blocks if A selected
+                                dataarray.append(data)
+                            elif not t == 'J':
+                                dataarray.append(data)
+                    tprev = t
+            except:
                 pass
-            else:
-                pass
-
+        else:
+            if ln>10:
+                comm += "{}\n".format(line)
+            pass
     fh.close()
+    dataarray = sorted(dataarray, reverse=True)
+    # now apply the jump values and create the data stream
+    headers['col-x'] = 'x'
+    headers['unit-col-x'] = 'nT'
+    headers['col-y'] = 'y'
+    headers['unit-col-y'] = 'nT'
+    headers['col-z'] = 'z'
+    headers['unit-col-z'] = 'nT'
+    headers['col-f'] = 'f'
+    headers['unit-col-f'] = 'nT'
+    headers['DataComponents'] = 'XYZF'
+    for data in dataarray:
+        if not data[10] == 'J':
+            ye = data[0].split('.')
+            dat = ye[0] + '-06-01'
+            ti = datetime.strptime(dat, "%Y-%m-%d")
+            array[0].append(ti)
+            array[lc].append(cnt)
+            if len(data) > 8 and is_number(data[6]) and is_number(data[7]) and is_number(data[8]) and is_number(data[9]) and float(data[6]) < 999999 and float(data[7]) < 999999 and float(data[8]) < 999999 and float(data[9]) < 999999:
+                array[1].append(float(data[6]) - jumpx)
+                array[2].append(float(data[7]) - jumpy)
+                array[3].append(float(data[8]) - jumpz)
+                array[4].append(float(data[9]) - jumpf)
+            else:
+                array[1].append(np.nan)
+                array[2].append(np.nan)
+                array[3].append(np.nan)
+                array[4].append(np.nan)
+            t = data[10]
+            ele = data[11]
+            array[mainele].append(ele)
+            array[stkind].append(t)
+        else:
+            ye = data[0].split('.')
+            dat = ye[0] + '-01-01'
+            ti = datetime.strptime(dat, "%Y-%m-%d")
+            comment = "jump line: {}\n".format(data)
+            comm += comment
+            if debug:
+                print("Found jump value at {}".format(ti))
+            jumpx += float(data[6])
+            jumpy += float(data[7])
+            jumpz += float(data[8])
+            jumpf += float(data[9])
 
-    if debug:
-        print ("readIYVF: Got data ...")
-
-    #fh.close()
     array = [np.asarray(ar,dtype=object) for ar in array]
     stream = DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
-    if not ele.lower().startswith('xyz') and ele.lower()[:3] in ['xyz','hdz','dhz','hez','idf']:
-        if ele.lower()[:3] in ['hdz','dhz']: # exception for usgs
-            ele = 'hdz'
-        stream = stream._convertstream('xyz2'+ele.lower()[:3])
+    #if not ele.lower().startswith('xyz') and ele.lower()[:3] in ['xyz','hdz','dhz','hez','idf']:
+    #    if ele.lower()[:3] in ['hdz','dhz']: # exception for usgs
+    #        ele = 'hdz'
+    #    stream = stream._convertstream('xyz2'+ele.lower()[:3])
 
-    stream.header['DataFormat'] = 'IYFV'
-    stream.header['SensorID'] = "{}_{}".format(headers.get('StationID','xxx').upper(),'IYFV')
+    stream.header['SensorID'] = "{}_{}".format(headers.get('StationID','XXX').upper(),'IYFV')
+    stream.header['DataComments'] = comm
+    if debug:
+        print ("readIYVF: Got data ...")
 
     return stream
 
@@ -2657,24 +2637,16 @@ def writeIYFV(datastream,filename, **kwargs):
                                      If data
 
         kind:           (string) One of Q,D,A -> default is A
-        comment:        (string) a comment related to the datastream
 
     """
 
     kind = kwargs.get('kind')
-    comment = kwargs.get('comment')
     note = 0
 
     if not kind in ['A','Q','D','q','d']:
         kind = 'A'
     else:
         kind = kind.upper()
-    if comment:
-        logger.info("writeIYFV: Comments not yet supported")
-        #identify next note and add comment at the send of the file
-        pass
-    else:
-        note = 0
 
     # check datastream
     if not datastream.length()[0] > 1:
@@ -2807,10 +2779,9 @@ def writeIYFV(datastream,filename, **kwargs):
         internal method to insert new yearly means in a file
         """
         content = []
-        fh = open(filename, 'rU', newline='')
+        fh = open(filename, 'rt', newline='')
         for line in fh:
             content.append(line)
-
         fh.close()
 
         yearlst = []
@@ -3223,6 +3194,24 @@ if __name__ == '__main__':
             ado = readBLV(filename, mode="adopted")
             # mp.tsplot([base,dat,ado], keys=[['dx','dy','dz']], symbols=[['o','o','o'],['o','o','o'],['-','-','-']], padding=[[2,0.02,2]], functions=[[func,func,func],[],[]])
             # ado and func perfectly match in graph find another test
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+        testset = 'IYFV'
+        try:
+            # read one year of magnetic data data
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            data = read('ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc')
+            print("Writing to Yearmean")
+            data.write("/tmp/", format_type='IYFV')
+            print("Reading")
+            dat = readIYFV("/tmp/YEARMEAN.FUR")
+            # validity tests - check value
+            f = dat.ndarray[4][0]
+            print("F from constructed values should be 48145 nT: {} nT".format(f))
             te = datetime.now(timezone.utc).replace(tzinfo=None)
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
