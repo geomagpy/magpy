@@ -2908,28 +2908,27 @@ The meta-information fields can hold much more information than required by most
 
 | library                 | formats                      | version | read/write | runtime tests | RW | requirements |
 |-------------------------|------------------------------|---------|------------|---------------|----|--------------|
-| format_abs_magpy.py     |                              |         |            |           |        |              |
-| format_acecdf.py        | ACECDF*                      | 1.x     | r          |           |        |              |
-| format_autodif.py       |                              |         |            |           |        |              |
-| format_autodif_fread.py |                              |         |            |           |        |              |
+| format_abs_magpy.py     | DI: MAGPYABS,JSONANS,MAGPYNEWABS | 2.0.0 | r        | no        |        | absolutes    |
+| format_acecdf.py        | ACECDF                       | 2.0.0   | r          | no        | X      | cdflib       |
+| format_autodif.py       | DI: AUTODIFABS               | 2.0.0   | r          | no        |        | absolutes    |
+| format_autodif_fread.py | DI: AUTODIF_FREAD**          | -.-.-   | rw         | -         |        | absolutes    |
 | format_basiccsv.py      | CSV                          | 2.0.0   | rw         | yes       | X      | csv          |
 | format_bdv.py           | BDV1**                       | 0.x     |            |           |        |              |
-| format_covjson.py       | COVJSON*                     |         | rw         |           |        | json         |
+| format_covjson.py       | COVJSON                      | 2.0.0   | rw         | yes       | X      | json         |
 | format_cr800.py         | CR800*,RADON                 | 2.0.0   | r          | no        | X      | csv          |
 | format_didd.py          | DIDD                         | 2.0.0   | rw         | yes       | X      | csv          |
 | format_dtu.py           | DTU1**                       | 0.x     |            |           |        |              |
-| format_gdas.py          |                              | 1.x     |            |           |        |              |
+| format_gdas.py          | GDASA1,GDASB1*               | 2.0.0   | r          | no        | X      |              |
 | format_gfz.py           | GFZKP,GFZINDEXJSON           | 2.0.0   | r          | yes       | -,-    | json         |
 | format_gfzcdf.py        | GFZCDF                       | 2.0.0   | r          | no        | X      |              |
 | format_gfztmp.py        | GFZTMP                       | 2.0.0   | r          | -         | -      |              |
 | format_gsm19.py         | GSM19 (b,wg)                 | 2.0.0   | r          | no        | X      |              |
-| format_hapijson.py      |                              | -.-.-   | rw         | future    |        | json         |
+| format_hapijson.py      | *                            | -.-.-   | rw         | future    |        | json         |
 | format_iaga02.py        | IAGA                         | 2.0.0   | rw         | yes       | X      | pyproj       |
-| format_imagcdf.py*      | IMAGCDF                      | 2.0.0   | rw         | yes       | X      | pyproj,cdflib |
-| format_imf.py           | IAF,IMF,DKA,BLV(1,2),IYFV*   | 2.0.0   | rw         | yes       | X,X,X,X,X | pyproj    |
+| format_imagcdf.py***    | IMAGCDF                      | 2.0.0   | rw         | yes       | X      | pyproj,cdflib |
+| format_imf.py           | IAF,IMF,DKA,BLV(1,2),IYFV    | 2.0.0   | rw         | yes       | X,X,X,X,X | pyproj    |
 | format_iono.py          | IONO                         | 2.0.0   | r          | no        | X      | csv          |
-| format_json.py          |                              |         | rw         |           |        |              |
-| format_latex.py         |                              |         | w          |           |   ,    |              |
+| format_latex.py         | LATEX                        | 2.0.0   | w          | yes       | -      | opt/Table.py |
 | format_lemi.py          | LEMIHF*,LEMIBIN*,LEMIBIN1    | 2.0.0   | r,r,r      | no        | -,-,X  | struct       |
 | format_magpy.py         | PYASCII,PYSTR,PYBIN          | 2.0.0   | rw,rw,r    | yes       |        | csv          |
 | format_magpycdf.py***   | PYCDF                        | 2.0.0   | rw         | yes       |        | cdflib       |
@@ -2942,8 +2941,8 @@ The meta-information fields can hold much more information than required by most
 | format_rcs.py           | RMRCS,RCS*                   | 2.0.0   | r          | no        | X,-    |              |
 | format_sfs.py           | SFDMI**,SFGSM**              | 0.x     | r,r        |           |        |              |
 | format_tsf.py           | TSF                          | 2.0.0   | r          | no        | X      |              |
-| format_wdc.py           | WDC*                         | 2.0.0   | rw*        | to be done    | X  |              |
-| format_wic.py           | IWT,METEO,USBLOG*,LIPPGRAV,LNM* | 2.0.0 | r,r,r,r,r | no        | X,X,-,X,- | csv       |
+| format_wdc.py           | WDC                          | 2.0.0   | rw         | yes       | X      |              |
+| format_wic.py           | IWT,METEO,USBLOG,LIPPGRAV,LNM | 2.0.0  | r,r,r,r,r  | no        | X,X,X,X,X | csv       |
 | format_wik.py           | PMAG1,PMAG2,OPT**            | 2.0.0   | r,r        | no        | X,X    |              |
 
 Runtime tests: internal testing routines contained within each library file, only available for rw libraries
@@ -2955,23 +2954,22 @@ Write tests are also included in stream.write which stores dummy data in all fil
    CR800 - not yet written completely plus no data
    NETCDF - not yet written
    RCS - not yet written
-   WDC - test with minute data, write test of minute and hour missing
-   IYFV - read and write tests missing
+   HAPIJSON - not yet written
+   GDASB1,LEMIHF,LEMIBIN - no example files for testing
    GFZTMP - untested but principally useable
 
 ** deprecated formats:
    OPT (in wik, old excel import from optical data readout)
    DTU1 (in dtu, text format used when jürgen was at dtu, still in linestruct version)
+   AUTODIF_FREAD - Deprecated - Special format for AutoDIF read-in
+   AUTODIF (in abs_magpy, replaced by AUTODIFABS)
    BDV1 (in bdv, Budkov data format)
    SFDMI,SFGSM (in sfs, San Fernando data format)
    removed in 2.0.0:
+   JSON (in json) replaced by COVJSON
    CS (in wic, was never included properly - CS data is creating binary files)
    PHA (in format_pha.py, deleted, potentially hazarduous asteroids)
    COMMATXT - (in format_simpletable.py) replaced by basiccsv, CSV
-
-*** PYCDF writing with flags still missing
-
-**** add ebro event data into the library
 
 ### A2 - supported data formats and developments state
 

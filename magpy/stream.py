@@ -226,7 +226,6 @@ SUPPORTED_FORMATS = {
                 'GSM19':['r', 'Output format from GSM19 magnetometer'],
                 'GFZINDEXJSON':['r', 'JSON structure for indicies (i.e. Kp) at GFZ webservice'],
                 'COVJSON':['rw', 'Coverage JSON'],
-                'JSON':['rw', 'JavaScript Object Notation'],
                 'LEMIHF':['r', 'LEMI text format data'],
                 'LEMIBIN':['r','Current LEMI binary data format'],
                 'LEMIBIN1':['r','Deprecated LEMI binary format at WIC'],

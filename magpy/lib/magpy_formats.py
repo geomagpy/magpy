@@ -157,9 +157,6 @@ def isFormat(filename, format_type):
     elif (format_type == "COVJSON"):
         if (isCOVJSON(filename)):
             return True
-    elif (format_type == "JSON"):
-        if (isJSON(filename)):
-            return True
     elif (format_type == "RMRCS"): # Data from the Conrad Observatory RCS System
         if (isRMRCS(filename)):
             return True
@@ -352,8 +349,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPYBIN(filename, headonly, **kwargs)
     elif (format_type == "GFZINDEXJSON"):
         return readGFZINDEXJSON(filename, headonly, **kwargs)
-    elif (format_type == "JSON"):
-        return readJSON(filename, headonly, **kwargs)
     elif (format_type == "GSM19"):
         return readGSM19(filename, headonly, **kwargs)
     elif (format_type == "LEMIHF"):
