@@ -657,8 +657,9 @@ into either an existing or new yearmean file.
 
 #### 3.3.7 Writing Latex tables (LATEX)
 
-The LaTeX library only supports a write method to create LaTeX tables based on the style deluxetable. The LATEX table
-format makes use of the "Table.py" module written by [Chris Burn](http://users.obs.carnegiescience.edu/~cburns/site/?p=22). 
+The LaTeX library only supports a write method to create LaTeX tables based on the style deluxetable 
+(add \usepackage{deluxetable} within the LaTeX documents header). The LATEX table format makes use of the "Table.py"
+module written by [Chris Burn](http://users.obs.carnegiescience.edu/~cburns/site/?p=22). 
 Caption and label of the table need to be defined within the data header as shown in the following example. The *mode* 
 option is different from any other write method, supporting 'wdc' for a wdc data type like table organization or 'list'
 for a simple list style table. An hourly mean table in WDC (World data center) style can be created as follows. 
@@ -669,6 +670,12 @@ for a simple list style table. An hourly mean table in WDC (World data center) s
         data.write('/tmp', filenamebegins='hourlymean-', filenameends='.tex', keys=['x','y','z','f'], mode='wdc',
                                                       dateformat='%m', coverage='month', format_type='LATEX')
 
+Beside **TEXcaption** and **TEXlabel** the following other header fields could be used for table style parameters:
+- **TEXjusts**  for positions like e.g. 'lrccc'
+- **TEXrotate** for rotation, default is False
+- **TEXtablewidth**
+- **TEXtablenum**
+- **TEXfontsize**
 
 #### 3.3.8 T-Soft format files (TSF)
 

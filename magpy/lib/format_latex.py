@@ -270,8 +270,7 @@ if __name__ == '__main__':
         return teststream
 
     teststream = create_minteststream(addnan=False)
-    #teststream = teststream.trim('2022-11-22','2022-11-23')
-    #print (len(teststream))
+    teststream = teststream.trim('2022-11-22T14:00:00','2022-11-22T15:00:00')
 
     errors = {}
     successes = {}
@@ -279,50 +278,35 @@ if __name__ == '__main__':
     t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
 
     while True:
-        testset = 'LATEX-minute'
+        testset = 'LATEX-HOUR'
         try:
-            filename = os.path.join('/tmp','{}_{}.dat'.format(testrun, datetime.strftime(teststream.start(),'%b%d%y')))
             ts = datetime.now(timezone.utc).replace(tzinfo=None)
-            succ1 = writeWDC(teststream, filename)
-            succ2 = isWDC(filename)
-            dat = readWDC(filename)
-            if not len(dat) > 0:
-                raise Exception("Error - no data could be read")
+            data = read('ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc')
+            data.header[
+                'TEXcaption'] = 'Hourly and daily means of field components X,Y,Z and independently measured F.'
+            data.header['TEXlabel'] = 'hourlymean'
+            data.write('/tmp', filenamebegins='hourlymean-', filenameends='.tex', keys=['x', 'y', 'z', 'f'], mode='wdc',
+                       dateformat='%m', coverage='month', format_type='LATEX')
             te = datetime.now(timezone.utc).replace(tzinfo=None)
-            # validity tests
-            diff = subtract_streams(teststream, dat, debug=True)
-            xm = diff.mean('x')
-            ym = diff.mean('y')
-            zm = diff.mean('z')
-            fm = diff.mean('f')
-            # agreement should be better than 0.01 nT as resolution is 0.1 nT in file
-            if np.abs(xm) > 0.01 or np.abs(ym) > 0.01 or np.abs(zm) > 0.01 or np.abs(fm) > 0.01:
-                 raise Exception("ERROR within data validity test")
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
             errors[testset] = str(excep)
             print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
-        testset = 'WDC-hour'
+        testset = 'LATEX-MIN'
         try:
-            teststream = teststream.filter(filter_type='flat',filter_width=timedelta(hours=1),resampleoffset=timedelta(minutes=30))
-            filename = os.path.join('/tmp','{}_{}.dat'.format(testrun, datetime.strftime(teststream.start(),'%b%d%y')))
             ts = datetime.now(timezone.utc).replace(tzinfo=None)
-            succ1 = writeWDC(teststream, filename)
-            succ2 = isWDC(filename)
-            dat = readWDC(filename)
-            if not len(dat) > 0:
-                raise Exception("Error - no data could be read")
+            teststream.header[
+                'TEXcaption'] = 'Minute data.'
+            teststream.header['TEXlabel'] = 'minutetest'
+            teststream.header['TEXjusts'] = 'lrcl'
+            teststream.header['TEXrotate'] = True
+            teststream.header['TEXtablewidth'] = '10cm'
+            teststream.header['TEXtablenum'] = '4.1'
+            teststream.header['TEXfontsize'] = '10'
+            teststream.write('/tmp', filenamebegins='mintest', filenameends='.tex', keys=['x', 'y', 'z'], mode='list',
+                       coverage='all', format_type='LATEX')
             te = datetime.now(timezone.utc).replace(tzinfo=None)
-            # validity tests
-            diff = subtract_streams(teststream, dat, debug=True)
-            xm = diff.mean('x')
-            ym = diff.mean('y')
-            zm = diff.mean('z')
-            fm = diff.mean('f')
-            # agreement should be better than 0.01 nT as resolution is 0.1 nT in file
-            if np.abs(xm) > 0.05 or np.abs(ym) > 0.05 or np.abs(zm) > 0.05 or np.abs(fm) > 0.05:
-                 raise Exception("ERROR within data validity test")
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:
