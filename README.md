@@ -497,10 +497,16 @@ Let's create a quick example by loading some example data set and store it a CSV
 
 ### 3.3 Specific commands and options for read and write
 
-#### 3.3.1 Supported geomagnetic data formats 
+#### 3.3.1 Supported geomagnetic data formats and defaults
 
 The `read` and `write` method all methods listed not specifically in the following sections 3.3.x support only basic 
-read commands, as listed in 3.1 and  basic write options as listed in 3.2.
+read commands, as listed in 3.1 and  basic write options as listed in 3.2. The default format of MagPy for most data
+sets is a PYCDF, which is based on NasaCDF. By default CDF files are compressed. If you do not want that then set 
+option *skipcompression* to True. 
+
+        data.write('/path/to/export/PYCDF/', skipcompression=True)
+
+
 
 #### 3.3.2 The INTERMAGNET archive format (IAF)
 
@@ -596,11 +602,9 @@ Writing BLV data has many more options to define the corrected content and struc
     fitdegree = kwargs.get('fitdegree')   # replaced by absinfo
     knotstep = kwargs.get('knotstep')   # replaced by absinfo
     extradays = kwargs.get('extradays')   # replaced by absinfo
-    mode = kwargs.get('mode')
     year = kwargs.get('year')
     meanh = kwargs.get('meanh')
     meanf = kwargs.get('meanf')
-    keys = kwargs.get('keys')   # replaced by absinfo
     deltaF = kwargs.get('deltaF')
     diff = kwargs.get('diff')
 
@@ -651,11 +655,19 @@ into either an existing or new yearmean file.
         data = read('/path/to/IAFminute/*.bin')
         data.write('/path/to/export/IYFV/yearmean.xxx', format_type='IYFV', kind='A')
 
-#### 3.3.7 MagPyCDF - the MagPy archive format (PYCDF)
+#### 3.3.7 Writing Latex tables (LATEX)
 
-By default CDF files are compressed. If you do not want that then set option *skipcompression* to True.
+The LaTeX library only supports a write method to create LaTeX tables based on the style deluxetable. The LATEX table
+format makes use of the "Table.py" module written by [Chris Burn](http://users.obs.carnegiescience.edu/~cburns/site/?p=22). 
+Caption and label of the table need to be defined within the data header as shown in the following example. The *mode* 
+option is different from any other write method, supporting 'wdc' for a wdc data type like table organization or 'list'
+for a simple list style table. An hourly mean table in WDC (World data center) style can be created as follows. 
 
-        data.write('/path/to/export/PYCDF/', format_type='PYCDF', skipcompression=True)
+        data = read('ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc')
+        data.header['TEXcaption'] = 'Hourly and daily means of components X,Y,Z and independently measured F.'
+        data.header['TEXlabel'] = 'hourlymean'
+        data.write('/tmp', filenamebegins='hourlymean-', filenameends='.tex', keys=['x','y','z','f'], mode='wdc',
+                                                      dateformat='%m', coverage='month', format_type='LATEX')
 
 
 #### 3.3.8 T-Soft format files (TSF)

@@ -61,7 +61,7 @@ def writeLATEX(datastream, filename, **kwargs):
     if mode == 'wdc':
         print("formatLATEX: Writing wdc mode")
         # 1. determine sampling rate
-        samplinginterval = datastream.get_sampling_period()
+        samplinginterval = datastream.get_sampling_period()/24/3600
         # get difference between first and last time in days
         ts,te = datastream._find_t_limits()
         deltat = te-ts
@@ -107,11 +107,7 @@ def writeLATEX(datastream, filename, **kwargs):
         if not justs:
             justs = 'p'*(numcols+1)
 
-        #fout = open( filename, "wb" )
-        if sys.version_info >= (3,0,0):
-            fout = open(filename, "w", newline='')
-        else:
-            fout = open(filename, "wb")
+        fout = open(filename, "w", newline='')
 
         t = Table(numcols+1, justs=justs, caption=caption, label=label, tablewidth=tablewidth, tablenum=tablenum, fontsize=fontsize, rotate=True)
         t.add_header_row(headline)
@@ -123,9 +119,8 @@ def writeLATEX(datastream, filename, **kwargs):
             aarray[pos] = np.empty((srange+1,int(np.round(float(datalen)/float(srange))),))
             aarray[pos][:] = np.nan
             aarray[pos] = aarray[pos].tolist()
-            #aarray = list(aarray)
 
-            bar = datastream.ndarray[pos]
+            bar = datastream._get_column(key)
             bar = bar[~np.isnan(bar)]
             mbar = np.floor(np.min(bar)/100.)*100.
 
