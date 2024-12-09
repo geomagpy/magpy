@@ -15,7 +15,9 @@ import os, sys
 from datetime import datetime, timedelta, timezone
 import numpy as np
 from magpy.stream import DataStream, read, magpyversion, join_streams, merge_streams, subtract_streams, loggerlib
-from magpy.core.methods import test_timestring
+from magpy.core.methods import test_timestring, testtime
+import dateutil.parser as dparser
+
 
 
 """
@@ -179,19 +181,22 @@ def readCOVJSON(filename, headonly=False, **kwargs):
 
     # Now assign all other elements to appropriate keys
     for element in ELEMENTSTODO:
-        print ("Now dealing with {}".format(element))
+        if debug:
+            print ("Now dealing with {}".format(element))
         # assign element to key
         if ranges.get(element).get('dataType') in ['float','double','int']:
             # get the first key which is not yet used
             index = min([idx for idx,el in enumerate(AVAILKEYS) if not el == 'USED'])
             key = AVAILKEYS[index]
-            print (" -> adding to {}".format(key))
+            if debug:
+                print (" -> adding to {}".format(key))
             addelement(stream, key, element, ranges[element], parameters[element])
             AVAILKEYS[index] = 'USED'
         else:
             if strcnt <= 4:
                 key = "str{}".format(strcnt)
-                print (" -> adding to {}".format(key))
+                if debug:
+                    print (" -> adding to {}".format(key))
                 addelement(stream, key, element, ranges[element], parameters[element])
             strcnt += 1
     return stream
