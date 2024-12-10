@@ -780,9 +780,13 @@ directly access data from the Advanced Composition Explorer ([ACE](https://izw1.
 Deep Space Climate Observatory ([DSCOVR](https://www.ngdc.noaa.gov/dscovr/portal/index.html#/)) is the replacement 
 satellite for ACE and its data can be obtained here:
 
+        dscovr_plasma = read("http://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json", debug=True)
+        dscovr_mag = read("http://services.swpc.noaa.gov/products/solar-wind/mag-3-day.json", debug=True)
 
-X-ray data from GOES 
 
+Finally, X-ray data from GOES is supported to identify flare signatures: 
+
+        xray = read("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json")
 
 ### 3.4 Converting the internal data structure
 

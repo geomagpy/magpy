@@ -271,6 +271,12 @@ def isFormat(filename, format_type):
     elif (format_type == "NOAAACE"): # NOAA ACE Satellite data
         if (isNOAAACE(filename)):
             return True
+    elif (format_type == "DSCOVR"):  # NOAA DSCOVR Satellite data
+        if (isDSCOVR(filename)):
+            return True
+    elif (format_type == "XRAY"):  # NOAA GOES XRAY Satellite data
+        if (isXRAY(filename)):
+            return True
     elif (format_type == "NETCDF"): # NetCDF format, NOAA DSCOVR satellite data
         if (isNETCDF(filename)):
             return True
@@ -406,6 +412,10 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readGFZTMP(filename, headonly, **kwargs)
     elif (format_type == "NOAAACE"):
         return readNOAAACE(filename, headonly, **kwargs)
+    elif (format_type == "DSCOVR"):
+        return readDSCOVR(filename, headonly, **kwargs)
+    elif (format_type == "XRAY"):
+        return readXRAY(filename, headonly, **kwargs)
     elif (format_type == "NETCDF"):
         return readNETCDF(filename, headonly, **kwargs)
     elif (format_type == "NEIC"):

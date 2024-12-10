@@ -269,6 +269,8 @@ SUPPORTED_FORMATS = {
                 'GFZCDF':['r', 'GFZ CDF variant'],
                 'PYCDF':['rw', 'MagPy CDF variant'],
                 'NOAAACE':['r', 'NOAA ACE satellite data format'],
+                'DSCOVR':['r', 'NOAA JSON format for DSCOVR data'],
+                'XRAY':['r', 'GOES XRAY JSON format'],
                 'NETCDF':['r', 'NetCDF4 format, NOAA DSCOVR satellite data archive format'],
                 'LATEX':['w','LateX data'],
                 #'SFDMI':['r', 'San Fernando variometer'],

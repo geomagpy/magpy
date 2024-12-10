@@ -5,9 +5,18 @@ Updated by Roman Leonhardt October 2024
 - contains test and read function
 """
 
-from magpy.stream import *
-from magpy.core.methods import testtime
+from magpy.stream import DataStream, merge_streams
+import os
+import re
+import numpy as np
+from datetime import datetime, timezone
+import dateutil.parser as dparser
+from magpy.core.methods import testtime, test_timestring
+import json
+import logging
+logger = logging.getLogger(__name__)
 
+KEYLIST=DataStream().KEYLIST
 
 def isNOAAACE(filename):
     """
@@ -27,7 +36,7 @@ def isNOAAACE(filename):
             return False
     except:
         return False
-    loggerlib.info("format_noaa: Found ACE file %s" % filename)
+    logger.info("format_noaa: Found ACE file %s" % filename)
     return True
 
 
@@ -116,7 +125,7 @@ def readNOAAACE(filename, headonly=False, **kwargs):
             # internet file accessed
             pass
         else:
-            logging.warning("Could not identify typical NOAA date in %s. Reading all ..." % daystring)
+            logger.warning("Could not identify typical NOAA date in %s. Reading all ..." % daystring)
         getfile = True
 
     if getfile:
@@ -135,7 +144,7 @@ def readNOAAACE(filename, headonly=False, **kwargs):
         indvar5 = KEYLIST.index('var5')
         indstr1 = KEYLIST.index('str1')
 
-        loggerlib.info('readNOAAACE: Reading %s' % (filename))
+        logger.info('readNOAAACE: Reading %s' % (filename))
 
         for line in fh:
             if line.isspace():
@@ -201,12 +210,11 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                 # skip data for option headonly
                 continue
             else:
-                nanval = float(NaN)
-                row = LineStruct()
+                nanval = np.nan
+                #row = LineStruct()
                 dataelem = line.split()
                 date = datetime(int(dataelem[0]),int(dataelem[1]),int(dataelem[2]),int(dataelem[3][:2]),int(dataelem[3][2:]))
                 status = int(dataelem[6])
-                row.str1 = status
                 #row.time = date2num(date)
                 array[indstr1].append(status)
                 array[indtime].append(date)
@@ -221,30 +229,25 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                 if usedata:
                     if datatype == 'swepam':
                         if (float(dataelem[7]) > -9999):
-                            row.var1 = float(dataelem[7])
                             array[indvar1].append(float(dataelem[7]))
                         else:
                             array[indvar1].append(nanval)
                         if (float(dataelem[8]) > -9999):
-                            row.var2 = float(dataelem[8])
                             array[indvar2].append(float(dataelem[8]))
                         else:
                             array[indvar2].append(nanval)
                         if (float(dataelem[9]) > -9999):
-                            row.var3 = float(dataelem[9])
                             array[indvar3].append(float(dataelem[9]))
                         else:
                             array[indvar3].append(nanval)
                     elif datatype == 'sis':
                         if (float(dataelem[7]) > -9999):
-                            row.x = float(dataelem[7])
                             array[indx].append(float(dataelem[7]))
                         else:
                             array[indx].append(nanval)
                         if (float(dataelem[8]) == 0): # status of high energy
                             keytypes.append('y')
                             if (float(dataelem[9]) > -9999):
-                                row.y = float(dataelem[9])
                                 array[indy].append(float(dataelem[9]))
                             else:
                                 array[indy].append(nanval)
@@ -252,69 +255,56 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                             array[indy].append(nanval)
                     elif datatype == 'mag':
                         if (float(dataelem[7]) > -9999):
-                            row.x = float(dataelem[7])
                             array[indx].append(float(dataelem[7]))
                         else:
                             array[indx].append(nanval)
                         if (float(dataelem[8]) > -9999):
-                            row.y = float(dataelem[8])
                             array[indy].append(float(dataelem[8]))
                         else:
                             array[indy].append(nanval)
                         if (float(dataelem[9]) > -9999):
-                            row.z = float(dataelem[9])
                             array[indz].append(float(dataelem[9]))
                         else:
                             array[indz].append(nanval)
                         if (float(dataelem[10]) > -9999):
-                            row.f = float(dataelem[10])
                             array[indf].append(float(dataelem[10]))
                         else:
                             array[indf].append(nanval)
                         if (float(dataelem[11]) > -9999):
-                            row.t1 = float(dataelem[11])
                             array[indt1].append(float(dataelem[11]))
                         else:
                             array[indt1].append(nanval)
                         if (float(dataelem[12]) > -9999):
-                            row.t2 = float(dataelem[12])
                             array[indt2].append(float(dataelem[12]))
                         else:
                             array[indt2].append(nanval)
                     elif datatype == 'epam':
                         if (float(dataelem[7]) > -9999):
-                            row.z = float(dataelem[7])
                             array[indz].append(float(dataelem[7]))
                         else:
                             array[indz].append(nanval)
                         if (float(dataelem[8]) > -9999):
-                            row.f = float(dataelem[8])
                             array[indf].append(float(dataelem[8]))
                         else:
                             array[indf].append(nanval)
                         if (float(dataelem[9]) == 0):
                             if (float(dataelem[10]) > -9999):
-                                row.var1 = float(dataelem[10])
                                 array[indvar1].append(float(dataelem[10]))
                             else:
                                 array[indvar1].append(nanval)
                             if (float(dataelem[11]) > -9999):
-                                row.var2 = float(dataelem[11])
                                 array[indvar2].append(float(dataelem[11]))
                             else:
                                 array[indvar2].append(nanval)
                             if (float(dataelem[12]) > -9999):
-                                row.var3 = float(dataelem[12])
                                 array[indvar3].append(float(dataelem[12]))
                             else:
                                 array[indvar3].append(nanval)
                             if (float(dataelem[13]) > -9999):
-                                row.var4 = float(dataelem[13])
                                 array[indvar4].append(float(dataelem[13]))
                             else:
                                 array[indvar4].append(nanval)
                             if (float(dataelem[14]) > -9999):
-                                row.var5 = float(dataelem[14])
                                 array[indvar5].append(float(dataelem[14]))
                             else:
                                 array[indvar5].append(nanval)
@@ -347,7 +337,6 @@ def readNOAAACE(filename, headonly=False, **kwargs):
                         array[indvar3].append(nanval)
                         array[indvar4].append(nanval)
                         array[indvar5].append(nanval)
-                #stream.add(row)
     fh.close()
 
     if datatype == 'swepam':
@@ -366,3 +355,198 @@ def readNOAAACE(filename, headonly=False, **kwargs):
 
     return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
+
+def isDSCOVR(filename):
+    """
+    Checks whether a file is DSCOVR JSON format.
+    """
+    try:
+        jsonfile = open(filename, 'r')
+        j = json.load(jsonfile)
+    except:
+        return False
+    try:
+        if j.get("domain").get("type") == 'Domain':
+            # Found Coverage json - use separate filter
+            return False
+    except:
+        pass
+    # j is a list of dictionaries in case of GOES
+    try:
+        if j[0].get("flux",'') and j[0].get("electron_correction",''):
+            # FOUND GOES data
+            return False
+    except:
+        pass
+    return True
+
+
+def readDSCOVR(filename, headonly=False, **kwargs):
+    """
+    Reading JSON format data.
+    """
+    stream = DataStream()
+    header = {}
+    array = [[] for key in KEYLIST]
+
+    with open(filename, 'r') as jsonfile:
+        dataset = json.load(jsonfile)
+        logger.info('Read: %s, Format: %s ' % (filename, "JSON"))
+
+        fillkeys = ['var1', 'var2', 'var3', 'var4', 'var5', 'x', 'y', 'z', 'f']
+        datakeys = dataset[0]
+        keydict = {}
+
+        for i, key in enumerate(datakeys):
+            if 'time' in key:
+                keydict[i] = 'time'
+            elif key == 'density':
+                keydict[i] = 'var1'
+                fillkeys.pop(fillkeys.index('var1'))
+            elif key == 'speed':
+                keydict[i] = 'var2'
+                fillkeys.pop(fillkeys.index('var2'))
+            elif key == 'temperature':
+                keydict[i] = 'var3'
+                fillkeys.pop(fillkeys.index('var3'))
+            elif 'bx' in key.lower():
+                keydict[i] = 'x'
+                fillkeys.pop(fillkeys.index('x'))
+            elif 'by' in key.lower():
+                keydict[i] = 'y'
+                fillkeys.pop(fillkeys.index('y'))
+            elif 'bz' in key.lower():
+                keydict[i] = 'z'
+                fillkeys.pop(fillkeys.index('z'))
+            elif 'bt' in key.lower():
+                keydict[i] = 'f'
+                fillkeys.pop(fillkeys.index('f'))
+            else:
+                try:
+                    keydict[i] = fillkeys.pop(0)
+                except IndexError:
+                    logger.warning(
+                        "CAUTION! Out of available keys for data. {} will not be contained in stream.".format(key))
+                    print("CAUTION! Out of available keys for data. {} will not be contained in stream.".format(key))
+
+            if 'time' in key:
+                data = [test_timestring(str(x[i])) for x in dataset[1:]]
+            else:
+
+                data = [np.nan if x[i] is None else float(x[i]) for x in dataset[1:]]
+            array[KEYLIST.index(keydict[i])] = data
+            header['col-' + keydict[i]] = key
+            if keydict[i] == 'var1' and key == 'density':
+                header['unit-col-var1'] = "cm^-3"
+            elif keydict[i] == 'var2' and key == 'speed':
+                header['unit-col-var2'] = "km/s"
+            elif keydict[i] == 'var3':
+                header['unit-col-var3'] = "K"
+            elif keydict[i] in ['x','y','z','f']:
+                 header['unit-col-'+keydict[i]] = "nT"
+            elif keydict[i] in ['var1','var2']:
+                 header['unit-col-'+keydict[i]] = "deg"
+            else:
+                 header['unit-col-' + keydict[i]] = ''
+
+    for idx, elem in enumerate(array):
+        array[idx] = np.asarray(array[idx], dtype=object)
+
+    stream = DataStream([], header, np.asarray(array, dtype=object))
+
+    return stream
+
+
+def isXRAY(filename):
+    """
+    Checks whether a file is DSCOVR JSON format.
+    """
+    try:
+        jsonfile = open(filename, 'r')
+        j = json.load(jsonfile)
+    except:
+        return False
+    try:
+        if j.get("domain").get("type") == 'Domain':
+            # Found Coverage json - use separate filter
+            return False
+    except:
+        pass
+    # j is a list of dictionaries in case of GOES
+    try:
+        if j[0].get("flux",'') and j[0].get("electron_correction",''):
+            # Found GOES data
+            pass
+        else:
+            return False
+    except:
+        pass
+    return True
+
+def readXRAY(filename, headonly=False, **kwargs):
+    """
+    #xray = 'https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json'
+    #path = '/home/cobs/SPACE/incoming/GOES/16'
+    :param source:
+    :param debug:
+    :return:
+    """
+    debug = kwargs.get('debug')
+    stream = DataStream()
+    array1 = [[] for key in KEYLIST]
+    array2 = [[] for key in KEYLIST]
+    header = {}
+    sat = 0
+
+    header['SensorName'] = 'XRS'
+    header['SensorGroup'] =  'GOES SolarSatellite'
+    header['SensorType'] =  'XRS'
+
+    with open(filename, 'r') as jsonfile:
+        data = json.load(jsonfile)
+        logger.info('Read: %s, Format: %s ' % (filename, "JSON"))
+
+        #with urllib.request.urlopen(source) as url:
+        #data = json.loads(url.read().decode())
+        if debug:
+            print("DEBUG", data)
+        pos1 = KEYLIST.index('x')
+        pos2 = KEYLIST.index('var1')
+        for element in data:
+            if element.get('energy') == '0.1-0.8nm':
+                date = dparser.parse(element.get('time_tag'))
+                array1[0].append(date.replace(tzinfo=None))
+                array1[pos1].append(float(element.get('flux')))
+                array1[pos1+1].append(float(element.get('observed_flux')))
+                array1[pos1+2].append(float(element.get('electron_correction')))
+                array1[pos1+3].append(int(element.get('electron_contaminaton')))
+                sat = element.get('satellite')
+                #print (date)
+            else:
+                date = dparser.parse(element.get('time_tag'))
+                var1 = float(element.get('flux'))
+                var2 = float(element.get('observed_flux'))
+                var3 = float(element.get('electron_correction'))
+                var4 = int(element.get('electron_contaminaton'))
+                array2[0].append(date.replace(tzinfo=None))
+                array2[pos2].append(float(element.get('flux')))
+                array2[pos2+1].append(float(element.get('observed_flux')))
+                array2[pos2+2].append(float(element.get('electron_correction')))
+                array2[pos2+3].append(int(element.get('electron_contaminaton')))
+                sat = element.get('satellite')
+        header['SensorDataLogger'] =  'GOES{}'.format(sat)
+        header['SensorID'] = "{}_{}_0001".format(header.get('SensorName'),header.get('SensorDataLogger'))
+        header['col-x'] = '0.1-0.8nm'
+        header['unit-col-x'] = 'Watts/mw'
+        header['col-y'] = 'observed_flux'
+        header['col-z'] = 'electron_correction'
+        header['col-f'] = 'electron_contaminaton'
+        header['col-var1'] = '0.05-0.4nm'
+        header['unit-col-var1'] = 'Watts/mw'
+        header['col-var2'] = 'observed_flux'
+        header['col-var3'] = 'electron_correction'
+        header['col-var4'] = 'electron_contamination'
+        stream1 = DataStream(header=header, ndarray=np.asarray([np.asarray(el) for el in array1],dtype=object))
+        stream2 = DataStream(header=header, ndarray=np.asarray([np.asarray(el) for el in array2],dtype=object))
+
+        return merge_streams(stream1,stream2)
