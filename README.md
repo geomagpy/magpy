@@ -788,19 +788,6 @@ Finally, X-ray data from GOES is supported to identify flare signatures:
 
         xray = read("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json")
 
-### 3.4 Converting the internal data structure
-
-Besides writing data using MagPy's functionality , you can also convert internal data structures to commonly used
-structures of other python packages and work with their functionality. 
-
-#### 3.4.1 pandas support
-
-[Pandas]() is a ...
-
-#### 3.4.2 ObsPy support
-
-[ObsPy]() ...
-
 
 ## 4. Figures
 
@@ -2241,9 +2228,9 @@ constant, then the baseline should also not be very complex.
 ### 7.5 Applying baselines
 
 
-The baseline method provides a number of options to assist the observer in determining baseline corrections and realted issues. 
-The basic building block of the baseline method is the fit function as discussed above. Lets first load raw vectorial 
-geomagnetic data, the absolute DI values of which are contained in above example:
+The baseline method provides a number of options to assist the observer in determining baseline corrections and related
+issues. The basic building block of the baseline method is the fit function as discussed above. Lets first load raw
+vectorial geomagnetic data, the absolute DI values of which are contained in above example:
 
        rawdata = read(example5)
 
@@ -2322,37 +2309,55 @@ way to obtain such a `meanstream` is sketched above.
 
 ### 7.7 Details on DI-flux analysis and calculation of basevalues
 
-Basevalues, often also referred to as **(component) baseline values**, are commonly obtained from DI-flux measurements, which are analyzed in combination with an independent fluxgate variometer. 
-Dependent on the DI-flux measurement technique, the variometer orientation and the source of also required scalar data varying analysis procedures have been suggested. In the following we outline the analysis technique of MagPy specifically related to different orientations and measurement techniques.
-The following terms are used throughout the methodological description and MagPy's interfaces. Fluxgate variometers are most commonly oriented either along a magnetic coordinate system, hereinafter denoted as **HEZ** (sometimes HDZ), or a geographic coordinate system **XYZ**. 
-Within the  magnetic coordinate system, the orthogonal fluxgate triple of variometers is oriented in a way, that the north component points towards magnetic north (H component), the east component E towards magnetic east and vertical points down. For geographic orientation Z is identically pointing down, X towards geographic north and Y towards geographic east. For other orientations please refer to the [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf).
+Basevalues, often also referred to as **(component) baseline values**, are commonly obtained from DI-flux measurements,
+which are analyzed in combination with an independent fluxgate variometer. Dependent on the DI-flux measurement
+technique, the variometer orientation and the source of also required scalar data varying analysis procedures have been
+suggested. In the following we outline the analysis technique of MagPy specifically related to different orientations
+and measurement techniques. The following terms are used throughout the methodological description and MagPy's
+interfaces. Fluxgate variometers are most commonly oriented either along a magnetic coordinate system, hereinafter
+denoted as **HEZ** (sometimes HDZ), or a geographic coordinate system **XYZ**. Within the  magnetic coordinate system,
+the orthogonal fluxgate triple of variometers is oriented in a way, that the north component points towards magnetic
+north (H component), the east component E towards magnetic east and vertical points down. For geographic orientation
+Z is identically pointing down, X towards geographic north and Y towards geographic east. For other orientations
+please refer to the [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf).
 
 #### 7.7.1 Theory of DI-analysis and basevalue calculation
 
-For describing the mathematical methodology we apply a similar notation as used within the [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf). Lets start with the following setup. The variometer used for evaluating the DI-flux measurement is oriented along a magnetic coordinate system (Figure XX). The actually measured components of the variometer are denoted N, E and V (North, East Vertical close to magnetic coordinate system). Each component consists of the following elements: 
+For describing the mathematical methodology we apply a similar notation as used within the [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf).
+Lets start with the following setup. The variometer used for evaluating the DI-flux measurement is oriented along a
+magnetic coordinate system (Figure XX). The actually measured components of the variometer are denoted N, E and V
+(North, East Vertical close to magnetic coordinate system). Each component consists of the following elements: 
 
 $$N = N_{base} + N_{bias} + N_{var}$$
 
-where $N_{var}$ is the measured variation, $N_{bias}$ contains the fluxgates bias field, and $N_{base}$ the components basevalue.
-Some instruments measure the quasi-absolute field variation, which would correspond to 
+where $N_{var}$ is the measured variation, $N_{bias}$ contains the fluxgates bias field, and $N_{base}$ the components
+basevalue. Some instruments measure the quasi-absolute field variation, which would correspond to 
 
 $$N_{v} = N_{bias} + N_{var}$$
 
-and thus the basevalues $N_{base}$ are typically small. This approach, making use of constant bias fields as provided within the LEMI025 binary data output is used for example at the Conrad Observatory. Another commonly used analysis approach combines bias fields and actual baseline values to  
+and thus the basevalues $N_{base}$ are typically small. This approach, making use of constant bias fields as provided
+within the LEMI025 binary data output is used for example at the Conrad Observatory. Another commonly used analysis
+approach combines bias fields and actual baseline values to  
 
 $$N_{b} = N_{bias} + N_{base}$$
 
-wherefore the hereby used $N_{b}$ are large in comparison to the measured variations $N_{var}$. All components are dependent on time. Bias field and basevalues, however, can be assumed to stay constant throughout the DI-flux measurement. Therefore, both approaches outlined above are equally effective. Hereinafter, we always assume variation measurements close to the total field value and for all field measurements within one DI-flux analysis we can describe north and vertical components as follows:
+wherefore the hereby used $N_{b}$ are large in comparison to the measured variations $N_{var}$. All components are
+dependent on time. Bias field and basevalues, however, can be assumed to stay constant throughout the DI-flux
+measurement. Therefore, both approaches outlined above are equally effective. Hereinafter, we always assume variation
+measurements close to the total field value and for all field measurements within one DI-flux analysis we can describe
+north and vertical components as follows:
 
 $$N(t_i) = N_{base} + N_{v}(t_i)$$
 
 $$V(t_i) = V_{base} + V_{v}(t_i)$$
  
-For the east component in an HEZ oriented instrument bias fields are usually set to zero. Thus $E$ simplifies to $E = E_{base} + E_{var}$. If the instrument is properly aligned along magnetic coordinates is simplifies further to 
+For the east component in an HEZ oriented instrument bias fields are usually set to zero. Thus $E$ simplifies to
+$E = E_{base} + E_{var}$. If the instrument is properly aligned along magnetic coordinates is simplifies further to 
 
 $$E(t_i) = E_{var}(t_i)$$
 
-as $E_{base}$ gets negligible (?? is that true??). The correct geomagnetic field components H, D and Z at time t for a HEZ oriented variometer can thus be calculated using the following formula (see also [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf)):
+as $E_{base}$ gets negligible (?? is that true??). The correct geomagnetic field components H, D and Z at time t for
+a HEZ oriented variometer can thus be calculated using the following formula (see also [IM technical manual](https://intermagnet.github.io/docs/Technical-Manual/technical_manual.pdf)):
 
 $$H(t) =  \sqrt{(N_{base} + N_{v}(t))^2 + E_{var}(t)^2}$$
 
@@ -2368,24 +2373,39 @@ $$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)}$$
 
 $$V_{base} =  Z(t_i) – V_{v}(t_i)$$
 
-where $H(t_i)$, $D(t_i)$ and $Z(t_i)$ are determined from the DI-Flux measurement providing declination $D(t_i)$ and inclination $I(t_i)$, in combination with an absolute scalar value obtained either on the same pier prior or after the DI-Flux measurement $(F(t_j))$, or from continuous measurements on a different pier.  As variometer measurements and eventually scalar data are obtained on different piers, pier differences also need to be considered. Such pier differences are denoted by $\delta D_v$, $\delta I_v$ and $\delta F_s$.
+where $H(t_i)$, $D(t_i)$ and $Z(t_i)$ are determined from the DI-Flux measurement providing declination $D(t_i)$ and
+inclination $I(t_i)$, in combination with an absolute scalar value obtained either on the same pier prior or after
+the DI-Flux measurement $(F(t_j))$, or from continuous measurements on a different pier.  As variometer measurements
+and eventually scalar data are obtained on different piers, pier differences also need to be considered. Such pier
+differences are denoted by $\delta D_v$, $\delta I_v$ and $\delta F_s$.
  
-The measurement procedure of the DI-flux technique requires magnetic east-west orientation of the optical axis of the theodolite. This is achieved by turning the theodolite so that the fluxgate reading shows zero (zero field method). Alternatively, small residual readings of the mounted fluxgate probe $(E_{res})$ can be considered (residual method). 
+The measurement procedure of the DI-flux technique requires magnetic east-west orientation of the optical axis of the
+theodolite. This is achieved by turning the theodolite so that the fluxgate reading shows zero (zero field method).
+Alternatively, small residual readings of the mounted fluxgate probe $(E_{res})$ can be considered (residual method). 
 
 #### 7.7.2 Iterative application in MagPy
 
-MagPy’s DI-flux analysis scheme for HEZ oriented variometers follows almost exactly the DTU scheme (citation , Juergen), using an iterative application. Basically, the analysis makes use of two main blocks. The first block (method *calcdec*) analyses the horizontal DI flux measurements, the second block (*calcinc*) analyses the inclination related steps of the DI-flux technique. 
-The first block determines declination $D(t)$ and $D_{base}$ by considering optional measurements of residuals and pier differences:
+MagPy’s DI-flux analysis scheme for HEZ oriented variometers follows almost exactly the DTU scheme (citation , Juergen),
+using an iterative application. Basically, the analysis makes use of two main blocks. The first block (method *calcdec*)
+analyses the horizontal DI flux measurements, the second block (*calcinc*) analyses the inclination related steps of
+the DI-flux technique. The first block determines declination $D(t)$ and $D_{base}$ by considering optional
+measurements of residuals and pier differences:
 
 $$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)} + arcsin(\frac{E_{res}(t_i)}{sqrt{(N_{base} + N_{v}(t_i))^2 + E_{var}(t_i)2}} + \delta D_v$$
 
-If residuals are zero, the residual term will also be zero and the resulting base values analysis is identical to a zero field technique. Initially, $N_{base}$ is unknown. Therefore, $N_{base}$ will either be set to zero or optionally provided annual mean values will be used as a starting criteria. It should be said that the choice is not really important as the iterative technique will provide suitable estimates already during the next call. A valid input for $H(t)$ is also required to correctly determine collimation data of the horizontal plane.
-The second block will determine inclination $I(t)$ as well as $H(t) = F(t) cos(I(t))$ and $Z(t) = F(t) sin(I(t))$. It will further determine $H_{base}$ and $Z_{base}$. Of significant importance hereby is a valid evaluation of F for each DI-Flux measurement. 
+If residuals are zero, the residual term will also be zero and the resulting base values analysis is identical to a
+zero field technique. Initially, $N_{base}$ is unknown. Therefore, $N_{base}$ will either be set to zero or optionally
+provided annual mean values will be used as a starting criteria. It should be said that the choice is not really
+important as the iterative technique will provide suitable estimates already during the next call. A valid input
+for $H(t)$ is also required to correctly determine collimation data of the horizontal plane. The second block will
+determine inclination $I(t)$ as well as $H(t) = F(t) cos(I(t))$ and $Z(t) = F(t) sin(I(t))$. It will further determine
+$H_{base}$ and $Z_{base}$. Of significant importance hereby is a valid evaluation of F for each DI-Flux measurement. 
 
 $$F(t_i) = F_m + (N_v(t_i) – N_m) cos(I) + (V_v(t_i)-V_m) sin(I) + (E_v(t_i)^2-E_m^2) / (2 F_m)$$
 
-where $F_m$ is the mean F value during certain time window, and $N_m$, $V_m$, $E_m$ are means of the variation measurement in the same time window. Thus $F(t_i)$ will contain variation corrected F values for each cycle of the DI-flux measurement.
-Based on these F values the angular correction related to residuals can be determined
+where $F_m$ is the mean F value during certain time window, and $N_m$, $V_m$, $E_m$ are means of the variation
+measurement in the same time window. Thus $F(t_i)$ will contain variation corrected F values for each cycle of the
+DI-flux measurement. Based on these F values the angular correction related to residuals can be determined
 
 $$I_{res}(t_i) =  arcsin(\frac{E_{res}(t_i)}{F(t_i)}$$
 
@@ -2397,23 +2417,53 @@ $$H(t) = F(t) cos(I)$$
 $$Z(t) = F(t) sin(I)$$
 
 and basevalues are finally obtained using formulas given above.
-As both evaluation blocks contain initially unkown parameters, which are however determined by the complementary block, the whole procedure is iteratively conducted until resulting parameters do not change any more in floating point resolution. Firstly, calcdec is conducted and afterwards calcinc. Then the results for $H$ and $H_{basis}$ are feed into calcdec when starting the next cycle. Usually not more than two cycles are necessary for obtaining final DI-flux parameters. Provision off starting parameters (i.e. annual means) is possible, but not necessary. By default, MagPy is running three analysis cycles.
+As both evaluation blocks contain initially unkown parameters, which are however determined by the complementary block,
+the whole procedure is iteratively conducted until resulting parameters do not change any more in floating point
+resolution. Firstly, calcdec is conducted and afterwards calcinc. Then the results for $H$ and $H_{basis}$ are feed
+into calcdec when starting the next cycle. Usually not more than two cycles are necessary for obtaining final DI-flux
+parameters. Provision off starting parameters (i.e. annual means) is possible, but not necessary. By default, MagPy is
+running three analysis cycles.
 
 #### 7.7.3 Scalar data source
 
-Scalar data is essential for correctly determining basevalues. The user has basically three options to provide such data. Firstly, a scalar estimate can be taken from provided annual means (use option annualmeans=[21300,1700,44000] in method **absoluteAnalysis** (2.11.2), annual means have to be provided in XYZ, in nT). A correct determination of basevalues is not possible this way but at least a rough estimate can be obtained. If only such scalar source is provided then the F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain the input **Fannual**. 
-If F data is continuously available on a different pier, you should feed that time series into the **absoluteAnalysis** call (or use the add scalar source option in XMagPy). Every MagPy supported data format or source can be used for this purpose. Such independent/external F data, denoted $F_{ext}$, requires however the knowledge of pier differences between the DI-flux pier and the scalar data (F) pier. If $F_{ext}$ is your only data source you need to provide pier differences $\delta F_s$ to **absoluteAnalysis** in nT using option deltaF. In XMagPy you have to open „Analysis Parameters“ on the DI panel and set „dideltaF“.  The F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain the input **Fext**. The provided $\delta F_s$ value will be included into **diresults**, both within the deltaF column and added to the description string **Fext**. 
-If F data is measured at the same pier as used for the DI-flux measurement, usually either directly before or after the DI-flux series, this data should be added into the DI absolute file structure (see 2.11.1).  Variation data, covering the time range of F measurements and DI-Flux measurements is required to correctly analyze the measurement. If such F data is used **diresults** will contain the input **Fabs**. 
-If $F_{abs}$ and $F_{ext}$ are both available during the analysis, then MagPy will use  $F_{abs}$ (F data from the DI-flux pier) for evaluating the DI-Flux measurement. It will also determine the pier difference 
+Scalar data is essential for correctly determining basevalues. The user has basically three options to provide such
+data. Firstly, a scalar estimate can be taken from provided annual means (use option annualmeans=[21300,1700,44000]
+in method **absoluteAnalysis** (2.11.2), annual means have to be provided in XYZ, in nT). A correct determination of
+basevalues is not possible this way but at least a rough estimate can be obtained. If only such scalar source is
+provided then the F-description column in the resulting basevalue time series (diresults, see 2.11.2) will contain
+the input **Fannual**. If F data is continuously available on a different pier, you should feed that time series into
+the **absoluteAnalysis** call (or use the add scalar source option in XMagPy). Every MagPy supported data format or
+source can be used for this purpose. Such independent/external F data, denoted $F_{ext}$, requires however the
+knowledge of pier differences between the DI-flux pier and the scalar data (F) pier. If $F_{ext}$ is your only data
+source you need to provide pier differences $\delta F_s$ to **absoluteAnalysis** in nT using option deltaF. In XMagPy
+you have to open „Analysis Parameters“ on the DI panel and set „dideltaF“.  The F-description column in the resulting
+basevalue time series (diresults, see 2.11.2) will contain the input **Fext**. The provided $\delta F_s$ value will be
+included into **diresults**, both within the deltaF column and added to the description string **Fext**. 
+If F data is measured at the same pier as used for the DI-flux measurement, usually either directly before or after
+the DI-flux series, this data should be added into the DI absolute file structure (see 2.11.1).  Variation data,
+covering the time range of F measurements and DI-Flux measurements is required to correctly analyze the measurement.
+If such F data is used **diresults** will contain the input **Fabs**. 
+If $F_{abs}$ and $F_{ext}$ are both available during the analysis, then MagPy will use  $F_{abs}$ (F data from the
+DI-flux pier) for evaluating the DI-Flux measurement. It will also determine the pier difference 
 
 $$\delta F_s  = F_{abs} – F_{ext}(uncorr)$$.
 
-This pier difference will be included into diresults within the delta F column. The F-description column in **diresults** will contain **Fabs**.  Any additionally, manually provided delta F value will show up in this column as well (**Fabs_12.5**). For the standard output of the DI-flux analysis any manually provided delta F will have been applied to $F_{ext}(corr)$.  
+This pier difference will be included into diresults within the delta F column. The F-description column in
+**diresults** will contain **Fabs**.  Any additionally, manually provided delta F value will show up in this column
+as well (**Fabs_12.5**). For the standard output of the DI-flux analysis any manually provided delta F will have been
+applied to $F_{ext}(corr)$.  
 
 #### 7.7.4 Using a geographically oriented variometer (XZY)
 
-The above outlined basevalue determination method is rather stable against deviations from ideal variometer orientations. Thus, you can use the very same technique also to evaluate basevalues for XYZ oriented variometers as long as your sites’ declination is small. A rough number would be that angular deviations (declination) of 3 degrees will lead to differences below 0.1 nT in basevalues. The small differences are related to the fact that strictly speaking the above technique is only valid if the variometer is oriented perfectly along the current magnetic coordinate system.
-MagPy (since version 1.1.3) also allows for evaluating XYZ variometer data by obtaining basevalues also in a XYZ representation. This technique requires accurate orientation of your variation instrument in geographic coordinates. Provided such precise orientation, the basic formula for obtaining basevalues get linear and simplifies to 
+The above outlined basevalue determination method is rather stable against deviations from ideal variometer
+orientations. Thus, you can use the very same technique also to evaluate basevalues for XYZ oriented variometers 
+as long as your sites’ declination is small. A rough number would be that angular deviations (declination) of 3 degrees
+will lead to differences below 0.1 nT in basevalues. The small differences are related to the fact that strictly
+speaking the above technique is only valid if the variometer is oriented perfectly along the current magnetic
+coordinate system.
+MagPy (since version 1.1.3) also allows for evaluating XYZ variometer data by obtaining basevalues also in a XYZ
+representation. This technique requires accurate orientation of your variation instrument in geographic coordinates. 
+Provided such precise orientation, the basic formula for obtaining basevalues get linear and simplifies to 
 
 $$X_{base} =  X(t_i) – X_{v}(t_i)$$
 
@@ -2421,11 +2471,16 @@ $$Y_{base} =  Y(t_i) - Y_{v}(t_i)$$
 
 $$Z_{base} =  Z(t_i) – Z_{v}(t_i)$$
 
-By default, MagPy will always create basevalues in HDZ components, even if xyz variation data is provided. If you want basevalues in XYZ components you need to confirm manually that the provided variation data is geographically oriented when calling **absoluteAnalysis**. Use option **variometerorientation=”XYZ”** for this purpose.  
+By default, MagPy will always create basevalues in HDZ components, even if xyz variation data is provided. If you
+want basevalues in XYZ components you need to confirm manually that the provided variation data is geographically
+oriented when calling **absoluteAnalysis**. Use option **variometerorientation=”XYZ”** for this purpose.  
 
 #### 7.7.5 Using other variometer orientation
 
-If you want to use variometer data in any other orientation then the two discussed above, it is necessary rotate your data set into one of the supported coordinate systems. Such rotations can be performed using MagPy's **rotate** method. Please note, that is then also necessary to rotate your variometers raw data using the same angular parameters prior to baseline adoption.
+If you want to use variometer data in any other orientation then the two discussed above, it is necessary rotate your
+data set into one of the supported coordinate systems. Such rotations can be performed using MagPy's **rotate** method.
+Please note, that is then also necessary to rotate your variometers raw data using the same angular parameters prior to
+baseline adoption.
 
 
 ### 7.8 Summary - General procedure for the baselineAnalysis method: 
@@ -2464,24 +2519,31 @@ at least three subsequent days of data. The first and last day of the sequence w
 The datas et need to contain X,Y and Z components of which X and Y are analyzed. You can use
 MagPy's timeseries methods to transform your data sets accordingly if needed. 
 
-A month of one minute data is provided in `example2`, which corresponds to an [INTERMAGNET] IAF archive file. Reading a file in this format will load one minute data by default. Accessing hourly data and other information is described below.
+A month of one minute data is provided in `example2`, which corresponds to an [INTERMAGNET] IAF archive file. Reading
+a file in this format will load one minute data by default. Accessing hourly data and other information is described
+below.
 
         data2 = read(example2)
 
         kvals = act.K_fmi(data2)
 
-The output of the K_fmi method is a DataStream object which contains timesteps and K values associated with the 'var1' key. 
+The output of the K_fmi method is a DataStream object which contains timesteps and K values associated with the 'var1'
+key. 
 
-For plotting we provide x and y components of magnetic data as well as the Kvalue results. The additional options determine the appearance of the plot (limits, bar chart):
+For plotting we provide x and y components of magnetic data as well as the Kvalue results. The additional options
+determine the appearance of the plot (limits, bar chart):
 
         p = tsplot([data2,kvals],keys=[['x','y'],['var1']], labelx=-0.08, symbols=[["-","-"],["k"]], title="K value plot", symbolcolor=[[0.5, 0.5, 0.5]], patch=patch, showpatch=[True,False], grid=True,height=2)
 
-`'k'` in `symbols` refers to the second subplot (K), which will then be plotted as bars rather than the standard line (`'-'`).
+`'k'` in `symbols` refers to the second subplot (K), which will then be plotted as bars rather than the standard
+line (`'-'`).
 
 
 ### 8.2 Automated geomagnetic storm detection
 
-Geomagnetic storm detection is supported by MagPy using two procedures based on wavelets and the Akaike Information Criterion (AIC) as outlined in detail in [Bailey and Leonhardt (2016)](https://earth-planets-space.springeropen.com/articles/10.1186/s40623-016-0477-2). A basic example of usage to find an SSC using a Discrete Wavelet Transform (DWT) is shown below:
+Geomagnetic storm detection is supported by MagPy using two procedures based on wavelets and the Akaike Information
+Criterion (AIC) as outlined in detail in [Bailey and Leonhardt (2016)](https://earth-planets-space.springeropen.com/articles/10.1186/s40623-016-0477-2). A basic example of usage to find an SSC
+using a Discrete Wavelet Transform (DWT) is shown below:
 
         from magpy.stream import read
         from magpy.core import activity as act
@@ -2490,7 +2552,11 @@ Geomagnetic storm detection is supported by MagPy using two procedures based on 
         detection, ssc_dict = act.seek_storm(stormdata, method="MODWT")
         print("Possible SSCs detected:", ssc_dict)
 
-The method `seek_storm` will return two variables: `detection` is True if any detection was made, while `ssc_list` is a flagging type dictionary containing data on each detection. Note that this method alone can return a long list of possible SSCs (most incorrectly detected), particularly during active storm times. It is most useful when additional restrictions based on satellite solar wind data apply (currently only optimised for ACE data, e.g. from the NOAA website):
+The method `seek_storm` will return two variables: `detection` is True if any detection was made, while `ssc_list` is
+a flagging type dictionary containing data on each detection. Note that this method alone can return a long list of
+possible SSCs (most incorrectly detected), particularly during active storm times. It is most useful when additional
+restrictions based on satellite solar wind data apply (currently only optimised for ACE data, e.g. from the NOAA
+website):
 
         satdata_ace_1m = read('20150317_ace_swepam_1m.txt')
         satdata_ace_5m = read('20150317_ace_epam_5m.txt')
@@ -2526,7 +2592,8 @@ solar quiet curve can be subtracted from actually measured data to unambiguously
 on the geomagnetic field. Such solar quiet curve is often also referred to a 'baseline'. Please be careful not to 
 mix it with the observatory baseline as outlined in chapter 7. In the following we will use the term "sq-variation". 
 Before discussing the actual methods currently provided by MagPy it is worthwhile to look briefly at some
-influences on the geomagnetic records and there effective time ranges  in order to understand the complexity of separating such sq-variation curve.
+influences on the geomagnetic records and there effective time ranges  in order to understand the complexity of
+separating such sq-variation curve.
 
 The following sources and variations should affect the baseline/variation:
 - long term secular variation and jerks (earth internal field)
@@ -2541,13 +2608,18 @@ The following sources and variations should affect the baseline/variation:
 - pulsations (typically, less then hours)
 - artifical/technical disturbances (mostly less than seconds to minutes):
 
-Our general approach relies on a frequency separation. Higher frequencies are removed and lower frequencies define the Sq variation. This is a general 
-feature of many sq-variation separation techniques and also forms the basis of our approach. For frequency separation we are decomposing the original signal
-into "frequency" bands using an empirical mode decomposition technique (EMD). For this purpose we are using the python module [emd](https://emd.readthedocs.io/en/stable/index.html). Geomagnetic data is non-stationary, highly dynamic, and contains
-non-sinusoidal contributions. In comparison to other Fourier-transform based decomposition techniques, which basically determine a set of sinusoidal basis functions, EMD is perfectly suited for such data sets and isolates a small number of temporally adaptive basis functions and derive dynamics in frequency and amplitude directly from them.
-These adaptive basis functions are called Intrinsic Mode Functions (IMF's).
+Our general approach relies on a frequency separation. Higher frequencies are removed and lower frequencies define
+the Sq variation. This is a general feature of many sq-variation separation techniques and also forms the basis of
+our approach. For frequency separation we are decomposing the original signal into "frequency" bands using an empirical
+mode decomposition technique (EMD). For this purpose we are using the python module [emd](https://emd.readthedocs.io/en/stable/index.html). Geomagnetic data is
+non-stationary, highly dynamic, and contains non-sinusoidal contributions. In comparison to other Fourier-transform
+based decomposition techniques, which basically determine a set of sinusoidal basis functions, EMD is perfectly
+suited for such data sets and isolates a small number of temporally adaptive basis functions and derive dynamics in
+frequency and amplitude directly from them. These adaptive basis functions are called Intrinsic Mode Functions (IMF's).
 
-In section 8.3.2 we show how our Sq technique is working in detail. If you are interested its simple, single-command application then move to the next section 8.3.1. Please note that you need to feed at least 6 days of one-minute data to this method. Ideally you would choose much longer time ranges. In the following examples we are analyzing
+In section 8.3.2 we show how our Sq technique is working in detail. If you are interested its simple, single-command
+application then move to the next section 8.3.1. Please note that you need to feed at least 6 days of one-minute data
+to this method. Ideally you would choose much longer time ranges. In the following examples we are analyzing
 three months of one-minute data.
 
 >![IMPORTANT]
@@ -2557,9 +2629,9 @@ three months of one-minute data.
 
 The act.sqbase command will return an estimate of the Sq variation curve. Three methods are currently supported.
 baseline_type='emd' will return a purly frequency filtered curve based on emperical-mode decomposition and recombining 
-low-frequency contents. baseline_type='median' will analyze the median cyclicity within a solar rotation cycle and use this
-estimate for Sq determination. baseline_type='joint' will use both apporaches, 'emd' for non-stormy times and 'median' for 
-storm-times. Details in 8.3.2
+low-frequency contents. baseline_type='median' will analyze the median cyclicity within a solar rotation cycle and use
+this estimate for Sq determination. baseline_type='joint' will use both apporaches, 'emd' for non-stormy times and
+'median' for storm-times. Details in 8.3.2
 
         from magpy.core import activity as act
         data = read("path-to-one-minute-data")
@@ -2570,24 +2642,30 @@ storm-times. Details in 8.3.2
 
 ##### Empirical mode decomposition
 
-The emd python module is used to determine IMF's from any given input signal. For the following example we are analyzing 3 months of definitive h data containing
-various different disturbances from weak geomagnetic storms. Each decomposition step, "sift" is removing complexity from the original data curve. 
-The original data is show in the upper diagram of Figure ![8.1.](./magpy/doc/sqbase-emd.png "Emperical mode decomposition") Altogether 16 sifts were found containing decreasing complex signal contributions. 
-Summing up all these IMF curves will exactly reconstruct the original data, another important feature of EMD.  
-In order to get comparable amount of sifts with similar frequency contents for different data selections you will need to supply 131500 minutes, corresponding to 3 months of geomagnetic data.
-This time range is good enough to cover essential periods affecting Sq-variation evolution below seasonal effects. Additionally it is quickly applicable. If you supply less data, the maximum amounts of sifts will be lower.
-Nevertheless, individual low-order sifts will contain similar frequency contributions. 
+The emd python module is used to determine IMF's from any given input signal. For the following example we are
+analyzing 3 months of definitive h data containing various different disturbances from weak geomagnetic storms. Each
+decomposition step, "sift" is removing complexity from the original data curve. The original data is show in the upper
+diagram of Figure ![8.1.](./magpy/doc/sqbase-emd.png "Emperical mode decomposition") Altogether 16 sifts were found containing decreasing
+complex signal contributions. Summing up all these IMF curves will exactly reconstruct the original data, another
+important feature of EMD.In order to get comparable amount of sifts with similar frequency contents for different
+data selections you will need to supply 131500 minutes, corresponding to 3 months of geomagnetic data. This time range
+is good enough to cover essential periods affecting Sq-variation evolution below seasonal effects. Additionally it is
+quickly applicable. If you supply less data, the maximum amounts of sifts will be lower. Nevertheless, individual
+low-order sifts will contain similar frequency contributions. 
 
 ##### Frequency and amplitude characteristics
 
 In a next step we are 
-specifically interested in the frequency content of each sift. For this purpose we apply a Hilbert-Huang-transform to analyse distributions of 
-instantaneous frequencies, amplitudes and phases of each sift. Results for IMF-6 are shown in Figure ![8.2.](./magpy/doc/sqbase-imf6-characteristics.png "Characteristics of IMF-6 with 3h periodicity") IMF-6 is hereby marking a period of about 3h,
-a range which is often used for the general baseline approximation (i.e. for K values).Its amplitude variation indicates a few time ranges containing "disturbed" data characterized by larger amplitude. The dashed line 
+specifically interested in the frequency content of each sift. For this purpose we apply a Hilbert-Huang-transform to
+analyse distributions of instantaneous frequencies, amplitudes and phases of each sift. Results for IMF-6 are shown in
+Figure ![8.2.](./magpy/doc/sqbase-imf6-characteristics.png "Characteristics of IMF-6 with 3h periodicity") IMF-6 is hereby marking a period of about 3h,
+a range which is often used for the general baseline approximation (i.e. for K values).Its amplitude variation
+indicates a few time ranges containing "disturbed" data characterized by larger amplitude. The dashed line 
 is related to the upper inner-quartile limit with a standard factor of 1.5 (i.e. Q3+f*IQR).
 
-If you are interested in determination of Sq baselines based on a frequency related filtering you can stop here already. Recombining all IMF from IMF-6 onwards will correspond to
-such frequency based filtering and provide a baseline very similar/almost identical to one used for K-value extraction.
+If you are interested in determination of Sq baselines based on a frequency related filtering you can stop here
+already. Recombining all IMF from IMF-6 onwards will correspond to such frequency based filtering and provide a
+baseline very similar/almost identical to one used for K-value extraction.
 
 Full application of this technique in MagPy is as follows:
 
@@ -2597,8 +2675,8 @@ Full application of this technique in MagPy is as follows:
 
 ##### Cyclicity based Sq variation
 
-For this approach we assume that any Sq signal is fully contained within the periodic oscillations that are present in our IMF's.
-In order to analyze these oscillations we follow the approach which is described [here](https://emd.readthedocs.io/en/stable/emd_tutorials/03_cycle_ananlysis/index.html) in detail. 
+For this approach we assume that any Sq signal is fully contained within the periodic oscillations that are present in
+our IMF's. In order to analyze these oscillations we follow the approach which is described [here](https://emd.readthedocs.io/en/stable/emd_tutorials/03_cycle_ananlysis/index.html) in detail. 
 For each IMF we are examining cyclicity and distinguish between good and bad cycles. A good cycle is charcterized by 
 
 a) A strictly positively increasing phase, 
@@ -2621,7 +2699,7 @@ IMF-6 and larger. The Sq baseline will be a sum of individual median oscillation
 this method will likely better estimate Sq variations during disturbed periods affecting hours/days. During quiet periods, however, a frequency related method
 is likely superior as such methods will remove any non-solar driven multi-day variation (i.e neutral atmosphere, see day2day variability in Haberle et al).
 
->![IMPORTANT]
+>[!IMPORTANT]
 > Correct application of the cyclicity analysis requires at least 1 month of one-minute data
 
 Full application of the median Sq technique in MagPy is as follows:
@@ -2845,37 +2923,35 @@ Text
 
 ## 10. Additional methods and functions - TODO
 
-### 10.1 Testing data validity before submissions to IM and IAGA
+### 10.1 Converting the internal data structure
 
-A common and important application used in the geomagnetism community is a general validity check of geomagnetic data to be submitted to the official data repositories [IAGA], WDC, or [INTERMAGNET]. Please note: this is currently under development and will be extended in the near future. A 'one-click' test method will be included in xmagpy in the future, checking:
+Besides writing data using MagPy's functionality , you can also convert internal data structures to commonly used
+structures of other python packages and work with their functionality. 
 
-A) Validity of data formats, e.g.:
+#### 10.1.1 pandas support
 
-        data = read('myiaffile.bin', debug=True)
+[Pandas]() is a ...
 
-B) Completeness of meta-information
+#### 10.1.2 ObsPy support
 
-C) Conformity of applied techniques to respective rules
-
-D) Internal consistency of data
-
-E) Optional: regional consistency
+[ObsPy]() ...
 
 
-### 10.2 Spectral Analysis and Noise
+### 10.2 Testing data validity before submissions to IM and IAGA
 
-For analysis of the spectral content of data, MagPy provides two basic plotting methods. `plotPS` will calculate and display a power spectrum of the selected component. `plotSpectrogram` will plot a spectrogram of the time series. As usual, there are many options for plot window and processing parameters that can be accessed using the help method.
-
-        data = read(example1)
-        mp.plotPS(data,key='f')
-        mp.plotSpectrogram(data,['f'])
-
-
+A common and important application used in the geomagnetism community is a general validity check of geomagnetic data 
+to be submitted to the official data repositories [IAGA], WDC, or [INTERMAGNET]. Please note: this is currently under
+development and will be extended in the near future. A 'one-click' test method will be included in xmagpy in the
+future, checking:
 
 
 ### 10.3 The art of meta-information
 
-Each data set is accompanied by a dictionary containing meta-information for this data. This dictionary is completely dynamic and can be filled freely, but there are a number of predefined fields that help the user provide essential meta-information as requested by [IAGA], [INTERMAGNET] and other data providers. All meta information is saved only to MagPy-specific archive formats PYCDF and PYSTR. All other export formats save only specific information as required by the projected format.
+Each data set is accompanied by a dictionary containing meta-information for this data. This dictionary is completely
+dynamic and can be filled freely, but there are a number of predefined fields that help the user provide essential
+meta-information as requested by [IAGA], [INTERMAGNET] and other data providers. All meta information is saved only
+to MagPy-specific archive formats PYCDF and PYSTR. All other export formats save only specific information as required
+by the projected format.
 
 The current content of this dictionary can be accessed by:
 
@@ -2898,14 +2974,21 @@ If you want to have a more readable list of the header information, do:
 
 #### 10.4.1 Conversion to ImagCDF - Adding meta-information
 
-To convert data from [IAGA] or IAF formats to the new [INTERMAGNET] CDF format, you will usually need to add additional meta-information required for the new format. MagPy can assist you here, firstly by extracting and correctly adding already existing meta-information into newly defined fields, and secondly by informing you of which information needs to be added for producing the correct output format.
+To convert data from [IAGA] or IAF formats to the new [INTERMAGNET] CDF format, you will usually need to add
+additional meta-information required for the new format. MagPy can assist you here, firstly by extracting and
+correctly adding already existing meta-information into newly defined fields, and secondly by informing you of which
+information needs to be added for producing the correct output format.
 
 Example of IAGA02 to ImagCDF:
 
         mydata = read('IAGA02-file.min')
         mydata.write('/tmp',format_type='IMAGCDF')
 
-The console output of the write command (see below) will tell you which information needs to be added (and how) in order to obtain correct ImagCDF files. Please note, MagPy will store the data in any case and will be able to read it again even if information is missing. Before submitting to a GIN, you need to make sure that the appropriate information is contained. Attributes that relate to publication of the data will not be checked at this point, and might be included later.
+The console output of the write command (see below) will tell you which information needs to be added (and how) in
+order to obtain correct ImagCDF files. Please note, MagPy will store the data in any case and will be able to read
+it again even if information is missing. Before submitting to a GIN, you need to make sure that the appropriate
+information is contained. Attributes that relate to publication of the data will not be checked at this point, and
+might be included later.
 
         >>>Writing IMAGCDF Format /tmp/wic_20150828_0000_PT1M_4.cdf
         >>>writeIMAGCDF: StandardLevel not defined - please specify by yourdata.header['DataStandardLevel'] = ['None','Partial','Full']
@@ -2913,7 +2996,8 @@ The console output of the write command (see below) will tell you which informat
         >>>writeIMAGCDF: given components are XYZF. Checking F column...
         >>>writeIMAGCDF: analyzed F column - values are apparently independend from vector components - using column name 'S'
 
-Now add the missing information. Selecting 'Partial' will require additional information. You will get a 'reminder' if you forget this. Please check IMAGCDF instructions on specific codes:
+Now add the missing information. Selecting 'Partial' will require additional information. You will get a 'reminder'
+if you forget this. Please check IMAGCDF instructions on specific codes:
 
         mydata.header['DataStandardLevel'] = 'Partial'
         mydata.header['DataPartialStandDesc'] = 'IMOS-01,IMOS-02,IMOS-03,IMOS-04,IMOS-05,IMOS-06,IMOS-11,IMOS-12,IMOS-13,IMOS-14,IMOS-15,IMOS-21,IMOS-22,IMOS-31,IMOS-41'
@@ -2929,7 +3013,11 @@ Similar reminders to fill out complete header information will be shown for othe
 
 #### 10.4.2 Providing location data
 
-Providing location data usually requires information on the reference system (ellipsoid,...). By default MagPy assumes that these values are provided in WGS84/WGS84 reference system. In order to facilitate most easy referencing and conversions, MagPy supports [EPSG] codes for coordinates. If you provide the geodetic references as follows, and provided that the [proj4] Python module is available, MagPy will automatically convert location data to the requested output format (currently WGS84).
+Providing location data usually requires information on the reference system (ellipsoid,...). By default MagPy assumes
+that these values are provided in WGS84/WGS84 reference system. In order to facilitate most easy referencing and
+conversions, MagPy supports [EPSG] codes for coordinates. If you provide the geodetic references as follows, and
+provided that the [proj4] Python module is available, MagPy will automatically convert location data to the requested
+output format (currently WGS84).
 
         mydata.header['DataAcquisitionLongitude'] = -34949.9
         mydata.header['DataAcquisitionLatitude'] = 310087.0
@@ -2941,7 +3029,15 @@ Providing location data usually requires information on the reference system (el
 
 #### 10.4.3 Special meta-information fields
 
-The meta-information fields can hold much more information than required by most output formats. This includes basevalue and baseline parameters, flagging details, detailed sensor information, serial numbers and much more. MagPy makes use of these possibilities. In order to save this meta-information along with your data set you can use MagPy internal archiving format, `PYCDF`, which can later be converted to any of the aforementioned output formats. You can even reconstruct a full data base. Any upcoming meta-information or output request can be easily added/modified without disrupting already existing data sets and the ability to read and analyse old data. This data format is also based on Nasa CDF. ASCII outputs are also supported by MagPy, of which the `PYSTR` format also contains all meta information and `PYASCII` is the most compact. Please consider that ASCII formats require a lot of memory, especially for one second and higher resolution data.
+The meta-information fields can hold much more information than required by most output formats. This includes
+basevalue and baseline parameters, flagging details, detailed sensor information, serial numbers and much more. MagPy
+makes use of these possibilities. In order to save this meta-information along with your data set you can use MagPy
+internal archiving format, `PYCDF`, which can later be converted to any of the aforementioned output formats. You can
+even reconstruct a full data base. Any upcoming meta-information or output request can be easily added/modified without
+disrupting already existing data sets and the ability to read and analyse old data. This data format is also based
+on Nasa CDF. ASCII outputs are also supported by MagPy, of which the `PYSTR` format also contains all meta information
+and `PYASCII` is the most compact. Please consider that ASCII formats require a lot of memory, especially for one
+second and higher resolution data.
 
 
         mydata.write('/tmp',format_type='PYCDF',coverage='year')
@@ -2992,9 +3088,10 @@ The meta-information fields can hold much more information than required by most
 | format_wic.py           | IWT,METEO,USBLOG,LIPPGRAV,LNM | 2.0.0  | r,r,r,r,r  | no        | X,X,X,X,X | csv       |
 | format_wik.py           | PMAG1,PMAG2,OPT**            | 2.0.0   | r,r        | no        | X,X    |              |
 
-Runtime tests: internal testing routines contained within each library file, only available for rw libraries
-RW: a local read/(write) test based on various example files. Only available on dedicated testing machines
-Write tests are also included in stream.write which stores dummy data in all file types supporting write_format commands. 
+Runtime tests: internal testing routines contained within each library file, only available for rw libraries.
+RW: a local read/(write) test based on various example files. Only available on dedicated testing machines.
+Write tests are also included in stream.write which stores dummy data in all file types supporting write_format
+commands. 
 
 
 *  incomplete formats or tests:
@@ -3003,18 +3100,19 @@ Write tests are also included in stream.write which stores dummy data in all fil
    - RCS - not yet written
    - HAPIJSON - not yet written
    - GDASB1,LEMIHF,LEMIBIN - no example files for testing
-   - GFZTMP - untested but principally useable
+   - GFZTMP - untested but principally usable
 
-** deprecated formats:
+** deprecated formats in 2.0.0:
    - OPT (in wik, old excel import from optical data readout)
    - DTU1 (in dtu, text format used when jürgen was at dtu, still in linestruct version)
    - AUTODIF_FREAD - Deprecated - Special format for AutoDIF read-in
    - AUTODIF (in abs_magpy, replaced by AUTODIFABS)
    - BDV1 (in bdv, Budkov data format)
    - SFDMI,SFGSM (in sfs, San Fernando data format)
-   removed in 2.0.0:
-   - CS (in wic, was never included properly - CS data is creating binary files)
-   - PHA (in format_pha.py, deleted, potentially hazarduous asteroids)
+
+removed in 2.0.0:
+   - CS (in wic, was never included properly - CS data is creating binary PYBIN files)
+   - PHA (in format_pha.py, deleted, potentially hazardous asteroids)
    - COMMATXT - (in format_simpletable.py) replaced by basiccsv, CSV
 
 
@@ -3119,13 +3217,48 @@ deprecated:
     - stream.bindetector(self,key,text=None,**kwargs):
     - stream.stream2flaglist(self, userange=True, flagnumber=None, keystoflag=None, sensorid=None, comment=None)
 
-
 removed:
     - stream.extractflags()  -> not useful any more
     - stream.flagfast()      -> not useful any more - used for previous flagging plots outside xmagpy
     - stream.flaglistadd()   -> core.flagging add
 
-### A3 - absolutes.py - all methods, overview with runtime and verification tests
+### A3 - core/flagging.py - all methods, overview with runtime and verification tests
+
+|  class            |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by |
+|-------------------|  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ---------- |
+| **core.flagging** |   |                 |                 |                |                  |          | |
+| flags             |  _check_version |  2.0.0       |                 |                |                  |         | flagging.load |
+| flags             |  _match_groups |  2.0.0        |                 |  yes           |  yes*         |    | apply_flags, create_patch |
+| flags             |  _list       |  2.0.0          |                 |  yes           |  yes             |         | |
+| flags             |  _set_label_from_comment |  2.0.0 |              |                |                  |         | flagging.load |
+| flags             |  add         |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  apply_flags |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  copy        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  create_patch |  2.0.0         |                 |                |  app**           |  6.1    | |
+| flags             |  diff        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  drop        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  fprint      |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  join        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  replace     |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  rename_nearby |  2.0.0        |                 |  yes           |  yes             |  6.1    | |
+| flags             |  save        |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  select      |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  stats       |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  timerange   |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  trim        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  union       |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+|       | _dateparser       |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | _readJson         |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | _readPickle       |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | load              |  2.0.0          |                 |                |  app**           |  6.6    | |
+|       | convert_to_flags  |  2.0.0     |                 |                |  app**           |  6.5    | |
+|       | flag_outlier      |  2.0.0         |                 |  yes           |  app**           |  6.2    | |
+|       | flag_range        |  2.0.0          |                 |  yes           |  app**           |  6.3    | |
+|       | flag_binary       |  2.0.0          |                 |  yes           |  app**           |  6.4    | |
+|       | flag_ultra        |  2.0.0          |                 |  no            |  no              |  6.7    | |
+
+
+### A4 - absolutes.py - all methods, overview with runtime and verification tests
 
 |    class          | method  | since version  |  until version  |  runtime test  |  result verification  |  manual  | *tested by     |     
 |-------------------| ------  | -------------  |  -------------  |  ------------  |  --------------  |  ------  |-----------------|
@@ -3158,7 +3291,7 @@ removed:
 |           | absolute_analysis |  2.0.0     |           |  yes        |  yes          |  7.2    |     |
 
 
-### A4 - core/activity.py - all methods, overview with runtime and verification tests
+### A5 - core/activity.py - all methods, overview with runtime and verification tests
 
 | class | method | since version | until version | runtime test | result verification | manual | *tested by |
 | ----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
@@ -3172,7 +3305,6 @@ removed:
 |       | seek_storm | 2.0.0     |               | yes          |  yes               |  8.2   | |
 |       | sqbase | 2.0.0         |               | yes          |  no                |  8.3   | requires long test set |
 
-### A5 - core/conversion.py - all methods, overview with runtime and verification tests
 
 ### A6 - core/database.py - all methods, overview with runtime and verification tests
 
@@ -3208,40 +3340,7 @@ removed:
 
         TODO: methods for DI support
 
-### A7 - core/flagging.py - all methods, overview with runtime and verification tests
-
-|  class            |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by |
-|-------------------|  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ---------- |
-| **core.flagging** |   |                 |                 |                |                  |          | |
-| flags             |  _check_version |  2.0.0       |                 |                |                  |         | flagging.load |
-| flags             |  _match_groups |  2.0.0        |                 |  yes           |  yes*         |    | apply_flags, create_patch |
-| flags             |  _list       |  2.0.0          |                 |  yes           |  yes             |         | |
-| flags             |  _set_label_from_comment |  2.0.0 |              |                |                  |         | flagging.load |
-| flags             |  add         |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  apply_flags |  2.0.0          |                 |  yes           |                  |  6.1    | |
-| flags             |  copy        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  create_patch |  2.0.0         |                 |                |  app**           |  6.1    | |
-| flags             |  diff        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  drop        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  fprint      |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  join        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  replace     |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  rename_nearby |  2.0.0        |                 |  yes           |  yes             |  6.1    | |
-| flags             |  save        |  2.0.0          |                 |  yes           |                  |  6.1    | |
-| flags             |  select      |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  stats       |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  timerange   |  2.0.0          |                 |  yes           |                  |  6.1    | |
-| flags             |  trim        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-| flags             |  union       |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
-|       | _dateparser       |  2.0.0          |                 |                |                  |         | flagging.load |
-|       | _readJson         |  2.0.0          |                 |                |                  |         | flagging.load |
-|       | _readPickle       |  2.0.0          |                 |                |                  |         | flagging.load |
-|       | load              |  2.0.0          |                 |                |  app**           |  6.6    | |
-|       | convert_to_flags  |  2.0.0     |                 |                |  app**           |  6.5    | |
-|       | flag_outlier      |  2.0.0         |                 |  yes           |  app**           |  6.2    | |
-|       | flag_range        |  2.0.0          |                 |  yes           |  app**           |  6.3    | |
-|       | flag_binary       |  2.0.0          |                 |  yes           |  app**           |  6.4    | |
-|       | flag_ultra        |  2.0.0          |                 |  no            |  no              |  6.7    | |
+### A7 - core/conversion.py - all methods, overview with runtime and verification tests
 
 ### A8 - core/methods.py - all methods, overview with runtime and verification tests
 
