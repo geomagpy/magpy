@@ -70,7 +70,7 @@ from magpy.lib.format_noaa import *
 from magpy.lib.format_nc import isNETCDF, readNETCDF
 from magpy.lib.format_latex import *
 from magpy.lib.format_covjson import *
-from magpy.lib.format_json import *
+#from magpy.lib.format_json import *
 
 # IMPORT OBSERVATORY/GROUP SPECIFIC FORMATS:
 from magpy.lib.format_wik import *

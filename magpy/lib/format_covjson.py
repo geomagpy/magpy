@@ -497,7 +497,7 @@ if __name__ == '__main__':
     print()
     print("----------------------------------------------------------")
     del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
-    #subprocess.call(del_test_files,shell=True)
+    subprocess.call(del_test_files,shell=True)
     for item in successes:
         print ("{} :     {}".format(item, successes.get(item)))
     if errors == {}:
