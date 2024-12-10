@@ -716,7 +716,10 @@ individual data provider. Please make sure to read them before accessing any of 
 
 #### 3.3.10 Reading DST data
 
-Disturbed storm time indices are provided by in a world data center (WDC) related format. DST
+Disturbed storm time indices are provided by [Kyoto](https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/index.html) in a 
+world data center (WDC) related format. This data can be accessed as follows.
+
+        data = read("https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/202411/dst2411.for.request")
 
 #### 3.3.11 The Conrad Observatory webservice
 
@@ -729,7 +732,12 @@ provided on the webpage. Current geomagnetic one-minute data can be obtained as 
 
 #### 3.3.12 The USGS webservice
 
-USGS webservice
+The [USGS webservice](https://www.usgs.gov/tools/web-service-geomagnetism-data) allows you accessing realtime data and many other data sources 
+from basically all USGS observatories. Besides the USGS also provides spot basevalue measurements and meta information.
+Checkout the webservice information as provided on the webpage. Current geomagnetic one-minute data for a specific 
+observatory (i.e. Bolder - BOU) can be obtained as follows:
+
+        data = read("https://geomag.usgs.gov/ws/data/?id=BOU")
 
 #### 3.3.13 Getting Index data from the GFZ Potsdam
 
@@ -761,9 +769,19 @@ exceeding magnitude 4.5 can be obtained as follows:
 Typically you will not treat the quake data set as timeseries but use this information as markers and signal identifiers.
 For this purpose you can convert the obtained time series into a flagging class as shown in section 6.5.
 
-#### 3.3.16 NOAA data
+#### 3.3.16 NOAA data: ACE, DSCOVR and GOES
 
-#### 3.3.17 GOES data
+A number of data sources from NASA and the NOAA National Geophysical Data Center related to space weather analysis by 
+the Space Weather  Prediction Center [SWPC](https://www.swpc.noaa.gov/products) are supported by MagPy. You can 
+directly access data from the Advanced Composition Explorer ([ACE](https://izw1.caltech.edu/ACE/)) using this syntax:
+
+        ace = read("https://sohoftp.nascom.nasa.gov/sdb/goes/ace/daily/20221122_ace_swepam_1m.txt")
+
+Deep Space Climate Observatory ([DSCOVR](https://www.ngdc.noaa.gov/dscovr/portal/index.html#/)) is the replacement 
+satellite for ACE and its data can be obtained here:
+
+
+X-ray data from GOES 
 
 
 ### 3.4 Converting the internal data structure
