@@ -283,33 +283,34 @@ def writeCOVJSON(datastream, filename, **kwargs):
         # parameters
         # ---
         #print ("Element", element)
-        component = datastream.get_key_name(element)
-        unitname = datastream.get_key_unit(element)
-        # get parametername for each element
-        #component = 'H' # based on element
-        paradict = {}
-        paradict['type'] = "Parameter"
-        oP = {}
-        oP['id'] = ''
-        oP['label'] = ''
-        oP['description'] = ''
-        paradict['observedProperty'] = oP
-        unit = {}
-        unit['label'] = unitname
-        unit['symbol'] = ''
-        paradict['unit'] = unit
-        pad[component] = paradict
-        # ranges
-        # ---
-        values = datastream._get_column(element)
-        rangedict = {}
-        rangedict['type'] = 'NdArray'
-        rangedict['dataType'] = 'float'
-        rangedict['axisNames'] = [component]
-        rangedict['shape'] = [datastream.length()[0]]
-        if not headonly:
-            rangedict['values'] = list(values)
-        rad[component] = rangedict
+        if not element.find('time') >= 0:  # no support for secondary times
+            component = datastream.get_key_name(element)
+            unitname = datastream.get_key_unit(element)
+            # get parametername for each element
+            #component = 'H' # based on element
+            paradict = {}
+            paradict['type'] = "Parameter"
+            oP = {}
+            oP['id'] = ''
+            oP['label'] = ''
+            oP['description'] = ''
+            paradict['observedProperty'] = oP
+            unit = {}
+            unit['label'] = unitname
+            unit['symbol'] = ''
+            paradict['unit'] = unit
+            pad[component] = paradict
+            # ranges
+            # ---
+            values = datastream._get_column(element)
+            rangedict = {}
+            rangedict['type'] = 'NdArray'
+            rangedict['dataType'] = 'float'
+            rangedict['axisNames'] = [component]
+            rangedict['shape'] = [datastream.length()[0]]
+            if not headonly:
+                rangedict['values'] = list(values)
+            rad[component] = rangedict
 
     
     # INTERMAGNET 
@@ -320,7 +321,7 @@ def writeCOVJSON(datastream, filename, **kwargs):
 
     #Construct a DataID if not existing
     if header.get("DataID","") == "":
-        dataid = header.get("StationID") + "_" + header.get('DataPublicationLevel','variation') + "_0001_0001"
+        dataid = header.get("StationID","NoCode") + "_" + header.get('DataPublicationLevel','variation') + "_0001_0001"
     else:
         dataid = header.get("DataID","")
     # subgroups of intermagnet dict

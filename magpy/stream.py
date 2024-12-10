@@ -8206,12 +8206,18 @@ if __name__ == '__main__':
                 errors['conversion'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with conversion")
             try:
+                wstream = create_minteststream(startdate=datetime(2022, 11, 1), addnan=False)
+                wstream = wstream.trim(datetime(2022, 11, 1),datetime(2022, 11, 2))
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
-                wformats = ['CSV', 'IAGA', 'IMAGCDF', 'IMF', 'PYSTR', 'PYASCII', 'PYCDF']
+                """
+                untested here because of different data requirements (tests within format libraries): 
+                IAF, BLV, BLV1_2, IYFV, DKA
+                """
+                wformats = ['CSV', 'IAGA', 'IMAGCDF', 'IMF', 'PYSTR', 'PYASCII', 'PYCDF','WDC','DIDD','LATEX','COVJSON']
                 # will not work for monthly files, IAF etc
                 for idx, f in enumerate(wformats):
                     print("testing wformat", f)
-                    filtstream.write('.',
+                    wstream.write('.',
                                      filenamebegins='{}_{}_'.format(testrun, idx),
                                      filenameends='.tst',
                                      dateformat='%Y-%m-%d',
@@ -8307,6 +8313,10 @@ if __name__ == '__main__':
         print()
         print("----------------------------------------------------------")
         del_test_files = 'rm {}*'.format(testrun)
+        subprocess.call(del_test_files, shell=True)
+        del_test_files = 'rm {}*'.format(testrun.upper())
+        subprocess.call(del_test_files, shell=True)
+        del_test_files = 'rm xyz_2022*'
         subprocess.call(del_test_files, shell=True)
         if errors == {}:
             print("0 errors! Great! :)")
