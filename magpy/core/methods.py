@@ -29,35 +29,35 @@ the following methods are contained:
 - testtime(variable)     :    returns datetime object if variable can be converted to it
 - test_timestring(variable)     :
 
-class | method | since version | until version | runtime test | result verification | manual | *tested by
------ | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
-**core.methods** |  |          |               |              |  |  |
-    | ceil_dt         |  2.0.0 |              | yes           |  |  |
-    | convert_geo_coordinate | 2.0.0 |        | yes           |  |  |
-    | data_for_di     | 2.0.0 |               | yes*          | yes*         |        | absolutes
-    | dates_to_url    | 2.0.0 |               |               |  |  |
-    | deprecated      | 2.0.0 |               | yes           |  |  |
- d  | denoralize      | 2.0.0 |     2.1.0     | no            |  |  |
-    | dictgetlast     | 2.0.0 |               | yes           |  |  |
-    | dict2string     | 2.0.0 |               | yes           |  |  |
-    | evaluate_function | 2.0.0 |             | yes           |  |  |
-    | extract_date_from_string | 2.0.0 |      | yes           |  |  |
-    | find_nearby     | 2.0.0 |               | yes           |  |  |
-    | find_nth        | 2.0.0 |               | yes           | yes          |            |  flagbrain
-    | func_from_file  | 2.0.0 |               | yes           | yes*         |  5.9       |  stream
-    | func_to_file    | 2.0.0 |               | yes           | yes*         |  5.9       |  stream
-    | get_chunks      | 2.0.0 |               | yes           |  |  |
-    | group_indices   | 2.0.0 |               | yes           |  |  |
-    | is_number       | 2.0.0 |               | yes           |  |  |
-    | mask_nan        | 2.0.0 |               | yes           |  |  |
-    | missingvalue    | 2.0.0 |               | yes           |  |  |
-    | nan_helper      | 2.0.0 |               | yes           |  |  |
-    | nearestpow2     | 2.0.0 |               | yes           |  |  |
-    | normalize       | 2.0.0 |               | yes           |  |  |
-    | round_seconds   | 2.0.0 |               | yes           |  |  |
-    | string2dict     | 2.0.0 |               | yes           |  |  |
-    | testtime        | 2.0.0 |               | yes           |  |  |
-    | test_timestring | 2.0.0 |               | yes           |  |  |
+|class | method | since version | until version | runtime test | result verification | manual | *tested by |
+|----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
+|**core.methods** |  |          |               |              |  |  | |
+|    | ceil_dt         |  2.0.0 |              | yes           |  |  | |
+|    | convert_geo_coordinate | 2.0.0 |        | yes           |  |  | |
+|    | data_for_di     | 2.0.0 |               | yes*          | yes*         |        | absolutes |
+|    | dates_to_url    | 2.0.0 |               |               |  |  | |
+|    | deprecated      | 2.0.0 |               | yes           |  |  | |
+| d  | denoralize      | 2.0.0 |     2.1.0     | no            |  |  | |
+|    | dictgetlast     | 2.0.0 |               | yes           |  |  | |
+|    | dict2string     | 2.0.0 |               | yes           |  |  | |
+|    | evaluate_function | 2.0.0 |             | yes           |  |  | |
+|    | extract_date_from_string | 2.0.0 |      | yes           |  |  | |
+|    | find_nearby     | 2.0.0 |               | yes           |  |  | |
+|    | find_nth        | 2.0.0 |               | yes           | yes          |            |  flagbrain |
+|    | func_from_file  | 2.0.0 |               | yes           | yes*         |  5.9       |  stream |
+|    | func_to_file    | 2.0.0 |               | yes           | yes*         |  5.9       |  stream |
+|    | get_chunks      | 2.0.0 |               | yes           |  |  | |
+|    | group_indices   | 2.0.0 |               | yes           |  |  | |
+|    | is_number       | 2.0.0 |               | yes           |  |  | |
+|    | mask_nan        | 2.0.0 |               | yes           |  |  | |
+|    | missingvalue    | 2.0.0 |               | yes           |  |  | |
+|    | nan_helper      | 2.0.0 |               | yes           |  |  | |
+|    | nearestpow2     | 2.0.0 |               | yes           |  |  | |
+|    | normalize       | 2.0.0 |               | yes           |  |  | |
+|    | round_seconds   | 2.0.0 |               | yes           |  |  | |
+|    | string2dict     | 2.0.0 |               | yes           |  |  | |
+|    | testtime        | 2.0.0 |               | yes           |  |  | |
+|    | test_timestring | 2.0.0 |               | yes           |  |  | |
 
 """
 import numpy as np

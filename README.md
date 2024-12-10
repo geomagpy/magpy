@@ -2950,43 +2950,43 @@ The meta-information fields can hold much more information than required by most
 
 ## Appendix
 
-### A1 - supported data formats and developments state
+### A1 - library - supported data formats, included runtime and read/write tests
 
 
 | library                 | formats                      | version | read/write | runtime tests | RW | requirements |
 |-------------------------|------------------------------|---------|------------|---------------|----|--------------|
-| format_abs_magpy.py     | DI: MAGPYABS,JSONANS,MAGPYNEWABS | 2.0.0 | r        | no        |        | absolutes    |
+| format_abs_magpy.py     | DI: MAGPYABS,JSONANS,MAGPYNEWABS | 2.0.0 | r        |           |        | absolutes    |
 | format_acecdf.py        | ACECDF                       | 2.0.0   | r          | no        | X      | cdflib       |
-| format_autodif.py       | DI: AUTODIFABS               | 2.0.0   | r          | no        |        | absolutes    |
-| format_autodif_fread.py | DI: AUTODIF_FREAD**          | -.-.-   | rw         | -         |        | absolutes    |
+| format_autodif.py       | DI: AUTODIFABS               | 2.0.0   | r          |           |        | absolutes    |
+| format_autodif_fread.py | DI: AUTODIF_FREAD**          | -.-.-   | rw         | -         | -      | absolutes    |
 | format_basiccsv.py      | CSV                          | 2.0.0   | rw         | yes       | X      | csv          |
-| format_bdv.py           | BDV1**                       | 0.x     |            |           |        |              |
+| format_bdv.py           | BDV1**                       | 0.x     |            | -         | -      |              |
 | format_covjson.py       | COVJSON                      | 2.0.0   | rw         | yes       | X      | json         |
 | format_cr800.py         | CR800*,RADON                 | 2.0.0   | r          | no        | X      | csv          |
 | format_didd.py          | DIDD                         | 2.0.0   | rw         | yes       | X      | csv          |
-| format_dtu.py           | DTU1**                       | 0.x     |            |           |        |              |
+| format_dtu.py           | DTU1**                       | 0.x     |            | -         | -      |              |
 | format_gdas.py          | GDASA1,GDASB1*               | 2.0.0   | r          | no        | X      |              |
 | format_gfz.py           | GFZKP,GFZINDEXJSON           | 2.0.0   | r          | yes       | -,-    | json         |
 | format_gfzcdf.py        | GFZCDF                       | 2.0.0   | r          | no        | X      |              |
 | format_gfztmp.py        | GFZTMP                       | 2.0.0   | r          | -         | -      |              |
 | format_gsm19.py         | GSM19 (b,wg)                 | 2.0.0   | r          | no        | X      |              |
-| format_hapijson.py      | *                            | -.-.-   | rw         | future    |        | json         |
+| format_hapijson.py      | *                            | -.-.-   | rw         | future    | -      | json         |
 | format_iaga02.py        | IAGA                         | 2.0.0   | rw         | yes       | X      | pyproj       |
 | format_imagcdf.py***    | IMAGCDF                      | 2.0.0   | rw         | yes       | X      | pyproj,cdflib |
 | format_imf.py           | IAF,IMF,DKA,BLV(1,2),IYFV    | 2.0.0   | rw         | yes       | X,X,X,X,X | pyproj    |
 | format_iono.py          | IONO                         | 2.0.0   | r          | no        | X      | csv          |
 | format_latex.py         | LATEX                        | 2.0.0   | w          | yes       | -      | opt/Table.py |
 | format_lemi.py          | LEMIHF*,LEMIBIN*,LEMIBIN1    | 2.0.0   | r,r,r      | no        | -,-,X  | struct       |
-| format_magpy.py         | PYASCII,PYSTR,PYBIN          | 2.0.0   | rw,rw,r    | yes       |        | csv          |
-| format_magpycdf.py***   | PYCDF                        | 2.0.0   | rw         | yes       |        | cdflib       |
-| format_nc.py            | NETCDF*                      | -.-.-   | rw         | future    |        | netcdf       |
+| format_magpy.py         | PYASCII,PYSTR,PYBIN          | 2.0.0   | rw,rw,r    | yes       | X,X,X  | csv          |
+| format_magpycdf.py***   | PYCDF                        | 2.0.0   | rw         | yes       | X      | cdflib       |
+| format_nc.py            | NETCDF*                      | -.-.-   | rw         | future    | -      | netcdf       |
 | format_neic.py          | NEIC                         | 2.0.0   | r          | no        | X      |              |
-| format_noaa.py          | NOAAACE                      | 2.0.0   | r          | no        | X      |              |
+| format_noaa.py          | NOAAACE,DSCOVR,XRAY          | 2.0.0   | r,r,r      | no        | X,X,X  | json         |
 | format_pos1.py          | POSMPB,POS1TXT,POS1          | 2.0.0   | r,r,r      | no        | X,X,X  |              |
 | format_predstorm.py     | PREDSTORM                    | 2.0.0   | r          | no        | X      |              |
 | format_qspin.py         | QSPIN                        | 2.0.0   | r          | no        | X      |              |
 | format_rcs.py           | RMRCS,RCS*                   | 2.0.0   | r          | no        | X,-    |              |
-| format_sfs.py           | SFDMI**,SFGSM**              | 0.x     | r,r        |           |        |              |
+| format_sfs.py           | SFDMI**,SFGSM**              | 0.x     | r,r        | -         | -      |              |
 | format_tsf.py           | TSF                          | 2.0.0   | r          | no        | X      |              |
 | format_wdc.py           | WDC                          | 2.0.0   | rw         | yes       | X      |              |
 | format_wic.py           | IWT,METEO,USBLOG,LIPPGRAV,LNM | 2.0.0  | r,r,r,r,r  | no        | X,X,X,X,X | csv       |
@@ -2998,27 +2998,27 @@ Write tests are also included in stream.write which stores dummy data in all fil
 
 
 *  incomplete formats or tests:
-   CR800 - not yet written completely plus no data
-   NETCDF - not yet written
-   RCS - not yet written
-   HAPIJSON - not yet written
-   GDASB1,LEMIHF,LEMIBIN - no example files for testing
-   GFZTMP - untested but principally useable
+   - CR800 - not yet written completely plus no data
+   - NETCDF - not yet written
+   - RCS - not yet written
+   - HAPIJSON - not yet written
+   - GDASB1,LEMIHF,LEMIBIN - no example files for testing
+   - GFZTMP - untested but principally useable
 
 ** deprecated formats:
-   OPT (in wik, old excel import from optical data readout)
-   DTU1 (in dtu, text format used when jürgen was at dtu, still in linestruct version)
-   AUTODIF_FREAD - Deprecated - Special format for AutoDIF read-in
-   AUTODIF (in abs_magpy, replaced by AUTODIFABS)
-   BDV1 (in bdv, Budkov data format)
-   SFDMI,SFGSM (in sfs, San Fernando data format)
+   - OPT (in wik, old excel import from optical data readout)
+   - DTU1 (in dtu, text format used when jürgen was at dtu, still in linestruct version)
+   - AUTODIF_FREAD - Deprecated - Special format for AutoDIF read-in
+   - AUTODIF (in abs_magpy, replaced by AUTODIFABS)
+   - BDV1 (in bdv, Budkov data format)
+   - SFDMI,SFGSM (in sfs, San Fernando data format)
    removed in 2.0.0:
-   JSON (in json) replaced by COVJSON
-   CS (in wic, was never included properly - CS data is creating binary files)
-   PHA (in format_pha.py, deleted, potentially hazarduous asteroids)
-   COMMATXT - (in format_simpletable.py) replaced by basiccsv, CSV
+   - CS (in wic, was never included properly - CS data is creating binary files)
+   - PHA (in format_pha.py, deleted, potentially hazarduous asteroids)
+   - COMMATXT - (in format_simpletable.py) replaced by basiccsv, CSV
 
-### A2 - supported data formats and developments state
+
+### A2 - stream.py - all methods, overview with runtime and verification tests
 
 | class                |  method  |  since version  |  until version  |  runtime test  |  result verification  | manual  |  *tested by | 
 | ----------------------|  ------  |  -------------  |  -------------  |  ------------  |  ------------------  |---------|  ---------- |
@@ -3125,7 +3125,129 @@ removed:
     - stream.flagfast()      -> not useful any more - used for previous flagging plots outside xmagpy
     - stream.flaglistadd()   -> core.flagging add
 
+### A3 - absolutes.py - all methods, overview with runtime and verification tests
 
+|    class          | method  | since version  |  until version  |  runtime test  |  result verification  |  manual  | *tested by     |     
+|-------------------| ------  | -------------  |  -------------  |  ------------  |  --------------  |  ------  |-----------------|
+| **core.absolutes** |    |                 |               |             |               |         |    |
+| AbsoluteDIStrcut  |              |  2.0.0     |           |  yes        |  yes          |  7.1    |     |
+| DILineStruct      |  get_data_list   |  2.0.0     |           |  yes        |  yes          |  7.1    |    |
+| DILineStruct      |  get_abs_distruct |  2.0.0    |           |  yes        |  yes          |  7.1    |     |
+| DILineStruct      |  save_di         |  2.0.0     |           |  yes*       |  yes*         |  7.3    | absolute_analysis  | 
+| AbsoluteAnalysis  |  add         |  2.0.0     |           |             |               |       | unused?             |
+| AbsoluteAnalysis  |  extend      |  2.0.0     |           |             |               |       | unused?             |
+| AbsoluteAnalysis  |  sorting     |  2.0.0     |           |             |               |       | unused?             |
+| AbsoluteAnalysis  |  _corrangle  |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcdec         |
+| AbsoluteAnalysis  |  _get_max    |  2.0.0     |           |  yes        |  yes          |  -      | unused?             |
+| AbsoluteAnalysis  |  _get_min    |  2.0.0     |           |  yes        |  yes          |  -      | unused?             |
+| AbsoluteAnalysis  |  _get_column |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcdec         |
+| AbsoluteAnalysis  |  _check_coverage |  2.0.0 |           |  yes        |               |  7.1    |     |
+| AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |   |  yes        |               |  7.1    |     |
+| AbsoluteAnalysis  |  _calcdec    |  2.0.0     |           |  yes        |  yes          |  7.1    | ad.calcabsolutes     |
+| AbsoluteAnalysis  |  _calcinc    |  2.0.0     |           |  yes        |  yes          |  7.1    | ad.calcabsolutes     |
+| AbsoluteAnalysis  |  _h          |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcinc         |
+| AbsoluteAnalysis  |  _z          |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcinc         |
+| AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |               |  7.1    |    |
+|           | _analyse_di_source |  2.0.0     |           |  yes        |               |  -      |     |
+|           | _logfile_len      |  2.0.0     |           |             |               |  -      | unused?     |        
+|           | deg2degminsec     |  2.0.0     |           |  yes        |  yes          |  7.2    |     |
+| d                 | absRead             |  2.0.0     |  2.1.0    |             |               |  -      |     |
+|           | abs_read          |  2.0.0     |           |  yes        |               |  7.1    |     |
+|           | _abs_read         |  2.0.0     |           |  yes        |               |  -      |     |
+| d                 | absoluteAnalysis    |  2.0.0     |  2.1.0    |             |               |  -      |     |
+|           | absolute_analysis |  2.0.0     |           |  yes        |  yes          |  7.2    |     |
+
+
+### A4 - core/activity.py - all methods, overview with runtime and verification tests
+
+| class | method | since version | until version | runtime test | result verification | manual | *tested by |
+| ----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
+| **core.activity** |  |         |               |              |                    |        | |
+| core.conversions |  |          |               |              |                    |        | |
+| decompose |    | 2.0.0         |               | yes*         |                    |  8.3   | sqbase |
+| k_fmi |        | 2.0.0         |               | yes*         |  yes*              |  8.1   | K_fmi |
+| stormdet |     | 2.0.0         |               | yes*         |  yes*              |  8.2   | seek_storm |
+|       | emd_decompose | 2.0.0  |               | yes*         |                    |  8.3   | sqbase |
+|       | K_fmi | 2.0.0          |               | yes          |  yes               |  8.1   | |
+|       | seek_storm | 2.0.0     |               | yes          |  yes               |  8.2   | |
+|       | sqbase | 2.0.0         |               | yes          |  no                |  8.3   | requires long test set |
+
+### A5 - core/conversion.py - all methods, overview with runtime and verification tests
+
+### A6 - core/database.py - all methods, overview with runtime and verification tests
+
+| class         | method | since version | until version | runtime test | result verification | manual | *tested by |
+|---------------| ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
+| **core.database** |  |          |              |              |                     |        | |
+| DataBank      | _executesql |  2.0.0 |              | yes*         |                     |        | many |
+| DataBank      | alter       | 2.0.0 |               | yes          |                     |  9.2   | db.dbinit |
+| DataBank      | coordinate  | 2.0.0 |               | yes          |                     |  9.2  | unused? |
+| DataBank      | datainfo    | 2.0.0 |               | yes          | yes*                |       | db.write |
+| DataBank      | dbinit      | 2.0.0 |               | yes          |                     |  9.2  | |
+| DataBank      | delete      | 2.0.0 |               | yes          |                     |  9.2  | |
+| DataBank      | diline_to_db | 2.0.0 |              | yes*         | yes*                |       | absolutes |
+| DataBank      | diline_from_db | 2.0.0 |            | yes*         | yes*                |       | absolutes |
+| DataBank      | dict_to_fields | 2.0.0 |            | yes          |                     |       | |
+| DataBank      | fields_to_dict | 2.0.0 |            | yes*         | yes*                |       | db.read, db.get_lines |
+| DataBank      | flags_from_db | 2.0.0 |             | yes          | yes                 |  9.3  | |
+| DataBank      | flags_to_db | 2.0.0 |               | yes          | yes                 |  9.3  | |
+| DataBank      | flags_to_delete | 2.0.0 |           | yes          | yes                 |  9.3  | |
+| DataBank      | get_float   | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | get_lines   | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | get_pier    |  2.0.0 |              | yes          | yes                 |  9.2  | |
+| DataBank      | get_string  | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | info        |  2.0.0 |              | yes          |                     |  9.2  | |
+| DataBank      | read        |  2.0.0 |              | yes          | yes                 |  9.2  | |
+| DataBank      | select      | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | sensorinfo  | 2.0.0 |               | yes          | yes*                |       | db.write |
+| DataBank      | set_time_in_datainfo | 2.0.0 |      | yes*         | yes*                |       | db.write |
+| DataBank      | update      | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | update_datainfo | 2.0.0 |           | yes          |                     |       | unused? |
+| DataBank      | tableexists | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | write       | 2.0.0 |               | yes          | yes                 |  9.2  | |
+
+        TODO: methods for DI support
+
+### A7 - core/flagging.py - all methods, overview with runtime and verification tests
+
+|  class            |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by |
+|-------------------|  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ---------- |
+| **core.flagging** |   |                 |                 |                |                  |          | |
+| flags             |  _check_version |  2.0.0       |                 |                |                  |         | flagging.load |
+| flags             |  _match_groups |  2.0.0        |                 |  yes           |  yes*         |    | apply_flags, create_patch |
+| flags             |  _list       |  2.0.0          |                 |  yes           |  yes             |         | |
+| flags             |  _set_label_from_comment |  2.0.0 |              |                |                  |         | flagging.load |
+| flags             |  add         |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  apply_flags |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  copy        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  create_patch |  2.0.0         |                 |                |  app**           |  6.1    | |
+| flags             |  diff        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  drop        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  fprint      |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  join        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  replace     |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  rename_nearby |  2.0.0        |                 |  yes           |  yes             |  6.1    | |
+| flags             |  save        |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  select      |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  stats       |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  timerange   |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  trim        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  union       |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+|       | _dateparser       |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | _readJson         |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | _readPickle       |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | load              |  2.0.0          |                 |                |  app**           |  6.6    | |
+|       | convert_to_flags  |  2.0.0     |                 |                |  app**           |  6.5    | |
+|       | flag_outlier      |  2.0.0         |                 |  yes           |  app**           |  6.2    | |
+|       | flag_range        |  2.0.0          |                 |  yes           |  app**           |  6.3    | |
+|       | flag_binary       |  2.0.0          |                 |  yes           |  app**           |  6.4    | |
+|       | flag_ultra        |  2.0.0          |                 |  no            |  no              |  6.7    | |
+
+### A8 - core/methods.py - all methods, overview with runtime and verification tests
+
+### A9 - core/plot.py - all methods, overview with runtime and verification tests
+
+### A10 - other modules - all methods, overview with runtime and verification tests
 
    [magpy-git]: <https://github.com/geomagpy/magpy>
    [magpy_win]: <http://www.conrad-observatory.at>

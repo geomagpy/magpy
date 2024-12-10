@@ -67,35 +67,36 @@ class DataBank(object):
         NOT INCLUDED FROM 1.x database
         - dbupload  (create archive based on stream2db) - did not find any usages in MagPy and cobsanalysis
 
-        class | method | since version | until version | runtime test | result verification | manual | *tested by
-        ----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ----------
-        **core.database** |  |          |              |              |                     |        |
-        DataBank | _executesql |  2.0.0 |              | yes*         |                     |        | many
-        DataBank | alter       | 2.0.0 |               | yes          |                     |  9.2   | db.dbinit
-        DataBank | coordinate  | 2.0.0 |               | yes          |                     |  9.2  | unused?
-        DataBank | datainfo    | 2.0.0 |               | yes          | yes*                |       | db.write
-        DataBank | dbinit      | 2.0.0 |               | yes          |                     |  9.2  |
-        DataBank | delete      | 2.0.0 |               | yes          |                     |  9.2  |
-        DataBank | diline_to_db | 2.0.0 |              | yes*         | yes*                |       | absolutes
-        DataBank | diline_from_db | 2.0.0 |            | yes*         | yes*                |       | absolutes
-        DataBank | dict_to_fields | 2.0.0 |            | yes          |                     |       |
-        DataBank | fields_to_dict | 2.0.0 |            | yes*         | yes*                |       | db.read, db.get_lines
-        DataBank | flags_from_db | 2.0.0 |             | yes          | yes                 |  9.3  |
-        DataBank | flags_to_db | 2.0.0 |               | yes          | yes                 |  9.3  |
-        DataBank | flags_to_delete | 2.0.0 |           | yes          | yes                 |  9.3  |
-        DataBank | get_float   | 2.0.0 |               | yes          | yes                 |  9.2  |
-        DataBank | get_lines   | 2.0.0 |               | yes          | yes                 |  9.2  |
-        DataBank | get_pier    |  2.0.0 |              | yes          | yes                 |  9.2  |
-        DataBank | get_string  | 2.0.0 |               | yes          | yes                 |  9.2  |
-        DataBank | info        |  2.0.0 |              | yes          |                     |  9.2  |
-        DataBank | read        |  2.0.0 |              | yes          | yes                 |  9.2  |
-        DataBank | select      | 2.0.0 |               | yes          | yes                 |  9.2  |
-        DataBank | sensorinfo  | 2.0.0 |               | yes          | yes*                |       | db.write
-        DataBank | set_time_in_datainfo | 2.0.0 |      | yes*         | yes*                |       | db.write
-        DataBank | update      | 2.0.0 |               | yes          | yes                 |  9.2  |
-        DataBank | update_datainfo | 2.0.0 |           | yes          |                     |       | unused?
-        DataBank | tableexists | 2.0.0 |               | yes          | yes                 |  9.2  |
-        DataBank | write       | 2.0.0 |               | yes          | yes                 |  9.2  |
+| class         | method | since version | until version | runtime test | result verification | manual | *tested by |
+|---------------| ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
+| **core.database** |  |          |              |              |                     |        | |
+| DataBank      | _executesql |  2.0.0 |              | yes*         |                     |        | many |
+| DataBank      | alter       | 2.0.0 |               | yes          |                     |  9.2   | db.dbinit |
+| DataBank      | coordinate  | 2.0.0 |               | yes          |                     |  9.2  | unused? |
+| DataBank      | datainfo    | 2.0.0 |               | yes          | yes*                |       | db.write |
+| DataBank      | dbinit      | 2.0.0 |               | yes          |                     |  9.2  | |
+| DataBank      | delete      | 2.0.0 |               | yes          |                     |  9.2  | |
+| DataBank      | diline_to_db | 2.0.0 |              | yes*         | yes*                |       | absolutes |
+| DataBank      | diline_from_db | 2.0.0 |            | yes*         | yes*                |       | absolutes |
+| DataBank      | dict_to_fields | 2.0.0 |            | yes          |                     |       | |
+| DataBank      | fields_to_dict | 2.0.0 |            | yes*         | yes*                |       | db.read, db.get_lines |
+| DataBank      | flags_from_db | 2.0.0 |             | yes          | yes                 |  9.3  | |
+| DataBank      | flags_to_db | 2.0.0 |               | yes          | yes                 |  9.3  | |
+| DataBank      | flags_to_delete | 2.0.0 |           | yes          | yes                 |  9.3  | |
+| DataBank      | get_float   | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | get_lines   | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | get_pier    |  2.0.0 |              | yes          | yes                 |  9.2  | |
+| DataBank      | get_string  | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | info        |  2.0.0 |              | yes          |                     |  9.2  | |
+| DataBank      | read        |  2.0.0 |              | yes          | yes                 |  9.2  | |
+| DataBank      | select      | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | sensorinfo  | 2.0.0 |               | yes          | yes*                |       | db.write |
+| DataBank      | set_time_in_datainfo | 2.0.0 |      | yes*         | yes*                |       | db.write |
+| DataBank      | update      | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | update_datainfo | 2.0.0 |           | yes          |                     |       | unused? |
+| DataBank      | tableexists | 2.0.0 |               | yes          | yes                 |  9.2  | |
+| DataBank      | write       | 2.0.0 |               | yes          | yes                 |  9.2  | |
+
         TODO: methods for DI support
 
 

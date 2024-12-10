@@ -65,38 +65,38 @@ class Flags(object):
     METHODS OVERVIEW:
     ----------------------------
 
-    class  |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by
----------  |  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ----------
-**core.flagging** |   |                 |                 |                |                  |          |
-flags  |  _check_version |  2.0.0       |                 |                |                  |         | flagging.load
-flags  |  _match_groups |  2.0.0        |                 |  yes           |  yes*         |    | apply_flags, create_patch
-flags  |  _list       |  2.0.0          |                 |  yes           |  yes             |         |
-flags  |  _set_label_from_comment |  2.0.0 |              |                |                  |         | flagging.load
-flags  |  add         |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  apply_flags |  2.0.0          |                 |  yes           |                  |  6.1    |
-flags  |  copy        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  create_patch |  2.0.0         |                 |                |  app**           |  6.1    |
-flags  |  diff        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  drop        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  fprint      |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  join        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  replace     |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  rename_nearby |  2.0.0        |                 |  yes           |  yes             |  6.1    |
-flags  |  save        |  2.0.0          |                 |  yes           |                  |  6.1    |
-flags  |  select      |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  stats       |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  timerange   |  2.0.0          |                 |  yes           |                  |  6.1    |
-flags  |  trim        |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-flags  |  union       |  2.0.0          |                 |  yes           |  yes             |  6.1    |
-       |  _dateparser |  2.0.0          |                 |                |                  |         | flagging.load
-       |  _readJson   |  2.0.0          |                 |                |                  |         | flagging.load
-       |  _readPickle |  2.0.0          |                 |                |                  |         | flagging.load
-       |  load        |  2.0.0          |                 |                |  app**           |  6.6    |
-       |  convert_to_flags |  2.0.0     |                 |                |  app**           |  6.5    |
-       |  flag_outlier |  2.0.0         |                 |  yes           |  app**           |  6.2    |
-       |  flag_range  |  2.0.0          |                 |  yes           |  app**           |  6.3    |
-       |  flag_binary |  2.0.0          |                 |  yes           |  app**           |  6.4    |
-       |  flag_ultra  |  2.0.0          |                 |  no            |  no              |  6.7    |
+|  class            |  method  |  since version  |  until version  |  runtime test  |  result verification  |  manual  |  *tested by |
+|-------------------|  ------  |  -------------  |  -------------  |  ------------  |  --------------  |  ------  |  ---------- |
+| **core.flagging** |   |                 |                 |                |                  |          | |
+| flags             |  _check_version |  2.0.0       |                 |                |                  |         | flagging.load |
+| flags             |  _match_groups |  2.0.0        |                 |  yes           |  yes*         |    | apply_flags, create_patch |
+| flags             |  _list       |  2.0.0          |                 |  yes           |  yes             |         | |
+| flags             |  _set_label_from_comment |  2.0.0 |              |                |                  |         | flagging.load |
+| flags             |  add         |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  apply_flags |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  copy        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  create_patch |  2.0.0         |                 |                |  app**           |  6.1    | |
+| flags             |  diff        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  drop        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  fprint      |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  join        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  replace     |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  rename_nearby |  2.0.0        |                 |  yes           |  yes             |  6.1    | |
+| flags             |  save        |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  select      |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  stats       |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  timerange   |  2.0.0          |                 |  yes           |                  |  6.1    | |
+| flags             |  trim        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+| flags             |  union       |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
+|       | _dateparser       |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | _readJson         |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | _readPickle       |  2.0.0          |                 |                |                  |         | flagging.load |
+|       | load              |  2.0.0          |                 |                |  app**           |  6.6    | |
+|       | convert_to_flags  |  2.0.0     |                 |                |  app**           |  6.5    | |
+|       | flag_outlier      |  2.0.0         |                 |  yes           |  app**           |  6.2    | |
+|       | flag_range        |  2.0.0          |                 |  yes           |  app**           |  6.3    | |
+|       | flag_binary       |  2.0.0          |                 |  yes           |  app**           |  6.4    | |
+|       | flag_ultra        |  2.0.0          |                 |  no            |  no              |  6.7    | |
 
 
 verification test marked by app** are done within the manual and example data sets
