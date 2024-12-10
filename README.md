@@ -497,16 +497,32 @@ Let's create a quick example by loading some example data set and store it a CSV
 
 ### 3.3 Specific commands and options for read and write
 
-#### 3.3.1 Supported geomagnetic data formats and defaults
+The following subsections highlight and introduce some format specific options for
+commonly used format types, which are available in addition to the options listed in as listed in 3.1 for `read` and 
+in 3.2 for `write`. In order to get a full list of i.e. supported `write` types use the following example. Change 'w' 
+by 'r' to get `read` types:
 
-The `read` and `write` method all methods listed not specifically in the following sections 3.3.x support only basic 
-read commands, as listed in 3.1 and  basic write options as listed in 3.2. The default format of MagPy for most data
+        from magpy.stream import SUPPORTED_FORMATS
+        print([fo for fo in SUPPORTED_FORMATS if 'w' in SUPPORTED_FORMATS.get(fo)[0]])
+
+#### 3.3.1 MagPy's internal formats and defaults
+
+The default format of MagPy for most data
 sets is a PYCDF, which is based on NasaCDF. By default CDF files are compressed. If you do not want that then set 
 option *skipcompression* to True. 
 
         data.write('/path/to/export/PYCDF/', skipcompression=True)
 
+The PYCDF format allows to save basically all time series and header information within a single data structure. It
+further supports the inclusion of baseline functions, spot basevalue data and flagging information. Thus you can archive
+basically the full analysis from raw data towards definitive data within a single file structure. It is recommended to
+use this structure for archiving your data when using MagPy, as any other supported data format can be easily created 
+from this data type including all required meta informtion.
 
+There are three further MagPy specific file types: PYASCII is a simple comma separated ascii structure without any
+header information, PYSTR is a also a comma separated ascii file including basic header information excluding functions.
+The PYBIN format is a efficient binary packed data structure containing minimal meta information, which is used as
+buffer files by MARTAS - real time data acquisition routine.
 
 #### 3.3.2 The INTERMAGNET archive format (IAF)
 
@@ -530,7 +546,7 @@ Additionally a README.IMO file will be created and filled with existing meta inf
 1-minute data is written, then also a DKA file will be created containing K values separately. Please check the
 INTERMAGNET format specifications for further details on DKA, README and IAF formats.
 
-#### 3.3.3 IMAGCDF
+#### 3.3.3 The new INTERMAGNET CDF fromat (IMAGCDF)
 
 The IMAGCDF format can contain several data sets from different instruments represented by different time columns. 
 Typical examples are scalar data with lower sampling resolution as vector data and/or temperature data in lower 
@@ -569,7 +585,7 @@ components, and the resulting adopted baseline function will be stored in the da
 Discontinuities are considered in IBVF version 2.0. Please be aware, although this is a reasonable approximation of 
 the adopted baseline function, it not necessarily the an exact reproduction of the originally used adopted baseline. 
 The comment section of blv files is also extracted and stored in the data sets header. How to access and plot such 
-basevalues and the adopted  functions is shown here
+basevalues and the adopted functions is shown here
 
         basevalues = read("/home/leon/Cloud/Daten/MagPyTestFiles/abk95.blv")
         func = basevalues.header.get('DataFunctionObject')
@@ -595,21 +611,10 @@ VariometerIAGACODE, or SalarIAGACODE. The comment section can also be found in t
 
         print(basevalues.header)
 
-Writing BLV data has many more options to define the corrected content and structure of the BLV data file:
+Writing BLV data has many more options to define the corrected content and structure of the BLV data file. These options
+are *absinfo*, *year*, *meanh*, *meanf*, *deltaF* and *diff*. See section 7.6 for further details.
 
-    absinfo = kwargs.get('absinfo')   # new in v0.3.95
-    fitfunc = kwargs.get('fitfunc')   # replaced by absinfo
-    fitdegree = kwargs.get('fitdegree')   # replaced by absinfo
-    knotstep = kwargs.get('knotstep')   # replaced by absinfo
-    extradays = kwargs.get('extradays')   # replaced by absinfo
-    year = kwargs.get('year')
-    meanh = kwargs.get('meanh')
-    meanf = kwargs.get('meanf')
-    deltaF = kwargs.get('deltaF')
-    diff = kwargs.get('diff')
-
-
-#### 3.3.5 IMF format
+#### 3.3.5 The IMF format
 
     version = kwargs.get('version')
     gin = kwargs.get('gin')
@@ -687,6 +692,13 @@ loaded into one data structure.
 
 #### 3.3.9 Reading data from the INTERMAGNET Webservice
 
+Besides reading from data files, MagPy supports a direct data access from various webservices for electronic realtime
+data access. All these webservices make use of lightly (sometimes not only slightly) different parameters for data 
+access. Please refer to the description of the webservices for possible options and parameter ranges.
+
+An important webservice is the [INTERMAGNET webservice](https://imag-data.bgs.ac.uk/GIN/) hosted at the British 
+Geological Survey (BGS). Below you will find a  typical example of an access using several available options. 
+
         data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices
                                ?request=GetData
                                &observatoryIagaCode=WIC
@@ -697,8 +709,10 @@ loaded into one data structure.
                                &publicationState=adj-or-rep
                                &samplesPerDay=minute')
 
-(IMPORTANT note for all remote data sources. Data access and usage is subjected to the terms and conditions of the individual data provider. Please 
-make sure to read them before accessing any of these products.)
+
+> [!IMPORTANT]  
+> An important note for all remote data sources: Data access and usage is subjected to the terms and conditions of the 
+individual data provider. Please make sure to read them before accessing any of these products.
 
 #### 3.3.10 Reading DST data
 
@@ -706,7 +720,12 @@ Disturbed storm time indices are provided by in a world data center (WDC) relate
 
 #### 3.3.11 The Conrad Observatory webservice
 
-Conrad Observatory Webservice
+The [Conrad Observatory](https://cobs.geosphere.at) provides an easy-to-use webservice using standardized options, which
+are (with one exception) identical to the ones used by the USGS webservice (see next section). Besides geomagnetic data
+you can also obtain meteorological and radiometric data from this service. Checkout the webservice information as
+provided on the webpage. Current geomagnetic one-minute data can be obtained as follows:
+
+        data = read("https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC")
 
 #### 3.3.12 The USGS webservice
 
@@ -724,17 +743,23 @@ Getting *kp* data from the GFZ Potsdam (old variant):
 
         data = read(r'http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab')
 
-(Please note: data access and usage is subjected to the terms and conditions of the individual data provider. Please 
-make sure to read them before accessing any of these products.)
-
-
 #### 3.3.14 Accessing the WDC FTP Server
 
-Getting magnetic data directly from an online source such as the WDC:
+Getting magnetic data directly from an online source such as the WDC using FTP access can be accomplished as follows. 
+If the FTP Server requires authentication you can just add the credentials into the FTP call like 'ftp:USER'
 
         data = read('ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc')
 
 #### 3.3.15 NEIC data
+
+There are many non-magnetic data sources which are supported by MagPy and which might be helpful for interpreting
+signals. One of these sources considers seismological event data from the USGS webservice. Recent global seismic events 
+exceeding magnitude 4.5 can be obtained as follows: 
+
+        quake = read('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv'
+
+Typically you will not treat the quake data set as timeseries but use this information as markers and signal identifiers.
+For this purpose you can convert the obtained time series into a flagging class as shown in section 6.5.
 
 #### 3.3.16 NOAA data
 
