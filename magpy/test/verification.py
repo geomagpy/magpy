@@ -490,6 +490,10 @@ class TestStream(unittest.TestCase):
         self.assertEqual(t1, datetime(2022, 11, 22))
         self.assertEqual(t2, testtime("2022-11-22T23:59:00"))
 
+    def test_union(self):
+        uniq = teststream.union(np.asarray([1, 1, 2, 2, 3, 3, 3, 3, 3]))
+        self.assertEqual(uniq, [1,2,3])
+
     def test_use_sectime(self):
         tcolumn = teststream._get_column('time')
         newtcolumn = np.asarray([element + timedelta(minutes=15) for element in tcolumn])

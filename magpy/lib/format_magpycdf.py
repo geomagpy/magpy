@@ -14,7 +14,8 @@ import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import DataStream, read, join_streams, subtract_streams,magpyversion
 from magpy.core.methods import testtime, extract_date_from_string
-from datetime import datetime, timedelta
+from magpy.core import flagging
+from datetime import datetime, timedelta, timezone
 import numpy as np
 import os
 import cdflib
@@ -116,7 +117,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                             value = value[0]
                 except:
                     pass
-                if not att in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList','DataFunctionObject']:
+                if not att in ['DataAbsFunctionObject','DataBaseValues', 'DataFlags','DataFunctionObject']:
                     stream.header[att] = value
                 else:
                         if debug:
@@ -221,7 +222,11 @@ def readPYCDF(filename, headonly=False, **kwargs):
     if debug:
         print(" - read pycdf: returning")
 
-    return DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
+    result = DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
+    if len(result._get_column('flag')) > 1 and not result.header.get('DataFlags'):
+        result.header['DataFlags'] = flagging.extract_flags(result)
+
+    return result
 
 
 def writePYCDF(datastream, filename, **kwargs):
@@ -289,12 +294,6 @@ def writePYCDF(datastream, filename, **kwargs):
             except:
                 mycdf = cdflib.cdfwrite.CDF(filename,cdf_spec=main_cdf_spec)
         elif mode == 'replace': # replace existing inputs
-            #print filename
-            #### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            ####  Please note: Replacing requires a lot memory
-            #### If memory issues appear then please overwrite existing data
-            #### TODO Optimze sorting
-            #### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             try:
                 exst = read(path_or_url=filename)
                 datastream = join_streams(datastream,exst,extend=True)
@@ -348,7 +347,7 @@ def writePYCDF(datastream, filename, **kwargs):
         for key in headdict:
             if not key.find('col-') >= 0:
                 #print (key, headdict[key])
-                if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList','DataFunctionObject']:
+                if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlags','DataFunctionObject']:
                     globalAttrs[key] = { 0 : str(headdict[key]) }
                 else:
                     logger.info("writePYCDF: Found Object in header - pickle and dump ")

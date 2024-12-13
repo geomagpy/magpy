@@ -11,7 +11,8 @@ import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import DataStream, read, join_streams, subtract_streams, magpyversion
 from magpy.core.methods import testtime, extract_date_from_string
-from datetime import datetime, timedelta
+from magpy.core import flagging
+from datetime import datetime, timedelta, timezone
 import numpy as np
 import os
 import struct
@@ -276,9 +277,6 @@ def readPYSTR(filename, headonly=False, **kwargs):
                                 elem[idx]=np.nan
                             array[idx].append(float(elem[idx]))
                         else:
-                            #print elem[idx]
-                            #if elem[idx] == '':
-                            #    elem[idx] = '-'
                             array[idx].append(elem[idx])
             except ValueError:
                 print("readPYSTR: Found value error when reading data")
@@ -299,7 +297,11 @@ def readPYSTR(filename, headonly=False, **kwargs):
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
-    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
+    result = DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
+    if len(result._get_column('flag')) > 1 and not result.header.get('DataFlags'):
+        result.header['DataFlags'] = flagging.extract_flags(result)
+
+    return result
 
 
 def readPYBIN(filename, headonly=False, **kwargs):

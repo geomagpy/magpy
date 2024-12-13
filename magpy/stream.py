@@ -404,6 +404,7 @@ class DataStream(object):
 |  DataStream           |  stream2dict  |  2.0.0  |               |  yes*          |  yes*            | -       |  baseline |
 |  DataStream           |  timerange  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  trim  |       2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  union      |  2.0.0  |                 |  yes           |  yes             | -       | flagging |
 |  DataStream           |  use_sectime  |  2.0.0  |               |  yes           |  yes             | 5.1     | |
 |  DataStream           |  variables  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  write  |      2.0.0  |                 |  yes           |  yes*            | 3.x     | in runtime |
@@ -428,7 +429,7 @@ deprecated:
 
 
 removed:
-    - stream.extractflags()  -> not useful any more
+    - stream.extractflags()  -> moved to extract_flags in flagging and used by PYCDF read
     - stream.flagfast()      -> not useful any more - used for previous flagging plots outside xmagpy
     - stream.flaglistadd()   -> core.flagging add
 
@@ -736,8 +737,10 @@ CALLED BY:
             self.ndarray = np.asarray(array, dtype=object)
 
 
-    @deprecated("Used only by old flagging routines")
     def union(self,column):
+        """
+        Used only by flagging routine "extract_flags" to read old flagging structures contained in PYCDF files
+        """
         seen = set()
         seen_add = seen.add
         return [ x for x in column if not (x in seen or seen_add(x))]
@@ -8154,6 +8157,17 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['determine_rotationangles'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with determine_rotationangles")
+            try:
+                sectest = orgstream.copy()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
+                uniq = sectest.union(np.asarray([1,1,2,2,3,3,3,3,3]))
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
+                print("Test Union:", uniq)
+                successes['union'] = (
+                    "Version: {}, union: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['union'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with union")
             try:
                 sectest = orgstream.copy()
                 s1, e1 = sectest._find_t_limits()

@@ -92,8 +92,9 @@ class Flags(object):
 |       | _readJson         |  2.0.0          |                 |                |                  |         | flagging.load |
 |       | _readPickle       |  2.0.0          |                 |                |                  |         | flagging.load |
 |       | load              |  2.0.0          |                 |                |  app**           |  6.6    | |
-|       | convert_to_flags  |  2.0.0     |                 |                |  app**           |  6.5    | |
-|       | flag_outlier      |  2.0.0         |                 |  yes           |  app**           |  6.2    | |
+|       | convert_to_flags  |  2.0.0          |                 |                |  app**           |  6.5    | |
+|       | extract_flags     |  2.0.0          |                 |  yes           |  app**           |         | lib magpycdf |
+|       | flag_outlier      |  2.0.0          |                 |  yes           |  app**           |  6.2    | |
 |       | flag_range        |  2.0.0          |                 |  yes           |  app**           |  6.3    | |
 |       | flag_binary       |  2.0.0          |                 |  yes           |  app**           |  6.4    | |
 |       | flag_ultra        |  2.0.0          |                 |  no            |  no              |  6.7    | |
@@ -1407,6 +1408,81 @@ def convert_to_flags(data, flagtype=2, labelid='030', sensorid=None, keystoflag=
     return fl
 
 
+def extract_flags(data, debug=False):
+    """
+    DEFINITION:
+        Extracts flags associated with the provided DataStream object. This method is solely used for importing old
+        PYCDF archive structures containing flag and comment columns.
+    PARAMETERS:
+        datastream (DataStream())
+    Variables:
+        None
+    RETURNS:
+        - limited flagging object     (Flags) a flag object containing [st,et,key,flagnumber,commentarray[idx],sensorid,now]
+
+    EXAMPLE:
+        fl = flagging.extract_flags(stream)
+    """
+    from itertools import groupby
+    from operator import itemgetter
+
+    fl = flagging.Flags()
+    sensorid = data.header.get('SensorID','')
+    #now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    flpos = data.KEYLIST.index('flag')
+    compos = data.KEYLIST.index('comment')
+    flags = data.ndarray[flpos]
+    comments = data.ndarray[compos]
+    if not len(flags) > 0 or not len(comments) > 0:
+        return fl
+
+    uniqueflags = data.union(flags)
+    uniquecomments = data.union(comments)
+
+    # 1. Extract relevant keys from uniqueflags
+    if debug:
+        print ("extract_flags: Unique Flags -", uniqueflags)
+        print ("extract_flags: Unique Comments -", uniquecomments)
+    keylist = []
+    for elem in uniqueflags:
+        if not elem in ['','-']:
+            #print (elem)
+            for idx,el in enumerate(elem):
+                if not el == '-' and el in ['0','1','2','3','4','5','6']:
+                    keylist.append(data.NUMKEYLIST[idx-1])
+    # 2. Cycle through keys and extract comments
+    if not len(keylist) > 0:
+        return fl
+
+    keylist = data.union(np.asarray(keylist))
+
+    for key in keylist:
+        indexflag = data.KEYLIST.index(key)
+        for comment in uniquecomments:
+            flagindicies = []
+            for idx, elem in enumerate(comments):
+                if not elem == '' and elem == comment:
+                    #print ("ELEM", elem)
+                    flagindicies.append(idx)
+            # 2. get consecutive groups
+            for k, g in groupby(enumerate(flagindicies), lambda ix: ix[0] - ix[1]):
+                try:
+                    consecutives = list(map(itemgetter(1), g))
+                    st = data.ndarray[0][consecutives[0]]
+                    et = data.ndarray[0][consecutives[-1]]
+                    flagnumber = flags[consecutives[0]][indexflag]
+                    labelid, operator = fl._import_conradosb(comment)
+                    if not flagnumber in ['-',None]:
+                        fl = fl.add(sensorid=sensorid, starttime=st,
+                                    endtime=et, components=[key],
+                                    flagtype=int(flagnumber), labelid = labelid, operator = operator,
+                                    comment=comment)
+                except:
+                    print ("extract_flags: error when extracting flags from datastream (flags, comments)")
+
+    return fl
+
 def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, groups=None, debug=False):
     """
     DEFINITION:
@@ -1714,7 +1790,7 @@ def flag_binary(data, key, flagtype=0, labelid='070', keystoflag=None, sensorid=
         return data
 
     tcol = data.ndarray[0]
-    ind = KEYLIST.index(key)
+    ind = data.KEYLIST.index(key)
     startstate = data.ndarray[ind][0]
     flaglist = []
     switchindices, = np.nonzero(np.diff(data.ndarray[ind], prepend=startstate))
@@ -2022,6 +2098,19 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['save'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR saving flags.")
+            try:
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
+                oldteststream = create_teststream(startdate=datetime(2022, 11, 22))
+                oldteststream.ndarray[20] = ['0110000000000000-'] * len(oldteststream)
+                oldteststream.ndarray[21] = ['Incredible awful data'] * len(oldteststream)
+                fl = extract_flags(oldteststream)
+                print (len(fl))
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
+                successes['extract_flags'] = (
+                    "Version: {}, extract_flags: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['extract_flags'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with extract_flags")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 stfl1 = flag_range(teststream, keys=['x'], above=340)

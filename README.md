@@ -1648,7 +1648,8 @@ Show original data in red and cleand data in grey in a single plot:
 This results in Figure ![6.2.](./magpy/doc/fl_outlier.png "Removing outlier from data")
 
 Saving fagging information within datastreams is also possible for a few data format, namely IMAGCDF and PYCDF. In order 
-to save flagging information you have to assign the flagging object to a header element "DataFlags".
+to save flagging information you have to assign the flagging object to a header element "DataFlags". A complete flagging
+dictionary is only stored in *format_type* PYCDF.
 
         data = read(example1)
         data.header["DataFlags"] = fl
