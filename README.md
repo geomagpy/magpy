@@ -546,23 +546,40 @@ Additionally a README.IMO file will be created and filled with existing meta inf
 1-minute data is written, then also a DKA file will be created containing K values separately. Please check the
 INTERMAGNET format specifications for further details on DKA, README and IAF formats.
 
-#### 3.3.3 The new INTERMAGNET CDF fromat (IMAGCDF)
+#### 3.3.3 The INTERMAGNET CDF fromat (IMAGCDF)
 
-The IMAGCDF format can contain several data sets from different instruments represented by different time columns. 
+The IMAGCDF format has been developed for archiving specifically one-second definitive geomagnetic data products. It
+can contain several data sets from different instruments, eventually associated to different time columns. 
 Typical examples are scalar data with lower sampling resolution as vector data and/or temperature data in lower 
-resolution. MagPy's IMAGCDF library will read all those data sets and, by default, will only use the most detailed 
-time column which typically is GeomagneticVectorTimes. Low resolution data will refer to this new time column and 
-"missing values" will be represented as NaN. The select options allows you to specifically load lower resolution data 
-like scalar or temperature readings.  
+resolution. If the contents refer to different time column then by default only data from the highest resolution time
+series will be loaded, which typically is GeomagneticVectorTimes. If the data set contains time columns of different 
+length, then you will find detailed information about them within header 'FileContents'. Using option *select* 
+you can specifically load these data sets as shown below. Please note: If all data refers to a single 
+time column then all data will be read and 'FileContents' remains empty.
 
-        data = read('/path/to/IMAGCDF/*.cdf', select='scalar')
+The general IMAGCDF read command looks as follows
+
+        data = read('/path/to/IMAGCDF/*.cdf')
+
+If the IMAGCDF archive contains contents referring to different time columns, then 'FileContents' will give you some
+information about them. The select options allows you to specifically load lower resolution data 
+like scalar or temperature readings.
+
+        print(data.header.get('FileContents')
+        sdata = read('/path/to/IMAGCDF/*.cdf', select='scalar')
+        tdata = read('/path/to/IMAGCDF/*.cdf', select='temperature')
 
 When writing IMAGCDF files MagPy is using np.nan as fill value for missing data. You can change that by providing a 
 different fill value using the option fillvalue:
 
         data.write('/path/to/export/', format_type='IMAGCDF', fillvalue=99999.0)
 
-MagPy is generally exporting IMAGCDF version 1.2 data files. Additionally, MagPy is also supports flagging information
+When writing IMAGCDF files with contents based on different time columns you will need to use options *scalar* and 
+*environment*. 
+
+        data.write('/path/to/export/', format_type='IMAGCDF', scalar=sdata, environment=tdata)
+
+MagPy is generally exporting IMAGCDF version 1.2.1 data files. Additionally, MagPy is also supports flagging information
 to be added into the IMAGCDF structure (IMAGCDF version 1.3, work in progress):
 
         data.write('/path/to/export/', format_type='IMAGCDF', addflags=True)
@@ -571,9 +588,6 @@ By default CDF files are compressed. If you do not want that then set option *sk
 
         data.write('/path/to/export/', format_type='IMAGCDF', skipcompression=True)
 
-Hint for XMagPy: When reading a IMAGCDF file with multiple data contents of varying sampling rates the plots of the
-lower resolution data are apparently empty. Got to "Plot Options" on the Data panel and use "plottype" -> "continuous"
-to display graphs of low resolution data sets.  
 
 #### 3.3.4 Baseline information in IBFV files (BLV)
 
@@ -1662,6 +1676,8 @@ When loading such data you can obtain the flagging information from the header i
         p = fl.create_patch()
         fig, ax = mp.tsplot(data,patch=p, height=2)
 
+You can also load PYCDF and PYSTR version 1.x and 0.x with flagging information, which was included differently 
+previously. This flags with be stored in the new structure and are then accessible by the headers 'DataFlags'.   
 
 ### 6.3 Flagging ranges
 

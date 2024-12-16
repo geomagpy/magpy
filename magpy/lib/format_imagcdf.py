@@ -11,7 +11,7 @@ Written by Roman Leonhardt October 2019
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
-from magpy.core.methods import testtime, convert_geo_coordinate
+from magpy.core.methods import testtime, convert_geo_coordinate, is_number
 from magpy.core import flagging
 from datetime import datetime, timedelta, timezone
 import os
@@ -22,7 +22,24 @@ logger = logging.getLogger(__name__)
 
 KEYLIST = DataStream().KEYLIST
 NUMKEYLIST = DataStream().NUMKEYLIST
-HEADTRANSLATE = {'FormatDescription':'DataFormat', 'IagaCode':'StationID', 'ElementsRecorded':'DataComponents', 'ObservatoryName':'StationName', 'Latitude':'DataAcquisitionLatitude', 'Longitude':'DataAcquisitionLongitude', 'Institution':'StationInstitution', 'VectorSensOrient':'DataSensorOrientation', 'TermsOfUse':'DataTerms','UniqueIdentifier':'DataID','ParentIdentifiers':'SensorID','ReferenceLinks':'StationWebInfo', 'FlagRulesetType':'FlagRulesetType','FlagRulesetVersion':'FlagRulesetVersion'}
+HEADTRANSLATE = {'FormatDescription':'DataFormat',
+                 'IagaCode':'StationID',
+                 'ElementsRecorded':'DataComponents',
+                 'ObservatoryName':'StationName',
+                 'Latitude':'DataAcquisitionLatitude',
+                 'Longitude':'DataAcquisitionLongitude',
+                 'Institution':'StationInstitution',
+                 'VectorSensOrient':'DataSensorOrientation',
+                 'TermsOfUse':'DataTerms',
+                 'UniqueIdentifier':'DataID',
+                 'ParentIdentifiers':'SensorID',
+                 'ReferenceLinks':'StationWebInfo',
+                 'FlagRulesetType':'FlagRulesetType',
+                 'FlagRulesetVersion':'FlagRulesetVersion'}
+
+FLOATLIST = ['DataAcquisitionLatitude','DataAcquisitionLongitude','DataElevation']
+
+#'ReferenceLinks':'StationWebInfo',
 
 
 def isIMAGCDF(filename):
@@ -64,6 +81,58 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     indexarray = np.asarray([])
     cdfversion=0.9
 
+    def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion,stationid=None, debug=False):
+        if debug:
+            print ("Rules", rulesettype, rulesetversion)
+        if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy'] and len(flagginglist) > 0:
+            if rulesetversion in ['1.0','1',1,'2.0',2]:
+                flagcolsconrad = [flagginglist[0],flagginglist[1],flagginglist[3],flagginglist[4],flagginglist[5],flagginglist[6],flagginglist[2]]
+                flaglisttmp = []
+                #'FlagBeginTimes', 'FlagEndTimes', 'FlagComponents', 'FlagCode', 'FlagDescription', 'FlagSystemReference', 'FlagModificationTimes']
+                #add(self, sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000',
+                #    label='',
+                #    comment='', groups=None, probabilities=None, stationid='', validity='', operator='', color='',
+                #    modificationtime=None, flagversion='2.0', debug=False)
+                for elem in flagcolsconrad:
+                    flaglisttmp.append(cdfdat[elem][...])
+                try:
+                    flaglisttmp[0] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[0])
+                except:
+                    flaglisttmp[0] = cdflib.cdfepoch.to_datetime(flaglisttmp[0])
+                try:
+                    flaglisttmp[1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[1])
+                except:
+                    flaglisttmp[1] = cdflib.cdfepoch.to_datetime(flaglisttmp[1])
+                try:
+                    flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[-1])
+                except:
+                    flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(flaglisttmp[-1])
+                flaglist = np.transpose(flaglisttmp)
+                flaglist = [list(elem) for elem in flaglist]
+                unique = []
+                for el in flaglist:
+                    if [el[0],el[1],el[3],el[4],el[5],el[6]] not in unique:
+                        unique.append([el[0],el[1],el[3],el[4],el[5],el[6]])
+                flags = flagging.Flags()
+                for un in unique:
+                    comps = []
+                    for el in flaglist:
+                        newel = [el[0],el[1],el[3],el[4],el[5],el[6]]
+                        if un == newel:
+                            comps.append(el[2])
+                    if len(comps) == 1 and comps[0].find(",") >= 0:
+                        # In case comps already consists of a comma separated string with individual components
+                        comps = comps[0].split(",")
+                    flags.add(sensorid=un[4], starttime=un[0], endtime=un[1], components=comps, flagtype=int(un[2]), labelid='099', comment=un[3], modificationtime=un[5])
+                return flags
+            else:
+                return {}
+        else:
+            print ("readIMAGCDF: Could  not interpret flagging ruleset or flagging object is empty")
+            logger.warning("readIMAGCDF: Could  not interpret Ruleset")
+            return {}
+
+
     cdfdat = cdflib.CDF(filename)
 
     if debug:
@@ -85,6 +154,19 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         else:
             attname = HEADTRANSLATE[att]
         headers[attname] = value
+
+    # eventually correct webrefs with http
+    webrefs = cdfdat.globalattsget().get('ReferenceLinks',[])
+    webrefsl = []
+    if webrefs and isinstance(webrefs,(list,tuple)):
+        for wr in webrefs:
+            if wr and not wr.find("://") >= 0:
+                wr = "https://"+wr
+            webrefsl.append(wr)
+    elif webrefs:
+        webrefsl = webrefs.split(',')
+        webrefsl = ["https://"+el if not el.find('://') >= 0 else el for el in webrefsl]
+    headers['StationWebInfo'] = webrefsl #",".join(webrefsl)
 
     formatvers = cdfdat.globalattsget().get('FormatVersion')
     if isinstance(formatvers, list):
@@ -138,6 +220,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     headers['DataLeapSecondUpdated'] = lsu
     if debug:
         print ("LEAP seconds updated:", lsu)
+        print (cdfdat.cdf_info())
 
     #  IAGA code
     if headers.get('SensorID','') == '':
@@ -166,6 +249,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             except:
                 pass
 
+    ts = datetime.now()
     if len(tllist) < 1:
         """
         No time column identified
@@ -180,6 +264,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             logger.error("readIMAGCDF: No Time information available - aborting")
             return
     elif len(tllist) > 1:
+        # Found at least on time column
+        # tllist ~ [[86400, 'GeomagneticVectorTimes'], [17280, 'GeomagneticScalarTimes'], [144, 'TemperatureTimes']]
         tllist = sorted(tllist)
         tl = [el[0] for el in tllist]
         namelst = [el[1] for el in tllist]
@@ -196,28 +282,17 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                         referencetimecol = na
                         pos = idx
             else:
-                logger.warning("readIMAGCDF: Time columns of different length. Choosing longest as basis")
+                print("readIMAGCDF: Time columns of different length. Choosing only longest. Use option select")
+                print("             and check header FileContents for available contents")
                 timecol = tllist[tl.index(max(tl))][1]
+                referencetimecol = timecol
             if not timecol:
                 timecol = tllist[tl.index(max(tl))][1]
+                referencetimecol = timecol
             newdatalist.append(['time',timecol])
             if debug:
                 print (" selected primary time column: {}".format(timecol))
-            datnumar = []
-            for na in namelst:
-                datnumar.append(np.asarray([datetime.utcfromtimestamp(el) for el in cdflib.cdfepoch.unixtime(cdfdat.varget(na))]))
-            multipletimedict = {}
-            for idx,na in enumerate(datnumar):
-                refnumar = datnumar[pos]
-                if pos == -1:
-                    pos = len(datnumar)-1
-                if not idx == pos:
-                    try:
-                        multipletimedict[namelst[idx]]=np.nonzero(np.in1d(refnumar,datnumar[idx]))[0]
-                    except:
-                        multipletimedict[namelst[idx]]=np.asarray([])
-            #if debug:
-            #    print (" Lengths of different time columns:", multipletimedict)
+            headers['FileContents'] = tllist
         else:
             logger.info("readIMAGCDF: Equal length time axes found - assuming identical time")
             if 'GeomagneticVectorTimes' in datalist:
@@ -227,57 +302,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     else:
         #"Single time axis found in file"
         newdatalist.append(['time',tllist[0][1]])
-
-    def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion,stationid=None, debug=False):
-        if debug:
-            print ("Rules", rulesettype, rulesetversion)
-        if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy'] and len(flagginglist) > 0:
-            if rulesetversion in ['1.0','1',1,'2.0',2]:
-                flagcolsconrad = [flagginglist[0],flagginglist[1],flagginglist[3],flagginglist[4],flagginglist[5],flagginglist[6],flagginglist[2]]
-                flaglisttmp = []
-                #'FlagBeginTimes', 'FlagEndTimes', 'FlagComponents', 'FlagCode', 'FlagDescription', 'FlagSystemReference', 'FlagModificationTimes']
-                #add(self, sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000',
-                #    label='',
-                #    comment='', groups=None, probabilities=None, stationid='', validity='', operator='', color='',
-                #    modificationtime=None, flagversion='2.0', debug=False)
-                for elem in flagcolsconrad:
-                    flaglisttmp.append(cdfdat[elem][...])
-                try:
-                    flaglisttmp[0] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[0])
-                except:
-                    flaglisttmp[0] = cdflib.cdfepoch.to_datetime(flaglisttmp[0])
-                try:
-                    flaglisttmp[1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[1])
-                except:
-                    flaglisttmp[1] = cdflib.cdfepoch.to_datetime(flaglisttmp[1])
-                try:
-                    flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[-1])
-                except:
-                    flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(flaglisttmp[-1])
-                flaglist = np.transpose(flaglisttmp)
-                flaglist = [list(elem) for elem in flaglist]
-                unique = []
-                for el in flaglist:
-                    if [el[0],el[1],el[3],el[4],el[5],el[6]] not in unique:
-                        unique.append([el[0],el[1],el[3],el[4],el[5],el[6]])
-                flags = flagging.Flags()
-                for un in unique:
-                    comps = []
-                    for el in flaglist:
-                        newel = [el[0],el[1],el[3],el[4],el[5],el[6]]
-                        if un == newel:
-                            comps.append(el[2])
-                    if len(comps) == 1 and comps[0].find(",") >= 0:
-                        # In case comps already consists of a comma separated string with individual components
-                        comps = comps[0].split(",")
-                    flags.add(sensorid=un[4], starttime=un[0], endtime=un[1], components=comps, flagtype=int(un[2]), labelid='099', comment=un[3], modificationtime=un[5])
-                return flags
-            else:
-                return {}
-        else:
-            print ("readIMAGCDF: Could  not interpret flagging ruleset or flagging object is empty")
-            logger.warning("readIMAGCDF: Could  not interpret Ruleset")
-            return {}
+    te = datetime.now()
 
     if not headers.get('FlagRulesetType','') == '':
         if debug:
@@ -288,6 +313,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if debug:
             print ("readIMAGCDF: Flagging information extracted")
 
+    if debug:
+        print ("Needed here {}".format((te-ts).total_seconds()))
     datalist = [elem for elem in datalist if not elem.endswith('Times') and not elem.startswith('Flag')]
 
     # #########################################################
@@ -360,28 +387,30 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             if delrow:
                 ar = np.delete(ar,index)
             if elem[0] in NUMKEYLIST:
-                fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
-                if np.isnan(fillval):
-                    # if it is nan than the following replace wont work anyway
-                    fillval = 99999.0
-                with np.errstate(invalid='ignore'):
-                    ar[ar > fillval-1] = float(np.nan)
-                ind = KEYLIST.index(elem[0])
-                headers['col-'+elem[0]] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
-                headers['unit-col-'+elem[0]] = cdfdat.varattsget(elem[1]).get('UNITS')
-                timecolumns = list(multipletimedict.keys())
                 timedepend = cdfdat.varattsget(elem[1]).get('DEPEND_0')
-                if not multipletimedict == {} and timedepend in timecolumns and not referencetimecol:
-                    indexarray = multipletimedict.get(timedepend)
-                    if debug:
-                        print("Timesteps of {}: {}, N(Values): {}".format(timedepend,len(indexarray),len(ar)))
-                    newar = np.asarray([np.nan]*arlen)
-                    newar[indexarray] = ar
-                    array[ind] = newar
-                elif not multipletimedict == {} and referencetimecol:
+                if referencetimecol:
                     if timedepend == referencetimecol:
+                        fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
+                        if np.isnan(fillval):
+                            # if it is nan than the following replace wont work anyway
+                            fillval = 99999.0
+                        with np.errstate(invalid='ignore'):
+                            ar[ar > fillval - 1] = float(np.nan)
+                        ind = KEYLIST.index(elem[0])
+                        headers['col-' + elem[0]] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
+                        headers['unit-col-' + elem[0]] = cdfdat.varattsget(elem[1]).get('UNITS')
+
                         array[ind] = ar
                 else:
+                    fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
+                    if np.isnan(fillval):
+                        # if it is nan than the following replace wont work anyway
+                        fillval = 99999.0
+                    with np.errstate(invalid='ignore'):
+                        ar[ar > fillval - 1] = float(np.nan)
+                    ind = KEYLIST.index(elem[0])
+                    headers['col-' + elem[0]] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
+                    headers['unit-col-' + elem[0]] = cdfdat.varattsget(elem[1]).get('UNITS')
                     array[ind] = ar
                 if elem[0] in ['f','F'] and headers.get('DataComponents','') in ['DIF','dif','idf','IDF'] and not len(array[zpos]) > 0:
                     array[zpos] = ar
@@ -393,19 +422,19 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
     if not headers.get('FlagRulesetType','') == '' and flags:
         result.header["DataFlags"] = flags
-        #result = result.flag(flaglist)
 
     return result
 
 
 def writeIMAGCDF(datastream, filename, **kwargs):
     """
-    Writing Intermagnet CDF format (currently: vers1.2) + optional flagging info
-
+    Writing Intermagnet CDF format (currently: vers1.2.1) + optional flagging info (vers1.3)
     """
     debug = kwargs.get('debug')
     fillval = kwargs.get('fillvalue')
     mode = kwargs.get('mode')
+    scalar = kwargs.get('scalar')
+    environment = kwargs.get('environment')
     addflags = kwargs.get('addflags')
     skipcompression = kwargs.get('skipcompression')
 
@@ -430,6 +459,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     main_cdf_spec = {}
     main_cdf_spec['Compressed'] = False
 
+    # Version dependent extraction of LeapSecond information
     try:
         leapsecondlastupdate = cdflib.cdfepoch.getLeapSecondLastUpdated()
     except:
@@ -487,20 +517,21 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     keylst = tmpkeylst
 
     headers = datastream.header
-    head, line = [],[]
-    success = False
-
-    # For test purposes: flagging
-    flaglist = []
 
     # check DataComponents for correctness
     dcomps = headers.get('DataComponents','')
-    dkeys = datastream._get_key_headers()
+    dkeys = datastream.variables()
     if 'f' in dkeys and len(dcomps) == 3:
         dcomps = dcomps+'S'
+    elif scalar and len(dcomps) == 3:
+        dcomps = dcomps + 'S'
+    elif (scalar or 'f' in dkeys) and len(dcomps) == 4:
+        dcomps = dcomps[:3] + 'S'
     if 'df' in dkeys and len(dcomps) == 3:
         dcomps = dcomps+'G'
     headers['DataComponents'] = dcomps
+    if debug:
+        print ("Components after checking:", dcomps)
 
     ### #########################################
     ###            Check Header
@@ -511,24 +542,29 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     globalAttrs = {}
     for key in headers:
+        value = headers.get(key)
+        if is_number(value) and key in FLOATLIST:
+            value = float(value)
+        else:
+            value = str(value)
         if key in INVHEADTRANSLATE:
-            globalAttrs[INVHEADTRANSLATE.get(key)] = { 0 : headers.get(key) }
+            globalAttrs[INVHEADTRANSLATE.get(key)] = { 0 : value }
         elif key.startswith('col-') or key.startswith('unit-'):
             pass
         else:
-            globalAttrs[key.replace('Data','',1)] = { 0 : str(headers.get(key)) }
+            globalAttrs[key.replace('Data','',1)] = { 0 : value }
 
 
-    ## 1. Fixed Part -- current version is 1.2
+    ## 1. Fixed Part -- current version is 1.2.1
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
     globalAttrs['FormatDescription'] = { 0 : 'INTERMAGNET CDF format'}
-    globalAttrs['FormatVersion'] = { 0 : '1.2'}
+    globalAttrs['FormatVersion'] = { 0 : '1.2.1'}
     globalAttrs['Title'] = { 0 : 'Geomagnetic time series data'}
-    if addflags:
-        globalAttrs['FormatVersion'] = { 0 : '1.3'}
 
     ## 3. Optional flagging information
     ##    identify flags within the data set and if they are present then add an attribute to the header
+    if addflags and datastream.header.get("DataFlags"):
+        globalAttrs['FormatVersion'] = { 0 : '1.3'}
     if addflags:
         flags = datastream.header.get("DataFlags", {})
         if flags:
@@ -580,6 +616,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     else:
         try:
             #print ("writeIMAGCDF: Asigning StandardName")
+            stdadd = 'INTERMAGNET'
             samprate = float(str(headers.get('DataSamplingRate',0)).replace('sec','').strip())
             if int(samprate) == 1:
                 stdadd = 'INTERMAGNET_1-Second'
@@ -635,9 +672,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if not 'StationIagaCode' in headers and 'StationID' in headers:
         globalAttrs['IagaCode'] = { 0 : headers.get('StationID','')}
 
-
     # writing of global attributes after checking for independency of eventually provided F (S) record - line 595
-    #mycdf.write_globalattrs(globalAttrs)
 
     ### #########################################
     ###               Data
@@ -661,6 +696,11 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     scal = ''
     ftest = DataStream()
     useScalarTimes = False
+    ftimecol = np.asarray([])
+    ttimecol = np.asarray([])
+    fcol, t1col, t2col = [],[],[]
+    mainsamprate = datastream.samplingrate()
+
     if 'f' in keylst or 'df' in keylst:
         if 'f' in keylst:
             if not 'df' in keylst:
@@ -676,39 +716,43 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                          fcolname = 'F'
                          print ("writeIMAGCDF: analyzed F column - values are apparently calculated from vector components - using column name 'F'")
                      else:
-                         print ("writeIMAGCDF: analyzed F column - values are apparently independend from vector components - using column name 'S'")
-            pos = KEYLIST.index('f')
-            col = datastream.ndarray[pos]
+                         print ("writeIMAGCDF: analyzed F column - values are apparently independent from vector components - using column name 'S'")
         if 'df' in keylst:
             scal = 'df'
-            #print ("writeIMAGCDF: Found dF column")
-            pos = KEYLIST.index('df')
-            col = datastream.ndarray[pos]
-        col = col.astype(float)
 
         # Check sampling rates of main stream and f/df stream
-        mainsamprate = datastream.samplingrate()
         ftest = datastream.copy()
         ftest = ftest._drop_nans(scal)
         fsamprate = ftest.samplingrate()
         if ftest.length()[0] > 0:
             ftest = ftest.get_gaps()
+        ftimecol = ftest.ndarray[0]
+        fcol = ftest._get_column(scal)
 
         if fsamprate-0.1 < mainsamprate and mainsamprate < fsamprate+0.1:
             #Samplingrate of F column and Vector are similar
             useScalarTimes=False
         else:
             useScalarTimes=True
+    elif scalar:
+        print ("Found scalar")
+        fkey = KEYLIST.index('f')
+        fcol = scalar.ndarray[fkey]
+        ftimecol = scalar.ndarray[0]
+        useScalarTimes = True
+        if len(fcol) > 0:
+            keylst.append('f')
 
     ## Update DataComponents/Elements records regarding S (independent) or F (vector)
     comps = datastream.header.get('DataComponents')
     if len(comps) == 4 and 'f' in keylst:
         comps = comps[:3] + fcolname
         globalAttrs['ElementsRecorded'] = { 0 : comps}
+
     ## writing Global header data
-    #print (" Writing ", globalAttrs)
     mycdf.write_globalattrs(globalAttrs)
 
+    # environment data
     ttest = DataStream()
     useTemperatureTimes = False
     if 't1' in keylst:
@@ -718,159 +762,183 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         tsamprate = ttest.samplingrate()
         ttest = ttest.get_gaps()
         #print ("t lenght", ttest.length())
-
+        ttimecol = ttest.ndarray[0]
+        t1col = datastream._get_column('t1')
+        t2col = datastream._get_column('t2')
         if tsamprate-0.1 < mainsamprate and  mainsamprate < tsamprate+0.1:
             #Samplingrate of t1/t2 column and Vector are similar
             useTemperatureTimes=False
         else:
             useTemperatureTimes=True
+    elif environment:
+        t1key = KEYLIST.index('t1')
+        t2key = KEYLIST.index('t2')
+        t1col = environment.ndarray[t1key]
+        if len(t1col) > 0:
+            keylst.append('t1')
+        t2col = environment.ndarray[t2key]
+        if len(t1col) > 0:
+            keylst.append('t2')
+        ttimecol = environment.ndarray[0]
+        useTemperatureTimes = True
 
     ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
-
+    fwritten = False
+    cdfkey = ''
+    cdfdata = None
     for key in keylst:
         # New : assign data to the following variables: var_attrs (meta), var_data (dataarray), var_spec (key??)
         var_attrs = {}
         var_spec = {}
+        col = np.asarray([])
 
         if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2','scalartime','temptime']:
-          try:
-            if not key in ['scalartime','temptime']:
-                ind = KEYLIST.index(key)
-                if len(datastream.ndarray[ind])>0:
-                    col = datastream.ndarray[ind]
-                if not 'time' in key:
-                    col = col.astype(float)
+            try:
+                if not key in ['scalartime','temptime']:
+                    ind = KEYLIST.index(key)
+                    if len(datastream.ndarray[ind])>0:
+                        col = datastream.ndarray[ind]
+                    if not 'time' in key:
+                        col = col.astype(float)
 
-                # eventually use a different fill value (default is nan)
-                if not np.isnan(fillval):
-                    col = np.nan_to_num(col, nan=fillval)
+                    # eventually use a different fill value (default is nan)
+                    if not np.isnan(fillval):
+                        col = np.nan_to_num(col, nan=fillval)
 
-                if not False in checkEqual3(col):
-                    logger.warning("Found identical values only for {}".format(key))
-                    col = col[:1]
+                    if not False in checkEqual3(col):
+                        logger.warning("Found identical values only for {}".format(key))
+                        col = col[:1]
 
-            #{'FIELDNAM': 'Geomagnetic Field Element X', 'VALIDMIN': array([-79999.]), 'VALIDMAX': array([ 79999.]), 'UNITS': 'nT', 'FILLVAL': array([ 99999.]), 'DEPEND_0': 'GeomagneticVectorTimes', 'DISPLAY_TYPE': 'time_series', 'LABLAXIS': 'X'}
-            if key == 'time':
-                cdfkey = 'GeomagneticVectorTimes'
-                cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in col] )
-                var_spec['Data_Type'] = 33
-            elif key == 'scalartime' and useScalarTimes:
-                cdfkey = 'GeomagneticScalarTimes'
-                ftimecol = ftest.ndarray[0]
-                # use ftest Datastream
-                cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in ftimecol] )
-                var_spec['Data_Type'] = 33
-            elif key == 'temptime' and useTemperatureTimes:
-                cdfkey = 'TemperatureTimes'
-                ttimecol = ttest.ndarray[0]
-                # use ttest Datastream
-                cdfdata = cdflib.cdfepoch.compute_tt2000([tt(elem) for elem in ttimecol])
-                var_spec['Data_Type'] = 33
-            elif len(col) > 0:
-                var_spec['Data_Type'] = 45
-                comps = datastream.header.get('DataComponents','')
-                keyup = key.upper()
-                if key in ['t1','t2']:
-                    cdfkey = key.upper().replace('T','Temperature')
-                elif not comps == '':
-                    try:
-                        if key == 'x':
-                            compsupper = comps[0].upper()
-                        elif key == 'y':
-                            compsupper = comps[1].upper()
-                        elif key == 'z':
-                            compsupper = comps[2].upper()
-                        elif key == 'f':
-                            compsupper = fcolname ## MagPy requires independend F value
-                        elif key == 'df':
-                            compsupper = 'G'
-                        else:
-                            compsupper = key.upper()
-                        cdfkey = 'GeomagneticField'+compsupper
-                        keyup = compsupper
-                    except:
+                #{'FIELDNAM': 'Geomagnetic Field Element X', 'VALIDMIN': array([-79999.]), 'VALIDMAX': array([ 79999.]), 'UNITS': 'nT', 'FILLVAL': array([ 99999.]), 'DEPEND_0': 'GeomagneticVectorTimes', 'DISPLAY_TYPE': 'time_series', 'LABLAXIS': 'X'}
+                if key == 'time':
+                    cdfkey = 'GeomagneticVectorTimes'
+                    cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in col] )
+                    var_spec['Data_Type'] = 33
+                elif key == 'scalartime' and useScalarTimes:
+                    cdfkey = 'GeomagneticScalarTimes'
+                    # use ftimecol Datastream
+                    cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in ftimecol] )
+                    var_spec['Data_Type'] = 33
+                elif key == 'temptime' and useTemperatureTimes:
+                    cdfkey = 'TemperatureTimes'
+                    cdfdata = cdflib.cdfepoch.compute_tt2000([tt(elem) for elem in ttimecol])
+                    var_spec['Data_Type'] = 33
+                elif len(col) > 0:
+                    var_spec['Data_Type'] = 45
+                    comps = datastream.header.get('DataComponents','')
+                    keyup = key.upper()
+                    if key in ['t1','t2']:
+                        cdfkey = key.upper().replace('T','Temperature')
+                    elif not comps == '':
+                        try:
+                            if key == 'x':
+                                compsupper = comps[0].upper()
+                            elif key == 'y':
+                                compsupper = comps[1].upper()
+                            elif key == 'z':
+                                compsupper = comps[2].upper()
+                            elif key == 'f':
+                                compsupper = fcolname ## MagPy requires independend F value
+                            elif key == 'df':
+                                compsupper = 'G'
+                            else:
+                                compsupper = key.upper()
+                            cdfkey = 'GeomagneticField'+compsupper
+                            keyup = compsupper
+                        except:
+                            cdfkey = 'GeomagneticField'+key.upper()
+                            keyup = key.upper()
+                    else:
                         cdfkey = 'GeomagneticField'+key.upper()
-                        keyup = key.upper()
-                else:
-                    cdfkey = 'GeomagneticField'+key.upper()
 
-                nonetest = [elem for elem in col if not elem == None]
-                if len(nonetest) > 0:
-                    var_attrs['DEPEND_0'] = "GeomagneticVectorTimes"
-                    var_attrs['DISPLAY_TYPE'] = "time_series"
-                    var_attrs['LABLAXIS'] = keyup
-                    var_attrs['FILLVAL'] = fillval
-                    if key in ['x','y','z','h','e','g']:
-                        cdfdata = col
-                        var_attrs['VALIDMIN'] = -88880.0
-                        var_attrs['VALIDMAX'] = 88880.0
-                    elif key == 'i':
-                        cdfdata = col
-                        var_attrs['VALIDMIN'] = -90.0
-                        var_attrs['VALIDMAX'] = 90.0
-                    elif key == 'd':
-                        cdfdata = col
-                        var_attrs['VALIDMIN'] = -360.0
-                        var_attrs['VALIDMAX'] = 360.0
-                    elif key in ['t1','t2']:
-                        var_attrs['VALIDMIN'] = -273.15
-                        var_attrs['VALIDMAX'] = 88880.0
-                        if useTemperatureTimes:
-                            keylst.append('temptime')
-                            tcol = ttest._get_column(key)
-                            var_attrs['DEPEND_0'] = "TemperatureTimes"
-                            cdfdata = tcol
-                        else:
+                    nonetest = [elem for elem in col if not elem == None]
+                    if len(nonetest) > 0:
+                        var_attrs['DEPEND_0'] = "GeomagneticVectorTimes"
+                        var_attrs['DISPLAY_TYPE'] = "time_series"
+                        var_attrs['LABLAXIS'] = keyup
+                        var_attrs['FILLVAL'] = fillval
+                        if key in ['x','y','z','h','e','g']:
                             cdfdata = col
-                    elif key in ['f','s','df']:
-                        if useScalarTimes:
-                            # write time column
-                            keylst.append('scalartime')
-                            fcol = ftest._get_column(key)
-                            #if len(naninds) > 0:
-                            #    cdfdata = col[~np.isnan(col)]
-                            var_attrs['DEPEND_0'] = "GeomagneticScalarTimes"
-                            #mycdf[cdfkey] = fcol
-                            cdfdata = fcol
-                        else:
+                            var_attrs['VALIDMIN'] = -88880
+                            var_attrs['VALIDMAX'] = 88880
+                        elif key == 'i':
                             cdfdata = col
-                        var_attrs['VALIDMIN'] = 0.0
-                        var_attrs['VALIDMAX'] = 88880.0
+                            var_attrs['VALIDMIN'] = -90
+                            var_attrs['VALIDMAX'] = 90
+                        elif key == 'd':
+                            cdfdata = col
+                            var_attrs['VALIDMIN'] = -360
+                            var_attrs['VALIDMAX'] = 360
+                        elif key in ['t1']:
+                            var_attrs['VALIDMIN'] = -273
+                            var_attrs['VALIDMAX'] = 88880
+                            if useTemperatureTimes:
+                                if not 'temptime' in keylst:
+                                    keylst.append('temptime')
+                                var_attrs['DEPEND_0'] = "TemperatureTimes"
+                                cdfdata = t1col
+                            else:
+                                cdfdata = t1col
+                        elif key in ['t2']:
+                            var_attrs['VALIDMIN'] = -273
+                            var_attrs['VALIDMAX'] = 88880
+                            if useTemperatureTimes:
+                                if not 'temptime' in keylst:
+                                    keylst.append('temptime')
+                                var_attrs['DEPEND_0'] = "TemperatureTimes"
+                                cdfdata = t2col
+                            else:
+                                cdfdata = t2col
+                        elif key in ['f','s','df'] and not fwritten:
+                            if useScalarTimes:
+                                # write time column
+                                keylst.append('scalartime')
+                                #fcol = ftest._get_column(key)
+                                #if len(naninds) > 0:
+                                #    cdfdata = col[~np.isnan(col)]
+                                var_attrs['DEPEND_0'] = "GeomagneticScalarTimes"
+                                #mycdf[cdfkey] = fcol
+                                cdfdata = fcol
+                            else:
+                                cdfdata = fcol
+                            fwritten = True
+                            var_attrs['VALIDMIN'] = 0
+                            var_attrs['VALIDMAX'] = 88880
 
-                for keydic in headers:
-                    if keydic == ('col-'+key):
-                        if key in ['x','y','z','f','dx','dy','dz','df']:
-                            try:
-                                var_attrs['FIELDNAM'] = "Geomagnetic Field Element "+key.upper()
-                            except:
-                                pass
-                        if key in ['t1','t2']:
-                            try:
-                                var_attrs['FIELDNAM'] = "Temperature"+key.replace('t','')
-                            except:
-                                pass
-                    if keydic == ('unit-col-'+key):
-                        if key in ['x','y','z','f','dx','dy','dz','df','t1','t2']:
-                            try:
-                                unit = 'unspecified'
-                                if 'unit-col-'+key == 'deg C':
-                                    #mycdf[cdfkey].attrs['FIELDNAM'] = "Temperature "+key.upper()
-                                    unit = 'Celsius'
-                                elif 'unit-col-'+key == 'deg':
-                                    unit = 'Degrees of arc'
-                                else:
-                                    unit = headers.get('unit-col-'+key,'')
-                                var_attrs['UNITS'] = unit
-                            except:
-                                pass
-            var_spec['Variable'] = cdfkey
-            var_spec['Num_Elements'] = 1
-            var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.
-            var_spec['Dim_Sizes'] = []
+                    for keydic in headers:
+                        if keydic == ('col-'+key):
+                            if key in ['x','y','z','f','dx','dy','dz','df']:
+                                try:
+                                    var_attrs['FIELDNAM'] = "Geomagnetic Field Element "+key.upper()
+                                except:
+                                    pass
+                            if key in ['t1','t2']:
+                                try:
+                                    var_attrs['FIELDNAM'] = "Temperature"+key.replace('t','')
+                                except:
+                                    pass
+                        if keydic == ('unit-col-'+key):
+                            if key in ['x','y','z','f','dx','dy','dz','df','t1','t2']:
+                                try:
+                                    unit = 'unspecified'
+                                    if 'unit-col-'+key == 'deg C':
+                                        #mycdf[cdfkey].attrs['FIELDNAM'] = "Temperature "+key.upper()
+                                        unit = 'Celsius'
+                                    elif 'unit-col-'+key == 'deg':
+                                        unit = 'Degrees of arc'
+                                    else:
+                                        unit = headers.get('unit-col-'+key,'')
+                                    var_attrs['UNITS'] = unit
+                                except:
+                                    pass
+                var_spec['Variable'] = cdfkey
+                var_spec['Num_Elements'] = 1
+                var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.
+                var_spec['Dim_Sizes'] = []
 
-            mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
-          except:
-            pass
+                mycdf.write_var(var_spec, var_attrs=var_attrs, var_data=cdfdata)
+            except:
+                pass
 
     success = filename
 

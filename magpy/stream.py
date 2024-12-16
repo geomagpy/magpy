@@ -5852,6 +5852,8 @@ CALLED BY:
            *Specific parameters:
             - addflags      (BOOL) add flags to IMAGCDF output if True
             - fillvalue     (float) define a fill value for non-existing data (default is np.nan)
+            - scalar        (DataStream) provide scalar data when sampling rate is different to vector data
+            - environment   (DataStream) provide environment data when sampling rate is different to vector data
 
         format_type='BLV'
         ------------------
@@ -5886,8 +5888,6 @@ CALLED BY:
         coverage = kwargs.get('coverage')
         mode = kwargs.get('mode')
         subdirectory = kwargs.get('subdirectory')
-        #period = kwargs.get('period')          # TODO
-        #offsets = kwargs.get('offsets')        # retired? TODO
         keys = kwargs.get('keys')
         absinfo = kwargs.get('absinfo')
         fitfunc = kwargs.get('fitfunc')
@@ -5911,6 +5911,8 @@ CALLED BY:
         debug = kwargs.get('debug')
         addflags = kwargs.get('addflags')
         fillvalue = kwargs.get('fillvalue')
+        scalar = kwargs.get('scalar')
+        environment = kwargs.get('environment')
         headonly = kwargs.get('headonly')
 
         success = True
@@ -6001,7 +6003,7 @@ CALLED BY:
                         writepath = os.path.join(filepath, str(diryear), filename)
                     elif subdirectory == 'Ym':
                         writepath = os.path.join(filepath, str(diryear), str(dirmonth).zfill(2), filename)
-                    success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
+                    success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,scalar=scalar,environment=environment,ebug=debug)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
@@ -6033,7 +6035,7 @@ CALLED BY:
                     writepath = os.path.join(filepath, filename)
                     if subdirectory == 'Y':
                         writepath = os.path.join(filepath, str(diryear), filename)
-                    success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,debug=debug)
+                    success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,kind=kind,comment=comment,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,scalar=scalar,environment=environment,debug=debug)
                 # get next endtime
                 starttime = endtime
                 cyear = cyear + 1
@@ -6090,7 +6092,7 @@ CALLED BY:
                     if len(newst.ndarray[0]) > 0 or len(newst) > 1:
                         logger.info('write: writing %s' % filename)
                         #print("Here", num2date(newst.ndarray[0][0]), newst.ndarray)
-                        success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,headonly=headonly,kind=kind,debug=debug)
+                        success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,version=version,gin=gin,datatype=datatype, useg=useg,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,scalar=scalar,environment=environment,headonly=headonly,kind=kind,debug=debug)
                 starttime = endtime
                 endtime = endtime + cov
 
@@ -6104,7 +6106,7 @@ CALLED BY:
             filename = filename.replace('\x00','')
             if debug:
                 print ("Writing file:", filename)
-            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly,kind=kind,fillvalue=fillvalue,debug=debug)
+            success = writeFormat(self, os.path.join(filepath,filename),format_type,mode=mode,keys=keys,absinfo=absinfo,fitfunc=fitfunc,fitdegree=fitdegree, knotstep=knotstep,meanh=meanh,meanf=meanf,deltaF=deltaF,diff=diff,baseparam=baseparam, year=year,extradays=extradays,skipcompression=skipcompression,compression=compression, addflags=addflags,headonly=headonly,kind=kind,fillvalue=fillvalue,scalar=scalar,environment=environment,debug=debug)
 
         return success
 
