@@ -1651,7 +1651,8 @@ any component will also create a flag in all other components as we assume that 
 
         fl = flagging.flag_outlier(datawithspikes, timerange=60, threshold=1.5, markall=True)
 
-Drop flagged data from the "disturbed" data set.
+Please consider that *markall* is making use of all data columns within your data file. Drop flagged data from 
+the "disturbed" data set.
 
         datawithoutspikes = fl.apply_flags(datawithspikes, mode='drop')
 
@@ -1661,7 +1662,15 @@ Show original data in red and cleand data in grey in a single plot:
 
 This results in Figure ![6.2.](./magpy/doc/fl_outlier.png "Removing outlier from data")
 
-Saving fagging information within datastreams is also possible for a few data format, namely IMAGCDF and PYCDF. In order 
+The `flag_outlier` method splits up the underlying data stream into overlapping chunks of successive datapoints. The 
+amount of datapoints in each chunk is determined by the given timerange divided by the sampling rate multiplied by 2. 
+If no timerange is given a window of 2*600 data points is used. The overlap of the chunks corresponds to half the 
+window size. Only outliers found simultanuously in overlapping chunks are marked by the method. In case of low
+resolution data with strongly varying sampling rates, i.e. spot basevalue data sets, both default window size 
+and determined window lengths from timeranges are unreliable. For such data sets it is useful to use the *datawindow*
+option which allows you to provide the analyzed window size directly i.e. window = 2 * datawindow.
+
+Saving flagging information within datastreams is also possible for a few data format, namely IMAGCDF and PYCDF. In order 
 to save flagging information you have to assign the flagging object to a header element "DataFlags". A complete flagging
 dictionary is only stored in *format_type* PYCDF.
 
