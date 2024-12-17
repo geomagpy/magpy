@@ -261,6 +261,11 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         """
         sensorid = header.get('SensorID')
         sensorgroup = header.get('SensorGroup')
+        if not flag_groups:
+            if sensorid == flag_sensor:
+                return True, flag_keys
+            else:
+                return False, []
         gkeys = list(flag_groups.keys())
         if sensorid == flag_sensor:
             return True, flag_keys
@@ -569,7 +574,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             # test, if sensorid is fitting or sensorid/group is part of groups
             valid, comps = self._match_groups(data.header, flagcont.get('sensorid'), flag_keys=flagcont.get('components'), flag_groups=flagcont.get('groups'))
             if debug:
-                print (valid, comps)
+                print (valid, comps, flagcont.get('groups'))
             if valid:
                 stfind = ndata.findtime(flagcont.get('starttime'))
                 etfind = ndata.findtime(flagcont.get('endtime'))+1
@@ -1471,10 +1476,12 @@ def extract_flags(data, debug=False):
                     consecutives = list(map(itemgetter(1), g))
                     st = data.ndarray[0][consecutives[0]]
                     et = data.ndarray[0][consecutives[-1]]
-                    flagnumber = flags[consecutives[0]][indexflag]
-                    labelid, operator = fl._import_conradosb(comment)
-                    if not flagnumber in ['-',None]:
-                        fl = fl.add(sensorid=sensorid, starttime=st,
+                    # in PYSTR flags with only '-' input are found - ignore those
+                    if not flags[consecutives[0]] in ['','-']:
+                        flagnumber = flags[consecutives[0]][indexflag]
+                        labelid, operator = fl._import_conradosb(comment)
+                        if not flagnumber in ['-',None]:
+                            fl = fl.add(sensorid=sensorid, starttime=st,
                                     endtime=et, components=[key],
                                     flagtype=int(flagnumber), labelid = labelid, operator = operator,
                                     comment=comment)
@@ -1483,7 +1490,7 @@ def extract_flags(data, debug=False):
 
     return fl
 
-def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, groups=None, debug=False):
+def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, groups=None, datawindow=None, debug=False):
     """
     DEFINITION:
         Flags outliers in data, using inner quartiles ranges
@@ -1516,6 +1523,9 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
         window = 600.
     else:
         window = timerange / sr
+    if window:
+        print ("overriding timerange/sampling rate related window size and using {} succesive data points as window length".format(datawindow))
+        window = datawindow
     if debug:
         print ("samplingrate", sr)
         print ("window", window)

@@ -216,6 +216,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
     """
     Reading ASCII PyMagStructure format data.
     """
+    debug = kwargs.get('debug')
     stream = DataStream([],{})
 
     array = [[] for key in KEYLIST]
@@ -297,9 +298,9 @@ def readPYSTR(filename, headonly=False, **kwargs):
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
-    result = DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
+    result = DataStream(header=headers,ndarray=np.asarray(array,dtype=object))
     if len(result._get_column('flag')) > 1 and not result.header.get('DataFlags'):
-        result.header['DataFlags'] = flagging.extract_flags(result)
+        result.header['DataFlags'] = flagging.extract_flags(result, debug=debug)
 
     return result
 
