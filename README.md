@@ -1670,6 +1670,8 @@ resolution data with strongly varying sampling rates, i.e. spot basevalue data s
 and determined window lengths from timeranges are unreliable. For such data sets it is useful to use the *datawindow*
 option which allows you to provide the analyzed window size directly i.e. window = 2 * datawindow.
 
+        fl = flagging.flag_outlier(basevaluedata, datawindow=60, threshold=3.5)
+
 Saving flagging information within datastreams is also possible for a few data format, namely IMAGCDF and PYCDF. In order 
 to save flagging information you have to assign the flagging object to a header element "DataFlags". A complete flagging
 dictionary is only stored in *format_type* PYCDF.
