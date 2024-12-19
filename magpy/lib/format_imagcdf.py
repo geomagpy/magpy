@@ -719,6 +719,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                          print ("writeIMAGCDF: analyzed F column - values are apparently independent from vector components - using column name 'S'")
         if 'df' in keylst:
             scal = 'df'
+            if not 'f' in keylst:
+                fcolname = 'G'
 
         # Check sampling rates of main stream and f/df stream
         ftest = datastream.copy()
@@ -748,6 +750,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if len(comps) == 4 and 'f' in keylst:
         comps = comps[:3] + fcolname
         globalAttrs['ElementsRecorded'] = { 0 : comps}
+
+    print ("Components before writing global attributes:", comps)
 
     ## writing Global header data
     mycdf.write_globalattrs(globalAttrs)
@@ -786,6 +790,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     fwritten = False
     cdfkey = ''
     cdfdata = None
+    print ("Writing keys", keylst)
     for key in keylst:
         # New : assign data to the following variables: var_attrs (meta), var_data (dataarray), var_spec (key??)
         var_attrs = {}
@@ -800,6 +805,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         col = datastream.ndarray[ind]
                     if not 'time' in key:
                         col = col.astype(float)
+                    if key in ['f'] and scalar and len(scalar) > 0:
+                        col = scalar._get_column(key)
+                    if key in ['t1','t2'] and environment and len(environment) > 0:
+                        col = environment._get_column(key)
 
                     # eventually use a different fill value (default is nan)
                     if not np.isnan(fillval):
@@ -824,6 +833,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     cdfdata = cdflib.cdfepoch.compute_tt2000([tt(elem) for elem in ttimecol])
                     var_spec['Data_Type'] = 33
                 elif len(col) > 0:
+                    print ("KEY with data", key)
                     var_spec['Data_Type'] = 45
                     comps = datastream.header.get('DataComponents','')
                     keyup = key.upper()
@@ -850,6 +860,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             keyup = key.upper()
                     else:
                         cdfkey = 'GeomagneticField'+key.upper()
+
 
                     nonetest = [elem for elem in col if not elem == None]
                     if len(nonetest) > 0:
@@ -931,6 +942,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                                     var_attrs['UNITS'] = unit
                                 except:
                                     pass
+                print("CDFKEY", cdfkey)
                 var_spec['Variable'] = cdfkey
                 var_spec['Num_Elements'] = 1
                 var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.

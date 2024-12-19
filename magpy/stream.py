@@ -400,6 +400,7 @@ class DataStream(object):
 |  DataStream           |  smooth  |     2.0.0  |                 |  yes           |  yes             | 5.3     | |
 |  DataStream           |  sorting  |    2.0.0  |                 |  yes*          |  no              | 5.1     |  read |
 |  DataStream           |  start  |      2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  stats  |      2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  steadyrise  |  2.0.0  |                |  yes           |  not yet         |         | |
 |  DataStream           |  stream2dict  |  2.0.0  |               |  yes*          |  yes*            | -       |  baseline |
 |  DataStream           |  timerange  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
@@ -5423,6 +5424,39 @@ CALLED BY:
         return self
 
 
+    def stats(self, format=''):
+        """
+        DESCRIPTION
+            Provide an overview about the data set.
+            Will return information on data length, sampling period, variables and important
+            header contents like SensorID, StationID, DataID
+        OPTIONS:
+            format  :    "dir" default dictionary, "md" for markdown
+        RETURN:
+            dictionary
+        APPLCIATION:
+            d = data.stats(format='md')
+        """
+        resdict = {"SensorID": self.header.get('SensorID'), "Variables": self.variables(),
+                   "Amount": len(self), "Samplingperiod (sec)": self.samplingrate(),
+                   "StationID": self.header.get('StationID'), "DataID": self.header.get('DataID')}
+        if format == 'md':
+            try:
+                from IPython.display import display, Markdown
+                head = ["| Parameter | Value |", "| ------ | ------ |"]
+                list = ["| {} | {} |".format(el, resdict.get(el)) for el in resdict]
+                head.extend(list)
+                fulltext = ''
+                for el in head:
+                    fulltext += "{}\n".format(el)
+                display(Markdown(fulltext))
+            except:
+                print(" stats: Markdown display requires IPython display")
+        elif format == 'json':
+            print(resdict)
+        return resdict
+
+
     def steadyrise(self, key, timewindow, **kwargs):
         """
         DEFINITION:
@@ -8099,6 +8133,14 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['extract'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with extract")
+            try:
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
+                d = teststream.stats()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
+                successes['stats'] = ("Version: {}, stats: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['stats'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with stats")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 xxx = teststream.cut(50, kind=0, order=0)

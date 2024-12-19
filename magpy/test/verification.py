@@ -473,6 +473,11 @@ class TestStream(unittest.TestCase):
         start = teststream.start()
         self.assertEqual(start, datetime(2022, 11, 22))
 
+    def test_stats(self):
+        d = teststream.stats()
+        le = d.get("Amount")
+        self.assertEqual(le, len(teststream))
+
     def test_steadyrise(self):
         # To be done with rain analysis
         self.assertEqual(2, 1)
