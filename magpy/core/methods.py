@@ -580,6 +580,27 @@ def dict2string(dictionary, typ='dictionary'):
             return string2
 
 
+def dictdiff(dict_a, dict_b, show_value_diff=True):
+    """
+    DESCRIPTION
+        Compares two dictionaries. Useful for header analysis.
+        Code was taken as is from
+        https://stackoverflow.com/questions/32815640/how-to-get-the-difference-between-two-dictionaries-in-python
+        and written by juandesant.
+    """
+    result = {}
+    result['added']   = {k: dict_b[k] for k in set(dict_b) - set(dict_a)}
+    result['removed'] = {k: dict_a[k] for k in set(dict_a) - set(dict_b)}
+    if show_value_diff:
+        common_keys =  set(dict_a) & set(dict_b)
+        result['value_diffs'] = {
+            k:(dict_a[k], dict_b[k])
+            for k in common_keys
+            if dict_a[k] != dict_b[k]
+        }
+    return result
+
+
 def dicgetlast(dictionary, pier=None, element=None):
     """
     DEFINITION:
@@ -1479,6 +1500,13 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['dict2string'] = str(excep)
         print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR dict2string.")
+    try:
+        da = {0:"a",1:"b",2:"c"}
+        db = {0:"a",1:"b",2:"d"}
+        res = dictdiff(da, db, show_value_diff=True)
+    except Exception as excep:
+        errors['dictdiff'] = str(excep)
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR dictdiff.")
     try:
         result = dicgetlast(d1, pier='A2', element='deltaD,deltaI,deltaF')
         print (result)

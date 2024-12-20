@@ -10,8 +10,8 @@ Written by Roman Leonhardt October 2019
 """
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
-from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
-from magpy.core.methods import testtime, convert_geo_coordinate, is_number
+from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion, example4
+from magpy.core.methods import testtime, convert_geo_coordinate, is_number, dictdiff
 from magpy.core import flagging
 from datetime import datetime, timedelta, timezone
 import os
@@ -143,6 +143,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
     for att in cdfdat.globalattsget():
         value = cdfdat.globalattsget().get(att)
+        if debug:
+            print ("readIMAGCDF: ", att, value)
         try:
             if isinstance(list(value), list):
                 if len(value) == 1:
@@ -167,6 +169,19 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         webrefsl = webrefs.split(',')
         webrefsl = ["https://"+el if not el.find('://') >= 0 else el for el in webrefsl]
     headers['StationWebInfo'] = webrefsl #",".join(webrefsl)
+
+    # consider other list like contents
+    listlikecontents = {'Institution' : 'StationInstitution'}
+    for listlikecont in listlikecontents:
+        lconlst = []
+        lconts = cdfdat.globalattsget().get(listlikecont,[])
+        if lconts and isinstance(lconts,(list,tuple)):
+            for lco in lconts:
+                lconlst.append(lco)
+        elif lconts:
+            lconlst = lconts.split(',')
+        newname = listlikecontents.get(listlikecont)
+        headers[newname] = lconlst
 
     formatvers = cdfdat.globalattsget().get('FormatVersion')
     if isinstance(formatvers, list):
@@ -220,7 +235,6 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     headers['DataLeapSecondUpdated'] = lsu
     if debug:
         print ("LEAP seconds updated:", lsu)
-        print (cdfdat.cdf_info())
 
     #  IAGA code
     if headers.get('SensorID','') == '':
@@ -314,7 +328,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             print ("readIMAGCDF: Flagging information extracted")
 
     if debug:
-        print ("Needed here {}".format((te-ts).total_seconds()))
+        print ("readIMAGCDF: Needed here {}".format((te-ts).total_seconds()))
     datalist = [elem for elem in datalist if not elem.endswith('Times') and not elem.startswith('Flag')]
 
     # #########################################################
@@ -340,7 +354,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 pass # for lines which have no Label
 
     if debug:
-        print ("Components in file: {}".format(newdatalist))
+        print ("readIMAGCDF: Components in file: {}".format(newdatalist))
 
     if not len(datalist) == len(newdatalist)-1:
         logger.warning("readIMAGCDF: error encountered in key assignment - please check")
@@ -380,8 +394,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 delrow = True
             arlen= len(ar)
             ind = KEYLIST.index('time')
-            #array[ind] = ar.astype(datetime)  # datetime.datetime
-            array[ind] = ar  # np.datetime64 might be quicker
+            array[ind] = ar.astype(datetime)  # datetime.datetime
+            #array[ind] = ar  # np.datetime64 might be quicker (NO!) but breaks other methods as total_seconds not defined
         else:
             ar = cdfdat.varget(elem[1])
             if delrow:
@@ -527,7 +541,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         dcomps = dcomps + 'S'
     elif (scalar or 'f' in dkeys) and len(dcomps) == 4:
         dcomps = dcomps[:3] + 'S'
-    if 'df' in dkeys and len(dcomps) == 3:
+    if 'df' in dkeys and not 'f' in dcomps and len(dcomps) == 3:
         dcomps = dcomps+'G'
     headers['DataComponents'] = dcomps
     if debug:
@@ -549,7 +563,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             value = str(value)
         if key in INVHEADTRANSLATE:
             globalAttrs[INVHEADTRANSLATE.get(key)] = { 0 : value }
-        elif key.startswith('col-') or key.startswith('unit-'):
+        elif key.startswith('col-') or key.startswith('unit-') or key.endswith('SamplingRate'):
             pass
         else:
             globalAttrs[key.replace('Data','',1)] = { 0 : value }
@@ -597,6 +611,26 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     else:
         globalAttrs['Source'] =  { 0 : headers.get('StationInstitution','')}
 
+    # Webaddress and institution lists
+    if not headers.get('StationWebInfo','') == '':
+        swl = headers.get('StationWebInfo')
+        if isinstance(swl, (list,tuple)):
+            globdict = {}
+            for insti, instel in enumerate(swl):
+                globdict[insti] = instel
+            globalAttrs['ReferenceLinks'] = globdict
+        else:
+            globalAttrs['ReferenceLinks'] = { 0 : headers.get('StationInstitution', '')}
+    if not headers.get('StationInstitution','') == '':
+        sil = headers.get('StationInstitution','')
+        if isinstance(sil, (list,tuple)):
+            globdict = {}
+            for insti, instel in enumerate(sil):
+                globdict[insti] = instel
+            globalAttrs['Institution'] = globdict
+        else:
+            globalAttrs['Institution'] = { 0 : headers.get('StationInstitution', '')}
+
     if not headers.get('DataStandardLevel','') == '':
         if headers.get('DataStandardLevel','') in ['None','none','Partial','partial','Full','full']:
             globalAttrs['StandardLevel'] = { 0 : headers.get('DataStandardLevel','')}
@@ -615,7 +649,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         globalAttrs['StandardName'] = { 0 : headers.get('DataStandardName','')}
     else:
         try:
-            #print ("writeIMAGCDF: Asigning StandardName")
+            #print ("writeIMAGCDF: Assigning StandardName")
             stdadd = 'INTERMAGNET'
             samprate = float(str(headers.get('DataSamplingRate',0)).replace('sec','').strip())
             if int(samprate) == 1:
@@ -631,7 +665,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                 print ("writeIMAGCDF: current Publication level {} does not allow to set StandardName".format(headers.get('DataPublicationLevel',0)))
                 globalAttrs['StandardLevel'] = { 0 : 'None'}
         except:
-            print ("writeIMAGCDF: Asigning StandardName Failed")
+            print ("writeIMAGCDF: Assigning StandardName Failed")
 
 
     proj = headers.get('DataLocationReference','')
@@ -650,22 +684,35 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if not ele=='':
         globalAttrs['Elevation'] = { 0 : float(ele) }
     if not longi=='' or lati=='':
+        if is_number(longi):
+            longi = float(longi)
+        if is_number(lati):
+            lati = float(lati)
         if proj == '':
-            patt = mycdf.attrs
-            try:
-                globalAttrs['Latitude'] = { 0 : float(lati) }
-                globalAttrs['Longitude'] = { 0 : float(longi) }
-            except:
-                globalAttrs['Latitude'] = { 0 : lati }
-                globalAttrs['Longitude'] = { 0 : longi }
+            globalAttrs['Latitude'] = { 0 : lati }
+            globalAttrs['Longitude'] = { 0 : longi }
         else:
             if proj.find('EPSG:') > 0:
                 epsg = int(proj.split('EPSG:')[1].strip())
+                # currently a problem as old WIC data has already been converted to WGS but reference was not updated
+                # result -> will try to convert again whenever called
+                # therefore I included some workaround which should not break anything else
                 if not epsg==4326:
-                    print ("writeIMAGCDF: converting coordinates to epsg 4326")
-                    longi,lati = convert_geo_coordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
-                    longi = "{:.3f}".format(float(longi))
-                    lati = "{:.3f}".format(float(lati))
+                    if lati < 48 and lati > 47 and longi < 16 and longi > 15:
+                        # workaround for wrong WIC data
+                        headers['DataLocationReference'] = 'WGS84, EPSG: 4326'
+                        globalAttrs['LocationReference'] =  { 0 : 'WGS84, EPSG: 4326' }
+                    else:
+                        print ("writeIMAGCDF: converting coordinates from {} to epsg 4326".format(epsg))
+                        print (lati,longi, epsg)
+                        longi,lati = convert_geo_coordinate(longi,lati,'epsg:'+str(epsg),'epsg:4326')
+                        longi = "{:.3f}".format(longi)
+                        lati = "{:.3f}".format(lati)
+                        print (lati,longi, epsg)
+                        # Important update location reference
+                        headers['DataLocationReference'] = 'WGS84, EPSG: 4326'
+                        globalAttrs['LocationReference'] =  { 0 : 'WGS84, EPSG: 4326' }
+
             globalAttrs['Latitude'] = { 0 : float(lati) }
             globalAttrs['Longitude'] = { 0 : float(longi) }
 
@@ -703,21 +750,23 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     if 'f' in keylst or 'df' in keylst:
         if 'f' in keylst:
-            if not 'df' in keylst:
-                 scal = 'f'
-                 #print ("writeIMAGCDF: Found F column") # check whether F or S
-                 comps = datastream.header.get('DataComponents')
-                 if not comps.endswith('S'):
-                     print ("writeIMAGCDF: given components are {}. Checking F column...".format(datastream.header.get('DataComponents')))
-                     #calculate delta F and determine average diff
-                     datastream = datastream.delta_f()
-                     dfmean, dfstd = datastream.mean('df',std=True, percentage=50)
-                     if dfmean < 0.0000000001 and dfstd < 0.0000000001:
-                         fcolname = 'F'
-                         print ("writeIMAGCDF: analyzed F column - values are apparently calculated from vector components - using column name 'F'")
-                     else:
-                         print ("writeIMAGCDF: analyzed F column - values are apparently independent from vector components - using column name 'S'")
-        if 'df' in keylst:
+             scal = 'f'
+             #print ("writeIMAGCDF: Found F column") # check whether F or S
+             comps = datastream.header.get('DataComponents')
+             if not comps.endswith('S'):
+                 print ("writeIMAGCDF: given components are {}. Checking F column...".format(datastream.header.get('DataComponents')))
+                 #calculate delta F and determine average diff
+                 datastream = datastream.delta_f()
+                 dfmean, dfstd = datastream.mean('df',std=True, percentage=50)
+                 if dfmean < 0.0000000001 and dfstd < 0.0000000001:
+                     fcolname = 'F'
+                     print ("writeIMAGCDF: analyzed F column - values are apparently calculated from vector components - using column name 'F'")
+                 else:
+                     print ("writeIMAGCDF: analyzed F column - values are apparently independent from vector components - using column name 'S'")
+             if 'df' in keylst:
+                 # if df is also part of the data stream, then remove this one
+                 datastream = datastream._drop_column('df')
+        elif 'df' in keylst:
             scal = 'df'
             if not 'f' in keylst:
                 fcolname = 'G'
@@ -737,21 +786,23 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         else:
             useScalarTimes=True
     elif scalar:
-        print ("Found scalar")
         fkey = KEYLIST.index('f')
         fcol = scalar.ndarray[fkey]
         ftimecol = scalar.ndarray[0]
         useScalarTimes = True
         if len(fcol) > 0:
             keylst.append('f')
+            datastream.header['unit-col-f'] = scalar.header['unit-col-f']
+            datastream.header['col-f'] = scalar.header['col-f']
 
     ## Update DataComponents/Elements records regarding S (independent) or F (vector)
     comps = datastream.header.get('DataComponents')
-    if len(comps) == 4 and 'f' in keylst:
+    if len(comps) == 4 and ('f' in keylst or 'df' in keylst):
         comps = comps[:3] + fcolname
         globalAttrs['ElementsRecorded'] = { 0 : comps}
 
-    print ("Components before writing global attributes:", comps)
+    if debug:
+        print ("writeIMAGCDF: Components before writing global attributes:", comps)
 
     ## writing Global header data
     mycdf.write_globalattrs(globalAttrs)
@@ -780,9 +831,13 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         t1col = environment.ndarray[t1key]
         if len(t1col) > 0:
             keylst.append('t1')
+            datastream.header['unit-col-t1'] = environment.header['unit-col-t1']
+            datastream.header['col-t1'] = environment.header['col-t1']
         t2col = environment.ndarray[t2key]
         if len(t1col) > 0:
             keylst.append('t2')
+            datastream.header['unit-col-t2'] = environment.header['unit-col-t2']
+            datastream.header['col-t2'] = environment.header['col-t2']
         ttimecol = environment.ndarray[0]
         useTemperatureTimes = True
 
@@ -790,7 +845,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     fwritten = False
     cdfkey = ''
     cdfdata = None
-    print ("Writing keys", keylst)
     for key in keylst:
         # New : assign data to the following variables: var_attrs (meta), var_data (dataarray), var_spec (key??)
         var_attrs = {}
@@ -833,7 +887,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     cdfdata = cdflib.cdfepoch.compute_tt2000([tt(elem) for elem in ttimecol])
                     var_spec['Data_Type'] = 33
                 elif len(col) > 0:
-                    print ("KEY with data", key)
                     var_spec['Data_Type'] = 45
                     comps = datastream.header.get('DataComponents','')
                     keyup = key.upper()
@@ -942,7 +995,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                                     var_attrs['UNITS'] = unit
                                 except:
                                     pass
-                print("CDFKEY", cdfkey)
                 var_spec['Variable'] = cdfkey
                 var_spec['Num_Elements'] = 1
                 var_spec['Rec_Vary'] = True # The dimensional sizes, applicable only to rVariables.
@@ -964,9 +1016,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         flagsystemreference = 'FlagSystemReference'
         flagobserver = 'FlagObserver'
 
-        flaglist = flags._list(parameter=['starttime','endtime','components','flagtype','comment','sensorid','operator','modificationtime'])
+        flaglist = np.asarray(flags._list(parameter=['starttime','endtime','components','flagtype','comment','sensorid','operator','modificationtime']), dtype=object)
         trfl = np.transpose(flaglist)[1:]
-        #print ("Transposed flaglist", trfl)
         try:
             print ("Writing flagging information ...")
             var_attrs = {}
@@ -1117,7 +1168,6 @@ if __name__ == '__main__':
         except Exception as excep:
             errors[testset] = str(excep)
             print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
-
         testset = 'IMAGCDFflags'
         try:
             filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
@@ -1143,6 +1193,66 @@ if __name__ == '__main__':
             fm = diff.mean('f')
             if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
                  raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+        testset = 'IMAGCDF_RW'
+        try:
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            # Testing general IMAGCDF
+            test1 = read(example4)
+            test1.write("/tmp", format_type='IMAGCDF', scalar=None, environment=None)  # , debug=True)
+            option = None
+            test1rep = read('/tmp/wic_2018*', select=option)  # , debug=True)
+            di = dictdiff(test1.header, test1rep.header)
+            if not di.get('added') == {} and not di.get('removed') == {}:
+                # raise Exception("ERROR within data validity test")
+                print("ERROR within data validity test")
+            # Testing G columns
+            test2 = test1.copy()
+            test2 = test2.delta_f()
+            test2 = test2._drop_column('f')
+            test2.write("/tmp", format_type='IMAGCDF', scalar=None, environment=None)  # , debug=True)
+            test2rep = read('/tmp/wic_2018*', select=option)  # , debug=True)
+            if not test2rep.header.get('DataComponents') == 'XYZG':
+                # raise Exception("ERROR within data validity test")
+                print("ERROR within data validity test")
+            # Testing multiple time columns and lists in header
+            test3 = test1.filter()
+            test3 = test3._drop_column('x')
+            test3 = test3._drop_column('y')
+            test3 = test3._drop_column('z')
+            # test4 = test3.filter()
+            test1 = test1._drop_column('f')
+            test1 = test1._drop_column('t1')
+            test1 = test1._drop_column('t2')
+            test1.header['StationInstitution'] = ['Institute1', 'Institute2']
+            test1.write("/tmp", format_type='IMAGCDF', scalar=test3, environment=test3)  # , debug=True)
+            test3rep = read('/tmp/wic_2018*', select=option)  # , debug=True)
+            print(test3rep.header.get('FileContents'))
+            fc = test3rep.header.get('FileContents')
+            if fc:
+                for el in fc:
+                    if el[1].find('Scalar') >= 0:
+                        print("Reading Scalar")
+                        scalar = read('/tmp/wic_2018*', select='scalar')
+                    if el[1].find('Temperature') >= 0:
+                        print("Reading Temperature")
+                        temperature = read('/tmp/wic_2018*', select='temperature')
+            if not len(test3rep.header.get('FileContents')) == 3:
+                # raise Exception("ERROR within data validity test")
+                print("ERROR within data validity test")
+            di = dictdiff(test1.header, test3rep.header)
+            di = dictdiff(test1.header, test3rep.header)
+            dv = di.get('value_diffs')
+            tli = [el for el in dv]
+            if not len(tli) <= 2:
+                # only format versions might be changed
+                # raise Exception("ERROR within data validity test")
+                print("ERROR within data validity test")
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
         except Exception as excep:

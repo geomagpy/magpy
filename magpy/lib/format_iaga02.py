@@ -272,16 +272,11 @@ def readIAGA(filename, headonly=False, **kwargs):
             elif line.startswith('%'):
                 pass
             else:
-                # data entry - may be written in multiple columns
-                # row beinhaltet die Werte eine Zeile
                 # transl. row values contains a line
                 row=[]
-                # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
-                # da darin der Zeilenumbruch "\n" steht
                 # transl. Do not use the last character of "line", d.h. line [:-1],
                 # 				since this is the line break "\n"
                 for val in line[:-1].split():
-                    # nur nicht-leere Spalten hinzufuegen
                     # transl. Just add non-empty columns
                     if val.strip()!="":
                         row.append(val.strip())

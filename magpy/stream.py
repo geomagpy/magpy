@@ -5439,7 +5439,10 @@ CALLED BY:
         """
         resdict = {"SensorID": self.header.get('SensorID'), "Variables": self.variables(),
                    "Amount": len(self), "Samplingperiod (sec)": self.samplingrate(),
-                   "StationID": self.header.get('StationID'), "DataID": self.header.get('DataID')}
+                   "StationID": self.header.get('StationID'), "DataID": self.header.get('DataID'),
+                   "DataComponents": self.header.get('DataComponents'),
+                   "Starttime": self.start(),
+                   "Endtime": self.end()}
         if format == 'md':
             try:
                 from IPython.display import display, Markdown

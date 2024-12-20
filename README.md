@@ -557,6 +557,9 @@ length, then you will find detailed information about them within header 'FileCo
 you can specifically load these data sets as shown below. Please note: If all data refers to a single 
 time column then all data will be read and 'FileContents' remains empty.
 
+The IMAGCDF library has been updated since version 1.1.8 and contains a number of improvements i.e. treatment of 
+multiple time columns, assignment of correct time columns, ESPG coordinate transformation, and speed.  
+
 The general IMAGCDF read command looks as follows
 
         data = read('/path/to/IMAGCDF/*.cdf')
@@ -883,6 +886,12 @@ As all columns require the either the same length or zero length, you simply che
 for the total amount of individual timesteps. This will be returned by the classic len command
 
         print(len(data))
+
+A quick overview of some data parameters can be obtained using the `stats` command. This command will return a 
+dictionary with the results. If you want a direct printout you can use the *format* option. Currently supported is
+a markdown output, requiring however the package IPython
+
+        d = data.stats()
 
 
 #### 5.1.2 Modifying data columns
@@ -3096,13 +3105,13 @@ second and higher resolution data.
 | format_gsm19.py         | GSM19 (b,wg)                 | 2.0.0   | r          | no        | X      |              |
 | format_hapijson.py      | *                            | -.-.-   | rw         | future    | -      | json         |
 | format_iaga02.py        | IAGA                         | 2.0.0   | rw         | yes       | X      | pyproj       |
-| format_imagcdf.py***    | IMAGCDF                      | 2.0.0   | rw         | yes       | X      | pyproj,cdflib |
+| format_imagcdf.py       | IMAGCDF                      | 2.0.0   | rw         | yes       | X      | pyproj,cdflib |
 | format_imf.py           | IAF,IMF,DKA,BLV(1,2),IYFV    | 2.0.0   | rw         | yes       | X,X,X,X,X | pyproj    |
 | format_iono.py          | IONO                         | 2.0.0   | r          | no        | X      | csv          |
 | format_latex.py         | LATEX                        | 2.0.0   | w          | yes       | -      | opt/Table.py |
 | format_lemi.py          | LEMIHF*,LEMIBIN*,LEMIBIN1    | 2.0.0   | r,r,r      | no        | -,-,X  | struct       |
 | format_magpy.py         | PYASCII,PYSTR,PYBIN          | 2.0.0   | rw,rw,r    | yes       | X,X,X  | csv          |
-| format_magpycdf.py***   | PYCDF                        | 2.0.0   | rw         | yes       | X      | cdflib       |
+| format_magpycdf.py      | PYCDF                        | 2.0.0   | rw         | yes       | X      | cdflib       |
 | format_nc.py            | NETCDF*                      | -.-.-   | rw         | future    | -      | netcdf       |
 | format_neic.py          | NEIC                         | 2.0.0   | r          | no        | X      |              |
 | format_noaa.py          | NOAAACE,DSCOVR,XRAY          | 2.0.0   | r,r,r      | no        | X,X,X  | json         |
@@ -3366,7 +3375,7 @@ removed:
 | DataBank      | tableexists | 2.0.0 |               | yes          | yes                 |  9.2  | |
 | DataBank      | write       | 2.0.0 |               | yes          | yes                 |  9.2  | |
 
-        TODO: methods for DI support
+TODO: methods for DI support
 
 ### A7 - core/conversion.py - all methods, overview with runtime and verification tests
 

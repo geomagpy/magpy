@@ -8,10 +8,10 @@ Installation instructions can be found on the main download page.
     - reorganization of methods and classes
     - cleanup of code, deletion of unused and defunct code fragments
     - removed python 2.x support, cleanup of import and dependencies
-    - changed many method with main focus on speed and memory efficiency
+    - changed many methods with main focus on speed and memory efficiency
     - completely new plotting routines
     - database methods updated and speeded up (i.e. read is 15times faster than in MagPy1.x)
-    - README completely reorganized, updated and partly rewritten
+    - README completely reorganized, updated and rewritten
     - jupyter-notebook examples for backend functionality
 
     Please note: despite the removal of py2.x support, MagPy2.x is fully
@@ -20,6 +20,11 @@ Installation instructions can be found on the main download page.
 2.0.0 important removals/modifications affecting definitive data production:
     - internal geomagnetic activity K code was replaced by the generally used routine as provided
       by IAGA.
+    - The IMAGCDF library has been updated since version 1.1.8 and contains a number of improvements and important
+      corrections i.e. treatment of multiple time columns, assignment of correct time columns,
+      ESPG coordinate transformation, and a significant speed boost particularly when dealing with different time
+      columns.
+
 
 2.0.0 new packages:
     plotting:
@@ -51,6 +56,7 @@ Installation instructions can be found on the main download page.
      - DKA export with missing data
      - fixed K (FMI) calculation
      - interpreting missing data and adopted baseline corrections when reading BLV
+     - IMAGCDF multiple time column treatment
 
 2.0.0 removed items:
      - opt.emd replaced by official python emd package
