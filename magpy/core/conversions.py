@@ -7,11 +7,20 @@ the following methods are contained:
 - obspy2magpy  :  converts between traces structure and
 - pandas2magpy
 - magpy2 pandas
+
+|class | method | since version | until version | runtime test | result verification | manual | *tested by |
+|----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
+|**core.conversions** |  |        |             |              |  |  | |
+|    | obspytomagpy      |  2.0.0 |             |              |  |  | |
+|    | pandas2magpy      |  2.0.0 |             |              |  |  | |
+
 """
 
 from magpy.stream import DataStream
 import numpy as np
 from datetime import timedelta
+
+KEYLIST = DataStream().KEYLIST
 
 
 def obspy2magpy(opstream, keydict=None):
@@ -30,7 +39,6 @@ def obspy2magpy(opstream, keydict=None):
     EXAMPLE:
         mpst = obspy2magpy(opst, keydict={'nn.e6046.11.p0': 'x', 'nn.e6046.11.p1': 'y'})
     """
-    KEYLIST = DataStream().KEYLIST
     array = [[] for key in KEYLIST]
     mpstream = DataStream()
     if not keydict:
@@ -88,3 +96,35 @@ def obspy2magpy(opstream, keydict=None):
     mpstream = DataStream(header=mpstream.header, ndarray=np.asarray(array, dtype=object))
 
     return mpstream
+
+def pandas2magpy(dataframe,sensorid="RADONWBV_9500_0001", columns=[], units=[], dateformat=None, debug=True):
+    """
+    DESCRIPTION
+        Converts pandas dataframe into a magpy datastream structure
+    """
+    import pandas as pd
+    array = dataframe.to_numpy()
+    if not columns:
+        columns = list(dataframe.columns)
+    st = DataStream()
+    st.header = {"SensorID":sensorid}
+    ar = [[] for el in KEYLIST]
+    for idx,el in enumerate(array.T):
+        #print (el)
+        if KEYLIST[idx].find('time') > -1:
+            if not dateformat:
+                #print (el)
+                el = pd.to_datetime(el)
+            else:
+                el = pd.to_datetime(el, format=dateformat, errors='coerce')
+        col = 'col-{}'.format(KEYLIST[idx])
+        uni = 'unit-col-{}'.format(KEYLIST[idx])
+        #print (el)
+        if columns and idx < len(columns) and columns[idx]:
+            st.header[col] = columns[idx]
+        if units and idx < len(units) and units[idx]:
+            st.header[uni] = units[idx]
+        ar[idx] = el
+    st.ndarray = np.asarray(ar,dtype=object)
+    #st = drop_nans(st,'time')
+    return st
