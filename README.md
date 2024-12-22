@@ -3381,6 +3381,37 @@ TODO: methods for DI support
 
 ### A8 - core/methods.py - all methods, overview with runtime and verification tests
 
+|class | method | since version | until version | runtime test | result verification | manual | *tested by |
+|----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
+|**core.methods** |  |          |               |              |  |  | |
+|    | ceil_dt         |  2.0.0 |              | yes           | yes          |        | |
+|    | convert_geo_coordinate | 2.0.0 |        | yes           | yes          |        | |
+|    | data_for_di     | 2.0.0 |               | yes*          | yes*         |        | absolutes |
+|    | dates_to_url    | 2.0.0 |               |               | yes          |        | |
+|    | deprecated      | 2.0.0 |               | --            | --           |        | |
+| d  | denormalize     | 2.0.0 |     2.1.0     | no            | no           |        | |
+|    | dictdiff        | 2.0.0 |               | yes           | yes          |        | |
+|    | dictgetlast     | 2.0.0 |               | yes           | yes          |        | |
+|    | dict2string     | 2.0.0 |               | yes           | yes          |        | |
+|    | evaluate_function | 2.0.0 |             |               | yes*         |            |  plot |
+|    | extract_date_from_string | 2.0.0 |      | yes           | yes          |        | |
+|    | find_nearest    | 2.0.0 |               | yes           | yes          |  | |
+|    | find_nth        | 2.0.0 |               | yes           | yes          |            |  flagbrain |
+|    | func_from_file  | 2.0.0 |               | yes           | yes*         |  5.9       |  stream |
+|    | func_to_file    | 2.0.0 |               | yes           | yes*         |  5.9       |  stream |
+|    | get_chunks      | 2.0.0 |               | yes           | yes          |        | |
+|    | group_indices   | 2.0.0 |               | yes           | yes          |        | |
+|    | is_number       | 2.0.0 |               | yes           | yes          |        | |
+|    | mask_nan        | 2.0.0 | maskNAN       | yes           | yes          |        | |
+|    | missingvalue    | 2.0.0 |               | yes           | yes          |        | |
+|    | nan_helper      | 2.0.0 |               | yes           | yes          |        | |
+|    | nearestpow2     | 2.0.0 |               | yes           | yes          |        | |
+|    | normalize       | 2.0.0 |               |               | yes          |        | |
+|    | round_second    | 2.0.0 |               | yes           | yes          |        | |
+|    | string2dict     | 2.0.0 |               | yes           | yes          |  | |
+|    | testtime        | 2.0.0 |               | yes           | yes*         |            |  library |
+|    | test_timestring | 2.0.0 |               |               | yes          |        | |
+
 ### A9 - core/plot.py - all methods, overview with runtime and verification tests
 
 ### A10 - other modules - all methods, overview with runtime and verification tests

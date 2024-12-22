@@ -32,32 +32,33 @@ the following methods are contained:
 |class | method | since version | until version | runtime test | result verification | manual | *tested by |
 |----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
 |**core.methods** |  |          |               |              |  |  | |
-|    | ceil_dt         |  2.0.0 |              | yes           |  |  | |
-|    | convert_geo_coordinate | 2.0.0 |        | yes           |  |  | |
+|    | ceil_dt         |  2.0.0 |              | yes           | yes          |        | |
+|    | convert_geo_coordinate | 2.0.0 |        | yes           | yes          |        | |
 |    | data_for_di     | 2.0.0 |               | yes*          | yes*         |        | absolutes |
-|    | dates_to_url    | 2.0.0 |               |               |  |  | |
-|    | deprecated      | 2.0.0 |               | yes           |  |  | |
-| d  | denoralize      | 2.0.0 |     2.1.0     | no            |  |  | |
-|    | dictgetlast     | 2.0.0 |               | yes           |  |  | |
-|    | dict2string     | 2.0.0 |               | yes           |  |  | |
-|    | evaluate_function | 2.0.0 |             | yes           |  |  | |
-|    | extract_date_from_string | 2.0.0 |      | yes           |  |  | |
-|    | find_nearby     | 2.0.0 |               | yes           |  |  | |
+|    | dates_to_url    | 2.0.0 |               |               | yes          |        | |
+|    | deprecated      | 2.0.0 |               | --            | --           |        | |
+| d  | denormalize     | 2.0.0 |     2.1.0     | no            | no           |        | |
+|    | dictdiff        | 2.0.0 |               | yes           | yes          |        | |
+|    | dictgetlast     | 2.0.0 |               | yes           | yes          |        | |
+|    | dict2string     | 2.0.0 |               | yes           | yes          |        | |
+|    | evaluate_function | 2.0.0 |             |               | yes*         |            |  plot |
+|    | extract_date_from_string | 2.0.0 |      | yes           | yes          |        | |
+|    | find_nearest    | 2.0.0 |               | yes           | yes          |  | |
 |    | find_nth        | 2.0.0 |               | yes           | yes          |            |  flagbrain |
 |    | func_from_file  | 2.0.0 |               | yes           | yes*         |  5.9       |  stream |
 |    | func_to_file    | 2.0.0 |               | yes           | yes*         |  5.9       |  stream |
-|    | get_chunks      | 2.0.0 |               | yes           |  |  | |
-|    | group_indices   | 2.0.0 |               | yes           |  |  | |
-|    | is_number       | 2.0.0 |               | yes           |  |  | |
-|    | mask_nan        | 2.0.0 |               | yes           |  |  | |
-|    | missingvalue    | 2.0.0 |               | yes           |  |  | |
-|    | nan_helper      | 2.0.0 |               | yes           |  |  | |
-|    | nearestpow2     | 2.0.0 |               | yes           |  |  | |
-|    | normalize       | 2.0.0 |               | yes           |  |  | |
-|    | round_seconds   | 2.0.0 |               | yes           |  |  | |
-|    | string2dict     | 2.0.0 |               | yes           |  |  | |
-|    | testtime        | 2.0.0 |               | yes           |  |  | |
-|    | test_timestring | 2.0.0 |               | yes           |  |  | |
+|    | get_chunks      | 2.0.0 |               | yes           | yes          |        | |
+|    | group_indices   | 2.0.0 |               | yes           | yes          |        | |
+|    | is_number       | 2.0.0 |               | yes           | yes          |        | |
+|    | mask_nan        | 2.0.0 | maskNAN       | yes           | yes          |        | |
+|    | missingvalue    | 2.0.0 |               | yes           | yes          |        | |
+|    | nan_helper      | 2.0.0 |               | yes           | yes          |        | |
+|    | nearestpow2     | 2.0.0 |               | yes           | yes          |        | |
+|    | normalize       | 2.0.0 |               |               | yes          |        | |
+|    | round_second    | 2.0.0 |               | yes           | yes          |        | |
+|    | string2dict     | 2.0.0 |               | yes           | yes          |  | |
+|    | testtime        | 2.0.0 |               | yes           | yes*         |            |  library |
+|    | test_timestring | 2.0.0 |               |               | yes          |        | |
 
 """
 import numpy as np
@@ -74,22 +75,6 @@ import json
 # import pyproj  # convertGeoCoor
 
 
-def is_number(s):
-    """
-    DESCRIPTION
-    Test whether s is a number
-    """
-    if str(s) in ['', 'None', None]:
-        return False
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
-    except:
-        return False
-
-
 def ceil_dt(dt, seconds):
     """
     DESCRIPTION:
@@ -101,10 +86,10 @@ def ceil_dt(dt, seconds):
         dt: (datetime object)
         seconds: (integer)
     USAGE:
-        $ print ceil_dt(datetime(2014,01,01,14,12,04),60)
-        $ 2014-01-01 14:13:00
-        $ print ceil_dt(datetime(2014,01,01,14,12,04),3600)
-        $ 2014-01-01 15:00:00
+        print (ceil_dt(datetime(2014,1,1,14,12,4), 60))
+        2014-01-01 14:13:00
+        print (ceil_dt(datetime(2014,1,1,14,12,4), 3600))
+        2014-01-01 15:00:00
         $ print ceil_dt(datetime(2014,01,01,14,7,0),60)
         $ 2014-01-01 14:07:00
     """
@@ -643,6 +628,9 @@ def extract_date_from_string(datestring):
        or the day (dailyfiles)
     APPLICATION:
        datelist = extract_date_from_string(filename)
+    EXAMPLES:
+       d = extract_date_from_string('gddtw_2022-11-22.txt')
+       d = extract_date_from_string('2022_gddtw.txt')
     """
 
     date = False
@@ -803,7 +791,10 @@ def evaluate_function(component, function, samplingrate, starttime=None, endtime
 
 def find_nearest(array, value):
     """
-    Find the nearest element within an array
+    DESCRIPTION
+        Find the nearest element within an array
+    APPLICATION
+        array_value, array_idx = find_nearest(array, value)
     """
     if not isinstance(value,(datetime, np.datetime64)):
         array = np.ma.masked_invalid(array)
@@ -922,10 +913,15 @@ def func_to_file(funcparameter,functionpath,debug=False):
 def get_chunks(endchunk, wl=3600):
     """
     DESCRIPTION
-       get the distribution and lengths of time windows between potentially disturbed time ranges
-       this statistic will help to identify i.e. lightning strikes, eventually vehicles if passing and coming back
-       do this analysis time dependent run a gliding window of 2h duration across the sequence and get the
+       get the distribution and lengths of time windows between potentially disturbed time ranges.
+       this statistic will help to identify i.e. lightning strikes, eventually vehicles if passing and coming back.
+       do this analysis time dependent: run a gliding window of default 2h duration across the sequence.
        create 2h/2 overlapping 2h window with some characteristics on average window distances and amount
+    PARAMETER
+       endchunk : the length of the list
+       wl : half window length - half of the window length and overlap between different windows
+    APPLICATION
+       l = get_chunks(10800, wl=3600)
 
     :param endchunk:
     :param wl:
@@ -944,7 +940,7 @@ def get_chunks(endchunk, wl=3600):
 def group_indices(indexlist):
     """
     DESCRIPTION
-        group successiv indices in list with start and endindex
+        group successive indices in list with start and endindex
         This method is useful for creating flagging structures
     APPLICATION
         used by merge_stream to identify ranges which are inserted
@@ -966,6 +962,27 @@ def group_indices(indexlist):
     for i,el in enumerate(start_idx[0]):
         single.append([el,end_idx[0][i]])
     return single
+
+
+def is_number(s):
+    """
+    DESCRIPTION
+    Test whether s is a number
+    """
+    if str(s) in ['', 'None', None]:
+        return False
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+    except:
+        return False
+
+
+def mask_nan(column):
+    return maskNAN(column)
+
 
 def maskNAN(column):
     """
@@ -1084,12 +1101,13 @@ def nan_helper(y):
 
 def nearestPow2(x):
     """
-    Function taken from ObsPy
-    Find power of two nearest to x
-    >>> nearestPow2(3)
-    2.0
-    >>> nearestPow2(15)
-    16.0
+    DESCRIPTION
+        Find power of two nearest to x
+    APPLICATION
+        nearestPow2(3)
+        -> 2.0
+        nearestPow2(15)
+        -> 16.0
     :type x: Float
     :param x: Number
     :rtype: Int
@@ -1458,12 +1476,6 @@ if __name__ == '__main__':
     except Exception as excep:
         errors['find_nth'] = str(excep)
         print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with find_nth.")
-
-    try:
-        group = group_indices(indlist)
-    except Exception as excep:
-        errors['group_indices'] = str(excep)
-        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- RUNTIME ERROR group_indices.")
     try:
         group = group_indices(indlist)
         # eventually implement the following with unittest

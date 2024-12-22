@@ -528,9 +528,116 @@ class TestStream(unittest.TestCase):
 
 
 class TestMethods(unittest.TestCase):
+
+    def test_ceil_dt(self):
+        t1 = ceil_dt(datetime(2014,1,1,14,12,4), 60)
+        t2 = ceil_dt(datetime(2014,1,1,14,12,4), 3600)
+        t1ver = datetime(2014,1,1,14,13)
+        t2ver = datetime(2014,1,1,15,00)
+        self.assertEqual(t1, t1ver)
+        self.assertEqual(t2, t2ver)
+
+    def test_convert_geo_coordinate(self):
+        lon, lat = convert_geo_coordinate(-34833.41399,310086.6051,'epsg:31256','epsg:4326')
+        self.assertEqual(np.round(lon,3), 15.866)
+        self.assertEqual(np.round(lat,3), 47.928)
+
+    def test_data_for_di(self):
+        # main test in absolutes
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both')
+        self.assertEqual(len(data), 86400)
+
+    def test_dates_to_url(self):
+        url = "https://example.com?getdata"
+        newurl = dates_to_url(url, starttime=datetime(2016,1,1), endtime=datetime(2016,1,4), starttimestring='starttime', endtimestring='endtime')
+        self.assertEqual(len(newurl),87)
+
+    def test_dictdiff(self):
+        da = {0:"a",1:"b",2:"c"}
+        db = {0:"a",1:"b",2:"d"}
+        res = dictdiff(da, db, show_value_diff=True)
+        ver = { 2 : ('c', 'd')}
+        self.assertDictEqual(res.get('value_diffs'), ver)
+
+    def test_dictgetlast_dict2string_string2dict(self):
+        testtxt = 'A2_(2017_(deltaD_0.00;deltaI_0.201;deltaF_1.12);2018_(deltaF_1.11))'
+        d1 = string2dict(testtxt)
+        d2 = string2dict('st_736677.0,time_timedelta(seconds=-2.3),et_736846.0', typ='listofdict')
+        result = dicgetlast(d1,pier='A2',element='deltaD,deltaI,deltaF')
+        self.assertEqual(float(result.get('deltaF')), 1.11)
+        t1 = dict2string(d1)
+        t2 = dict2string(d2, typ='listofdict')
+        self.assertEqual(t1, testtxt)
+
+    def test_extract_date_from_string(self):
+        datestr = ['gddtw_2022-11-22.txt', 'gddtw_20221122.txt','2022-11-22T12:00:00_data.txt']
+        daterange = '2022_data.txt'
+        ref = datetime.date(datetime(2022,11,22))
+        for dat in datestr:
+            d = extract_date_from_string(dat)
+            self.assertEqual(ref, d[0])
+        d = extract_date_from_string(daterange)
+        self.assertTrue(d[0] <= ref <= d[1])
+
+    def test_find_nearest(self):
+        ar = [1,2,3,4,5,6]
+        arvalue, aridx = find_nearest(ar,3.2)
+        self.assertEqual(arvalue, 3)
+        self.assertEqual(aridx, 2)
+
     def test_find_nth(self):
         i = find_nth("Hello_World_I_am_here","_", 3)
         self.assertEqual(i, 13)
+
+    def test_get_chunks(self):
+        l = get_chunks(10800, wl=3600)
+        self.assertEqual(len(l), 2)
+
+    def test_group_indices(self):
+        indlist = [0,2,3,2000,2005,2006,2007,2008,2034,2037,2040,2041,2042,2050]
+        group = group_indices(indlist)
+        self.assertEqual(group,[[0, 0], [3, 3], [8, 8], [9, 9], [13, 13], [1, 2], [4, 7], [10, 12]])
+
+    def test_is_number(self):
+        self.assertFalse(is_number("drt345"))
+        self.assertTrue(is_number("345"))
+
+    def test_mask_nan(self):
+        v = np.array([1, 2, 3, 4, 5, np.nan, 7, 8, 9, 10, 11, 12, 13, 14])
+        a = maskNAN(v)
+        self.assertTrue(a.mask[5])
+
+    def test_missingvalue(self):
+        v = np.array([1, 2, 3, 4, 5, np.nan, 7, 8, 9, 10, 11, 12, 13, 14])
+        mv = missingvalue(v, window_len=10, fill='interpolate', fillvalue=99)
+        self.assertEqual(6, mv[5])
+        mv = missingvalue(v, window_len=10, fill='value', fillvalue=99)
+        self.assertEqual(99, mv[5])
+
+    def test_nan_helper(self):
+        v = np.array([1, 2, 3, 4, 5, np.nan, 7, 8, 9, 10, 11, 12, 13, 14])
+        a, b = nan_helper(v)
+        self.assertTrue(a[5])
+
+    def test_nearestpow2(self):
+        res = nearestPow2(15)
+        self.assertEqual(res, 16)
+
+    def test_normalize(self):
+        il = [1,2,3,4,6,5,7,8]
+        e = normalize(np.asarray(il))
+        self.assertEqual(e[0][-1], 1)
+
+    def test_round_second(self):
+        t1 = datetime(2022,11,22,11,27,13,654321)
+        t2 = datetime(2022,11,22,11,27,13,254321)
+        t3 = datetime(2022,11,22,23,59,59,654321)
+        self.assertEqual(round_second(t1), datetime(2022,11,22,11,27,14))
+        self.assertEqual(round_second(t2), datetime(2022,11,22,11,27,13))
+        self.assertEqual(round_second(t3), datetime(2022,11,23))
+
+    def test_test_timestring(self):
+        self.assertEqual(test_timestring("2022-11-22"), datetime(2022,11,22))
 
 
 class TestFlagging(unittest.TestCase):
