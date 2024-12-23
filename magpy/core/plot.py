@@ -67,7 +67,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
            symbols=None, symbolcolor=[[0.8, 0.8, 0.8]], title=None, xinds=[None], legend={}, grid={}, patch={},
            fill=None, showpatch=[True], errorbars=None, functions=None, functionfmt="r-", xlabelposition=None,
            ylabelposition=None, yscale=None, dateformatter=None, force=False, width=10, height=4, alpha=0.5,
-           debug=False):
+           variables=None, debug=False):
     """
     DESCRIPTION:
         tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a shared x axis based on the first plot.
@@ -139,6 +139,8 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         data = [data]
         # amount of plots
     amount = len(data)
+    if variables and not keys:
+        keys = variables
     # check for available keys - do that only for the primary dataset if not provided
     if keys:
         keysdepth = len(np.array(keys, dtype=object).shape)

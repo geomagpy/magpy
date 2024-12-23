@@ -296,6 +296,10 @@ Note that this requires the existence of a "data" object, which is obtained e.g.
 
         help(DataStream().fit)
 
+Provide a list of streams and an array 
+of keys:
+
+        help(mp.tsplot)
 
 
 #### 2.3.2 MagPy's logging system
@@ -808,49 +812,102 @@ Finally, X-ray data from GOES is supported to identify flare signatures:
 
 ## 4. Figures
 
-You will find some example plots at the [Conrad Observatory](http://www.conrad-observatory.at).
+In the following we will introduce plotting routines and some often used options. You will find many additional example
+plots within this manual. You can also access a full list of all plot options using the `help(mp.tsplot)` method.
 
-### 4.1 A quick timersies plot
+### 4.1 A quick timeseries plot
 
+Firstly import the required modules:
+
+        from magpy.stream import example1, read
         import magpy.core.plot as mp
-        mp.tsplot(data)
 
-### 4.2 Often used options
+Then you can simply call `tsplot` without any additional options. This command will always create up to three 
+timeseries plots of the first three data columns within your dataset.
 
-Select specific keys to plot:
+        vario = read(example1)
+        mp.tsplot(vario)
 
-        mp.tsplot(data,['x','y','z'])
+### 4.2 Timeseries: using some plot options and saving
 
-Defining a plot title and specific colors:
+Lets start with some often used options. Select specific keys/variables, add a title, grid and set dimensions. We will
+further return figure and axes.
 
-        mp.tsplot(data,keys=['x','y'],title="Test plot",
-                colorlist=['g', 'c'])
+        vario = read(example1)
+        fig, ax = mp.tsplot(vario,keys=['x','y','z'], title="Variometer data", grid=True, width=10, height=2)
 
-Refining the y-axis range for the y colum between 0 and automatic maximum value (see `help(mp.plot)` for list and all options):
+This will lead to the following plot. ![4.2.1](./magpy/doc/pl_421.png "A general plot with some options")
 
-        mp.plot(data,variables=['x','y'],plottitle="Test plot",
-                colorlist=['g', 'c'], specialdict = {'y':[0,]})
+You can save this plot to a file using:
 
-Changing size and appearance:
-
+        fig.savefig("/tmp/pl_421.png")
 
 
-Many more examples are provided in chapter 5: 
+### 4.3 Timeseries data from multiple streams
 
-### 4.3 Data from multiple streams
+The timeseries plotting method is specifically designed for multiple diagrams from different data sets. To 
+demonstrate that we load additional scalar data and then plot variometer and scalar data together including some new
+options. Please note the list character of supplied streams and selected keys. Many additional options require the 
+same dimensions as the keys array, some the dimensions of the stream list.
 
-Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array 
-of keys:
+        scalar = read(example2)
+        fig,ax = mp.tsplot([vario,scalar],keys=[['x','y','z'],['f']], title="Variometer data", grid=True, width=10, 
+                    height=2, yranges=[[[21000,21100],[-50,50],[43800,43850]],[[48600,48650]]], ylabelposition=-0.1, 
+                    dateformatter="%Y-%m-%d %H", legend=True, alpha=0.5,
+                    fill=[[[],[{"boundary":0,"fillcolor":"red"},{"boundary":0,"fillcolor":"blue","fillrange":"smaller"}],[]],[[]]])
 
-        fig, ax = mp.tsplot([data1,data2],[['x','y','z'],['f']])
+The option *yranges* allows to define individual ranges for each plot, *ylabelposition* puts all labels at the same
+x position, *dateformatter* changes the x labels and rotates them to not overlap and a simple default legend can be added 
+as well. Both *grid* and *legend* allow to provide a dictionary with detailed format specifications. The selected *fill*
+option is applied to key y, the E component, and defines everything above 0 to be filled red and everything below 0 to 
+be filled blue. The transparency *alpha* is set to 0.5. ![4.2.2](./magpy/doc/pl_422.png "A plot with more options")
 
-### 4.4 Getting an options overview
+It is recommended to use the list type parameters even when loading a single data set, at least when using more complex
+options. This will help to provide the parameters correctly. In the following example we open a single basevalue data
+set and demonstrate the usage of different plot *symbols*, *symbolcolors*, and *padding*. Padding defines scale
+extensions for the y scale which would typically use maximum and minimum values from data.
 
-Various datasets from multiple data streams will be plotted above one another. Provide a list of streams and an array 
-of keys:
+        basevalue = read(example3)
+        fig,ax = mp.tsplot([basevalue],[['dx','dy','dz']], symbols=[['.','-.','--o']], 
+                    symbolcolor=[[0.2, 0.2, 0.2],'r','b'], padding=[[1,0.005,0.5]], height=2)
 
-        help(mp.tsplot)
+This will produce this plot: ![4.2.3](./magpy/doc/pl_423.png "Symbols and colors")
 
+In a next example we will plot the H components of three observatories. For this we load data from the USGS webservice.
+
+        data1 = read("https://geomag.usgs.gov/ws/data/?id=BOU")
+        data2 = read("https://geomag.usgs.gov/ws/data/?id=SIT")
+        data3 = read("https://geomag.usgs.gov/ws/data/?id=NEW")
+        fig,ax = mp.tsplot([data1,data2,data3], [['x'],['x'],['x']], symbolcolor=['g','r','b'], legend=True, height=2)
+
+The obtained plot show the data on similar timescales below each other. ![4.2.4](./magpy/doc/pl_424.png "Geomag")
+If you want to plot them in a single diagram then just define a single key value.
+
+        fig,ax = mp.tsplot([data1,data2,data3], [['x']], symbolcolor=['g','r','b'],
+                    legend={"legendtext":('BOU', 'SIT', 'NEW')}, height=2)
+
+![4.2.5](./magpy/doc/pl_425.png "Geomag in a single plot")
+
+
+### 4.4 Patches, annotations and functions in tsplot
+
+Patches are used to mark certain regions within the plot. A patch is described within a python dictionary as shown in 
+this example:
+
+        patch = {"ssc" : {"start":datetime(2024,5,10,17,6),"end":datetime(2024,5,10,17,8),"components":"x","color":"red","alpha":0.2},
+                "initial": {"start":datetime(2024,5,10,17,8),"end":datetime(2024,5,10,19,10),"components":"x","color":"yellow","alpha":0.2},
+                "main": {"start":datetime(2024,5,10,19,10),"end":datetime(2024,5,11,2,0),"components":"x","color":"orange","alpha":0.2},
+                "recovery": {"start":datetime(2024,5,11,2,0),"end":datetime(2024,5,12,11),"components":"x","color":"green","alpha":0.2}}
+        fig,ax = mp.tsplot([variometer,dst], keys=[['x'],['var1']], patch=patch, height=2)
+
+Patches are also used to mark flags as shown in section 6 and in further examples below. 
+Several examples on how to plot functions in addition to data is shown in section 5.9.
+
+
+### 4.5 Other plots
+
+Frequency plots can be constructed using matplotlib build in methods and some examples are provided in section 5.
+Stereo diagrams are on the TODO list for a future version of MagPy. 
 
 ## 5. Timeseries methods
 
@@ -2659,7 +2716,7 @@ application then move to the next section 8.3.1. Please note that you need to fe
 to this method. Ideally you would choose much longer time ranges. In the following examples we are analyzing
 three months of one-minute data.
 
->![IMPORTANT]
+>[!IMPORTANT]
 > Method requires one-minute data, at least 6 days, preferably 3 months to cover a number of solar rotation cycles
 
 #### 8.3.1 Getting an Sq variation curve
