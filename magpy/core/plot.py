@@ -64,7 +64,7 @@ def fill_list(mylist, target_len, value):
 
 
 def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=None, yranges=None, padding=None,
-           symbols=None, symbolcolor=[[0.8, 0.8, 0.8]], title=None, xinds=[None], legend={}, grid={}, patch={},
+           symbols=None, colors=None, title=None, xinds=[None], legend={}, grid={}, patch={},
            fill=None, showpatch=[True], errorbars=None, functions=None, functionfmt="r-", xlabelposition=None,
            ylabelposition=None, yscale=None, dateformatter=None, force=False, width=10, height=4, alpha=0.5,
            variables=None, debug=False):
@@ -78,7 +78,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         keys (list)         :    default are the first three av[]ailable keys of the first data set. If only keys for the first data set are given, then an overlay plot is activated
                                  If all keys are provided then all plots are plotted separately.
         symbols (list)      :    default "-" : define plot symbols - accpeted are "-",".","o" and "k"
-        symbolcolor (list)  :    default is light grey : defines the color of all individual plots of each datastream
+        colors (list)       :    default is light grey : defines the color of all individual plots of each datastream
         timecolumn (list)   :    default None : define the used time column - can be time or sectime (if existing)
         yranges (list)      :    default None : define individual ranges for y axes - overrides padding
                                  EXAMPLE: keys=[['x','y'],['f']], yranges=[[[20000,22000],[-1000,1000]],[[44000,54000]]]
@@ -107,7 +107,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                                  EXAMPLE: keys=[['x','y'],['var1']], functions=[[func1,[]],[func2]]
         functionfmt(string) :    Default "r-" for all functions
         xlabelposition (dict) :    default none - if defined then all xlabels are configured as follows
-                                 EXAMPLE: TODO
+                                 EXAMPLE: not yet implemented
         ylabelposition (float) :    default none - if defined then all ylabels are set to this x position
                                  EXAMPLE: ylabelposition=-0.1
         ysacle (string)     :    'linear' (default), 'log'
@@ -156,6 +156,8 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         separate = True
     if not symbols:
         symbols = [["-" for el in line] for line in keys]
+    if not colors:
+        colors = [[[0.8, 0.8, 0.8] for el in line] for line in keys]
     if not yranges:
         yranges = [[["default", "default"] for el in line] for line in keys]
     if yscale and not isinstance(yscale, (list, tuple)):
@@ -164,11 +166,11 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         yscale = [["linear" for el in line] for line in keys]
     keys = fill_list(keys, amount, keys[-1])
     symbols = fill_list(symbols, amount, symbols[-1])
+    colors = fill_list(colors, amount, colors[-1])
     yscale = fill_list(yscale, amount, yscale[-1])
     yranges = fill_list(yranges, amount, yranges[-1])
     timecolumn = fill_list(timecolumn, amount, timecolumn[-1])
     showpatch = fill_list(showpatch, amount, showpatch[-1])
-    symbolcolor = fill_list(symbolcolor, amount, symbolcolor[-1])
     xinds = fill_list(xinds, amount, xinds[-1])
     if not title:
         title = [None]
@@ -234,6 +236,10 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                 # Symbols and color
                 # ------------------
                 symbol = symbols[idx][i]
+                try:
+                    color = colors[idx][i]
+                except:
+                    color = [0.8, 0.8, 0.8]
                 if symbol == "k":
                     # special symbol for K values
                     diffs = (np.asarray(t[1:].astype(datetime64) - t[:-1].astype(datetime64)) / 1000000.).astype(
@@ -248,7 +254,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                                  bartrange], [0, 0, comp[num] + 0.1, comp[num] + 0.1],
                                 facecolor=cm.RdYlGn((9 - comp[num]) / 9., 1), alpha=alpha, edgecolor='k')
                     symbol = "|"
-                    symbolcolor[idx] = None
+                    color = None
                     yranges[idx][i] = [0, 9]
                 # Fill between graphs
                 # ------------------
@@ -267,7 +273,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                                 indi = np.where(comp > boundary, True, False)
                             else:
                                 indi = np.where(comp < boundary, True, False)
-                            ax.fill_between(t, comp, boundary, color=fillcolor, alpha=alpha, where=indi)
+                            ax.fill_between(t, comp, boundary, color=fillcolor, alpha=fillalpha, where=indi)
                 # Error bars
                 # ------------------
                 if errorbars:
@@ -275,11 +281,11 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                     if errordict and isinstance(errordict, dict):
                         yerr = dat._get_column(errordict.get('key'))
                         if len(yerr) > 0:
-                            errorcolor = errordict.get('color', symbolcolor[idx])
+                            errorcolor = errordict.get('color', color)
                             capsize = errordict.get('capsize', 3)
                             marker = errordict.get('marker', '.')
                             linestyle = errordict.get('linestyle', '-')
-                            plt.errorbar(t, comp, yerr=yerr, linestyle=linestyle, marker=marker, color=symbolcolor[idx],
+                            plt.errorbar(t, comp, yerr=yerr, linestyle=linestyle, marker=marker, color=color,
                                          capsize=capsize, ecolor=errorcolor)
                 # Plot the main graph
                 # ------------------
@@ -289,7 +295,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                     mincomp = 0
                     maxcomp = 1
                 else:
-                    plt.plot(t, comp, symbol, color=symbolcolor[idx])
+                    plt.plot(t, comp, symbol, color=color)
                     mincomp = np.nanmin(comp)
                     maxcomp = np.nanmax(comp)
                 # plt.hlines(0,t[0],t[-1])

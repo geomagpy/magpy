@@ -1523,7 +1523,7 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
         window = 600.
     else:
         window = timerange / sr
-    if window:
+    if datawindow:
         print ("overriding timerange/sampling rate related window size and using {} succesive data points as window length".format(datawindow))
         window = datawindow
     if debug:

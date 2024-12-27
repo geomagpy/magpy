@@ -863,35 +863,39 @@ option is applied to key y, the E component, and defines everything above 0 to b
 be filled blue. The transparency *alpha* is set to 0.5. ![4.2.2](./magpy/doc/pl_422.png "A plot with more options")
 
 It is recommended to use the list type parameters even when loading a single data set, at least when using more complex
-options. This will help to provide the parameters correctly. In the following example we open a single basevalue data
-set and demonstrate the usage of different plot *symbols*, *symbolcolors*, and *padding*. Padding defines scale
+options. This will help to provide the parameters correctly. 
+
+### 4.4 Symbols and colors
+
+In the following example we open a single basevalue data
+set and demonstrate the usage of different plot *symbols*, *colors*, and *padding*. Padding defines scale
 extensions for the y scale which would typically use maximum and minimum values from data.
 
         basevalue = read(example3)
-        fig,ax = mp.tsplot([basevalue],[['dx','dy','dz']], symbols=[['.','-.','--o']], 
-                    symbolcolor=[[0.2, 0.2, 0.2],'r','b'], padding=[[1,0.005,0.5]], height=2)
+        fig,ax = mp.tsplot([data],[['dx','dy','dz']], symbols=[['.','-.x','--o']], 
+                    colors=[[[0.2, 0.2, 0.2],'r','blue']], padding=[[1,0.005,0.5]], height=2)
 
 This will produce this plot: ![4.2.3](./magpy/doc/pl_423.png "Symbols and colors")
 
 In a next example we will plot the H components of three observatories. For this we load data from the USGS webservice.
 
         data1 = read("https://geomag.usgs.gov/ws/data/?id=BOU")
-        data2 = read("https://geomag.usgs.gov/ws/data/?id=SIT")
-        data3 = read("https://geomag.usgs.gov/ws/data/?id=NEW")
-        fig,ax = mp.tsplot([data1,data2,data3], [['x'],['x'],['x']], symbolcolor=['g','r','b'], legend=True, height=2)
+        data2 = read("https://geomag.usgs.gov/ws/data/?id=NEW")
+        data3 = read("https://geomag.usgs.gov/ws/data/?id=SIT")
+        fig,ax = mp.tsplot([data1,data2,data3],[['x'],['x'],['x']],colors=[['g'],['r'],['b']],legend=True,height=2)
 
 The obtained plot show the data on similar timescales below each other. ![4.2.4](./magpy/doc/pl_424.png "Geomag")
 If you want to plot them in a single diagram then just define a single key value.
 
-        fig,ax = mp.tsplot([data1,data2,data3], [['x']], symbolcolor=['g','r','b'],
+        fig,ax = mp.tsplot([data1,data2,data3], [['x']], colors=[['g'],['r'],['b']],
                     legend={"legendtext":('BOU', 'SIT', 'NEW')}, height=2)
 
 ![4.2.5](./magpy/doc/pl_425.png "Geomag in a single plot")
 
 
-### 4.4 Patches, annotations and functions in tsplot
+### 4.5 Patches, annotations and functions in tsplot
 
-Patches are used to mark certain regions within the plot. A patch is described within a python dictionary as shown in 
+Patches are used to mark certain regions within the plot. A patch is described as a python dictionary as shown in 
 this example:
 
         patch = {"ssc" : {"start":datetime(2024,5,10,17,6),"end":datetime(2024,5,10,17,8),"components":"x","color":"red","alpha":0.2},
@@ -900,14 +904,16 @@ this example:
                 "recovery": {"start":datetime(2024,5,11,2,0),"end":datetime(2024,5,12,11),"components":"x","color":"green","alpha":0.2}}
         fig,ax = mp.tsplot([variometer,dst], keys=[['x'],['var1']], patch=patch, height=2)
 
-Patches are also used to mark flags as shown in section 6 and in further examples below. 
-Several examples on how to plot functions in addition to data is shown in section 5.9.
+Patches are also used to mark flags as shown in section 6 and in further examples in sections 5 and 8. 
+
+Functions are discussed in section 5.9. There you will also find numerous examples on how to plot these functions
+along with data.
 
 
-### 4.5 Other plots
+### 4.6 Other plots
 
 Frequency plots can be constructed using matplotlib build in methods and some examples are provided in section 5.
-Stereo diagrams are on the TODO list for a future version of MagPy. 
+Stereo diagrams will be added in a future version of MagPy. 
 
 ## 5. Timeseries methods
 
@@ -1432,7 +1438,9 @@ files) are available in the header. Access it as follows:
 
         blvdata = read(example7)
         func = blvdata.header.get('DataFunctionObject')
-        mp.tsplot([blvdata],[['dx','dy','dz']], symbols=[['.','.','.']], padding=[[2,0.005,2]], symbolcolor=[[0.5, 0.5, 0.5]], functions=[[func,func,func]], height=2)
+        fig, ax = mp.tsplot([blvdata],[['dx','dy','dz']], symbols=[['.','.','.']], padding=[[0.005,0.005,2]], 
+                             colors=[[[0.5, 0.5, 0.5],[0.5, 0.5, 0.5],[0.5, 0.5, 0.5]]], functions=[[func,func,func]], 
+                             height=2)
 
 
 #### 5.9.5 Applying functions to timeseries
@@ -1724,7 +1732,7 @@ the "disturbed" data set.
 
 Show original data in red and cleand data in grey in a single plot:
 
-        mp.tsplot([datawithspikes,datawithoutspikes],['x','y','z'], symbolcolors=['r','grey'])
+        mp.tsplot([datawithspikes,datawithoutspikes],[['x','y','z']], colors=[['r','r','r'],['grey','grey','grey']])
 
 This results in Figure ![6.2.](./magpy/doc/fl_outlier.png "Removing outlier from data")
 
@@ -1985,20 +1993,22 @@ to the observer for final verification.
 Assigning flag labels without AI can be done by the flag_ultra probability technique. This is only useful for 
 testing purposes.  
 
-TODO - Import modules:
+Please note: the following example will not work. It is here just to demonstrate the general application. Flag_bot is
+currently under development:
 
         from magpy.stream import *
         from magpy.core import plot as mp
         from magpy.core import flagging
 
         data = read(example1)
-        fl = flag_ultra(data)
+        fl = flagging.flag_ultra(data)
 
         cleandata = fl.apply_flags(data, mode='drop')
 
 Show original data in red and cleand data in grey in a single plot:
 
-        mp.tsplot([data,cleandata],['x','y','z'], symbolcolors=['r','grey'])
+        mp.tsplot([data,cleandata],[['x','y','z']], colors=[['r','r','r'],['grey','grey','grey']])
+
 
 
 ## 7. DI-flux measurements, basevalues and baselines
@@ -2599,7 +2609,7 @@ baseline adoption.
 
 Please import activity related functionality to enable the methods shown below:
 
-        (jnmagpy)$ from magpy.core import activity as act
+        from magpy.core import activity as act
 
 ### 8.1 Determination of K indices
 
@@ -2613,12 +2623,11 @@ at least three subsequent days of data. The first and last day of the sequence w
 The datas et need to contain X,Y and Z components of which X and Y are analyzed. You can use
 MagPy's timeseries methods to transform your data sets accordingly if needed. 
 
-A month of one minute data is provided in `example2`, which corresponds to an [INTERMAGNET] IAF archive file. Reading
-a file in this format will load one minute data by default. Accessing hourly data and other information is described
-below.
+A week of one second data is provided in `example4`. We will filter this data set to one-minute resolution first. 
+Accessing hourly data and other information is described below.
 
-        data2 = read(example2)
-
+        data = read(example4)
+        data2 = data.filter()
         kvals = act.K_fmi(data2)
 
 The output of the K_fmi method is a DataStream object which contains timesteps and K values associated with the 'var1'
@@ -2627,7 +2636,8 @@ key.
 For plotting we provide x and y components of magnetic data as well as the Kvalue results. The additional options
 determine the appearance of the plot (limits, bar chart):
 
-        p = tsplot([data2,kvals],keys=[['x','y'],['var1']], labelx=-0.08, symbols=[["-","-"],["k"]], title="K value plot", symbolcolor=[[0.5, 0.5, 0.5]], patch=patch, showpatch=[True,False], grid=True,height=2)
+        p,ax = mp.tsplot([data2,kvals],keys=[['x','y'],['var1']], ylabelposition=-0.08, symbols=[["-","-"],["k"]], 
+                          title="K value plot", colors=[[[0.5, 0.5, 0.5],[0.5, 0.5, 0.5]],['r']], grid=True, height=2)
 
 `'k'` in `symbols` refers to the second subplot (K), which will then be plotted as bars rather than the standard
 line (`'-'`).
