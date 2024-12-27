@@ -917,7 +917,7 @@ Stereo diagrams will be added in a future version of MagPy.
 
 ## 5. Timeseries methods
 
-Lets first load some example data set to demonstrate the application of basic data stream timeseries manipulation 
+Lets load some example data set to demonstrate the application of basic data stream timeseries manipulation 
 methods.
 
         data = read(example5)
@@ -927,7 +927,7 @@ methods.
 
 #### 5.1.1 Basic data characteristics
 
-Lets firstly check what data is actually contained in the data stream.
+Firstly check what data is actually contained in the data stream.
 If you want to now which column keys are used in the current data set use
 
         print (data.variables())
