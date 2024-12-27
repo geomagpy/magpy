@@ -242,45 +242,56 @@ Open Finder and search for your script "xmagpy". Copy it to the desktop. To chan
 
 ## 2. A quick guide to MagPy
 
-written by R. Leonhardt, R. Bailey (April 2017)
+This guide requires at least a basic understanding of python and ist usage. MagPy is a python package which you can run 
+in any python 3 environment fulfilling the requirements listed in section 1. There are two basic ways to use MagPy
+1) Import package or modules and use within a python environment
+2) Run the graphical user interface xmagpy (xmagpyw for Mac)
 
-MagPy's functionality can be accessed basically in three different ways:
-    1) Directly import and use the magpy package into a python environment
-    2) Run the graphical user interface xmagpy (xmagpyw for Mac)
-    3) Use predefined applications "Scripts"
-
-The following section will primarily deal with way 1.
-For 2 - xmagpy - we refer to the specfic xmagpy manual can be found in the download section of 
-the [Conrad Observatory Webpage](https://cobs.geosphere.at).
-Predefined applications/scripts are summarized in the appendix.
+This guide will solely focus on (1). For (2) - xmagpy - we refer to the specific xmagpy manual to be found in the 
+download section of the [Conrad Observatory Webpage](https://cobs.geosphere.at).
 
 ### 2.1 Getting started with the python package
 
-Start python. Import all stream methods and classes using:
+Start python. At the beginnig we will need to import either specific modules or methods. The following command will
+import all stream methods/classes and example data sets. :
 
-    from magpy.stream import *
+        from magpy.stream import *
 
-Please note that this import will shadow any already existing `read` method.
+This is NOT a "safe" import method as this import will shadow any already existing `read` method. But for now we are happy 
+with it.
 
-## To be moved elsewhere
+Now we can use all methods of this module like reading files (see section 3) and working with the data. 
+
+        data = read(example1)
+
+MagPy has many more modules which will be described in detail below. If we want to plot the data we need the plotting
+module, which provides the method timeseries plot `tsplot`. Further information is found in section 4.
+
+        from magpy.core import plot as mp
+
+This is a "safe" import method as we do not shadow any other method. Using the module reference *mp* we can now use any
+method containd in the plotting module
+
+        mp.tsplot(data)
+
 
 ### 2.2 MagPy's internal data structure
 
-Data is stored in form of an numpy array. Meta information will be organized within a dictionary. Both structures together from a data stream object.
-For data treatment each input column is assigned to an internal key. The name of this key has not necessarily anything to do with the type/name of data.
+Data is stored in form of an numpy array. Meta information will be organized within a python dictionary. Both 
+structures together form an internal  data stream object. For data treatment each input column is assigned to an 
+internal key. The name of this key has not necessarily anything to do with the type/name of data.
 
-**key** refers to the internally used columnname
+You can view the array part as follows
 
-**name** refers to the contents asigned to a key
+        print(data.ndarray)
 
-**unit** refers to the units of the contents
+The header information is printed by
 
-print(trimstream.get_key_name('x'))
+        print(data.header)
 
+The header can also contain references to the column contents for each key. Details are found in section 5.
 
-### 2.3 Getting help on options and usage
-
-#### 2.3.1 Python's help function
+### 2.3 Getting help on methods and modules
 
 Information on individual methods and options can be obtained as follows:
 
@@ -290,46 +301,17 @@ For basic functions:
 
 For specific methods related to e.g. a stream object "data":
 
+        data = read(example1)
         help(data.fit)
 
-Note that this requires the existence of a "data" object, which is obtained e.g. by data = read(...). The help text can also be shown by directly calling the *DataStream* object method using:
+Note that this requires the existence of a "data" object, which is obtained e.g. by data = read(...). The help text 
+can also be shown by directly calling the *DataStream* object method using:
 
         help(DataStream().fit)
 
-Provide a list of streams and an array 
-of keys:
+Another example is shown here:
 
         help(mp.tsplot)
-
-
-#### 2.3.2 MagPy's logging system
-
-MagPy automatically logs many function options and runtime information, which can be useful for debugging purposes. This log is saved by default in the temporary file directory of your operating system, e.g. for Linux this would be `/tmp/magpy.log`. The log is formatted as follows with the date, module and function in use and the message leve (INFO/WARNING/ERROR):
-
-        2017-04-22 09:50:11,308 INFO - magpy.stream - Initiating MagPy...
-
-Messages on the WARNING and ERROR level will automatically be printed to shell. Messages for more detailed debugging are written at the DEBUG level and will not be printed to the log unless an additional handler for printing DEBUG is added.
-
-Custom loggers can be defined by creating a logger object after importing MagPy and adding handlers (with formatting):
-
-        from magpy.stream import *
-        import logging
-
-        logger = logging.getLogger()
-        hdlr = logging.FileHandler('testlog.log')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        hdlr.setFormatter(formatter)
-        logger.addHandler(hdlr)
-
-The logger can also be configured to print to shell (stdout, without formatting):
-
-        import sys
-        logger = logging.getLogger()
-        stdoutlog = logging.StreamHandler(sys.stdout)
-        logger.addHandler(stdoutlog)
-
-
-
 
 ## 3. Reading and writing data
 
@@ -454,14 +436,14 @@ Time series example data sets are contained in the following example files:
 - `example1`: [IAGA] ZIP (IAGA2002, zip compressed) file with 1 second HEZ data
 - `example2`: [MagPy] Archive (CDF) file with 1 sec F data
 - `example3`: [MagPy] Basevalue (TXT) ascii file with DI and baseline data
-- `example4`: [INTERMAGNET] ImagCDF (CDF) file with one week of 1 second data
+- `example4`: [INTERMAGNET] ImagCDF (CDF) file with four days of 1 second data
 - `example5`: [MagPy] Archive (CDF) raw data file with xyz and supporting data
 
 Other examples which are NOT supported by the stream.read are wither DI data sets (section 7) and flagging examples
 (section 6):
 
 - `example6a`: [MagPy] DI (txt) raw data file with DI measurement (requires magpy.absolutes)
-- `example6b`: [MagPy] like 6a to be used with example4 (requires magpy.absolutes)
+- `example6b`: [MagPy] like 6a  (requires magpy.absolutes)
 - `flagging_example`: [MagPy] FlagDictionary (JSON) flagging info to be used with example1 (requires magpy.core.flagging)
 - `recipe1_flags`: [MagPy] FlagDictionary (JSON) to be used with cookbook recipe 1 (requires magpy.core.flagging)
 
@@ -898,11 +880,12 @@ If you want to plot them in a single diagram then just define a single key value
 Patches are used to mark certain regions within the plot. A patch is described as a python dictionary as shown in 
 this example:
 
+        variometer = read(example4)
         patch = {"ssc" : {"start":datetime(2024,5,10,17,6),"end":datetime(2024,5,10,17,8),"components":"x","color":"red","alpha":0.2},
                 "initial": {"start":datetime(2024,5,10,17,8),"end":datetime(2024,5,10,19,10),"components":"x","color":"yellow","alpha":0.2},
                 "main": {"start":datetime(2024,5,10,19,10),"end":datetime(2024,5,11,2,0),"components":"x","color":"orange","alpha":0.2},
                 "recovery": {"start":datetime(2024,5,11,2,0),"end":datetime(2024,5,12,11),"components":"x","color":"green","alpha":0.2}}
-        fig,ax = mp.tsplot([variometer,dst], keys=[['x'],['var1']], patch=patch, height=2)
+        fig,ax = mp.tsplot([variometer], keys=[['x']], patch=patch, height=2)
 
 Patches are also used to mark flags as shown in section 6 and in further examples in sections 5 and 8. 
 
@@ -2628,7 +2611,7 @@ Accessing hourly data and other information is described below.
 
         data = read(example4)
         data2 = data.filter()
-        kvals = act.K_fmi(data2)
+        kvals = act.K_fmi(data2, K9_limit=500, longitude=15.0)
 
 The output of the K_fmi method is a DataStream object which contains timesteps and K values associated with the 'var1'
 key. 
@@ -2649,9 +2632,9 @@ Geomagnetic storm detection is supported by MagPy using two procedures based on 
 Criterion (AIC) as outlined in detail in [Bailey and Leonhardt (2016)](https://earth-planets-space.springeropen.com/articles/10.1186/s40623-016-0477-2). A basic example of usage to find an SSC
 using a Discrete Wavelet Transform (DWT) is shown below:
 
-        from magpy.stream import read
+        from magpy.stream import read, example4
         from magpy.core import activity as act
-        stormdata = read("LEMI025_2015-03-17.cdf")      # 1s variometer data
+        stormdata = read(example4)      # 1s variometer data
         stormdata = stormdata.smooth('x', window_len=25)
         detection, ssc_dict = act.seek_storm(stormdata, method="MODWT")
         print("Possible SSCs detected:", ssc_dict)
@@ -3146,6 +3129,34 @@ second and higher resolution data.
 
         mydata.write('/tmp',format_type='PYCDF',coverage='year')
 
+
+### 10.5 MagPy's logging system and debugging support
+
+MagPy automatically logs many function options and runtime information, which can be useful for debugging purposes. 
+This log is saved by default in the temporary file directory of your operating system, e.g. for Linux this would be
+`/tmp/magpy.log`. The log is formatted as follows with the date, module and function in use and the message leve (INFO/WARNING/ERROR):
+
+        2017-04-22 09:50:11,308 INFO - magpy.stream - Initiating MagPy...
+
+Messages on the WARNING and ERROR level will automatically be printed to shell. Messages for more detailed debugging are written at the DEBUG level and will not be printed to the log unless an additional handler for printing DEBUG is added.
+
+Custom loggers can be defined by creating a logger object after importing MagPy and adding handlers (with formatting):
+
+        from magpy.stream import *
+        import logging
+
+        logger = logging.getLogger()
+        hdlr = logging.FileHandler('testlog.log')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        hdlr.setFormatter(formatter)
+        logger.addHandler(hdlr)
+
+The logger can also be configured to print to shell (stdout, without formatting):
+
+        import sys
+        logger = logging.getLogger()
+        stdoutlog = logging.StreamHandler(sys.stdout)
+        logger.addHandler(stdoutlog)
 
 
 ## Appendix
