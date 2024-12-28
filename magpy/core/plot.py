@@ -64,7 +64,7 @@ def fill_list(mylist, target_len, value):
 
 
 def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=None, yranges=None, padding=None,
-           symbols=None, colors=None, title=None, xinds=[None], legend={}, grid={}, patch={},
+           symbols=None, colors=None, title=None, xinds=[None], legend={}, grid={}, patch={}, annotate=False,
            fill=None, showpatch=[True], errorbars=None, functions=None, functionfmt="r-", xlabelposition=None,
            ylabelposition=None, yscale=None, dateformatter=None, force=False, width=10, height=4, alpha=0.5,
            variables=None, debug=False):
@@ -95,6 +95,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                                  or grid=True  for default values
         patch (list/dict)   :    default none - patch contain colored regions covering the full vertical space in each plot - used for flagging info
                                  {"patch1":{"start":datetime,"end":datetime,"color":color,"alpha":0.2},"patch2":{"start":datetime,"end":datetime,"color":color,"alpha":0.2}]
+        annotate (Bool/dict) :   default False - if True, then annotations are set to start time of patches
         showpatch (list)    :    default True for all streams -
                                  EXAMPLE: data=[stream1,stream2,stream3],showpatches=[True,False,True]
         errorbars (list/dict) :  a list of dicts containing definitions for each plot as follows: i.e. two data stream with keys=[['x','y'],['var1']]
@@ -207,6 +208,8 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
     # parameter for separate plots
     total_pos = 0
     total_keys = np.concatenate(keys).size
+    annocount = 0
+    yoff = -10
 
     allaxes = []
     for idx, dat in enumerate(data):
@@ -347,6 +350,29 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                             rect = patches.Rectangle((winmin, mincomp), winmax - winmin, maxcomp - mincomp,
                                                      edgecolor=edgecolor, facecolor=edgecolor, alpha=0.2)
                             plt.gca().add_patch(rect)
+                            # Annotations
+                            # ------------------
+                            if annotate:
+                                annosign = -1
+                                annocount += 1
+                                annotext = line
+                                textx = 0
+                                texty = 0
+                                if annotate == "label":
+                                    annotext = l.get('label')
+                                elif annotate == "labelid":
+                                    annotext = l.get('labelid')
+                                    #annosign = 1
+                                    #texty = rect.get_y()
+                                if annocount % 2:
+                                    yoff = 20
+                                else:
+                                    yoff = 10
+                                plt.gca().annotate(annotext, (rect.get_x() + rect.get_width() / 2, maxcomp), xytext = (textx, texty + annosign*yoff),
+                                                   textcoords = 'offset points', ha = 'center', va = 'bottom')
+
+
+
                 # Plottitle
                 # ------------------
                 if not isinstance(title, (list, tuple)) and not titledone:

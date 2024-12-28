@@ -887,7 +887,10 @@ this example:
                 "recovery": {"start":datetime(2024,5,11,2,0),"end":datetime(2024,5,12,11),"components":"x","color":"green","alpha":0.2}}
         fig,ax = mp.tsplot([variometer], keys=[['x']], patch=patch, height=2)
 
-Patches are also used to mark flags as shown in section 6 and in further examples in sections 5 and 8. 
+Patches are also used to mark flags as shown in section 6 and in further examples in sections 5 and 8. If you want to 
+add annotations then use the option *annotate*. If set to True, then the patch keys are added as annotations in the
+upper part of the plot. The y-position is alternating. For flags, it is recommended to use labels or label IDs as 
+annotations. Do that by selecting them by i.e. *annotate='labelid'*. 
 
 Functions are discussed in section 5.9. There you will also find numerous examples on how to plot these functions
 along with data.
