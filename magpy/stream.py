@@ -356,6 +356,7 @@ class DataStream(object):
 |  DataStream           |  bc  |         2.0.0  |                 |  yes           |  yes             | 7.5     | |
 |  DataStream           |  calc_f  |     2.0.0  |                 |  yes           |  yes             | 5.4     | |
 |  DataStream           |  compensation  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  contents   |  2.0.0  |                 |  yes           |  yes             | 4.4     | |
 |  DataStream           |  cut  |        2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  dailymeans  |  2.0.0  |                |  yes           |  yes             | 5.3     | |
 |  DataStream           |  delta_f  |    2.0.0  |                 |  yes           |  yes             | 5.4     | |
@@ -406,6 +407,7 @@ class DataStream(object):
 |  DataStream           |  timerange  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  trim  |       2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  union      |  2.0.0  |                 |  yes           |  yes             | -       | flagging |
+|  DataStream           |  unique     |  2.0.0  |                 |  yes           |  yes             | 4.4     | |
 |  DataStream           |  use_sectime  |  2.0.0  |               |  yes           |  yes             | 5.1     | |
 |  DataStream           |  variables  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  write  |      2.0.0  |                 |  yes           |  yes*            | 3.x     | in runtime |
@@ -746,6 +748,15 @@ CALLED BY:
         seen_add = seen.add
         return [ x for x in column if not (x in seen or seen_add(x))]
 
+    def unique(self, key):
+        """
+        DESCRIPTION:
+            Return unique elements for the selected column.
+        EXAMPLE:
+            print(data.uniques('str1'))
+        """
+        column = self._get_column(key)
+        return self.union(column)
 
     def removeduplicates(self):
         """
@@ -2427,6 +2438,25 @@ CALLED BY:
 
         return stream
 
+    def contents(self):
+        """
+        DESCRIPTION
+            show the contents of the stream
+        RETURNS
+            will return a dictionary containing key plus column name, unit and first element
+        EXAMPLE
+            print(data.contents)
+        :return:
+        """
+        variables = self.variables()
+        result = {}
+        for variable in variables:
+            content = {}
+            content['columnname'] = self.header.get('col-{}'.format(variable),'')
+            content['columnunit'] = self.header.get('unit-col-{}'.format(variable),'')
+            content['content'] = self._get_column(variable)[-1]
+            result[variable] = content
+        return result
 
     def cut(self,length,kind=0,order=0):
         """
@@ -2866,6 +2896,7 @@ CALLED BY:
         ind = KEYLIST.index(key)
 
         stream = self.copy()
+        newarray = [[] for key in self.KEYLIST]
 
         if not is_number(value):
             if value.startswith('(') and value.endswith(')') and compare == '==':
@@ -2888,8 +2919,8 @@ CALLED BY:
         for ind,el in enumerate(stream.ndarray):
             if len(stream.ndarray[ind]) > 0:
                 ar = [stream.ndarray[ind][i] for i in indexar]
-                stream.ndarray[ind] = np.asarray(ar).astype(object)
-        return stream
+                newarray[ind] = np.asarray(ar).astype(object)
+        return DataStream(header=self.header, ndarray=np.asarray(newarray, dtype=object))
 
 
     def extract_headerlist(self, element, parameter=1, year=None):
@@ -8138,6 +8169,14 @@ if __name__ == '__main__':
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with extract")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
+                d = teststream.contents()
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
+                successes['contents'] = ("Version: {}, contents: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['contents'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with contents")
+            try:
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 d = teststream.stats()
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['stats'] = ("Version: {}, stats: {}".format(magpyversion, (te - ts).total_seconds()))
@@ -8215,6 +8254,16 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['union'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with union")
+            try:
+                sectest = orgstream.copy()
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
+                uniq = sectest.unique('time')
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
+                successes['unique'] = (
+                    "Version: {}, unique: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['unique'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with unique")
             try:
                 sectest = orgstream.copy()
                 s1, e1 = sectest._find_t_limits()

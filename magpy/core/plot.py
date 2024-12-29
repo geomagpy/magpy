@@ -543,7 +543,7 @@ if __name__ == '__main__':
         errors['fill_list'] = str(excep)
         print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
     try:
-        #v1 = tsplot(testdata)
+        fig,ax = tsplot([teststream])
         pass
     except Exception as excep:
         errors['tsplot'] = str(excep)

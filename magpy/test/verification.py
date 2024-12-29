@@ -6,6 +6,7 @@ import magpy.absolutes as di
 from magpy.core.flagging import *
 from magpy.core import database
 from magpy.core import activity
+from magpy.core import plot as mp
 import scipy
 
 def create_verificationstream(startdate=datetime(2022, 11, 22)):
@@ -207,6 +208,12 @@ class TestStream(unittest.TestCase):
         self.assertEqual(len(fstream.ndarray[4]), 1440)
         fval = fstream.ndarray[4][0]
         self.assertEqual(fval, np.sqrt(20000 * 20000 + 20000 * 20000))
+
+    def test_contents(self):
+        d = teststream.contents()
+        cont = d.get('x')
+        colname  = cont.get('columnname')
+        self.assertEqual(colname, 'X')
 
     def test_compensation(self):
         teststream.header['DataCompensationX'] = -10
@@ -498,6 +505,10 @@ class TestStream(unittest.TestCase):
     def test_union(self):
         uniq = teststream.union(np.asarray([1, 1, 2, 2, 3, 3, 3, 3, 3]))
         self.assertEqual(uniq, [1,2,3])
+
+    def test_unique(self):
+        uniq = teststream.unique('time')
+        self.assertEqual(len(uniq),len(teststream))
 
     def test_use_sectime(self):
         tcolumn = teststream._get_column('time')
@@ -878,6 +889,29 @@ class TestFlagging(unittest.TestCase):
         results = fl.rename_nearby(parameter='labelid', values=['001'])
         label = results.flagdict.get('233844116124').get('label')
         self.assertEqual(label, 'lightning strike')
+
+
+class TestPlot(unittest.TestCase):
+    def test_testtimestep(self):
+        #from matplotlib.dates import date2num
+        v1 = datetime.now(timezone.utc).replace(tzinfo=None)
+        v2 = np.datetime64(v1)
+        v3 = date2num(v1)
+        # can also be used for unittest
+        var1 = mp.testtimestep(v1)
+        var2 = mp.testtimestep(v2)
+        var3 = mp.testtimestep(v3)
+        self.assertTrue(var1)
+        self.assertTrue(var2)
+        self.assertFalse(var3)
+
+    def test_fill_list(self):
+        ml = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        v1 = mp.fill_list(ml, 19, 10)
+        # can also be used for unittest with np.sum
+        # print (np.sum(v1), np.sum(ml)) # +100 for unittest
+        self.assertEqual(np.sum(v1), np.sum(ml)+100)
+
 
 class TestDatabase(unittest.TestCase):
     def test_write(self):

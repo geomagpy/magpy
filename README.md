@@ -590,7 +590,7 @@ the adopted baseline function, it not necessarily the an exact reproduction of t
 The comment section of blv files is also extracted and stored in the data sets header. How to access and plot such 
 basevalues and the adopted functions is shown here
 
-        basevalues = read("/home/leon/Cloud/Daten/MagPyTestFiles/abk95.blv")
+        basevalues = read(example7)
         func = basevalues.header.get('DataFunctionObject')
         mp.tsplot(basevalues, ['dx','dy','dz'], symbols=[['o','o','o']], functions=[[func,func,func]])
 
@@ -598,7 +598,7 @@ If you are mainly interested in the adopted baseline data you can use the read *
 the adopted baseline data into the data columns. Function header will remain empty and measured basevalues will be 
 ignored. This mode will give you an exact reproduction of the contained adopted baseline values.
 
-        adoptedbase = read("/home/leon/Cloud/Daten/MagPyTestFiles/abk95.blv", mode='adopted')
+        adoptedbase = read(example7, mode='adopted')
         mp.tsplot(adoptedbase, ['dx','dy','dz'])
 
 If you want to plot data and original adopted basevalues use
@@ -767,7 +767,7 @@ There are many non-magnetic data sources which are supported by MagPy and which 
 signals. One of these sources considers seismological event data from the USGS webservice. Recent global seismic events 
 exceeding magnitude 4.5 can be obtained as follows: 
 
-        quake = read('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv'
+        quake = read('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.csv')
 
 Typically you will not treat the quake data set as timeseries but use this information as markers and signal identifiers.
 For this purpose you can convert the obtained time series into a flagging class as shown in section 6.5.
@@ -783,8 +783,8 @@ directly access data from the Advanced Composition Explorer ([ACE](https://izw1.
 Deep Space Climate Observatory ([DSCOVR](https://www.ngdc.noaa.gov/dscovr/portal/index.html#/)) is the replacement 
 satellite for ACE and its data can be obtained here:
 
-        dscovr_plasma = read("http://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json", debug=True)
-        dscovr_mag = read("http://services.swpc.noaa.gov/products/solar-wind/mag-3-day.json", debug=True)
+        dscovr_plasma = read("http://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json")
+        dscovr_mag = read("http://services.swpc.noaa.gov/products/solar-wind/mag-3-day.json")
 
 
 Finally, X-ray data from GOES is supported to identify flare signatures: 
@@ -854,7 +854,7 @@ set and demonstrate the usage of different plot *symbols*, *colors*, and *paddin
 extensions for the y scale which would typically use maximum and minimum values from data.
 
         basevalue = read(example3)
-        fig,ax = mp.tsplot([data],[['dx','dy','dz']], symbols=[['.','-.x','--o']], 
+        fig,ax = mp.tsplot([basevalue],[['dx','dy','dz']], symbols=[['.','-.x','--o']], 
                     colors=[[[0.2, 0.2, 0.2],'r','blue']], padding=[[1,0.005,0.5]], height=2)
 
 This will produce this plot: ![4.2.3](./magpy/doc/pl_423.png "Symbols and colors")
@@ -1607,7 +1607,7 @@ Data flagging is handled by magpy.core.flagging module.
 
 After importing this functionality we create an empty flagging object
 
-        fl = flagging.flags()
+        fl = flagging.Flags()
 
 This flagging object corresponds to a python dictionary consisting of a unique identifier as key and flagging contents
 as value. Flagging contents are subject to the following fields: obligatory are 'sensorid', 'starttime', 'endtime', 
@@ -1905,7 +1905,7 @@ Firstly we will import some necessary modules:
 
 Lets create a small flagging object
 
-        fl = flagging.flags()
+        fl = flagging.Flags()
         fl = fl.add(sensorid="LEMI025_X56878_0002_0001", starttime="2022-11-22T16:36:12.654362",
                     endtime="2022-11-22T16:41:12.654362", components=['x', 'y', 'z'], labelid='020', flagtype=4,
                     comment="SSC with an amplitude of 40 nT", operator='John Doe')
@@ -3236,7 +3236,7 @@ removed in 2.0.0:
 
 ### A2 - stream.py - all methods, overview with runtime and verification tests
 
-| class                |  method  |  since version  |  until version  |  runtime test  |  result verification  | manual  |  *tested by | 
+| class                |  method  |  since version  |  until version  |  runtime test  |  result verification  | manual  |  *tested by |
 | ----------------------|  ------  |  -------------  |  -------------  |  ------------  |  ------------------  |---------|  ---------- |
 |  **stream**           |             |         |                 |                |                  |         | |
 |  DataStream           |  _aic       |  2.0.0  |                 |  yes*          |  yes*            | -       |  core.activity |
@@ -3266,6 +3266,7 @@ removed in 2.0.0:
 |  DataStream           |  bc  |         2.0.0  |                 |  yes           |  yes             | 7.5     | |
 |  DataStream           |  calc_f  |     2.0.0  |                 |  yes           |  yes             | 5.4     | |
 |  DataStream           |  compensation  |  2.0.0  |              |  yes           |  yes             | 5.1     | |
+|  DataStream           |  contents   |  2.0.0  |                 |  yes           |  yes             | 4.4     | |
 |  DataStream           |  cut  |        2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  dailymeans  |  2.0.0  |                |  yes           |  yes             | 5.3     | |
 |  DataStream           |  delta_f  |    2.0.0  |                 |  yes           |  yes             | 5.4     | |
@@ -3310,10 +3311,13 @@ removed in 2.0.0:
 |  DataStream           |  smooth  |     2.0.0  |                 |  yes           |  yes             | 5.3     | |
 |  DataStream           |  sorting  |    2.0.0  |                 |  yes*          |  no              | 5.1     |  read |
 |  DataStream           |  start  |      2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  stats  |      2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  steadyrise  |  2.0.0  |                |  yes           |  not yet         |         | |
 |  DataStream           |  stream2dict  |  2.0.0  |               |  yes*          |  yes*            | -       |  baseline |
 |  DataStream           |  timerange  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  trim  |       2.0.0  |                 |  yes           |  yes             | 5.1     | |
+|  DataStream           |  union      |  2.0.0  |                 |  yes           |  yes             | -       | flagging |
+|  DataStream           |  unique     |  2.0.0  |                 |  yes           |  yes             | 4.4     | |
 |  DataStream           |  use_sectime  |  2.0.0  |               |  yes           |  yes             | 5.1     | |
 |  DataStream           |  variables  |  2.0.0  |                 |  yes           |  yes             | 5.1     | |
 |  DataStream           |  write  |      2.0.0  |                 |  yes           |  yes*            | 3.x     | in runtime |
@@ -3494,6 +3498,13 @@ TODO: methods for DI support
 |    | test_timestring | 2.0.0 |               |               | yes          |        | |
 
 ### A9 - core/plot.py - all methods, overview with runtime and verification tests
+
+|class | method | since version | until version | runtime test | result verification | manual | *tested by |
+|----- | ------ | ------------- | ------------- | ------------ | ------------------- |--------| ---------- |
+|**core.plot** |  |             |               |              |                     |        | |
+|    | tsplot          | 2.0.0  |               | yes          | -                   | 4.x    | |
+|    | testtimestep    | 2.0.0  |               | yes          | yes                 | -      | |
+|    | fill_list       | 2.0.0  |               | yes          | yes                 | -      | |
 
 ### A10 - other modules - all methods, overview with runtime and verification tests
 

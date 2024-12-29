@@ -642,7 +642,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         for d in flagdict:
             cont = {}
             valid = True
-            comps = flagdict[d].get('components',['x','y','z'])
+            comps = flagdict[d].get('components',DataStream().KEYLIST)
             if data:
                 valid, comps = self._match_groups(data.header, flagdict[d].get('sensorid'), flag_keys=comps, flag_groups=flagdict[d].get('groups'))
             if valid:
