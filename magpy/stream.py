@@ -2920,7 +2920,7 @@ CALLED BY:
             if len(stream.ndarray[ind]) > 0:
                 ar = [stream.ndarray[ind][i] for i in indexar]
                 newarray[ind] = np.asarray(ar).astype(object)
-        return DataStream(header=self.header, ndarray=np.asarray(newarray, dtype=object))
+        return DataStream(header=stream.header, ndarray=np.asarray(newarray, dtype=object))
 
 
     def extract_headerlist(self, element, parameter=1, year=None):

@@ -874,6 +874,34 @@ If you want to plot them in a single diagram then just define a single key value
 
 ![4.2.5](./magpy/doc/pl_425.png "Geomag in a single plot")
 
+A final and more complex example is used to disply spot basevalue data from different instruments. For this example we
+firstly identify the individual instruments in a data set, then construct separate datastreams for each instrument and
+finally display all the data sets within diagrams for the H, D and Z baseline.
+
+        data = read(example3)
+        # Check the columns contents
+        print(data.contents())
+        instrumentskey = 'str2'
+        # Get a list of unique instruments
+        instruments = data.unique(instrumentskey)
+
+        # Create lists of data for each instrument plus symbols and colors
+        streamlist,colorlist,symbollist,yrangelist = [],[],[],[]
+        key = 'str2'
+        for idx,inst in enumerate(instruments):
+            t = data.extract(key,inst)
+            streamlist.append(t)
+            colorlist.append([[0.5+idx/8,0+idx/4,0.5-idx/8],[0.5+idx/8,0+idx/4,0.5-idx/8],[0.5+idx/8,0+idx/4,0.5-idx/8]])
+            symbollist.append(['.','.','.'])
+            yrangelist.append([[21,25],[3.665,3.682],[-22,-16]])
+
+        # Plot everything and add a legend
+        lg = {"legendtext":instruments,"legendposition":"upper right","legendstyle":"shadow","plotnumber":2}
+        fig,ax = mp.tsplot(streamlist,[['dx','dy','dz']], symbols=symbollist, colors=colorlist, legend=lg, 
+                           yranges=yrangelist, height=2)
+
+This results in the following plot. ![4.2.6](./magpy/doc/pl_426.png "Basevalue data from different instruments")
+
 
 ### 4.5 Patches, annotations and functions in tsplot
 

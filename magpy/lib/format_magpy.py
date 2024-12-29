@@ -614,7 +614,7 @@ def writePYSTR(datastream, filename, **kwargs):
                         elif isinstance(el[0],np.datetime64):
                             row.append(np.datetime_as_string(el[i], unit='us'))
                         else:
-                            row.append = np.nan
+                            row.append(np.nan)
                     else:
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
                             try:

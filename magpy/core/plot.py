@@ -215,7 +215,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
     for idx, dat in enumerate(data):
         # x column
         x = dat._get_column(timecolumn[idx])
-        if len(x) > 1 and testtimestep(x[0]):
+        if len(x) > 0 and testtimestep(x[0]):
             t = x
             # 0. date directly (~0 sec)
         else:
