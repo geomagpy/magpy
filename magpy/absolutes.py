@@ -66,9 +66,9 @@ CONTENTS
 |-------------------| ------  | -------------  |  -------------  |  ------------  |  --------------  |  ------  |-----------------|
 | **core.absolutes** |    |                 |               |             |               |         |    |
 | AbsoluteDIStrcut  |              |  2.0.0     |           |  yes        |  yes          |  7.1    |     |
-| DILineStruct      |  get_data_list   |  2.0.0     |           |  yes        |  yes          |  7.1    |    |
-| DILineStruct      |  get_abs_distruct |  2.0.0    |           |  yes        |  yes          |  7.1    |     |
-| DILineStruct      |  save_di         |  2.0.0     |           |  yes*       |  yes*         |  7.3    | absolute_analysis  | 
+| DILineStruct      |  get_data_list |  2.0.0   |           |  yes        |  yes          |  7.1    |    |
+| DILineStruct      |  get_abs_distruct |  2.0.0  |         |  yes        |  yes          |  7.1    |     |
+| DILineStruct      |  save_di     |  2.0.0     |           |  yes*       |  yes*         |  7.3    | absolute_analysis  | 
 | AbsoluteAnalysis  |  add         |  2.0.0     |           |             |               |       | unused?             |
 | AbsoluteAnalysis  |  extend      |  2.0.0     |           |             |               |       | unused?             |
 | AbsoluteAnalysis  |  sorting     |  2.0.0     |           |             |               |       | unused?             |
@@ -77,20 +77,20 @@ CONTENTS
 | AbsoluteAnalysis  |  _get_min    |  2.0.0     |           |  yes        |  yes          |  -      | unused?             |
 | AbsoluteAnalysis  |  _get_column |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcdec         |
 | AbsoluteAnalysis  |  _check_coverage |  2.0.0 |           |  yes        |               |  7.1    |     |
-| AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |   |  yes        |               |  7.1    |     |
+| AbsoluteAnalysis  |  _insert_function_values |  2.0.0 |    |  yes       |               |  7.1    |     |
 | AbsoluteAnalysis  |  _calcdec    |  2.0.0     |           |  yes        |  yes          |  7.1    | ad.calcabsolutes     |
 | AbsoluteAnalysis  |  _calcinc    |  2.0.0     |           |  yes        |  yes          |  7.1    | ad.calcabsolutes     |
 | AbsoluteAnalysis  |  _h          |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcinc         |
 | AbsoluteAnalysis  |  _z          |  2.0.0     |           |  yes        |  yes          |  -      | ad._calcinc         |
 | AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |               |  7.1    |    |
-|           | _analyse_di_source |  2.0.0     |           |  yes        |               |  -      |     |
-|           | _logfile_len      |  2.0.0     |           |             |               |  -      | unused?     |        
-|           | deg2degminsec     |  2.0.0     |           |  yes        |  yes          |  7.2    |     |
-| d                 | absRead             |  2.0.0     |  2.1.0    |             |               |  -      |     |
-|           | abs_read          |  2.0.0     |           |  yes        |               |  7.1    |     |
-|           | _abs_read         |  2.0.0     |           |  yes        |               |  -      |     |
-| d                 | absoluteAnalysis    |  2.0.0     |  2.1.0    |             |               |  -      |     |
-|           | absolute_analysis |  2.0.0     |           |  yes        |  yes          |  7.2    |     |
+|             | _analyse_di_source |  2.0.0     |           |  yes        |               |  -      |     |
+|             | _logfile_len       |  2.0.0     |           |             |               |  -      | unused?     |        
+|             | deg2degminsec      |  2.0.0     |           |  yes        |  yes          |  7.2    |     |
+| d           | absRead            |  2.0.0     |  2.1.0    |             |               |  -      |     |
+|             | abs_read           |  2.0.0     |           |  yes        |               |  7.1    |     |
+|             | _abs_read          |  2.0.0     |           |  yes        |               |  -      |     |
+| d           | absoluteAnalysis   |  2.0.0     |  2.1.0    |             |               |  -      |     |
+|             | absolute_analysis  |  2.0.0     |           |  yes        |  yes          |  7.2    |     |
          
 """
 
