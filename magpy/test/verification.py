@@ -1073,7 +1073,7 @@ class TestAbsolutes(unittest.TestCase):
 
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
         absst = di.abs_read(example6a)
-        #dbaddsucc = db.diline_to_db(absst, mode="delete", stationid='WIC', debug=True)
+        dbaddsucc = db.diline_to_db(absst, mode="delete", stationid='WIC', debug=True)
         res = db.diline_from_db()
         success = True
         atts = ['time', 'hc', 'vc', 'res', 'opt', 'laser', 'ftime', 'f', 't', 'scaleflux', 'scaleangle', 'azimuth', 'person', 'pier', 'stationid', 'di_inst', 'f_inst', 'fluxgatesensor', 'inputdate']

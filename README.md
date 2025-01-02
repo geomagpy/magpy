@@ -3040,9 +3040,10 @@ Database tools support the treatment of absolute values as well as baseline eval
 it is also possible to use the magpy database for this purpose. Two methods allow for storing and retrieving DI data 
 from the database.
 
-        db.diline_to_db()
-
-        db.diline_from_db()
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        absst = di.abs_read(example6a)
+        db.diline_to_db((absst, mode="delete", stationid='WIC')
+        res = db.diline_from_db()
 
 
 You can store baseline fitting parameters for each variometer defined by its SensorID within the MagPy database. The 
@@ -3481,13 +3482,14 @@ removed:
 | DataBank      | datainfo    | 2.0.0 |               | yes          | yes*                |       | db.write |
 | DataBank      | dbinit      | 2.0.0 |               | yes          |                     |  9.2  | |
 | DataBank      | delete      | 2.0.0 |               | yes          |                     |  9.2  | |
-| DataBank      | diline_to_db | 2.0.0 |              | yes*         | yes*                |       | absolutes |
-| DataBank      | diline_from_db | 2.0.0 |            | yes*         | yes*                |       | absolutes |
+| DataBank      | diline_to_db | 2.0.0 |              | yes*         | yes*                |  9.4  | absolutes |
+| DataBank      | diline_from_db | 2.0.0 |            | yes*         | yes*                |  9.4  | absolutes |
 | DataBank      | dict_to_fields | 2.0.0 |            | yes          |                     |       | |
 | DataBank      | fields_to_dict | 2.0.0 |            | yes*         | yes*                |       | db.read, db.get_lines |
 | DataBank      | flags_from_db | 2.0.0 |             | yes          | yes                 |  9.3  | |
 | DataBank      | flags_to_db | 2.0.0 |               | yes          | yes                 |  9.3  | |
 | DataBank      | flags_to_delete | 2.0.0 |           | yes          | yes                 |  9.3  | |
+| DataBank      | get_baseline | 2.0.0 |              | yes          | yes                 |  9.4  | |
 | DataBank      | get_float   | 2.0.0 |               | yes          | yes                 |  9.2  | |
 | DataBank      | get_lines   | 2.0.0 |               | yes          | yes                 |  9.2  | |
 | DataBank      | get_pier    |  2.0.0 |              | yes          | yes                 |  9.2  | |
@@ -3502,7 +3504,6 @@ removed:
 | DataBank      | tableexists | 2.0.0 |               | yes          | yes                 |  9.2  | |
 | DataBank      | write       | 2.0.0 |               | yes          | yes                 |  9.2  | |
 
-TODO: methods for DI support
 
 ### A7 - core/conversion.py - all methods, overview with runtime and verification tests
 
