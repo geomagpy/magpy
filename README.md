@@ -2509,7 +2509,7 @@ analyses the horizontal DI flux measurements, the second block (*calcinc*) analy
 the DI-flux technique. The first block determines declination $D(t)$ and $D_{base}$ by considering optional
 measurements of residuals and pier differences:
 
-$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)} + arcsin(\frac{E_{res}(t_i)}{sqrt{(N_{base} + N_{v}(t_i))^2 + E_{var}(t_i)2}} + \delta D_v$$
+$$D_{base} =  D(t_i) - arctan(\frac{E_{var}(t_i)}{N_{base} + N_{v}(t_i)}) + arcsin(\frac{E_{res}(t_i)}{sqrt{(N_{base} + N_{v}(t_i))^2 + E_{var}(t_i)2}}) + \delta D_v$$
 
 If residuals are zero, the residual term will also be zero and the resulting base values analysis is identical to a
 zero field technique. Initially, $N_{base}$ is unknown. Therefore, $N_{base}$ will either be set to zero or optionally
@@ -3036,7 +3036,21 @@ associated value. Parameter "all" will delete all existing flags in the database
 
 ### 9.4 Absolutes and databases
 
-Text
+Database tools support the treatment of absolute values as well as baseline evaluation. Besides storing DI data in files
+it is also possible to use the magpy database for this purpose. Two methods allow for storing and retrieving DI data 
+from the database.
+
+        db.diline_to_db()
+
+        db.diline_from_db()
+
+
+You can store baseline fitting parameters for each variometer defined by its SensorID within the MagPy database. The 
+default table for this purpose is called "BASELINE". To retrieve baseline adoption parameters from the database use
+the `get_baseline` method. This method will return a dictionary containing the valid fitting function and its parameters
+for the selected date. If no date is provided, then the currently valid parameters will be returned.
+
+        baseline_adoption = db.get_baseline('LEMI036_2_0001', date="2021-01-01")
 
 
 ## 10. Additional methods and functions - TODO

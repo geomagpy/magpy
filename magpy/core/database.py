@@ -76,13 +76,14 @@ class DataBank(object):
 | DataBank      | datainfo    | 2.0.0 |               | yes          | yes*                |       | db.write |
 | DataBank      | dbinit      | 2.0.0 |               | yes          |                     |  9.2  | |
 | DataBank      | delete      | 2.0.0 |               | yes          |                     |  9.2  | |
-| DataBank      | diline_to_db | 2.0.0 |              | yes*         | yes*                |       | absolutes |
-| DataBank      | diline_from_db | 2.0.0 |            | yes*         | yes*                |       | absolutes |
+| DataBank      | diline_to_db | 2.0.0 |              | yes*         | yes*                |  9.4  | absolutes |
+| DataBank      | diline_from_db | 2.0.0 |            | yes*         | yes*                |  9.4  | absolutes |
 | DataBank      | dict_to_fields | 2.0.0 |            | yes          |                     |       | |
 | DataBank      | fields_to_dict | 2.0.0 |            | yes*         | yes*                |       | db.read, db.get_lines |
 | DataBank      | flags_from_db | 2.0.0 |             | yes          | yes                 |  9.3  | |
 | DataBank      | flags_to_db | 2.0.0 |               | yes          | yes                 |  9.3  | |
 | DataBank      | flags_to_delete | 2.0.0 |           | yes          | yes                 |  9.3  | |
+| DataBank      | get_baseline | 2.0.0 |              | yes          | yes                 |  9.4  | |
 | DataBank      | get_float   | 2.0.0 |               | yes          | yes                 |  9.2  | |
 | DataBank      | get_lines   | 2.0.0 |               | yes          | yes                 |  9.2  | |
 | DataBank      | get_pier    |  2.0.0 |              | yes          | yes                 |  9.2  | |
@@ -97,8 +98,10 @@ class DataBank(object):
 | DataBank      | tableexists | 2.0.0 |               | yes          | yes                 |  9.2  | |
 | DataBank      | write       | 2.0.0 |               | yes          | yes                 |  9.2  | |
 
-        TODO: methods for DI support
-
+REMOVED:
+    dbaddBLV2DATAINFO(db,blvname, stationid):
+    -> will read blvdata from database, extract location data from piers and write everything to DATAINFO
+    -> is apparently unused and will be removed
 
     DATABASE FIELDS:
 
@@ -2022,40 +2025,6 @@ class DataBank(object):
         loggerdatabase.info("flags_to_delete: Done")
         return True
 
-    def info(self, destination='log', level='full'):
-        """
-        DEFINITION:
-            Provide version info of database and write to log
-        PARAMETERS:
-            - db:           (mysql database) defined by mysql.connect().
-            - destination:  (string) either "log"(default) or "stdout"
-            - level:        (string) "full"(default) -> show size as well, else skip size
-        """
-        report = ""
-        size = 'not determined'
-        versionsql = "SELECT VERSION()"
-        namesql = "SELECT DATABASE()"
-        cursor = self.db.cursor()
-        cursor.execute(versionsql)
-        version = cursor.fetchone()[0]
-        cursor.execute(namesql)
-        databasename = cursor.fetchone()[0]
-        if level == 'full':
-            sizesql = 'SELECT sum(round(((data_length + index_length) / 1024 / 1024 / 1024), 2)) as "Size in GB" FROM information_schema.TABLES WHERE table_schema="{}"'.format(
-                databasename)
-            cursor.execute(sizesql)
-            size = cursor.fetchone()[0]
-        if destination == 'log':
-            loggerdatabase.info(
-                "connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename, version, size))
-        else:
-            report = "connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename, version,
-                                                                                             size)
-            print(report)
-        self.db.commit()
-        cursor.close()
-        return report
-
 
     def get_float(self, tablename, sensorid, columnid):
         """
@@ -2087,6 +2056,97 @@ class DataBank(object):
                 return 0.0
         except:
                 return 0.0
+
+
+    def get_baseline(self, sensorid, date=None, debug=False):
+        """
+        DESCRIPTION:
+            Method to extract baseline fitting data from db. By default the currently valid baseline will be returned.
+            Use the option "date" to select previous parameters
+        PARAMETER:
+            db: name of the mysql data base
+            sensorid: identification id of sensor in database
+            date:     the line matching the given date will be returned
+        USED BY:
+            analysis scrips i.e. magnetism_products and f_analysis
+        RETURNS:
+            a list with all selected baseline data
+        """
+        # find out the version of the baseline table:
+        # if BaseID is existing then MaxTime column == 3
+        # else MaxTime ==2
+        db = self.db
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        if date:
+            date = testtime(date)
+        else:
+            date = now
+
+        def checking_baseline_table(db):
+            maxtcol = 2
+            vers = '1.0'
+            query = "SELECT * FROM BASELINE"
+            cur = db.cursor()
+            cur.execute(query)
+            columns = cur.description
+            cur.close()
+            result = [{column[0]: index for index, column in enumerate(columns)}]
+            result = result[0]
+            if 'BaseID' in result:
+                idpos = result.get('BaseID')
+                if idpos == 0:
+                    vers = '1.1'
+                else:
+                    vers = '2.0'
+            maxtcol = result.get('MaxTime')
+            return maxtcol, vers
+
+
+        maxtcol, basetableversion = checking_baseline_table(db)
+        if debug:
+            print("get baseline: Found BASELINE table version {}".format(basetableversion))
+
+        fallbackvals = [(99, sensorid, now-timedelta(days=365), now, 'spline', 1, 0.3, 'fallback')]
+        paralist = ['BaseID','SensorID','MinTime','MaxTime','BaseFunction','BaseDegree','BaseKnots','BaseComment']
+        where = 'SensorID LIKE "%' + sensorid + '%"'
+        if debug:
+            print("get baseline: searchsql: {}".format(where))
+        vals = self.select(','.join(paralist), 'BASELINE', where)
+        res = {}
+        # use fallback if nothing found in db
+        if not len(vals) > 0:
+            vals = fallbackvals
+        for line in vals:
+            cont = {}
+            for i in list(range(1,8)):
+                try:
+                    value = line[i]
+                    if paralist[i].find('Time') >= 0:
+                        if not line[i]:
+                            value = now
+                        else:
+                            value = testtime(line[i])
+                    cont[paralist[i]] = value
+                except:
+                    pass
+            res[line[0]] = cont
+
+        if debug:
+            print("Now selecting data with corresponding date")
+        result = {}
+        for el in res:
+            lr = res.get(el).get('MinTime')
+            hr = res.get(el).get('MaxTime')
+            if lr <= date <= hr:
+                if debug:
+                    print ("Found baseline")
+                result[el] = res.get(el)
+
+        if debug:
+            print("Finally got:", result)
+
+        return result
+
 
     def get_lines(self, tablename, lines):
         """
@@ -2216,6 +2276,42 @@ class DataBank(object):
             return fl
         except:
             return row[0]
+
+
+    def info(self, destination='log', level='full'):
+        """
+        DEFINITION:
+            Provide version info of database and write to log
+        PARAMETERS:
+            - db:           (mysql database) defined by mysql.connect().
+            - destination:  (string) either "log"(default) or "stdout"
+            - level:        (string) "full"(default) -> show size as well, else skip size
+        """
+        report = ""
+        size = 'not determined'
+        versionsql = "SELECT VERSION()"
+        namesql = "SELECT DATABASE()"
+        cursor = self.db.cursor()
+        cursor.execute(versionsql)
+        version = cursor.fetchone()[0]
+        cursor.execute(namesql)
+        databasename = cursor.fetchone()[0]
+        if level == 'full':
+            sizesql = 'SELECT sum(round(((data_length + index_length) / 1024 / 1024 / 1024), 2)) as "Size in GB" FROM information_schema.TABLES WHERE table_schema="{}"'.format(
+                databasename)
+            cursor.execute(sizesql)
+            size = cursor.fetchone()[0]
+        if destination == 'log':
+            loggerdatabase.info(
+                "connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename, version, size))
+        else:
+            report = "connected to database '{}' (MYSQL Version {}) - size in GB: {}".format(databasename, version,
+                                                                                             size)
+            print(report)
+        self.db.commit()
+        cursor.close()
+        return report
+
 
     def read(self, table, starttime=None, endtime=None, sql=None):
         """
@@ -2364,9 +2460,9 @@ class DataBank(object):
         RETURNS:
             A list containing the matching elements
         EXAMPLE:
-            magsenslist = dbselect(db, 'SensorID', 'SENSORS', 'SensorGroup = "Magnetism"')
-            tempsenslist = dbselect(db, 'SensorID', 'SENSORS','SensorElements LIKE "%T%"')
-            lasttime = dbselect(db,'time','DATATABLE',expert="ORDER BY time DESC LIMIT 1")
+            magsenslist = db.select('SensorID', 'SENSORS', 'SensorGroup = "Magnetism"')
+            tempsenslist = db.select('SensorID', 'SENSORS','SensorElements LIKE "%T%"')
+            lasttime = db.select('time','DATATABLE',expert="ORDER BY time DESC LIMIT 1")
 
         """
         returnlist = []
@@ -3142,6 +3238,14 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['get_pier'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with get_pier.")
+            try:
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
+                value = db.get_baseline('LEMI036_2_0001', date="2021-01-01")
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
+                successes['get_baseline'] = ("Version: {}, get_baseline: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['get_baseline'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with get_baseline.")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 (long, lat) = db.coordinates('P1')

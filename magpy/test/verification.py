@@ -930,6 +930,11 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(len(data), 1000)
         self.assertEqual(sr, 60)
 
+    def test_get_baseline(self):
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        test = db.get_baseline('LEMI036_5_0001', date="2021-01-01")
+        self.assertEqual(test, {})
+
     def test_updateselect(self):
         db = database.DataBank("localhost","maxmustermann","geheim","testdb")
         db.update('SENSORS', ['SensorGroup'], ['magnetism'], condition='SensorID="Test_0002_0001"')
