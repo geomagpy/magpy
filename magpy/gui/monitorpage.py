@@ -1,16 +1,8 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-try:
-    from magpy.stream import *
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
-except:
-    from magpy.stream import *
-    from magpy.absolutes import *
-    from magpy.transfer import *
-    from magpy.database import *
+from magpy.stream import *
+import magpy.absolutes as di
+from magpy.core import database
 
 import wx
 

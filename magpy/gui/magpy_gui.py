@@ -1,46 +1,29 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
 import wx
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 from matplotlib.figure import Figure
 
-try:
-    from pubsub import pub
-except:
-    try: # Necessary for wx2.8.11.0
-        from wx.lib.pubsub import setupkwargs
-    except:
-        pass
-    from wx.lib.pubsub import pub
+from pubsub import pub
 
 from wx.lib.dialogs import ScrolledMessageDialog
 import wx.lib.scrolledpanel as scrolled
 
-try:
-    # wx 4.x
-    from wx import STB_SIZEGRIP as wxSTB_SIZEGRIP
-    from wx.adv import AboutDialogInfo as wxAboutDialogInfo
-    from wx.adv import AboutBox as wxAboutBox
-    from wx import FD_MULTIPLE as wxMULTIPLE
-    print ("WX Version 4.x")
-except:
-    # wx 2.x, 3.x
-    from wx import ST_SIZEGRIP as wxSTB_SIZEGRIP
-    from wx import AboutDialogInfo as wxAboutDialogInfo
-    from wx import AboutBox as wxAboutBox
-    from wx import MULTIPLE as wxMULTIPLE
-    print ("WX Version 3.x")
+# wx 4.x
+from wx import STB_SIZEGRIP as wxSTB_SIZEGRIP
+from wx.adv import AboutDialogInfo as wxAboutDialogInfo
+from wx.adv import AboutBox as wxAboutBox
+from wx import FD_MULTIPLE as wxMULTIPLE
 
 
-from magpy.stream import read
-import magpy.mpplot as mp
-#import magpy.absolutes import as di
+#from magpy.stream import read
+import magpy.core.plot as mp
+#import magpy.absolutes as di
 from magpy.absolutes import *
-from magpy.transfer import *
-from magpy.database import *
+from magpy.core import methods
+from magpy.core import database
 from magpy.version import __version__
 from magpy.gui.streampage import *
 from magpy.gui.flagpage import *
@@ -51,13 +34,16 @@ from magpy.gui.reportpage import *
 from magpy.gui.developpage import *  # remove this
 from magpy.gui.analysispage import *
 from magpy.gui.monitorpage import *
-from magpy.collector import collectormethods as colsup
+
+#from magpy.collector import collectormethods as colsup
+
 from magpy.gui.statisticspage import StatisticsPanel
 import glob, os, pickle, base64
 import platform # for system check to import WXAgg on Mac
 import pylab
 import time #,thread
 import threading
+import locale
 
 import wx.py
 
@@ -88,9 +74,13 @@ def wxdate2pydate(date):
      else:
           return None
 
-def saveini(optionsdict): #dbname=None, user=None, passwd=None, host=None, dirname=None, compselect=None, abscompselect=None, basecompselect=None, resolution=None, dipathlist = None, divariopath = None, discalarpath = None, diexpD = None, diexpI = None, stationid = None, diid = None, ditype = None, diazimuth = None, dipier = None, dialpha = None, dideltaF = None, didbadd = None, bookmarks = None):
+def saveini(optionsdict):
     """
-    Method for initializing deault paremeters credentials
+    Method for initializing default paremeters credentials
+    #dbname=None, user=None, passwd=None, host=None, dirname=None, compselect=None, abscompselect=None,
+    basecompselect=None, resolution=None, dipathlist = None, divariopath = None, discalarpath = None,
+    diexpD = None, diexpI = None, stationid = None, diid = None, ditype = None, diazimuth = None, dipier = None,
+    dialpha = None, dideltaF = None, didbadd = None, bookmarks = None):
     """
 
     try:
@@ -304,7 +294,9 @@ class PlotPanel(scrolled.ScrolledPanel):
         # switch to WXAgg (required for MacOS)
         if platform.system() == "Darwin":
             matplotlib.use('WXAgg')
-        self.figure = plt.figure()
+        width = 10
+        hght = 3
+        self.figure = plt.figure(figsize=(width, hght))
         self.plt = plt
         scsetmp = ScreenSelections()
         self.canvas = FigureCanvas(self,-1,self.figure)
@@ -359,7 +351,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         db = self.datavars[8]
         parameterstring = 'time,'+self.datavars[1]
         # li should contain a data source of a certain length (can be filled by any reading process)
-        li = sorted(dbselect(db, parameterstring, self.datavars[0], expert='ORDER BY time DESC LIMIT {}'.format(int(self.datavars[2]))))
+        li = sorted(db.select(parameterstring, self.datavars[0], expert='ORDER BY time DESC LIMIT {}'.format(int(self.datavars[2]))))
         try:
             tmpdt = [datetime.strptime(elem[0], "%Y-%m-%d %H:%M:%S.%f") for elem in li]
         except:
@@ -428,7 +420,9 @@ class PlotPanel(scrolled.ScrolledPanel):
             #if not client.connected_flag:
             #    reconnect
             sumtime = sumtime+1
-            li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
+            # TODO
+            #li = colsup.streamdict.get(self.datavars[0][:-5])   # li is an ndarray
+            li = []
             if debug:
                 print (li)
                 print (self.datavars[0][:-5])
@@ -503,7 +497,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         parameterstring = 'time,'+parameter
 
         # Test whether data is available at all with selected keys and dataid
-        li = sorted(dbselect(db, parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
+        li = sorted(db.select(parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
 
         if not len(li) > 0:
             print("Parameter", parameterstring, dataid, coverage)
@@ -612,78 +606,6 @@ class PlotPanel(scrolled.ScrolledPanel):
                 # Display the plot
                 self.canvas.draw()
 
-
-        """
-        # Test whether data is available at all with selected keys and dataid
-        li = sorted(dbselect(db, parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
-
-        if not len(li) > 0:
-            print("Parameter", parameterstring, dataid, coverage)
-            print("Did not find any data to display - aborting")
-            return
-        else:
-            valkeys = ['time']
-            valkeys = parameterstring.split(',')
-            for i,elem in enumerate(valkeys):
-                idx = KEYLIST.index(elem)
-                if elem == 'time':
-                    self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S.%f") for el in li]
-                else:
-                    self.array[idx] = [float(el[i]) for el in li]
-
-        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db, 9: martasaddress, 10: martasport, 11: martasdelay}
-
-        self.figure.clear()
-        t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
-        t1.start()
-        # Display the plot
-        self.canvas.draw()
-        """
-
-        """
-        #clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst
-        #dataid = self.datavars[0]
-        #parameter = self.datavars[1]
-        #period = self.datavars[2]
-        #pad = self.datavars[3]
-        #currentdate = self.datavars[4]
-        #unitlist = self.datavars[5]
-        #coverage = self.datavars[6]  # coverage
-        #updatetime = self.datavars[7]
-        #db = self.datavars[8]
-
-        try:
-            from magpy.collector import subscribe2client as msubs
-        except:
-            print ("MARTAS and LogFile options not available - check dependencies")
-            return
-
-        # MARTAS specific
-        clientip = self.datavars[9]
-        destpath = self.datavars[10]
-        sshcredlst = self.datavars[11]
-        s = self.datavars[12]
-        o = self.datavars[13]
-        stationid = self.datavars[14]
-
-        # clientname
-        import socket
-        clientaddress = socket.getfqdn(clientip)
-        clientname = clientaddress.split('.')[0]
-
-        dest = 'file'
-        printdata = False
-        dbcredlst = []
-
-        print ("Here", clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst)
-
-        factory = WampClientFactory("ws://"+clientip+":9100", debugWamp = False)
-        msubs.sendparameter(clientname,clientip,destpath,dest,stationid,sshcredlst,s,o,printdata,dbcredlst)
-        factory.protocol = msubs.PubSubClient
-        connectWS(factory)
-
-        reactor.run()
-        """
 
 
     def monitorPlot(self,array,**kwargs):
@@ -800,8 +722,8 @@ class PlotPanel(scrolled.ScrolledPanel):
         except:
             pass
 
-        self.axes = mp.plotStreams(streams,keys,figure=self.figure,**plotopt)
-        #self.axes = mp.plotStreams(streams,keys,figure=self.figure,**kwargs)
+        self.axes = mp.tsplot(streams,keys,figure=self.figure,**plotopt)
+
         self.axlist = self.figure.axes
 
         #get current xlimits:
@@ -813,21 +735,13 @@ class PlotPanel(scrolled.ScrolledPanel):
 
         stream = streams[-1]
         key = keys[-1]
-        if not len(stream.ndarray[0])>0:
-            #print ("Here")
-            self.t = [elem.time for elem in stream]
-            flag = [elem.flag for elem in stream]
-            self.k = [eval("elem."+keys[0]) for elem in stream]
-        else:
-            self.t = stream.ndarray[0]
-            flagpos = KEYLIST.index('flag')
-            firstcol = KEYLIST.index(key[0])
-            flag = stream.ndarray[flagpos]
-            self.k = stream.ndarray[firstcol]
-        #self.axes.af2 = self.AnnoteFinder(t,yplt,flag,self.axes)
-        #self.axes.af2 = self.AnnoteFinder(t,k,flag,self.axes)
-        #af2 = self.AnnoteFinder(t,k,flag,self.axes)
-        #self.figure.canvas.mpl_connect('button_press_event', af2)
+
+        self.t = stream.ndarray[0]
+        flagpos = KEYLIST.index('flag')
+        firstcol = KEYLIST.index(key[0])
+        flag = stream.ndarray[flagpos]
+        self.k = stream.ndarray[firstcol]
+
         self.canvas.draw()
 
     def initialPlot(self):
@@ -941,7 +855,7 @@ class PlotPanel(scrolled.ScrolledPanel):
 class MenuPanel(scrolled.ScrolledPanel):
     """
     DESCRIPTION
-        comtains all methods for the right menu panel and their insets
+        contains all methods for the right menu panel and their insets
         All methods are listed in the MainFrame class
     """
     def __init__(self, *args, **kwds):
@@ -962,25 +876,6 @@ class MenuPanel(scrolled.ScrolledPanel):
         nb.AddPage(self.abs_page, "DI")
         nb.AddPage(self.rep_page, "Report")
         nb.AddPage(self.com_page, "Live")
-        """
-        self.nb = wx.Notebook(self,-1)
-        self.str_page = StreamPage(self.nb)
-        self.fla_page = FlagPage(self.nb)
-        self.met_page = MetaPage(self.nb)
-        self.ana_page = AnalysisPage(self.nb)
-        self.abs_page = AbsolutePage(self.nb)
-        self.rep_page = ReportPage(self.nb)
-        self.com_page = MonitorPage(self.nb)
-        self.stats_page = StatisticsPa(self.nb)
-        self.nb.AddPage(self.str_page, "Stream")
-        self.nb.AddPage(self.fla_page, "Flagging")
-        self.nb.AddPage(self.met_page, "Meta")
-        self.nb.AddPage(self.ana_page, "Analysis")
-        self.nb.AddPage(self.stats_page, "Statistics")
-        self.nb.AddPage(self.abs_page, "DI")
-        self.nb.AddPage(self.rep_page, "Report")
-        self.nb.AddPage(self.com_page, "Monitor")
-        """
 
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
@@ -2581,82 +2476,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         """
         saveoptions = False
         ok = False
-        """
-        try:
-            stationid = self.dipathlist.get('station','')
-        except:
-            stationid = ''
-        """
         ws = self.options.get('webservices',{})
 
         dlg = ParameterDictDialog(None, title="Review Webserive analysis parameter", dictionary=ws, preselect=['conrad'])
         if dlg.ShowModal() == wx.ID_OK:
             ok = True
-            """
-            valuedict = {}
-            for el in dlg.panel.elementlist:
-                if not el[1].GetName() == 'Label':
-                    try:
-                        val = el[1].GetValue()
-                        valuedict[el[1].GetName()] = val
-                    except:
-                        try:
-                            val = el[1].GetStringSelection()
-                            if val == 'False':
-                                val = False
-                            if val == 'True':
-                                val = True
-                            valuedict[el[1].GetName()] = val
-                            #print ("Val:", el[1].GetName(), val)
-                        except:
-                            pass
-            """
 
         dlg.Destroy()
-
-        """
-        if ok:
-            #print ("Station", valuedict.get('stationid'))
-            stationid = valuedict.get('stationid')
-            exvals = dipara.get(valuedict.get('stationid'),{})
-            if not exvals == {} and not (valuedict == exvals):
-                exstationid =  dipara.get(valuedict.get('stationid')).get('stationid','')
-                #print ("StationID existing")
-                # Update
-                dipara[stationid] = valuedict
-                self.options['diparameter'] = dipara
-                # Modify data permanently?
-                updatedlg = wx.MessageDialog(self, "Update input\n"
-                        "Remember new settings?\n".format(time),
-                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
-
-                if updatedlg.ShowModal() == wx.ID_YES:
-                    saveoptions = True
-                    updatedlg.Destroy()
-
-            elif not (valuedict == exvals):
-                #print ("StationID not yet existing")
-                # add new station information?
-                updatedlg = wx.MessageDialog(self, "New Station ID\n"
-                        "Add new parameters for StationID {} ?\n".format(stationid),
-                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
-
-                if updatedlg.ShowModal() == wx.ID_YES:
-                    saveoptions = True
-                    updatedlg.Destroy()
-                if saveoptions:
-                    dipara[stationid] = valuedict
-                    self.options['diparameter'] = dipara
-
-            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('options')
-
-        if saveoptions:
-            saveini(self.options)
-            inipara, check = loadini()
-            self.initParameter(inipara)
-            self.dipathlist = tmppathlist
-        """
-
 
 
     def OnOpenDB(self, event):
@@ -2673,7 +2499,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             if not len(datainfoidlist) > 0:
                 return datainfoidlist
             for dataid in datainfoidlist:
-                ar = dbselect(db, 'time', dataid, expert="ORDER BY time DESC LIMIT 10")
+                ar = db.select('time', dataid, expert="ORDER BY time DESC LIMIT 10")
                 if len(ar) > 0:
                     existinglist.append(dataid)
             return existinglist
@@ -2701,9 +2527,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             if dlg.ShowModal() == wx.ID_OK:
                 datainfoid = dlg.dataComboBox.GetValue()
                 stream = DataStream()
-                mintime = stream._testtime([elem[1] for elem in output if elem[0] == datainfoid][0])
-                lastupload = stream._testtime([elem[2] for elem in output if elem[0] == datainfoid][0])
-                maxtime = stream._testtime(datetime.strftime(lastupload,'%Y-%m-%d'))+timedelta(days=1)
+                mintime = testtime([elem[1] for elem in output if elem[0] == datainfoid][0])
+                lastupload = testtime([elem[2] for elem in output if elem[0] == datainfoid][0])
+                maxtime = testtime(datetime.strftime(lastupload,'%Y-%m-%d'))+timedelta(days=1)
                 self.menu_p.str_page.pathTextCtrl.SetValue('MySQL Database')
                 self.menu_p.str_page.fileTextCtrl.SetValue(datainfoid)
                 getdata = True
@@ -2773,9 +2599,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             mode = dlg.mode
             path = dlg.selectedTextCtrl.GetValue()
             fileformat = dlg.formatComboBox.GetValue()
-            #print "Stream: ", len(self.stream), len(self.plotstream)
-            #print "Data: ", self.stream[0].time, self.stream[-1].time, self.plotstream[0].time, self.plotstream[-1].time
-            #print ("Main : ", filenamebegins, filenameends, dateformat, fileformat, coverage, mode)
 
             checkPath = os.path.join(path, dlg.filenameTextCtrl.GetValue())
             export = False
@@ -2927,14 +2750,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         except:
             pass
         # check whether host can be pinged (faster)
-        if PLATFORM.startswith('linux'):
+        platf = platform.platform()
+        print (platform.platform())
+        if platf.startswith('linux'):
             response = os.system("ping -c 1 -w2 {} > /dev/null 2>&1".format(host))
         else:
             response = 0
 
         if response == 0:
             try:
-                self.db = mysql.connect(host=host,user=user,passwd=passwd,db=dbname)
+                self.db = database.DataBank(host=host,user=user,passwd=passwd,db=dbname)
             except:
                 self.db = False
         else:
@@ -2987,16 +2812,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
             self.options['dbname'] = dlg.dbTextCtrl.GetValue()
             self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
-            """
-            self.db = mysql.connect (host=host,user=user,passwd=passwd,db=mydb)
-            if self.db:
-                self.DBOpen.Enable(True)
-                self.menu_p.rep_page.logMsg('- MySQL Database selected.')
-                self.changeStatusbar("Database %s successfully connected" % (self.db))
-            else:
-                self.menu_p.rep_page.logMsg('- MySQL Database access failed.')
-                self.changeStatusbar("Database connection failed")
-            """
         dlg.Destroy()
 
 
@@ -3045,7 +2860,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
                 self.options['dbname'] = dlg.dbTextCtrl.GetValue()
                 self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
-                dbinit(self.db)
+                self.db.dbinit()
                 self.changeStatusbar("New database initiated - Ready")
             dlg.Destroy()
         else:
@@ -3620,7 +3435,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 saveReport(dlg.contlabel, dlg.report)
             else:
                 dlg.Destroy()
-                locale.setlocale(locale.LC_TIME, old_loc)
+                #locale.setlocale(locale.LC_TIME, old_loc)
                 self.changeStatusbar("Ready")
                 return
 
@@ -4562,7 +4377,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
     def checkDB(self, level='minimal'):
         if self.databaseconnected:
             try:
-                dbinfo(self.db,destination='stdout',level='minimal')#,level='full') # use level ='minimal'
+                self.db.info(destination='stdout',level='minimal')#,level='full') # use level ='minimal'
             except:
                 logger.info("Database not connected any more -- reconnecting")
                 self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
@@ -5412,7 +5227,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 # assume Database
                 try:
                     self.changeStatusbar("Loading data ... please be patient")
-                    stream = readDB(path[0],path[1], starttime=start, endtime=end)
+                    db = path[0]
+                    stream = db.read(path[1], starttime=start, endtime=end)
                 except:
                     print ("Reading failed")
 
@@ -6246,7 +6062,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             dlg.Destroy()
             self.menu_p.rep_page.logMsg(" - failed to add meta information from DB")
         else:
-            self.plotstream.header = dbfields2dict(self.db,dataid)
+            self.plotstream.header = self.db.fields_to_dict(dataid)
             self.menu_p.rep_page.logMsg(" - added meta information for {} from DB".format(dataid))
             self.ActivateControls(self.plotstream)
 
@@ -6271,7 +6087,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             dlg = wx.MessageDialog(self, "Please confirm!\n"
                             "I want to replace the Meta information\nfrom the DB with data provided.\n","Confirm", wx.YES_NO |wx.ICON_INFORMATION)
             if dlg.ShowModal() == wx.ID_YES:
-                dbdict2fields(self.db,self.plotstream.header)
+                self.db.dict_to_fields(self.plotstream.header)
                 self.menu_p.rep_page.logMsg(" - added meta information for {} to DB".format(dataid))
             self.ActivateControls(self.plotstream)
 
@@ -6286,7 +6102,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='DATAINFO')
             if dlg.ShowModal() == wx.ID_OK:
                 d = locals()
-                for key in DATAINFOKEYLIST:
+                for key in self.db.DATAINFOKEYLIST:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     try:
                         if not d['value'] == dlg.header.get(key,''):
@@ -6311,7 +6127,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='SENSORS')
             if dlg.ShowModal() == wx.ID_OK:
                 d = locals()
-                for key in SENSORSKEYLIST:
+                for key in self.db.SENSORSKEYLIST:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     if not d['value'] == dlg.header.get(key,''):
                         self.plotstream.header[key] = d['value']
@@ -6333,7 +6149,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='STATIONS')
             if dlg.ShowModal() == wx.ID_OK:
                 d = locals()
-                for key in STATIONSKEYLIST:
+                for key in self.db.STATIONSKEYLIST:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     if not d['value'] == dlg.header.get(key,''):
                         self.plotstream.header[key] = d['value']
@@ -6786,7 +6602,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 absstream = DataStream()
 
             try:
-                if not divariopath == '' and not discalapath == '':
+                if not divariopath == '' and not discalarpath == '':
                     variid = absstream.header.get('SensorID').split('_')[1]
                     scalid = absstream.header.get('SensorID').split('_')[2]
                     msgtxt = ''
@@ -6840,11 +6656,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                 # set load di to something useful (seems to be empty now)
 
 
-
+    """
     def onDISetParameter(self,event):
-        """
+        #""
         open parameter box for DI analysis
-        """
+        #""
 
         dlg = DISetParameterDialog(None, title='Set Parameter')
         dlg.expDTextCtrl.SetValue(self.options.get('diexpD',''))
@@ -6868,6 +6684,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.options['ditype'] =  dlg.abstypeComboBox.GetValue()
 
         dlg.Destroy()
+    """
 
 
     def onInputSheet(self,event):
@@ -6952,108 +6769,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
     # ################
     # ------------------------------------------------------------------------------------------
 
-    """
-    def onConnectMQTTButton(self, event):
-        # start a subscribe to client call
-        success = True
-
-        # continuously collect data to stream and periodically call monitor plots
-        # Open dlg to select MARTAS-address (IP number)
-        # and to provide ssh access
-        # (favorite dict on MARTAS sheet {'MARTAS':'address','MQTT':'address'})
-        dlg = AGetMARTASDialog(None, title='Select MARTAS',options=self.options)
-        if dlg.ShowModal() == wx.ID_OK:
-            martasaddress = dlg.addressComboBox.GetValue()
-            martasuser = dlg.userTextCtrl.GetValue()
-            martaspasswd = dlg.pwdTextCtrl.GetValue()
-        else:
-            dlg.Destroy()
-            return
-
-        # If IP selected try to get sensor.txt from MARTAS using ssh
-        # If true : start record with sensorid
-        # if false: ask for sensorid (windows)
-        print ("Getting sensor information from ", martasaddress)
-        martaspath = os.path.join('/home',martasuser,'MARTAS')
-        print (martaspath)
-        sensfile = os.path.join(martaspath,'sensors.txt')
-        owfile = os.path.join(martaspath,'owlist.csv')
-
-        import tempfile
-        destpath = tempfile.gettempdir()
-
-        destsensfile = os.path.join(destpath,martasaddress+'_sensors.txt')
-        destowfile = os.path.join(destpath,martasaddress+'_owlist.csv')
-
-        try:
-            scptransfer(martasuser+'@'+martasaddress+':'+sensfile,destsensfile,martaspasswd)
-        except:
-            print ("Could not connect to/get sensor info of client {} - aborting".format(martasaddress))
-            success = False
-            #print "Please make sure that you connected at least once to the client by ssh"
-            #print " with your defaultuser %s " % martasuser
-            #print " This way the essential key data is established."
-        print ("Searching for onewire data from {}".format(martasaddress))
-        try:
-            scptransfer(martasuser+'@'+martasaddress+':'+owfile,destowfile,martaspasswd)
-        except:
-            print ("No one wire info available on client {} - proceeding".format(martasaddress))
-
-        s,o = [],[]
-        if os.path.exists(destsensfile):
-            with open(destsensfile,'rb') as f:
-                reader = csv.reader(f)
-                s = []
-                for line in reader:
-                    print (line)
-                    if len(line) < 2:
-                        try:
-                            s.append(line[0].split())
-                        except:
-                            # Empty line for example
-                            pass
-                    else:
-                        s.append(line)
-            print (s)
-        else:
-            print ("Apparently no sensors defined on client {} - aborting".format(martasaddress))
-            success = False
-            return
-
-        if os.path.exists(destowfile):
-            with open(destowfile,'rb') as f:
-                reader = csv.reader(f)
-                o = [line for line in reader]
-            print (o)
-
-
-        # get all parameters
-        pad = 5
-        sr = 1.0 # sampling rate
-        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
-        period = float(self.menu_p.com_page.frequSlider.GetValue())
-        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
-        coverage = covval/sr
-        limit = period/sr
-
-        # start subscribe2client
-        #self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db}
-        self.plot_p.datavars = {2: limit, 3: pad, 4: currentdate, 6: coverage, 7: period, 9: martasaddress, 10: destpath, 11: [martasuser,martaspasswd], 12: s, 13: o, 14: self.options.get('stationid','WIC')}
-
-        self.monitorSource='MARTAS'
-        success = True
-        if success:
-            self.menu_p.com_page.startMonitorButton.Enable()
-            self.menu_p.com_page.getMARCOSButton.Disable()
-            self.menu_p.com_page.getMQTTButton.Disable()
-            self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(martasaddress))
-            self.menu_p.com_page.logMsg('Begin monitoring...')
-            self.menu_p.com_page.logMsg(' - Selected MARTAS')
-            self.menu_p.com_page.logMsg(' - IP: {}'.format(martasaddress))
-            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
-            self.menu_p.com_page.frequSlider.Enable()         # always
-    """
 
     def onConnectMARCOSButton(self, event):
         # active if database is connected
@@ -7067,14 +6782,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             if not len(datainfoidlist) > 0:
                 return datainfoidlist
             for dataid in datainfoidlist:
-                ar = dbselect(db, 'time', dataid, expert="ORDER BY time DESC LIMIT 10")
+                ar = db.select('time', dataid, expert="ORDER BY time DESC LIMIT 10")
                 if len(ar) > 0:
                     existinglist.append(dataid)
             return existinglist
 
 
         self.menu_p.rep_page.logMsg('- Selecting MARCOS table for monitoring ...')
-        output = dbselect(self.db,'DataID,DataMinTime,DataMaxTime','DATAINFO')
+        output = self.db.select('DataID,DataMinTime,DataMaxTime','DATAINFO')
         datainfoidlist = [elem[0] for elem in output]
         datainfoidlist = dataAvailabilityCheck(self.db, datainfoidlist)
 
@@ -7090,7 +6805,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         dlg = AGetMARCOSDialog(None, title='Select table',datalst=datainfoidlist)
         if dlg.ShowModal() == wx.ID_OK:
             datainfoid = dlg.dataComboBox.GetValue()
-            vals = dbselect(self.db, 'SensorID,DataSamplingRate,ColumnContents,ColumnUnits,StationID','DATAINFO', 'DataID = "'+datainfoid+'"')
+            vals = self.db.select('SensorID,DataSamplingRate,ColumnContents,ColumnUnits,StationID','DATAINFO', 'DataID = "'+datainfoid+'"')
             vals = vals[0]
             sensid= vals[0]
             sr= float(vals[1].strip('sec'))
@@ -7178,7 +6893,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         # get header information from data stream
         try:
             import paho.mqtt.client as mqtt
-            from magpy.collector import collectormethods as colsup
+            #from magpy.collector import collectormethods as colsup
             mqttimport = True
         except:
             mqttimport = False
@@ -7345,7 +7060,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         """
         #header = {}
         if db:
-            header = dbfields2dict(db,dataid)
+            header = db.fields_to_dict(dataid)
         if len(array[0]) > 0:
             if isinstance(array[0][-1], datetime):
                 array[0] = date2num(array[0])

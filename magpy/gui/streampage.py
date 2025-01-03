@@ -1,20 +1,14 @@
 #!/usr/bin/env python
 
 from magpy.stream import *
-from magpy.absolutes import *
-from magpy.transfer import *
-from magpy.database import *
+import magpy.absolutes as di
+import magpy.core.database
 
 import wx
 
-try:
-    # wx 2.x, 3.x
-    from wx import DatePickerCtrl as wxDatePickerCtrl
-    from wx import DP_DEFAULT as wxDP_DEFAULT
-except:
-    # wx 4.x
-    from wx.adv import DatePickerCtrl as wxDatePickerCtrl
-    from wx.adv import DP_DEFAULT as wxDP_DEFAULT
+# wx 4.x
+from wx.adv import DatePickerCtrl as wxDatePickerCtrl
+from wx.adv import DP_DEFAULT as wxDP_DEFAULT
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx

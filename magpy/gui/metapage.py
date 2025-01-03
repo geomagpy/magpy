@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
 from magpy.stream import *
-from magpy.absolutes import *
-from magpy.transfer import *
-from magpy.database import *
+import magpy.absolutes as di
+from magpy.core import database
 
 import wx
 

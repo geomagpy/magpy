@@ -67,7 +67,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
            symbols=None, colors=None, title=None, xinds=[None], legend={}, grid={}, patch={}, annotate=False,
            fill=None, showpatch=[True], errorbars=None, functions=None, functionfmt="r-", xlabelposition=None,
            ylabelposition=None, yscale=None, dateformatter=None, force=False, width=10, height=4, alpha=0.5,
-           variables=None, debug=False):
+           variables=None, figure=None, debug=False):
     """
     DESCRIPTION:
         tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a shared x axis based on the first plot.
@@ -118,6 +118,8 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         height (float)      :    default 4 - default height of each individual plot
                                  EXAMPLE: height=2
         width (float)       :    default 10 - default width of all plots
+                                 EXAMPLE: width=12
+        figure (object)     :    provide a figure object for the plot - used by magpy_gui
                                  EXAMPLE: width=12
 
     EXAMPLE:
@@ -203,7 +205,10 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
     if not functionfmt:
         functionfmt = 'r-'
 
-    fig = plt.figure(figsize=(width, hght))
+    if not figure:
+        fig = plt.figure(figsize=(width, hght))
+    else:
+        fig = figure
 
     # parameter for separate plots
     total_pos = 0
