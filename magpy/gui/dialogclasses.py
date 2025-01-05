@@ -7555,4 +7555,5 @@ wx.ART_MESSAGE_BOX, (32, 32))
         # Display the Dialog
         self.Show()
         # Make sure the screen gets fully drawn before continuing.
-        wx.Yield()
+        wx.GetApp().Yield()
+        #wx.Yield()

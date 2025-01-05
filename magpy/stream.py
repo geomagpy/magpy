@@ -1247,8 +1247,12 @@ CALLED BY:
         tresult = None
 
         if len(self.ndarray[0]) > 0:
-            result = np.nanmax(self.ndarray[key_ind].astype(float))
-            ind = np.nanargmax(self.ndarray[key_ind].astype(float))
+            if key_ind > 0:
+                ar = self.ndarray[key_ind].astype(float)
+            else:
+                ar = self.ndarray[key_ind]
+            result = np.nanmax(ar)
+            ind = np.nanargmax(ar)
             tresult = self.ndarray[t_ind][ind]
 
         if returntime:
@@ -1266,8 +1270,12 @@ CALLED BY:
         tresult = None
 
         if len(self.ndarray[0]) > 0:
-            result = np.nanmin(self.ndarray[key_ind].astype(float))
-            ind = np.nanargmin(self.ndarray[key_ind].astype(float))
+            if key_ind > 0:
+                ar = self.ndarray[key_ind].astype(float)
+            else:
+                ar = self.ndarray[key_ind]
+            result = np.nanmin(ar)
+            ind = np.nanargmin(ar)
             tresult = self.ndarray[t_ind][ind]
 
         if returntime:
@@ -1276,9 +1284,9 @@ CALLED BY:
             return result
 
     def _get_variance(self, key):
-        if not key in KEYLIST[:16]:
+        if not key in self.KEYLIST[:16]:
             raise ValueError("Column key not valid")
-        key_ind = KEYLIST.index(key)
+        key_ind = self.KEYLIST.index(key)
         if len(self.ndarray[0]) > 0:
             result = np.nanvar(self.ndarray[key_ind].astype(float))
             return result
@@ -1294,7 +1302,7 @@ CALLED BY:
         APPLICATION
              amp = stream.amplitude('x')
         """
-        if not key in KEYLIST[1:16]:
+        if not key in self.KEYLIST[1:16]:
             raise ValueError("Column key not valid")
         ts = self._get_column(key).astype(float)
         ts = ts[~np.isnan(ts)]
@@ -1360,7 +1368,7 @@ CALLED BY:
         ext = ''
         if len(self.ndarray[4]) > 0:
             ext = 'F'
-        if len(self.ndarray[KEYLIST.index('df')]) > 0:
+        if len(self.ndarray[self.KEYLIST.index('df')]) > 0:
             ext = 'G'
 
         if len(self.ndarray[0]) > 0:
@@ -1453,16 +1461,16 @@ CALLED BY:
         searchlist.extend(self.NUMKEYLIST)
         tstart = datetime.now(timezone.utc).replace(tzinfo=None)
 
-        array = [np.asarray([]) for elem in KEYLIST]
+        array = [np.asarray([]) for elem in self.KEYLIST]
         if len(self) > 0 and key in searchlist:
             # get the indicies with NaN's and then use numpy delete
-            ind = KEYLIST.index(key)
+            ind = self.KEYLIST.index(key)
             col = np.asarray(self.ndarray[ind])
             if len(col) > 0:
                 if not key == 'time':
                     col = col.astype(float)
                 indicieslst = np.argwhere(np.isnan(col))
-                for index, tkey in enumerate(KEYLIST):
+                for index, tkey in enumerate(self.KEYLIST):
                     if len(self.ndarray[index]) > 0 and len(self.ndarray[index]) == len(col):
                         array[index] = np.delete(self.ndarray[index], indicieslst)
                 if debug:
@@ -1493,7 +1501,7 @@ CALLED BY:
         except:
             return self
 
-        ndarray = np.asarray([np.asarray(elem) if KEYLIST[idx] in keys or KEYLIST[idx] == 'time' else np.asarray([]) for idx,elem in enumerate(result.ndarray)],dtype=object)
+        ndarray = np.asarray([np.asarray(elem) if self.KEYLIST[idx] in keys or self.KEYLIST[idx] == 'time' else np.asarray([]) for idx,elem in enumerate(result.ndarray)],dtype=object)
 
         return DataStream(header=result.header,ndarray=ndarray)
 
@@ -1506,7 +1514,7 @@ CALLED BY:
       APPLICATION:
         Used by write
         """
-        ndarray = [[] for key in KEYLIST]
+        ndarray = [[] for key in self.KEYLIST]
 
         startindices = []
         endindices = []
@@ -1636,7 +1644,7 @@ CALLED BY:
         signal = self._get_column(key)
         #Clear the projected results column
         array = []
-        aic2ind = KEYLIST.index(aic2key)
+        aic2ind = self.KEYLIST.index(aic2key)
         if len(self.ndarray[aic2ind]) > 0:
             if delete:
                 print ("aic_calc: removing contents from column {} for storage of aic data".format(aic2key))
@@ -1977,10 +1985,10 @@ CALLED BY:
         array,headline,addline = [],[],[]
         for key in keylst:
             try:
-                pos = KEYLIST.index(key)
+                pos = self.KEYLIST.index(key)
             except ValueError:
                 pos = -1
-            if pos in range(0,len(KEYLIST)):
+            if pos in range(0,len(self.KEYLIST)):
                 headline.append(key)
                 if not key == 'time':
                     addline.append(self.header.get('col-'+key))
@@ -2020,7 +2028,7 @@ CALLED BY:
             print("dict2stream: list is empty")
             return DataStream()
 
-        array = [[] for el in KEYLIST]
+        array = [[] for el in self.KEYLIST]
 
         headerinfo = lst[0]
         addinfo = lst[1]
@@ -2030,7 +2038,7 @@ CALLED BY:
         #print(collst)
 
         for idx,key in enumerate(headerinfo):
-            pos = KEYLIST.index(key)
+            pos = self.KEYLIST.index(key)
             array[pos] = collst[idx]
 
         if isinstance(array[0][0],float):
@@ -2363,11 +2371,11 @@ CALLED BY:
         fstream = self.copy()
 
         if len(self.ndarray[0]) > 0:
-            inddf = KEYLIST.index('df')
-            indf = KEYLIST.index('f')
-            indx = KEYLIST.index('x')
-            indy = KEYLIST.index('y')
-            indz = KEYLIST.index('z')
+            inddf = self.KEYLIST.index('df')
+            indf = self.KEYLIST.index('f')
+            indx = self.KEYLIST.index('x')
+            indy = self.KEYLIST.index('y')
+            indz = self.KEYLIST.index('z')
             if len(fstream.ndarray[inddf]) > 0 and not skipdelta:
                 df = fstream.ndarray[inddf].astype(float)
             else:
@@ -2541,14 +2549,14 @@ CALLED BY:
         keys = keys[:4]
 
         for key in keys:
-            poslst.append(KEYLIST.index(key))
+            poslst.append(self.KEYLIST.index(key))
         for idx,pos in enumerate(poslst):
-            deltaposlst.append(KEYLIST.index(deltakeys[idx]))
+            deltaposlst.append(self.KEYLIST.index(deltakeys[idx]))
 
         if not len(self.ndarray[0]) > 0:
             return self
 
-        array = [[] for el in KEYLIST]
+        array = [[] for el in self.KEYLIST]
         data = self.copy()
         data = data.removeduplicates()
         timecol = np.floor(date2num(data.ndarray[0]))
@@ -2559,19 +2567,19 @@ CALLED BY:
             array[0].append(num2date(day)+offset)
             for idx, pos in enumerate(poslst):
                 if not keepposition:
-                    array[idx+1].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
+                    array[idx+1].append(sttmp.mean(self.KEYLIST[pos],percentage=percentage))
                 else:
-                    array[pos].append(sttmp.mean(KEYLIST[pos],percentage=percentage))
-                data.header['col-'+KEYLIST[idx+1]] = '{}'.format(self.header.get('col-'+KEYLIST[pos]))
-                data.header['unit-col-'+KEYLIST[idx+1]] = '{}'.format(self.header.get('unit-col-'+KEYLIST[pos]))
+                    array[pos].append(sttmp.mean(self.KEYLIST[pos],percentage=percentage))
+                data.header['col-'+self.KEYLIST[idx+1]] = '{}'.format(self.header.get('col-'+self.KEYLIST[pos]))
+                data.header['unit-col-'+self.KEYLIST[idx+1]] = '{}'.format(self.header.get('unit-col-'+self.KEYLIST[pos]))
                 diff = pos-idx
             if not keepposition:
               for idx,dpos in enumerate(deltaposlst):
                 #if len(sttmp.ndarray[idx]) > 0:
-                me,std = sttmp.mean(KEYLIST[idx+diff],percentage=percentage, std=True)
+                me,std = sttmp.mean(self.KEYLIST[idx+diff],percentage=percentage, std=True)
                 array[dpos].append(std)
-                data.header['col-'+KEYLIST[dpos]] = 'sigma {}'.format(self.header.get('col-'+KEYLIST[idx+diff]))
-                data.header['unit-col-'+KEYLIST[dpos]] = '{}'.format(self.header.get('unit-col-'+KEYLIST[idx+diff]))
+                data.header['col-'+self.KEYLIST[dpos]] = 'sigma {}'.format(self.header.get('col-'+self.KEYLIST[idx+diff]))
+                data.header['unit-col-'+self.KEYLIST[dpos]] = '{}'.format(self.header.get('unit-col-'+self.KEYLIST[idx+diff]))
         data.header['DataFormat'] = 'MagPyDailyMean'
 
         array = [np.asarray(el) for el in array]
@@ -2612,11 +2620,11 @@ CALLED BY:
             syst = None
 
 
-        ind = KEYLIST.index("df")
-        indx = KEYLIST.index("x")
-        indy = KEYLIST.index("y")
-        indz = KEYLIST.index("z")
-        indf = KEYLIST.index("f")
+        ind = self.KEYLIST.index("df")
+        indx = self.KEYLIST.index("x")
+        indy = self.KEYLIST.index("y")
+        indz = self.KEYLIST.index("z")
+        indf = self.KEYLIST.index("f")
         if len(self.ndarray[0])>0 and len(self.ndarray[indx])>0 and len(self.ndarray[indy])>0 and len(self.ndarray[indz])>0 and len(self.ndarray[indf])>0:
             # requires x,y,z and f
             arx = self.ndarray[indx]**2
@@ -2688,7 +2696,7 @@ CALLED BY:
             t = stream.ndarray[0]
 
         for i, key in enumerate(keys):
-            ind = KEYLIST.index(key)
+            ind = self.KEYLIST.index(key)
             val = stream.ndarray[ind].astype(float64)
             dval = np.gradient(np.asarray(val))
             stream._put_column(dval, put2keys[i])
@@ -2765,17 +2773,17 @@ CALLED BY:
 
         # 1a. Grab array from stream
         data = self._get_column(key)
-        t_ind = KEYLIST.index('time')
+        t_ind = self.KEYLIST.index('time')
 
         #DWT_stream = DataStream([],{})
         DWT_stream = DataStream()
         headers = DWT_stream.header
-        array = [[] for key in KEYLIST]
-        x_ind = KEYLIST.index('x')
-        dx_ind = KEYLIST.index('dx')
-        var1_ind = KEYLIST.index('var1')
-        var2_ind = KEYLIST.index('var2')
-        var3_ind = KEYLIST.index('var3')
+        array = [[] for key in self.KEYLIST]
+        x_ind = self.KEYLIST.index('x')
+        dx_ind = self.KEYLIST.index('dx')
+        var1_ind = self.KEYLIST.index('var1')
+        var2_ind = self.KEYLIST.index('var2')
+        var3_ind = self.KEYLIST.index('var3')
         i = 0
         logger.info("DWT_calc: Starting Discrete Wavelet Transform of key %s." % key)
 
@@ -2893,7 +2901,7 @@ CALLED BY:
         if not len(self.ndarray[0]) > 0:
             return self
 
-        ind = KEYLIST.index(key)
+        ind = self.KEYLIST.index(key)
 
         stream = self.copy()
         newarray = [[] for key in self.KEYLIST]
@@ -3341,9 +3349,9 @@ CALLED BY:
         for key in keys:
             if debugmode:
                 print ("Start filtering for", key)
-            if not key in KEYLIST:
+            if not key in self.KEYLIST:
                 logger.error("Column key %s not valid." % key)
-            keyindex = KEYLIST.index(key)
+            keyindex = self.KEYLIST.index(key)
             if len(fstream.ndarray[keyindex])>0:
                 v = fstream.ndarray[keyindex]
 
@@ -3493,9 +3501,9 @@ CALLED BY:
             sp = fitstream.get_sampling_period()/3600./24. # use days because of date2num
             if sp == 0:  ## if no dominant sampling period can be identified then use minutes
                 sp = 0.0177083333256
-            if not key in KEYLIST[1:16]:
+            if not key in self.KEYLIST[1:16]:
                 raise ValueError("Column key not valid")
-            ind = KEYLIST.index(key)
+            ind = self.KEYLIST.index(key)
             val = tmpst.ndarray[ind]
 
             # interplolate NaN values
@@ -3630,9 +3638,9 @@ CALLED BY:
         if not len(keys) == 3:
             print ("simplebaseline corr: wrong key length")
             return self
-        arrayx = np.asarray(list(self.ndarray[KEYLIST.index(keys[0])])).astype(float)
-        arrayy = np.asarray(list(self.ndarray[KEYLIST.index(keys[1])])).astype(float)
-        arrayz = np.asarray(list(self.ndarray[KEYLIST.index(keys[2])])).astype(float)
+        arrayx = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[0])])).astype(float)
+        arrayy = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[1])])).astype(float)
+        arrayz = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[2])])).astype(float)
 
         if basecomp in ["HDZ","hdz"]:
             print ("simplebaseline: Basevalues are provided as HDZ components")
@@ -3640,10 +3648,10 @@ CALLED BY:
             print ("simplebaseline: Basevalues are provided as XYZ components")
 
         #1. calculate function value for each data time step
-        array = [[] for key in KEYLIST]
+        array = [[] for key in self.KEYLIST]
         array[0] = self.ndarray[0]
-        for key in KEYLIST:
-            ind = KEYLIST.index(key)
+        for key in self.KEYLIST:
+            ind = self.KEYLIST.index(key)
             if key in keys: # new
                 if key == 'x' and basecomp in ["HDZ","hdz"]:
                     array[ind] = np.sqrt((arrayx + basevalue[keys.index(key)])**2 + arrayy**2)
@@ -3696,8 +3704,8 @@ CALLED BY:
         else:
             funct = funclist
 
-        totalarray = [[] for key in KEYLIST]
-        posstr = KEYLIST.index('str1')
+        totalarray = [[] for key in self.KEYLIST]
+        posstr = self.KEYLIST.index('str1')
         testx = []
         basex = np.asarray([])
         arrayx = np.asarray([])
@@ -3705,9 +3713,9 @@ CALLED BY:
 
         # required for addbaseline option
         if mode == 'addbaseline':
-            arrayx = np.asarray(list(self.ndarray[KEYLIST.index(keys[0])])).astype(float)
-            arrayy = np.asarray(list(self.ndarray[KEYLIST.index(keys[1])])).astype(float)
-            arrayz = np.asarray(list(self.ndarray[KEYLIST.index(keys[2])])).astype(float)
+            arrayx = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[0])])).astype(float)
+            arrayy = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[1])])).astype(float)
+            arrayz = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[2])])).astype(float)
 
         for function in funct:
             if not function:
@@ -3716,14 +3724,14 @@ CALLED BY:
                 return self
 
             #1. calculate function value for each data time step
-            array = [[] for key in KEYLIST]
+            array = [[] for key in self.KEYLIST]
             array[0] = self.ndarray[0]
             dis_done = False
             # get x array for baseline
             functimearray = (date2num(self.ndarray[0]).astype(float)-function[1])/(function[2]-function[1])
-            for key in KEYLIST:
+            for key in self.KEYLIST:
                 validkey = False
-                ind = KEYLIST.index(key)
+                ind = self.KEYLIST.index(key)
                 if key in keys: # new
                     keyind = keys.index(key)
                     if fkeys:
@@ -3821,12 +3829,12 @@ CALLED BY:
         # Changed that - 49 sec before, no less then 2 secs
         if len(self.ndarray[0]) > 0:
             #1. calculate function value for each data time step
-            array = [[] for key in KEYLIST]
+            array = [[] for key in self.KEYLIST]
             array[0] = self.ndarray[0]
             functimearray = (self.ndarray[0].astype(float)-function[1])/(function[2]-function[1])
             #print functimearray
             for key in keys:
-                ind = KEYLIST.index(key)
+                ind = self.KEYLIST.index(key)
                 if mode == 'add':
                     array[ind] = self.ndarray[ind] + function[0]['f'+key](functimearray)
                 elif mode == 'sub':
@@ -3959,7 +3967,7 @@ CALLED BY:
         APPLICATION:
            element = datastream.GetKeyName('var1')
         """
-        if not key in KEYLIST:
+        if not key in self.KEYLIST:
             print ("key not in KEYLIST - aborting")
             return ''
         element = ''
@@ -3973,7 +3981,7 @@ CALLED BY:
 
         # Two
         try:
-            element = self.header.get('ColumnContents','').split(',')[KEYLIST.index(key)]
+            element = self.header.get('ColumnContents','').split(',')[self.KEYLIST.index(key)]
             if not element == '':
                 return element
         except:
@@ -4006,7 +4014,7 @@ CALLED BY:
         APPLICATION:
            unit = datastream.GetKeyUnit('var1')
         """
-        if not key in KEYLIST:
+        if not key in self.KEYLIST:
             print ("key not in KEYLIST - aborting")
             return ''
         unit = ''
@@ -4020,7 +4028,7 @@ CALLED BY:
 
         # Two
         try:
-            unit = self.header.get('ColumnUnits','').split(',')[KEYLIST.index(key)]
+            unit = self.header.get('ColumnUnits','').split(',')[self.KEYLIST.index(key)]
             if not unit == '':
                 return unit
         except:
@@ -4064,7 +4072,7 @@ CALLED BY:
         gapvariable = kwargs.get('gapvariable')
         debug = kwargs.get('debug')
 
-        if key in KEYLIST:
+        if key in self.KEYLIST:
             gapvariable = True
 
         if not gapvariable:
@@ -4189,9 +4197,9 @@ CALLED BY:
 
         logger.info('get_rotation: Determining rotation angle towards a magnetic coordinate system assuming z to be vertical down.')
 
-        ind1 = KEYLIST.index(keys[0])
-        ind2 = KEYLIST.index(keys[1])
-        ind3 = KEYLIST.index(keys[2])
+        ind1 = self.KEYLIST.index(keys[0])
+        ind2 = self.KEYLIST.index(keys[1])
+        ind3 = self.KEYLIST.index(keys[2])
 
         if len(self.ndarray[0]) > 0:
             if len(self.ndarray[ind1]) > 0 and len(self.ndarray[ind2]) > 0 and len(self.ndarray[ind3]) > 0:
@@ -4246,12 +4254,17 @@ CALLED BY:
 
         # New way:
         if len(timecol) > 1:
-            newtd = np.nanmedian(np.diff(timecol))
-            # also get the mean
-            meand = np.nanmean(np.diff(timecol))
+            try: # will fail for python 3.7
+                newtd = np.nanmedian(np.diff(timecol))
+                # also get the mean
+                meand = np.nanmean(np.diff(timecol))
+            except:
+                newtd = np.median(np.diff(timecol))
+                # also get the mean
+                meand = np.mean(np.diff(timecol))
             # if the mean is significantly larger than the median (might happen in heavily
             # unevenly spaced series like DI measurements) then better use mean
-            # otherwise median will return the short distance but does not reveal a weekly repetion
+            # otherwise median will return the short distance but does not reveal a weekly repetition
             if meand > newtd * 1000:
                 newtd = meand
             return newtd.total_seconds()
@@ -4346,7 +4359,7 @@ CALLED BY:
         if not keys:
             keys = ['x','y','z']
 
-        array = [[] for key in KEYLIST]
+        array = [[] for key in self.KEYLIST]
         ndtype = False
         if len(self.ndarray[0])>0:
             t = linspace(0,1,len(self.ndarray[0]))
@@ -4367,7 +4380,7 @@ CALLED BY:
             dval = np.insert(dval, 0, 0) # Prepend 0 to maintain original length
             for n in nind:
                 dval = np.insert(dval, n, np.nan) # Insert nans at original position
-            ind = KEYLIST.index('d'+key)
+            ind = self.KEYLIST.index('d'+key)
             array[ind] = np.asarray(dval)
 
         self.ndarray = np.asarray(array, dtype=object)
@@ -4511,8 +4524,8 @@ CALLED BY:
                 newlst.append(elem-diff/3)
             newlst.append(elem)
 
-        indvar1 = KEYLIST.index('var1')
-        indvar2 = KEYLIST.index('var2')
+        indvar1 = self.KEYLIST.index('var1')
+        indvar2 = self.KEYLIST.index('var2')
         ar = []
         k = 0
         for elem in self.ndarray[indvar2]:
@@ -4541,14 +4554,14 @@ CALLED BY:
         def checkEqual3(lst):
             return lst[1:] == lst[:-1]
 
-        array = [np.asarray([]) for elem in KEYLIST]
+        array = [np.asarray([]) for elem in self.KEYLIST]
 
         keys = self._get_key_headers()
 
         t = np.asarray(self._get_column('time'))
         array[0] = t
         for key in keys:
-            ind = KEYLIST.index(key)
+            ind = self.KEYLIST.index(key)
             col = self._get_column(key)
             if len(col) > 0:
                 if not False in checkEqual3(col) and str(col[0]) == str('-'):
@@ -4618,10 +4631,10 @@ CALLED BY:
         except:
             if not isinstance( percentage, (int)):
                 logger.error("mean: Percentage needs to be an integer!")
-        if not key in KEYLIST[:16]:
+        if not key in self.KEYLIST[:16]:
             logger.error("mean: Column key not valid!")
 
-        ind = KEYLIST.index(key)
+        ind = self.KEYLIST.index(key)
         length = len(self.ndarray[0])
         self.ndarray[ind] = np.asarray(self.ndarray[ind])
         if key in self.NUMKEYLIST:
@@ -4720,20 +4733,20 @@ CALLED BY:
 
         # 1a. Grab array from stream
         data = self._get_column(key)
-        t_ind = KEYLIST.index('time')
+        t_ind = self.KEYLIST.index('time')
 
         #MODWT_stream = DataStream([],{})
         MODWT_stream = DataStream()
         headers = MODWT_stream.header
-        array = [[] for key in KEYLIST]
-        x_ind = KEYLIST.index('x')
-        dx_ind = KEYLIST.index('dx')
-        var1_ind = KEYLIST.index('var1')
-        var2_ind = KEYLIST.index('var2')
-        var3_ind = KEYLIST.index('var3')
-        var4_ind = KEYLIST.index('var4')
-        var5_ind = KEYLIST.index('var5')
-        dy_ind = KEYLIST.index('dy')
+        array = [[] for key in self.KEYLIST]
+        x_ind = self.KEYLIST.index('x')
+        dx_ind = self.KEYLIST.index('dx')
+        var1_ind = self.KEYLIST.index('var1')
+        var2_ind = self.KEYLIST.index('var2')
+        var3_ind = self.KEYLIST.index('var3')
+        var4_ind = self.KEYLIST.index('var4')
+        var5_ind = self.KEYLIST.index('var5')
+        dy_ind = self.KEYLIST.index('dy')
         i = 0
         logger.info("MODWT_calc: Starting Discrete Wavelet Transform of key %s." % key)
 
@@ -4769,13 +4782,13 @@ CALLED BY:
                 d_cut = dcoeffs[-(j+1)][i:i+window]
                 if j <= 5:
                     key = 'var'+str(j+1)
-                    array[KEYLIST.index(key)].append(sum(d_cut)/float(window))
+                    array[self.KEYLIST.index(key)].append(sum(d_cut)/float(window))
                 elif 5 < j <= 7:
                     if j == 6:
                         key = 'dy'
                     elif j == 7:
                         key = 'dz'
-                    array[KEYLIST.index(key)].append(sum(d_cut)/float(window))
+                    array[self.KEYLIST.index(key)].append(sum(d_cut)/float(window))
 
             i += window
 
@@ -4796,8 +4809,8 @@ CALLED BY:
         MODWT_stream.header['col-dy'] = 'D6'
         MODWT_stream.header['unit-col-dy'] = 'nT^2'
 
-        for key in KEYLIST:
-            array[KEYLIST.index(key)] = np.asarray(array[KEYLIST.index(key)])
+        for key in self.KEYLIST:
+            array[self.KEYLIST.index(key)] = np.asarray(array[self.KEYLIST.index(key)])
 
         return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
@@ -4827,8 +4840,8 @@ CALLED BY:
         sel = self.copy()
 
         for key in factors:
-            if key in KEYLIST:
-                ind = KEYLIST.index(key)
+            if key in self.KEYLIST:
+                ind = self.KEYLIST.index(key)
                 val = sel.ndarray[ind]
                 if key == 'time':
                     logger.error("factor: Multiplying time? That's just plain silly.")
@@ -5068,7 +5081,7 @@ CALLED BY:
             if endtime > cutstream.ndarray[0][-1]:
                 ed = len(cutstream.ndarray[0])
             dropind = [i for i in range(st,ed)]
-            for index,key in enumerate(KEYLIST):
+            for index,key in enumerate(self.KEYLIST):
                 if len(cutstream.ndarray[index])>0:
                     cutstream.ndarray[index] = np.delete(cutstream.ndarray[index], dropind)
 
@@ -5170,15 +5183,15 @@ CALLED BY:
             print("Diff:", diff)
 
         # res stream with new t_list is used for return
-        array=[np.asarray([]) for elem in KEYLIST]
+        array=[np.asarray([]) for elem in self.KEYLIST]
         t0 = t_list[0] - timedelta(seconds=period)
         for key in keys:
             if debugmode:
                 print ("Resampling:", key)
-            if key not in KEYLIST[1:16]:
+            if key not in self.KEYLIST[1:16]:
                 logger.warning("resample: Key %s not supported!" % key)
 
-            index = KEYLIST.index(key)
+            index = self.KEYLIST.index(key)
             try:
                 int_data = stwithnan.interpol([key],kind='linear')#'cubic')
                 int_func = int_data[0]['f'+key]
@@ -5303,9 +5316,9 @@ CALLED BY:
         xyz.m = ortho.l*a[1][0]+ortho.m*a[1][1]+ortho.n*a[1][2];
         xyz.n = ortho.l*a[2][0]+ortho.m*a[2][1]+ortho.n*a[2][2];
         """
-        ind1 = KEYLIST.index(keys[0])
-        ind2 = KEYLIST.index(keys[1])
-        ind3 = KEYLIST.index(keys[2])
+        ind1 = self.KEYLIST.index(keys[0])
+        ind2 = self.KEYLIST.index(keys[1])
+        ind3 = self.KEYLIST.index(keys[2])
 
         if len(data.ndarray[0]) > 0:
             if len(data.ndarray[ind1]) > 0 and len(data.ndarray[ind2]) > 0 and len(data.ndarray[ind3]) > 0:
@@ -5352,8 +5365,8 @@ CALLED BY:
         if len(stream.ndarray[0]) > 0:
             # Check for flagging and comment column
             if not noflags:
-                flagidx = KEYLIST.index('flag')
-                commentidx = KEYLIST.index('comment')
+                flagidx = self.KEYLIST.index('flag')
+                commentidx = self.KEYLIST.index('comment')
                 if len(stream.ndarray[flagidx]) > 0:
                     keys.append('flag')
                 if len(stream.ndarray[commentidx]) > 0:
@@ -5361,7 +5374,7 @@ CALLED BY:
 
             # Remove all missing
             for idx, elem in enumerate(stream.ndarray):
-                if not KEYLIST[idx] in keys:
+                if not self.KEYLIST[idx] in keys:
                     stream.ndarray[idx] = np.asarray([])
             return stream
         else:
@@ -5421,7 +5434,7 @@ CALLED BY:
 
         for key in keys:
             if key in self.NUMKEYLIST:
-                ind = KEYLIST.index(key)
+                ind = self.KEYLIST.index(key)
                 x = self.ndarray[ind]
                 x = maskNAN(x)
 
@@ -5525,7 +5538,7 @@ CALLED BY:
         if not len(self.ndarray[0]) > 0:
             return np.asarray([])
 
-        ind = KEYLIST.index(key)
+        ind = self.KEYLIST.index(key)
         if len(self.ndarray[ind]) > 0:
             startt = np.min(self.ndarray[0])
             for idx,val in enumerate(self.ndarray[ind]):
@@ -5630,7 +5643,7 @@ CALLED BY:
         elif endtime:
             vind = np.nonzero(timea < endtime)
         if vind and len(vind) > 0 and len(vind[0]) > 0:
-            newar = [[] for el in KEYLIST]
+            newar = [[] for el in self.KEYLIST]
             for id, ar in enumerate(self.ndarray):
                 if len(ar) > 0:
                     newar[id] = ar[list(vind[0])]
@@ -5655,7 +5668,7 @@ CALLED BY:
 
         # Non destructive
         stream = self.copy()
-        pos = KEYLIST.index('sectime')
+        pos = self.KEYLIST.index('sectime')
         tcol = stream.ndarray[0]
         stream = stream._copy_column('sectime','time')
         if swap:
@@ -5688,7 +5701,7 @@ CALLED BY:
         if numerical:
             TESTLIST = self.FLAGKEYLIST
         else:
-            TESTLIST = KEYLIST
+            TESTLIST = self.KEYLIST
 
         keylist = []
 
@@ -6132,7 +6145,7 @@ CALLED BY:
                         dailystream.ndarray = np.asarray([array[(len(ndarray[0])-1):] for array in dailystream.ndarray],dtype=object)
                 else:
                     lst = [elem for elem in self if starttime <= num2date(elem.time).replace(tzinfo=None) < endtime]
-                    ndarray = np.asarray([np.asarray([]) for key in KEYLIST],dtype=object)
+                    ndarray = np.asarray([np.asarray([]) for key in self.KEYLIST],dtype=object)
 
                 t4 = datetime.now(timezone.utc).replace(tzinfo=None)
                 #print "write - selecting time range needs:", t4-t3
@@ -6198,9 +6211,9 @@ CALLED BY:
         if not len(keys) == 3:
             print("idf2xyz: invalid keys provided")
 
-        indx = KEYLIST.index(keys[0])
-        indy = KEYLIST.index(keys[1])
-        indz = KEYLIST.index(keys[2])
+        indx = self.KEYLIST.index(keys[0])
+        indy = self.KEYLIST.index(keys[1])
+        indz = self.KEYLIST.index(keys[2])
         if unit == 'gon':
             ang_fac = 400./360.
         elif unit == 'rad':
@@ -6243,9 +6256,9 @@ CALLED BY:
         if not len(keys) == 3:
             print("xyz2idf: invalid keys provided")
 
-        indx = KEYLIST.index(keys[0])
-        indy = KEYLIST.index(keys[1])
-        indz = KEYLIST.index(keys[2])
+        indx = self.KEYLIST.index(keys[0])
+        indy = self.KEYLIST.index(keys[1])
+        indz = self.KEYLIST.index(keys[2])
 
         unit = kwargs.get('unit')
         if unit == 'gon':
@@ -6290,9 +6303,9 @@ CALLED BY:
             keys = ['x','y','z']
         if not len(keys) == 3:
             print("xyz2hdz: invalid keys provided")
-        indx = KEYLIST.index(keys[0])
-        indy = KEYLIST.index(keys[1])
-        indz = KEYLIST.index(keys[2])
+        indx = self.KEYLIST.index(keys[0])
+        indy = self.KEYLIST.index(keys[1])
+        indz = self.KEYLIST.index(keys[2])
 
         unit = kwargs.get('unit')
         if unit == 'gon':
@@ -6335,9 +6348,9 @@ CALLED BY:
         if not len(keys) == 3:
             print("hdz2xyz: invalid keys provided")
 
-        indx = KEYLIST.index(keys[0])
-        indy = KEYLIST.index(keys[1])
-        indz = KEYLIST.index(keys[2])
+        indx = self.KEYLIST.index(keys[0])
+        indy = self.KEYLIST.index(keys[1])
+        indz = self.KEYLIST.index(keys[2])
 
         unit = kwargs.get('unit')
         if unit == 'gon':
@@ -6608,6 +6621,7 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headon
     keylist = kwargs.get('keylist') # for PYBIN
     debug = kwargs.get('debug')
 
+    KEYLIST =  DataStream().KEYLIST
     if starttime:
         starttime = testtime(starttime)
     if endtime:
@@ -6820,6 +6834,8 @@ def _read(filename, dataformat=None, headonly=False, **kwargs):
     debug = kwargs.get('debug')
 
     stream = DataStream([],{})
+    KEYLIST =  DataStream().KEYLIST
+
     format_type = None
     foundapproptiate = False
     if not dataformat:
@@ -7008,6 +7024,8 @@ def join_streams(stream_a,stream_b, **kwargs):
         combinedstream = join_streams(stream_a,stream_b)
     """
     logger.info('join_streams: Start joining at %s.' % str(datetime.now()))
+    KEYLIST =  DataStream().KEYLIST
+
 
     # Check stream type and eventually convert them to ndarrays
     # --------------------------------------
@@ -7077,6 +7095,8 @@ def joinStreams(stream_a,stream_b, **kwargs):
         combinedstream = joinStreams(stream_a,stream_b)
     """
     logger.info('joinStreams: Start joining at %s.' % str(datetime.now()))
+    KEYLIST =  DataStream().KEYLIST
+
 
     # Check stream type and eventually convert them to ndarrays
     # --------------------------------------
@@ -7501,6 +7521,8 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
         keys = stream_a._get_key_headers(numerical=True)
     keysb = stream_b._get_key_headers(numerical=True)
     keys = list(set(keys)&set(keysb))
+    KEYLIST =  DataStream().KEYLIST
+
 
     if not len(keys) > 0:
         logger.error("subtractStreams: No common keys found - aborting")
