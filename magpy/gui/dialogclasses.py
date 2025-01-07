@@ -21,12 +21,31 @@ from io import open
 import dateutil.parser
 
 
+"""
+
+| class          |  since version  |  until version  |  runtime test  |  manual  |  used by |
+| -------------- |  -------------  |  -------------  |  ------------  | -------- |  ---------- |
+| OpenWebAddressDialog |    2.0.0  |                 |  level 1       |          | on_open_url |
+| ConnectWebServiceDialog | 2.0.0  |                 |  level 1       |          | on_open_webservice |
+|  xxx     |  2.0.0  |            |             |               |      | |
+|  xxx     |  2.0.0  |            |             |               |      | |
+
+runtime test:
+- : not tested
+level 0 : opens in linux
+level 1 : all buttons working and return ok
+level 2 : all options tested
+level 3 : level 2 also on Mac and Windows (level2w or level2m as temporary)
+
+* all tests are performed with the suggested configuration of the install recommendation
+"""
 
 # Subclasses for Dialogs called by magpy gui
 
 class OpenWebAddressDialog(wx.Dialog):
     """
-    Dialog for File Menu - Load URL
+    DESCRIPTION
+        Dialog for File Menu - Load URL
     """
 
     def __init__(self, parent, title, favorites):
@@ -34,56 +53,59 @@ class OpenWebAddressDialog(wx.Dialog):
             title=title, size=(400, 600))
         self.favorites = favorites
         if self.favorites == None or len(self.favorites) == 0:
-            self.favorites = ['http://www.intermagnet.org/test/ws/?id=BOU']
+            self.favorites = ['http://www.example.com']
         self.createControls()
         self.doLayout()
         self.bindControls()
 
     # Widgets
     def createControls(self):
-        # single anaylsis
-        #ftp://user:passwd@www.zamg.ac.at//data/magnetism/wic/variation/WIC20160627pmin.min
-        # db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
-        self.urlLabel = wx.StaticText(self, label="Insert address (e.g. 'ftp://.../' for all files, or 'ftp://.../data.dat' for a single file)",size=(500,30))
-        self.urlTextCtrl = wx.TextCtrl(self, value=self.favorites[0],size=(500,30))
-        self.favoritesLabel = wx.StaticText(self, label="Favorites:",size=(160,30))
+        # single analysis
+        self.urlLabel = wx.StaticText(self, label="Open address:",size=(500,-1))
+        self.urlHelp = wx.StaticText(self, label="Valid inputs: 'ftp://.../'for all files, or 'ftp://.../data.dat' for a single file",size=(500,-1))
+        #self.urlTextCtrl = wx.TextCtrl(self, value=self.favorites[0],size=(500,30))
+        self.favoritesLabel = wx.StaticText(self, label="Modify URL memory:",size=(160,-1))
         self.getFavsComboBox = wx.ComboBox(self, choices=self.favorites,
-            style=wx.CB_DROPDOWN, value=self.favorites[0],size=(160,-1))
-        self.addFavsButton = wx.Button(self, label='Add to favorites',size=(160,30))
-        self.dropFavsButton = wx.Button(self, label='Remove from favorites',size=(160,30))
+            style=wx.CB_DROPDOWN, value=self.favorites[0],size=(500,-1))
+        self.addFavsButton = wx.Button(self, label='Add current input',size=(200,-1))
+        self.dropFavsButton = wx.Button(self, label='Remove selected item',size=(200,-1))
 
-        self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,-1))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,-1))
 
     def doLayout(self):
+        #mainSizer = wx.BoxSizer(wx.VERTICAL)
+        #boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        #gridSizer = wx.FlexGridSizer(rows=3, cols=2, vgap=10, hgap=10)
+        # mainSizer contains main selection menua
+
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
-        gridSizer = wx.FlexGridSizer(rows=5, cols=3, vgap=10, hgap=10)
+        gridSizer = wx.FlexGridSizer(rows=6, cols=2, vgap=10, hgap=10)
+        gridSizer1 = wx.FlexGridSizer(rows=2, cols=1, vgap=10, hgap=10)
+        gridSizer2 = wx.FlexGridSizer(rows=5, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        # Add the controls to the sizers:
         for control, options in \
                 [(self.urlLabel, noOptions),
-                  emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.getFavsComboBox, expandOption),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.favoritesLabel, noOptions),
                   emptySpace,
+                 (self.addFavsButton, dict(flag=wx.ALIGN_LEFT)),
+                 emptySpace,
+                 (self.dropFavsButton, dict(flag=wx.ALIGN_LEFT)),
                   emptySpace,
-                 (self.getFavsComboBox, expandOption),
-                 (self.urlTextCtrl, expandOption),
-                  emptySpace,
-                 (self.addFavsButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                  emptySpace,
-                 (self.dropFavsButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]:
+                  (self.urlHelp, noOptions),
+                  emptySpace]:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -102,21 +124,24 @@ class OpenWebAddressDialog(wx.Dialog):
         http://www.intermagnet.org/test/ws/?id=BOU
         """
         url = self.getFavsComboBox.GetValue()
-        self.urlTextCtrl.SetValue(url)
+        #self.urlTextCtrl.SetValue(url)
 
 
     def AddFavs(self, e):
-        url = self.urlTextCtrl.GetValue()
+        # url = self.urlTextCtrl.GetValue()
+        url = self.getFavsComboBox.GetValue()
         if not url in self.favorites:
             self.favorites.append(url)
             self.getFavsComboBox.Append(str(url))
 
     def DropFavs(self, e):
-        url = self.urlTextCtrl.GetValue()
+        url = self.getFavsComboBox.GetValue()
         self.favorites = [elem for elem in self.favorites if not elem == url]
         self.getFavsComboBox.Clear()
         for elem in self.favorites:
             self.getFavsComboBox.Append(elem)
+        if self.favorites and len(self.favorites) > 0:
+            self.getFavsComboBox.SetValue(self.favorites[0])
 
 class ConnectWebServiceDialog(wx.Dialog):
     """
@@ -418,34 +443,43 @@ class ExportDataDialog(wx.Dialog):
     """
     Dialog for Exporting data
     """
-    def __init__(self, parent, title, path, stream, defaultformat):
+    def __init__(self, parent, title, path, datadict, exportoptions):
         super(ExportDataDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
+
         self.WriteFormats = [ key for key in SUPPORTED_FORMATS if 'w' in SUPPORTED_FORMATS[key][0]]
+        stream = datadict.get('dataset')
+        samplingrate = datadict.get('samplingrate')
+        coverage = datadict.get('coverage')
+        defaultformat = exportoptions.get('format_type')
 
-        #print ("STREAM content:", stream.header.get('DataType'))
-        #print ("Too be used to limit selection possible formats")
+        print (self.WriteFormats)
+        ALL = ['IAGA', 'WDC', 'IMF', 'IAF', 'BLV', 'BLV1_2', 'IYFV', 'DKA', 'DIDD', 'COVJSON', 'PYSTR', 'PYASCII', 'CSV',
+         'IMAGCDF', 'PYCDF', 'LATEX']
+        LOWRESOLUTIONFORMATS = ['WDC', 'IMF', 'IAF', 'IYFV', 'DKA', 'DIDD']
+        KVALUEFORMAT = ['DKA']
         EXPERIMENTALFORMATS = ['LATEX']
-        #if self.options.get('experimental'):
-        self.WriteFormats = [el for el in self.WriteFormats if not el in EXPERIMENTALFORMATS]
-
         BLVFORMATS = ['BLV','PYCDF','PYSTR']
+        self.WriteFormats = [el for el in self.WriteFormats if not el in EXPERIMENTALFORMATS]
         if stream.header.get('DataType','').startswith('MagPyDI') or stream.header.get('DataFormat','') == 'MagPyDI':
             self.WriteFormats = [el for el in self.WriteFormats if el in BLVFORMATS]
         else:
-            self.WriteFormats = [el for el in self.WriteFormats if not el == 'BLV']
+            self.WriteFormats = [el for el in self.WriteFormats if not el.startswith('BLV')]
+            if samplingrate < 59:
+                self.WriteFormats = [el for el in self.WriteFormats if not el in LOWRESOLUTIONFORMATS]
+            if samplingrate > 3601:
+                self.WriteFormats = [el for el in self.WriteFormats if not el in ['WDC','IMF','IAF','DIDD']]
+            if coverage <= 28:
+                self.WriteFormats = [el for el in self.WriteFormats if not el in ['IAF']]
 
         if not defaultformat or not defaultformat in self.WriteFormats:
             defaultformat = 'PYCDF'
         self.default = self.WriteFormats.index(defaultformat)
         # use stream info and defaults file export
-        self.filenamebegins = None
-        self.filenameends = None
-        self.dateformat = None
-        self.coverage = None
         self.mode = 'overwrite'
+        self.exportoptions = exportoptions
         self.stream = stream
-        self.filename = self.GetFilename(stream, defaultformat, self.filenamebegins, self.filenameends,self.coverage,self.dateformat)
+        self.filename = self.GetFilename(stream, exportoptions=exportoptions)
         self.path = path
         self.createControls()
         self.doLayout()
@@ -518,22 +552,27 @@ class ExportDataDialog(wx.Dialog):
         self.formatComboBox.Bind(wx.EVT_COMBOBOX, self.OnFormatChange)
 
 
-    def GetFilename(self, stream, format_type, filenamebegins=None, filenameends=None, coverage=None, dateformat=None, blvyear=None):
+    def GetFilename(self, stream, exportoptions=None):
         """
         DESCRIPTION:
             Helper method to determine filename from selections
         """
+        filenamebegins = exportoptions.get('filenamebegins')
+        filenameends = exportoptions.get('filenameends')
+        coverage = exportoptions.get('coverage')
+        dateformat = exportoptions.get('dateformat')
+        format_type  = exportoptions.get('format_type')
+        year  = exportoptions.get('year')
+
         #print ("Calling GetFilename: if file is MagPyDI - eventually open a message box to define year", filenamebegins, filenameends, coverage, dateformat)
-        format_type, self.filenamebegins, self.filenameends, coverage, self.dateformat = stream._write_format(format_type, filenamebegins, filenameends, coverage, dateformat , blvyear)
-        #print ("obtained:", self.filenamebegins, self.filenameends, self.coverage, self.dateformat)
-        self.coverage = coverage
-        if coverage == 'all':
+        format_type, self.exportoptions['filenamebegins'], self.exportoptions['filenameends'], self.exportoptions['coverage'], self.exportoptions['dateformat'] = stream._write_format(format_type, filenamebegins, filenameends, coverage, dateformat , year)
+        if self.exportoptions.get('coverage') == 'all':
             datelook = ''
         else:
-            datelook = datetime.strftime(stream._find_t_limits()[0],self.dateformat)
+            datelook = datetime.strftime(stream._find_t_limits()[0],self.exportoptions.get('dateformat'))
         if format_type.endswith('PYCDF'):
-            self.filenameends = '.cdf'
-        filename = self.filenamebegins+datelook+self.filenameends
+            self.exportoptions['filenameends'] = '.cdf'
+        filename = self.exportoptions.get('filenamebegins')+datelook+self.exportoptions.get('filenameends')
         return filename
 
 
@@ -548,16 +587,16 @@ class ExportDataDialog(wx.Dialog):
 
     def OnModifyButton(self, event):
         # open a dialog to select filename specifications
-        helpdlg = ExportModifyNameDialog(None, title='File name specifications',filenamebegins=self.filenamebegins, filenameends=self.filenameends,coverage=self.coverage,dateformat=self.dateformat,mode=self.mode, year='unspecified')
+        helpdlg = ExportModifyNameDialog(None, title='File name specifications',exportoptions=self.exportoptions)
         blvyear = None
         if helpdlg.ShowModal() == wx.ID_OK:
-            self.filenamebegins = helpdlg.beginTextCtrl.GetValue()
-            self.filenameends = helpdlg.endTextCtrl.GetValue()
-            self.dateformat = helpdlg.dateTextCtrl.GetValue()
-            self.coverage = helpdlg.coverageComboBox.GetValue()
-            self.mode = helpdlg.modeComboBox.GetValue()
+            self.exportoptions['filenamebegins'] = helpdlg.beginTextCtrl.GetValue()
+            self.exportoptions['filenameends'] = helpdlg.endTextCtrl.GetValue()
+            self.exportoptions['dateformat'] = helpdlg.dateTextCtrl.GetValue()
+            self.exportoptions['coverage'] = helpdlg.coverageComboBox.GetValue()
+            self.exportoptions['mode'] = helpdlg.modeComboBox.GetValue()
             year = helpdlg.yearTextCtrl.GetValue()
-            if not year == 'unspecified':
+            if year:
                 try:
                     blvyear = int(year)
                 except:
@@ -572,11 +611,12 @@ class ExportDataDialog(wx.Dialog):
     def OnFormatChange(self, event):
         # call stream._write_format to determine self.filename
         selformat = self.formatComboBox.GetValue()
-        self.filenamebegins = None
-        self.filenameends = None
-        self.coverage = None
-        self.dateformat = None
-        self.filename = self.GetFilename(self.stream, selformat, self.filenamebegins, self.filenameends,self.coverage,self.dateformat)
+        self.exportoptions['format_type'] = selformat
+        self.exportoptions['filenamebegins'] = None
+        self.exportoptions['filenameends'] = None
+        self.exportoptions['coverage'] = None
+        self.exportoptions['dateformat'] = None
+        self.filename = self.GetFilename(self.stream, selformat, exportoptions=self.exportoptions)
         self.filenameTextCtrl.SetValue(self.filename)
 
 
@@ -584,15 +624,10 @@ class ExportModifyNameDialog(wx.Dialog):
     """
     Helper Dialog for Exporting data
     """
-    def __init__(self, parent, title, filenamebegins, filenameends, coverage, dateformat,mode, year):
+    def __init__(self, parent, title, exportoptions):
         super(ExportModifyNameDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
-        self.filenamebegins = filenamebegins
-        self.filenameends = filenameends
-        self.dateformat = dateformat
-        self.coverage = coverage
-        self.mode = mode
-        self.year = year
+        self.exportoptions = exportoptions
         self.createControls()
         self.doLayout()
 
@@ -602,18 +637,18 @@ class ExportModifyNameDialog(wx.Dialog):
 
         self.beginLabel = wx.StaticText(self, label="Name(s) start with ...", size=(160,30))
         self.endLabel = wx.StaticText(self, label="Name(s) end with ...", size=(160,30))
-        self.beginTextCtrl = wx.TextCtrl(self, value=self.filenamebegins, size=(160,30))
-        self.endTextCtrl = wx.TextCtrl(self, value=self.filenameends, size=(160,30))
+        self.beginTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('filenamebegins'), size=(160,30))
+        self.endTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('filenameends'), size=(160,30))
         self.dateformatLabel = wx.StaticText(self, label="Date looks like ...")
-        self.dateTextCtrl = wx.TextCtrl(self, value=self.dateformat, size=(160,-1))
+        self.dateTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('dateformat'), size=(160,-1))
         self.coverageLabel = wx.StaticText(self, label="File covers ...")
         self.coverageComboBox = wx.ComboBox(self, choices=['hour','day','month','year','all'],
-            style=wx.CB_DROPDOWN, value=self.coverage,size=(160,-1))
+            style=wx.CB_DROPDOWN, value=self.exportoptions.get('coverage'),size=(160,-1))
         self.modeLabel = wx.StaticText(self, label="Write mode ...")
         self.modeComboBox = wx.ComboBox(self, choices=['replace','append', 'overwrite', 'skip'],
-            style=wx.CB_DROPDOWN, value=self.mode,size=(160,-1))
+            style=wx.CB_DROPDOWN, value=self.exportoptions.get('mode'),size=(160,-1))
         self.yearLabel = wx.StaticText(self, label="Year (BLV export):", size=(160,30))
-        self.yearTextCtrl = wx.TextCtrl(self, value=self.year, size=(160,30))
+        self.yearTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('year'), size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,30))
 

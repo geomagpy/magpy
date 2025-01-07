@@ -63,11 +63,11 @@ def fill_list(mylist, target_len, value):
     return mylist[:target_len] + [value] * (target_len - len(mylist))
 
 
-def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=None, yranges=None, padding=None,
-           symbols=None, colors=None, title=None, xinds=[None], legend={}, grid={}, patch={}, annotate=False,
-           fill=None, showpatch=[True], errorbars=None, functions=None, functionfmt="r-", xlabelposition=None,
-           ylabelposition=None, yscale=None, dateformatter=None, force=False, width=10, height=4, alpha=0.5,
-           variables=None, figure=None, debug=False):
+def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges = None, padding = None,
+    symbols = None, colors = None, title = None, xinds = None, legend = None, grid = None, patch = None, annotate = False,
+    fill = None, showpatch = None, errorbars = None, functions = None, functionfmt = "r-", xlabelposition = None,
+    ylabelposition = None, yscale = None, dateformatter = None, force = False, width = 10, height = 4, alpha = 0.5,
+    variables = None, figure = None, debug=False):
     """
     DESCRIPTION:
         tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a shared x axis based on the first plot.
@@ -135,7 +135,43 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
         tsplot([teststream,xxx],[['x','y'],['x','y']], symbols=[["-","-"],[".","--"]], symbolcolor=[[0.5, 0.5, 0.5]], errorbars=[[{},{}],[e1,e2]], height=2)
 
     """
-    # This method requires the porovision of data sets on which the get_gaps method has been applied
+    # This method requires the provision of data sets on which the get_gaps method has been applied
+    def is_list_empty(testlist):
+        return isinstance(testlist, list) and all(map(is_list_empty, testlist))
+
+    if not data:
+        data = [DataStream()]
+    if not keys:
+        keys = [['dummy']]
+    if not symbols:
+        symbols = [[]]
+    if not colors:
+        colors = [[]]
+    if not timecolumn:
+        timecolumn = ['time']
+    if not yranges:
+        yranges = [[]]
+    if not yscale:
+        yscale = [[]]
+    if not padding:
+        padding = [[]]
+    if not fill:
+        fill = [[]]
+    if not errorbars:
+        errorbars = [[]]
+    if not functions:
+        functions = [[]]
+    if not xinds:
+        xinds = [None]
+    if not showpatch:
+        showpatch = [True]
+    if not legend:
+        legend = {}
+    if not grid:
+        grid = {}
+    if not patch:
+        patch = {}
+
     titledone = False
     # check if provided data is a list
     if not isinstance(data, (list, tuple)):
@@ -157,15 +193,15 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
     else:
         hght = int(height * np.concatenate(keys).size)
         separate = True
-    if not symbols:
+    if is_list_empty(symbols):
         symbols = [["-" for el in line] for line in keys]
-    if not colors:
+    if is_list_empty(colors):
         colors = [[[0.8, 0.8, 0.8] for el in line] for line in keys]
-    if not yranges:
+    if is_list_empty(yranges):
         yranges = [[["default", "default"] for el in line] for line in keys]
     if yscale and not isinstance(yscale, (list, tuple)):
         yscale = [[yscale for el in line] for line in keys]
-    if not yscale:
+    if is_list_empty(yscale):
         yscale = [["linear" for el in line] for line in keys]
     keys = fill_list(keys, amount, keys[-1])
     symbols = fill_list(symbols, amount, symbols[-1])
@@ -184,19 +220,19 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
             yranges = fill_list(yranges, amount, yranges[-1])
         else:
             yranges = None
-    if padding:
+    if not is_list_empty(padding):
         if len(padding[0]) == len(keys[0]):
             padding = fill_list(padding, amount, padding[-1])
         else:
             padding = None
     skey = list(np.array(keys, dtype=object).shape)[:2]
-    if errorbars:
+    if not is_list_empty(errorbars):
         if not isinstance(errorbars, (list, tuple)):
             errorbars = False
         elif not skey == list(np.array(errorbars, dtype=object).shape)[:2]:
             print("Given error bars do not fit in shape to keys - skipping")
             errorbars = False
-    if functions:
+    if not is_list_empty(functions):
         if not isinstance(functions, (list, tuple)):
             functions = False
         elif not skey == list(np.array(functions, dtype=object).shape)[:2]:
@@ -266,7 +302,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                     yranges[idx][i] = [0, 9]
                 # Fill between graphs
                 # ------------------
-                if fill:
+                if fill and not is_list_empty(fill):
                     try:
                         fdi = fill[idx][i]
                     except:
@@ -284,7 +320,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                             ax.fill_between(t, comp, boundary, color=fillcolor, alpha=fillalpha, where=indi)
                 # Error bars
                 # ------------------
-                if errorbars:
+                if errorbars and not is_list_empty(errorbars):
                     errordict = errorbars[idx][i]
                     if errordict and isinstance(errordict, dict):
                         yerr = dat._get_column(errordict.get('key'))
@@ -297,7 +333,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                                          capsize=capsize, ecolor=errorcolor)
                 # Plot the main graph
                 # ------------------
-                if force and not len(comp) > 0 and patch:
+                if force and not len(comp) > 0 and patch and not is_list_empty(patch):
                     # need the time range covered by patches
                     plt.plot(t, [0.5] * len(t), 'w-', alpha=0.0)
                     mincomp = 0
@@ -315,7 +351,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                 # Padding and y ranges
                 # ------------------
                 adjustrange = False
-                if yranges:
+                if yranges and not is_list_empty(yranges):
                     adjustrange = False
                     if not yranges[idx][i][0] == "default":
                         adjustrange = True
@@ -325,7 +361,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                         maxcomp = yranges[idx][i][1]
                     if adjustrange:
                         plt.ylim(mincomp, maxcomp)
-                if padding and not adjustrange:
+                if padding and not is_list_empty(padding) and not adjustrange:
                     mincomp = mincomp - padding[idx][i]
                     maxcomp = maxcomp + padding[idx][i]
                     plt.ylim(mincomp, maxcomp)
@@ -388,7 +424,7 @@ def tsplot(data=[DataStream()], keys=[['dummy']], timecolumn=['time'], xrange=No
                 # plt.xlim(x[0],x[-1])
                 # Functions
                 # ------------------
-                if functions:
+                if functions and not is_list_empty(functions):
                     function = functions[idx][i]
                     if function and isinstance(function, (list, tuple)):
                         if len(np.array(function,

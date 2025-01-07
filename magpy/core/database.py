@@ -419,6 +419,17 @@ REMOVED:
         cursor.close()
 
 
+    def close(self):
+        """
+        DEFINITION:
+            close the database
+        """
+        try:
+            self.db.close()
+        except:
+            pass
+
+
     def coordinates(self, pier="A2", epsgcode='epsg:4326'):
         """
         DEFINITION:
