@@ -27,8 +27,15 @@ import dateutil.parser
 | -------------- |  -------------  |  -------------  |  ------------  | -------- |  ---------- |
 | OpenWebAddressDialog |    2.0.0  |                 |  level 1       |          | file_on_open_url |
 | ConnectWebServiceDialog | 2.0.0  |                 |  level 1       |          | file_on_open_webservice |
-| ExportDataDialog |        2.0.0  |                 |                |          | file_export_data  |
-| ExportModifyNameDialog |  2.0.0  |                 |                |          | ExportDataDialog  |
+| LoadDataDialog |        2.0.0    |                 |                |          | file_export_data  |
+| ExportDataDialog |        2.0.0  |                 |  level 1       |          | file_export_data  |
+| ExportModifyNameDialog |  2.0.0  |                 |  level 1       |          | ExportDataDialog  |
+| DatabaseConnectDialog |  2.0.0   |                 |  level 1       |          | db_on_connect |
+| OptionsInitDialog |      2.0.0   |                 |  level 1       |          | options_init |
+| xx |  2.0.0   |                 |               |          | xx |
+| xx |  2.0.0   |                 |               |          | xx |
+| xx |  2.0.0   |                 |               |          | xx |
+| xx |  2.0.0   |                 |               |          | xx |
 
 runtime test:
 - : not tested
@@ -85,8 +92,6 @@ class OpenWebAddressDialog(wx.Dialog):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
         # A GridSizer will contain the other controls:
         gridSizer = wx.FlexGridSizer(rows=6, cols=2, vgap=10, hgap=10)
-        gridSizer1 = wx.FlexGridSizer(rows=2, cols=1, vgap=10, hgap=10)
-        gridSizer2 = wx.FlexGridSizer(rows=5, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
@@ -597,7 +602,6 @@ class ExportDataDialog(wx.Dialog):
             self.exportoptions['mode'] = helpdlg.modeComboBox.GetValue()
             self.exportoptions['subdirectory'] = helpdlg.subdirComboBox.GetValue()
             format_type = self.exportoptions.get('format_type')
-            print (format_type)
             if format_type == 'IMF':
                 self.exportoptions['version'] = helpdlg.versionTextCtrl.GetValue()
                 self.exportoptions['gin'] = helpdlg.ginTextCtrl.GetValue()
@@ -711,6 +715,8 @@ class ExportModifyNameDialog(wx.Dialog):
                                                 style=wx.CB_DROPDOWN, value=self.exportoptions.get('datatype'),
                                                 size=(160, -1))
             elemlist.append((self.datatypeComboBox, expandOption))
+            self.beginTextCtrl.Disable()
+            self.endTextCtrl.Disable()
 
         if format_type == 'IAF':
             """
@@ -722,6 +728,9 @@ class ExportModifyNameDialog(wx.Dialog):
                                                 style=wx.CB_DROPDOWN, value=self.exportoptions.get('kvals'),
                                                 size=(160, -1))
             elemlist.append((self.kvalsComboBox, expandOption))
+            self.beginTextCtrl.Disable()
+            self.endTextCtrl.Disable()
+            self.coverageComboBox.Disable()
 
         if format_type == 'IYFV':
             """
@@ -770,6 +779,8 @@ class ExportModifyNameDialog(wx.Dialog):
                                                 style=wx.CB_DROPDOWN, value=self.exportoptions.get('environment'),
                                                 size=(160, -1))
             elemlist.append((self.environmentComboBox, expandOption))
+            self.beginTextCtrl.Disable()
+            self.endTextCtrl.Disable()
 
         if format_type == 'BLV':
             """
@@ -1118,69 +1129,45 @@ class OptionsInitDialog(wx.Dialog):
     Dialog for Database Menu - Connect MySQL
     """
 
-    def __init__(self, parent, title, options):
+    def __init__(self, parent, title, guidict, analysisdict):
         super(OptionsInitDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
-        self.options = options
-        self.funclist = ['spline','polynomial']
+        self.guidict = guidict
+        self.analysisdict = analysisdict
+        self.funclist = ['spline', 'polynomial', 'harmonic', 'least-squares', 'mean']
         self.createControls()
         self.doLayout()
 
     # Widgets
     def createControls(self):
-        # single anaylsis
-        # db = mysql.connect (host = "localhost",user = "user",passwd = "secret",db = "mysqldb")
-        self.dboptLabel = wx.StaticText(self, label="Database:",size=(160,30))
         self.basicLabel = wx.StaticText(self, label="Basics:",size=(160,30))
         self.calcLabel = wx.StaticText(self, label="Calculation:",size=(160,30))
         self.otherLabel = wx.StaticText(self, label="Other:",size=(160,30))
-        self.hostLabel = wx.StaticText(self, label="Host",size=(160,30))
-        self.hostTextCtrl = wx.TextCtrl(self,value=self.options.get('host','localhost'),size=(160,30))
-        self.userLabel = wx.StaticText(self, label="User",size=(160,30))
-        self.userTextCtrl = wx.TextCtrl(self, value=self.options.get('user','Max'),size=(160,30))
-        self.passwdLabel = wx.StaticText(self, label="Password",size=(160,30))
-        self.passwdTextCtrl = wx.TextCtrl(self, value=self.options.get('passwd','Secret'),style=wx.TE_PASSWORD,size=(160,30))
-        self.dbLabel = wx.StaticText(self, label="Database",size=(160,30))
-        self.dbTextCtrl = wx.TextCtrl(self, value=self.options.get('dbname','MyDB'),size=(160,30))
-        self.dirnameLabel = wx.StaticText(self, label="Default directory",size=(160,30))
-        self.dirnameTextCtrl = wx.TextCtrl(self, value=self.options.get('dirname',''),size=(160,30))
-
-        self.stationidLabel = wx.StaticText(self, label="Station ID",size=(160,30))
-        self.stationidTextCtrl = wx.TextCtrl(self, value=self.options.get('stationid','WIC'),size=(160,30))
-
+        self.dirnameLabel = wx.StaticText(self, label="Default load directory",size=(160,30))
+        self.dirnameTextCtrl = wx.TextCtrl(self, value=self.guidict.get('dirname',''),size=(160,30))
+        self.exportLabel = wx.StaticText(self, label="Default export directory",size=(160,30))
+        self.exportTextCtrl = wx.TextCtrl(self, value=self.guidict.get('exportpath',''),size=(160,30))
+        self.stationidLabel = wx.StaticText(self, label="Default station code",size=(160,30))
+        self.stationidTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('defaultstation','WIC'),size=(160,30))
         self.experimentalLabel = wx.StaticText(self, label="Experimental methods",size=(160,30))
         self.experimentalCheckBox = wx.CheckBox(self, label="Activate", size=(160,30))
         self.martasscantimeLabel = wx.StaticText(self, label="Scanning MARTAS [sec]",size=(160,30))
-        self.martasscantimeTextCtrl = wx.TextCtrl(self, value=self.options.get('martasscantime','20'),size=(160,30))
-
-        #self.basevalueLabel = wx.StaticText(self, label="Basevalue components",size=(160,30))
-        #self.basevalueRadioBox = wx.RadioBox(self,
-        #    label="",
-        #    choices=self.basevalorientation, majorDimension=2, style=wx.RA_SPECIFY_COLS, size=(160,-1))
-
+        self.martasscantimeTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('martasscantime','20'),size=(160,30))
         self.baselinedirectLabel = wx.StaticText(self, label="Apply baseline",size=(160,30))
         self.baselinedirectCheckBox = wx.CheckBox(self, label="directly", size=(160,30))
-        self.baselinedirectCheckBox.SetValue(self.options.get('baselinedirect',False))
-        self.fitfunctionLabel = wx.StaticText(self, label="Fit function",size=(160,30))
+        self.baselinedirectCheckBox.SetValue(self.analysisdict.get('baselinedirect',False))
+        self.fitfunctionLabel = wx.StaticText(self, label="Default fit function",size=(160,30))
         self.fitfunctionComboBox = wx.ComboBox(self, choices=self.funclist,
-                              style=wx.CB_DROPDOWN, value=self.options.get('fitfunction','spline'),size=(160,-1))
+                              style=wx.CB_DROPDOWN, value=self.analysisdict.get('fitfunction','spline'),size=(160,-1))
         self.fitknotstepLabel = wx.StaticText(self, label="Knotstep (spline)",size=(160,30))
-        self.fitknotstepTextCtrl = wx.TextCtrl(self, value=self.options.get('fitknotstep','0.3'),size=(160,30))
+        self.fitknotstepTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('fitknotstep','0.3'),size=(160,30))
         self.fitdegreeLabel = wx.StaticText(self, label="Degree (polynom)",size=(160,30))
-        self.fitdegreeTextCtrl = wx.TextCtrl(self, value=self.options.get('fitdegree','5'),size=(160,30))
-        self.bookmarksLabel = wx.StaticText(self, label="Favorite URLs",size=(160,30))
-        bm = self.options.get('bookmarks',['http://www.intermagnet.org/test/ws/?id=BOU'])
-        self.bookmarksComboBox = wx.ComboBox(self, choices=bm,style=wx.CB_DROPDOWN, value=bm[0],size=(160,-1))
-
+        self.fitdegreeTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('fitdegree','5'),size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
         self.saveButton = wx.Button(self, wx.ID_OK, label='Save',size=(160,30))
 
-        #self.bookmarksComboBox.Disable()
-
-        self.experimentalCheckBox.SetValue(self.options.get('experimental',False))
-        f = self.dboptLabel.GetFont()
+        self.experimentalCheckBox.SetValue(self.guidict.get('experimental',False))
         newf = wx.Font(14, wx.DECORATIVE, wx.ITALIC, wx.BOLD)
-        self.dboptLabel.SetFont(newf)
         self.basicLabel.SetFont(newf)
         self.calcLabel.SetFont(newf)
         self.otherLabel.SetFont(newf)
@@ -1195,58 +1182,38 @@ class OptionsInitDialog(wx.Dialog):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        elemlist = [(self.dboptLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.hostLabel, noOptions),
-                 (self.userLabel, noOptions),
-                 (self.passwdLabel, noOptions),
-                 (self.dbLabel, noOptions),
-                 (self.hostTextCtrl, expandOption),
-                 (self.userTextCtrl, expandOption),
-                 (self.passwdTextCtrl, expandOption),
-                 (self.dbTextCtrl, expandOption),
-                 (self.basicLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.dirnameLabel, noOptions),
-                 (self.stationidLabel, noOptions),
-                  emptySpace,
-                 (self.bookmarksLabel, noOptions),
-                 (self.dirnameTextCtrl, expandOption),
-                 (self.stationidTextCtrl, expandOption),
-                  emptySpace,
-                 (self.bookmarksComboBox, noOptions),
-                 (self.calcLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.baselinedirectLabel, noOptions),
-                 (self.fitfunctionLabel, noOptions),
-                 (self.fitknotstepLabel, noOptions),
-                 (self.fitdegreeLabel, noOptions),
-                 (self.baselinedirectCheckBox, noOptions),
-                 (self.fitfunctionComboBox, noOptions),
-                 (self.fitknotstepTextCtrl, expandOption),
-                 (self.fitdegreeTextCtrl, expandOption),
-                 (self.otherLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.martasscantimeLabel, noOptions),
+        elemlist = [(self.basicLabel, noOptions),
                     emptySpace,
-                 (self.experimentalLabel, noOptions),
-                  emptySpace,
-                 (self.martasscantimeTextCtrl, noOptions),
+                    (self.calcLabel, noOptions),
                     emptySpace,
-                 (self.experimentalCheckBox, noOptions),
-                  emptySpace,
-                 (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                  emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+                    (self.stationidLabel, noOptions),
+                    (self.stationidTextCtrl, expandOption),
+                    (self.fitfunctionLabel, noOptions),
+                    (self.fitfunctionComboBox, noOptions),
+                    (self.dirnameLabel, noOptions),
+                    (self.dirnameTextCtrl, expandOption),
+                    (self.fitknotstepLabel, noOptions),
+                    (self.fitknotstepTextCtrl, expandOption),
+                    (self.exportLabel, noOptions),
+                    (self.exportTextCtrl, expandOption),
+                    (self.fitdegreeLabel, noOptions),
+                    (self.fitdegreeTextCtrl, expandOption),
+                    (self.otherLabel, noOptions),
+                    emptySpace,
+                    emptySpace,
+                    emptySpace,
+                    (self.baselinedirectLabel, noOptions),
+                    (self.baselinedirectCheckBox, noOptions),
+                    (self.experimentalLabel, noOptions),
+                    (self.experimentalCheckBox, noOptions),
+                    (self.martasscantimeLabel, noOptions),
+                    (self.martasscantimeTextCtrl, noOptions),
+                    emptySpace,
+                    emptySpace,
+                    (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
+                    emptySpace,
+                    emptySpace,
+                    (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
 
         # A GridSizer will contain the other controls:
         cols = 4
@@ -1269,28 +1236,22 @@ class OptionsDIDialog(wx.Dialog):
     Dialog for DI specific options
     """
 
-    def __init__(self, parent, title, options):
+    def __init__(self, parent, title, analysisdict):
         super(OptionsDIDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
-        self.options = options
+        self.analysisdict = analysisdict
+        defaultstation = self.analysisdict.get('defaultstation')
+        self.currentstation = defaultstation
+        self.stations = self.analysisdict.get('stations')
+        self.stationlist = [el for el in self.stations]
+        self.dicontent = self.stations.get(defaultstation)
 
-        self.abstypes = ['manual','autodif']
-        self.dipathlist = self.options.get('dipathlist','')
-        if isinstance(self.dipathlist, dict):
-            dipath = self.options.get('didictionary',{}).get('didatapath','')
-            self.dipathlist = dipath
-        elif isinstance(self.dipathlist, str):
-            self.dipathlist = self.dipathlist
-        else:
-            self.dipathlist = self.dipathlist[0]
-
-        self.sheetorder = self.options.get('order','')
-        #self.sheetorder = ",".join(self.options.get('order',''))
-        self.sheetdouble = False
-        self.sheetscale = False
-        if self.options.get('double','False') == 'True':
+        self.sheetorder = self.dicontent.get('order','')
+        self.sheetdouble = self.dicontent.get('double',False)
+        self.sheetscale = self.dicontent.get('scalevalue',False)
+        if self.dicontent.get('double',False) in [True,'True']:
             self.sheetdouble = True
-        if self.options.get('scalevalue','False') == 'True':
+        if self.dicontent.get('scalevalue',False) in [True,'True']:
             self.sheetscale = True
         self.createControls()
         self.doLayout()
@@ -1298,80 +1259,18 @@ class OptionsDIDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         # General paths
-        self.DIPathsLabel = wx.StaticText(self, label="Set paths:",size=(160,30))
-        self.dipathlistLabel = wx.StaticText(self, label="Default DI path")
-        self.divariopathLabel = wx.StaticText(self, label="DI variometer")
-        self.discalarpathLabel = wx.StaticText(self, label="DI scalar")
-        self.diselectpathLabel = wx.StaticText(self, label="(select paths in DI panel)")
-        self.dipathlistTextCtrl = wx.TextCtrl(self, value=self.dipathlist)
-        self.divariopathTextCtrl = wx.TextCtrl(self, value=self.options.get('divariopath',''))
-        self.discalarpathTextCtrl = wx.TextCtrl(self, value=self.options.get('discalarpath',''))
-        self.dipathlistTextCtrl.Disable()
-        self.divariopathTextCtrl.Disable()
-        self.discalarpathTextCtrl.Disable()
+        self.stationLabel = wx.StaticText(self, label="Select station code",size=(160,-1))
+        self.stationComboBox = wx.ComboBox(self, choices=self.stationlist,
+                              style=wx.CB_DROPDOWN, value=self.currentstation,size=(160,-1))
         # Thresholds and defaults
-        """
-        self.DIDefaultsLabel = wx.StaticText(self, label="Defaults:",size=(160,30))
-        self.diexpDLabel = wx.StaticText(self, label="expected Dec",size=(160,30))
-        self.diexpILabel = wx.StaticText(self, label="expected Inc",size=(160,30))
-        self.diidLabel = wx.StaticText(self, label="DI ID",size=(160,30))
-        self.ditypeLabel = wx.StaticText(self, label="DI Type",size=(160,30)) #abstype
-        self.diazimuthLabel = wx.StaticText(self, label="Azimuth",size=(160,30))
-        self.dipierLabel = wx.StaticText(self, label="Pier",size=(160,30))
-        self.dialphaLabel = wx.StaticText(self, label="Alpha",size=(160,30))
-        self.dideltaFLabel = wx.StaticText(self, label="Delta F",size=(160,30))
-        self.didbaddLabel = wx.StaticText(self, label="Add to DB",size=(160,30))
-        diexpD = str(self.options.get('diexpD',''))
-        diexpI = str(self.options.get('diexpI',''))
-        diazimuth = str(self.options.get('diazimuth',''))
-        dipier = str(self.options.get('dipier',''))
-        dialpha = str(self.options.get('dialpha',''))
-        dideltaF = str(self.options.get('dideltaF',''))
-        self.diannualmeanLabel = wx.StaticText(self, label="AnnualMean (*)",size=(160,30))
-        self.dibetaLabel = wx.StaticText(self, label="Beta",size=(160,30))
-        self.dideltaDLabel = wx.StaticText(self, label="Delta D",size=(160,30))
-        self.dideltaILabel = wx.StaticText(self, label="Delta I",size=(160,30))
-        diannualmean = str(self.options.get('diannualmean',''))
-        dibeta = str(self.options.get('dibeta',''))
-        dideltaD = str(self.options.get('dideltaD',''))
-        dideltaI = str(self.options.get('dideltaI',''))
-        self.dibetaTextCtrl = wx.TextCtrl(self, value=dibeta,size=(160,30))
-        self.dideltaDTextCtrl = wx.TextCtrl(self, value=dideltaD,size=(160,30))
-        self.diannualmeanTextCtrl = wx.TextCtrl(self, value=diannualmean,size=(160,30))
-        self.dideltaITextCtrl = wx.TextCtrl(self, value=dideltaI,size=(160,30))
-        """
-        """ add
-        - beta:         (float) orientation angle 2 in deg
-        - deltaD:       (float) = kwargs.get('deltaD')
-        - deltaI:       (float) = kwargs.get('deltaI')
-        - outputformat: (string) one of 'idf', 'xyz', 'hdf'
-        - annualmeans:  (list) provide annualmean for x,y,z as [x,y,z] with floats
-        """
-        """
-        self.diexpDTextCtrl = wx.TextCtrl(self, value=diexpD,size=(160,30))
-        self.diexpITextCtrl = wx.TextCtrl(self, value=diexpI,size=(160,30))
-        self.diidTextCtrl = wx.TextCtrl(self, value=self.options.get('diid',''),size=(160,30))
-        #self.ditypeTextCtrl = wx.TextCtrl(self, value=,size=(160,30)) #abstype
-        self.ditypeComboBox = wx.ComboBox(self, choices=self.abstypes,
-                 style=wx.CB_DROPDOWN, value=self.options.get('ditype',''),size=(160,-1))
-        self.diazimuthTextCtrl = wx.TextCtrl(self, value=diazimuth,size=(160,30))
-        self.dipierTextCtrl = wx.TextCtrl(self, value=dipier,size=(160,30))
-        self.dialphaTextCtrl = wx.TextCtrl(self, value=dialpha,size=(160,30))
-        self.dideltaFTextCtrl = wx.TextCtrl(self, value=dideltaF,size=(160,30))
-        self.didbaddTextCtrl = wx.TextCtrl(self, value=self.options.get('didbadd',''),size=(160,30))
-        """
-        # Thresholds and defaults
-        self.DIInputLabel = wx.StaticText(self, label="Input sheet:",size=(160,30))
-        self.sheetorderTextCtrl = wx.TextCtrl(self, value=self.sheetorder,size=(160,30))
-        self.sheetdoubleCheckBox = wx.CheckBox(self, label="Repeated positions",size=(160,30))
-        self.sheetscaleCheckBox = wx.CheckBox(self, label="Scale value",size=(160,30))
+        self.diinputLabel = wx.StaticText(self, label="Input sheet:",size=(160,-1))
+        self.sheetorderTextCtrl = wx.TextCtrl(self, value=self.sheetorder,size=(160,-1))
+        self.sheetdoubleCheckBox = wx.CheckBox(self, label="Repeated positions",size=(160,-1))
+        self.sheetscaleCheckBox = wx.CheckBox(self, label="Scale value",size=(160,-1))
 
-        f = self.DIInputLabel.GetFont()
+        f = self.diinputLabel.GetFont()
         newf = wx.Font(14, wx.DECORATIVE, wx.ITALIC, wx.BOLD)
-        self.DIInputLabel.SetFont(newf)
-        #self.DIDefaultsLabel.SetFont(newf)
-        self.DIPathsLabel.SetFont(newf)
-
+        self.diinputLabel.SetFont(newf)
         self.sheetdoubleCheckBox.SetValue(self.sheetdouble)
         self.sheetscaleCheckBox.SetValue(self.sheetscale)
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
@@ -1389,34 +1288,18 @@ class OptionsDIDialog(wx.Dialog):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        elemlist = [(self.DIPathsLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.dipathlistLabel, noOptions),
-                 (self.divariopathLabel, noOptions),
-                 (self.discalarpathLabel, noOptions),
-                 (self.diselectpathLabel, noOptions),
-                 (self.dipathlistTextCtrl, expandOption),
-                 (self.divariopathTextCtrl, expandOption),
-                 (self.discalarpathTextCtrl, expandOption),
-                 (self.DIInputLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.sheetorderTextCtrl, expandOption),
-                 (self.sheetdoubleCheckBox, noOptions),
-                 (self.sheetscaleCheckBox, noOptions),
-                 (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                  emptySpace,
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+        elemlist = [(self.stationLabel, noOptions),
+                    (self.stationComboBox, expandOption),
+                    (self.diinputLabel, noOptions),
+                    (self.sheetorderTextCtrl, expandOption),
+                    (self.sheetdoubleCheckBox, noOptions),
+                    (self.sheetscaleCheckBox, noOptions),
+                    (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
+                    (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
 
 
         # A GridSizer will contain the other controls:
-        cols = 4
+        cols = 2
         rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
@@ -1430,45 +1313,17 @@ class OptionsDIDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+    def bindControls(self):
+        self.stationComboBox.Bind(wx.EVT_COMBOBOX, self.OnStationChange)
 
-        """
-                 (self.DIDefaultsLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.ditypeLabel, noOptions),
-                 (self.diidLabel, noOptions),
-                 (self.diexpDLabel, noOptions),
-                 (self.diexpILabel, noOptions),
-                 (self.ditypeComboBox, noOptions),
-                 (self.diidTextCtrl, expandOption),
-                 (self.diexpDTextCtrl, expandOption),
-                 (self.diexpITextCtrl, expandOption),
-                 (self.diazimuthLabel, noOptions),
-                 (self.dipierLabel, noOptions),
-                 (self.dialphaLabel, noOptions),
-                 (self.dideltaFLabel, noOptions),
-                 (self.diazimuthTextCtrl, expandOption),
-                 (self.dipierTextCtrl, expandOption),
-                 (self.dialphaTextCtrl, expandOption),
-                 (self.dideltaFTextCtrl, expandOption),
-                 (self.dideltaDLabel, noOptions),
-                 (self.dideltaILabel, noOptions),
-                 (self.dibetaLabel, noOptions),
-                 (self.diannualmeanLabel, noOptions),
-                 (self.dideltaDTextCtrl, expandOption),
-                 (self.dideltaITextCtrl, expandOption),
-                 (self.dibetaTextCtrl, expandOption),
-                 (self.diannualmeanTextCtrl, expandOption),
-                 (self.didbaddLabel, noOptions),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-                 (self.didbaddTextCtrl, expandOption),
-                  emptySpace,
-                  emptySpace,
-                  emptySpace,
-        """
+    def OnStationChange(self, event):
+        # call stream._write_format to determine self.filename
+        self.currentstation = self.formatComboBox.GetValue()
+        self.dicontent = self.stations.get(self.currentstation)
+        self.sheetorderTextCtrl.SetValue(self.dicontent.get('order',''))
+        self.sheetdoubleCheckBox.SetValue(self.dicontent.get('double',False))
+        self.sheetscaleCheckBox.SetValue(self.dicontent.get('scalevalue',False))
+
 
 # ###################################################
 #    Stream page

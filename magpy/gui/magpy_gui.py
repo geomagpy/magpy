@@ -103,13 +103,21 @@ Major methods:              major_method
 |  MainFrame     | _do_plot  |         2.0.0  |             | level 1    |               |        | file_on_open  |
 |  MainFrame     | _update_cursor_status |  2.0.0  |        | level 1    |               |        |   |
 |  MainFrame     | _open_stream  |     2.0.0  |             | level 0    |               |        | file_on_open  |
+|  MainFrame     | _update_statistics | 2.0.0  |            | level 0    |               |        | _do_plot  |
+|  MainFrame     | changeStatusbar  |  2.0.0  |             | level 2    |               |        | everywhere  |
 |  MainFrame     | file_on_open_file  | 2.0.0  |            | level 1    |               |        |   |
 |  MainFrame     | file_on_open_dir  | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | file_on_open_url  | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 1    |               |        |   |
 |  MainFrame     | file_on_open_db  |  2.0.0  |             |            |               |        |   |
-|  MainFrame     | file_on_export |    2.0.0  |             | level 0    |               |        |   |
+|  MainFrame     | file_on_export |    2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | file_on_quit  |     2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | db_on_connect  |    2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | db_on_init  |       2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | options_init |      2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | help_about  |       2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
@@ -119,6 +127,8 @@ Major methods:              major_method
 |             |    |  2.0.0  |               |            |               |        |   |
 |             |    |  2.0.0  |               |            |               |        |   |
 |             |    |  2.0.0  |               |            |               |        |   |
+
+db_on_init
 
 runtime test:
 - : not tested
@@ -1119,6 +1129,7 @@ class MainFrame(wx.Frame):
         favoritemartas['example'] = 'www.example.com'
         analysisdict['favoritemartas'] = favoritemartas
         # DI analysis
+        analysisdict['baselinedirect'] = False
         content = {}
         content['dipathlist'] = [basepath]
         content['divariopath'] = os.path.join(basepath, '*')
@@ -1304,14 +1315,14 @@ class MainFrame(wx.Frame):
         self.StreamOperationsMenu.AppendSeparator()
         self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Access memory/&multiple data set operations...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.Append(self.StreamListSelect)
-        self.MainMenu.Append(self.StreamOperationsMenu, "Memory/DataO&perations")
+        self.MainMenu.Append(self.StreamOperationsMenu, "Memo&ry")
         # ## Data Checker
         self.CheckDataMenu = wx.Menu()
         self.CheckDefinitiveDataSelect = wx.MenuItem(self.CheckDataMenu, 701, "Check &definitive data...\tCtrl+H", "Check data", wx.ITEM_NORMAL)
         self.CheckDataMenu.Append(self.CheckDefinitiveDataSelect)
         self.OpenLogFileSelect = wx.MenuItem(self.CheckDataMenu, 702, "Open MagP&y log...\tCtrl+Y", "Open log", wx.ITEM_NORMAL)
         self.CheckDataMenu.Append(self.OpenLogFileSelect)
-        self.MainMenu.Append(self.CheckDataMenu, "E&xtra")
+        self.MainMenu.Append(self.CheckDataMenu, "Spe&cials")
         # ## Options Menu
         self.OptionsMenu = wx.Menu()
         self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic initialisation parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
@@ -1378,8 +1389,6 @@ class MainFrame(wx.Frame):
                         'force' : False,
                         'alpha' : 0.5
                         }
-        # temporary
-        self.plotopt = plotopt
         return plotopt
 
 
@@ -1402,19 +1411,19 @@ class MainFrame(wx.Frame):
         # Database Menu
         self.Bind(wx.EVT_MENU, self.db_on_connect, self.DBConnect)
         self.Bind(wx.EVT_MENU, self.db_on_init, self.DBInit)
-
+        # Memory Menu
         self.Bind(wx.EVT_MENU, self.OnStreamList, self.StreamListSelect)
         self.Bind(wx.EVT_MENU, self.OnStreamAdd, self.StreamAddListSelect)
+        # DI Menu
         self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
-        # Check that
-        #self.Bind(wx.EVT_MENU, self.onDefineVario, self.DIPath2Vario)
-        #self.Bind(wx.EVT_MENU, self.onDefineScalar, self.DIPath2Scalar)
         self.Bind(wx.EVT_MENU, self.onInputSheet, self.DIInputSheet)
-        self.Bind(wx.EVT_MENU, self.OnOptionsInit, self.OptionsInitItem)
-        self.Bind(wx.EVT_MENU, self.OnOptionsDI, self.OptionsDIItem)
-        self.Bind(wx.EVT_MENU, self.OnHelpAbout, self.HelpAboutItem)
-        self.Bind(wx.EVT_MENU, self.OnHelpReadFormats, self.HelpReadFormatsItem)
-        self.Bind(wx.EVT_MENU, self.OnHelpWriteFormats, self.HelpWriteFormatsItem)
+        # Options Menu
+        self.Bind(wx.EVT_MENU, self.options_init, self.OptionsInitItem)
+        self.Bind(wx.EVT_MENU, self.options_di, self.OptionsDIItem)
+        # Help Menu
+        self.Bind(wx.EVT_MENU, self.help_about, self.HelpAboutItem)
+        self.Bind(wx.EVT_MENU, self.help_read_formats, self.HelpReadFormatsItem)
+        self.Bind(wx.EVT_MENU, self.help_write_formats, self.HelpWriteFormatsItem)
         self.Bind(wx.EVT_CLOSE, self.file_on_quit)  #Bind the EVT_CLOSE event to FileQuit()
         self.Bind(wx.EVT_MENU, self.OnCheckDefinitiveData, self.CheckDefinitiveDataSelect)
         self.Bind(wx.EVT_MENU, self.OnCheckOpenLog, self.OpenLogFileSelect)
@@ -2218,9 +2227,9 @@ class MainFrame(wx.Frame):
                 checkbox.SetValue(False)
         # Connect callback to the initial plot
         for ax in self.plot_p.axlist:
-            ax.callbacks.connect('xlim_changed', self.updateStatistics)
-            ax.callbacks.connect('ylim_changed', self.updateStatistics)
-        self.updateStatistics()
+            ax.callbacks.connect('xlim_changed', self._update_statistics)
+            ax.callbacks.connect('ylim_changed', self._update_statistics)
+        self._update_statistics()
         self.changeStatusbar("Ready")
 
 
@@ -2277,6 +2286,24 @@ class MainFrame(wx.Frame):
 
         else:
             return DataStream()
+
+
+    def changeStatusbar(self,msg):
+        self.SetStatusText(msg)
+
+
+    def _update_statistics(self, event=None):
+        """
+        DESCRIPTION
+             Updates and sets the statistics if the statistics page
+             is displayed
+        """
+        if self.menu_p.ana_page.statsButton.GetLabel() == 'Hide Statistics':
+            datacont = self.datadict.get(self.active_id)
+            plotcont = self.plotdict.get(self.active_id)
+            self.stats_p.stats_page.setStatistics(keys=plotcont.get('shownkeys'),
+                    stream=datacont.get('dataset').copy(),
+                    xlimits=self.plot_p.xlimits)
 
 
     # ##################################################################################################################
@@ -2821,8 +2848,6 @@ class MainFrame(wx.Frame):
                     else:
                         exportparameter[el] = exportoptions.get(el)
 
-                print ("EXPORT", exportparameter)
-
                 exportsuccess = stream.write(exportpath,
                                              format_type=exportparameter.get('format_type'),
                                              filenamebegins=exportparameter.get('filenamebegins'),
@@ -2857,120 +2882,9 @@ class MainFrame(wx.Frame):
                                              environment=exportparameter.get('environment'))
 
                 # TODO: Eventually get additional options -> better do that with export options in Export Dialog
-                """
-                if fileformat == 'BLV':
-                        #print ("Writing BLV data")  # add function here
-                        #print ("Function", self.plotopt['function'])
-                        year = num2date(np.nanmean(np.asarray(self.plotstream.ndarray[0],dtype=float64))).year
-                        #print (" BLV export: replacing year with {}".format(year))
-                        # use functionlist as kwarg in write method
-                        # Please note: Xmagpy will loose all non-numerical columns
-                        diff = None
-                        meanH=None
-                        meanF=None
-                        deltaF = None
-                        subdlg = ExportBLVDialog(None, title='Exporting BLV', year=year, streamlist=self.streamlist, deltaFsel="default")
-                        if subdlg.ShowModal() == wx.ID_OK:
-                            streamd = subdlg.streamd
-                            difftmp = subdlg.diffsourceComboBox.GetValue() # comment not yet supported by bib
-                            try:
-                                idx = [ele for ele in streamd if streamd[ele].get("name") == difftmp]
-                                diff, meanH, meanF = self.dailymeans_blv(self.streamlist[idx[0]],debug=False)
-                            except:
-                                pass
-                            deltaFsel = subdlg.adoptedscalarComboBox.GetValue()
-                            if deltaFsel in ['median','mean']:
-                                deltaF = deltaFsel
-                            year = int(subdlg.yearTextCtrl.GetValue())
+                # dailymean_blv - calculates meanh, meanf and diff
+                # self.plotstream.func2header(self.plotopt['function']) -> generally add function as into the header
 
-                        exportsuccess = stream.write(path,
-                                    filenamebegins=filenamebegins,
-                                    filenameends=filenameends,
-                                    dateformat=dateformat,
-                                    mode=mode,
-                                    year=year,
-                                    deltaF=deltaF,
-                                    diff=diff,
-                                    meanH=meanH,
-                                    meanF=meanF,
-                                    fitfunc = self.plotopt.get('function'),
-                                    coverage=coverage,
-                                    format_type=fileformat)
-                        ## add absinfo if a fit has been calculated
-                        mode = 'replace'
-                elif fileformat == 'PYCDF':
-                        # Open Yes/No message box and to select whether flags should be stored or not
-                        #print ("Writing PYCDF data")  # add function here
-                        if self.plotopt['function']:
-                            # Function
-                            fdlg = wx.MessageDialog(self, 'Found fit functions - add them to the data file?', 'Export fit functions', wx.YES_NO | wx.ICON_QUESTION)
-                            if fdlg.ShowModal() == wx.ID_YES:
-                                print (" -> found fit functions - adding them")
-                                self.plotstream.func2header(self.plotopt['function'])
-                            fdlg.Destroy()
-                        # Test whether flags are present at all
-                        addflags = False
-                        # Compression
-                        cdlg = wx.MessageDialog(self, 'Compress? (selecting "NO" improves compatibility between different operating systems', 'Compression', wx.YES_NO | wx.ICON_QUESTION)
-                        compression = 0
-                        if cdlg.ShowModal() == wx.ID_YES:
-                            compression = 5
-                        cdlg.Destroy()
-                        exportsuccess = stream.write(path,
-                                    filenamebegins=filenamebegins,
-                                    filenameends=filenameends,
-                                    dateformat=dateformat,
-                                    mode=mode,
-                                    compression = compression,
-                                    coverage=coverage,
-                                    format_type=fileformat)
-                elif fileformat == 'IMAGCDF':
-                        # Open Yes/No message box and to select whether flags should be stored or not
-                        #print ("Writing IMAGCDF data")  # add function here
-                        addflags = False
-                        # Test whether flags are present at all
-                        if self.flaglist and len(self.flaglist) > 0:
-                            fdlg = wx.MessageDialog(self, 'Save flags?', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-                            if fdlg.ShowModal() == wx.ID_YES:
-                                addflags = True
-                            fdlg.Destroy()
-                        exportsuccess = stream.write(path,
-                                    filenamebegins=filenamebegins,
-                                    filenameends=filenameends,
-                                    dateformat=dateformat,
-                                    mode=mode,
-                                    addflags = addflags,
-                                    coverage=coverage,
-                                    format_type=fileformat)
-                elif fileformat == 'IYFV':
-                        kind = 'A'
-                        comment = ""
-                        subdlg = ExportIYFVDialog(None, title='Select kind of data', kind=kind, comment=comment)
-                        if subdlg.ShowModal() == wx.ID_OK:
-                            #comment = subdlg.commentTextCtrl.GetValue() # comment not yet supported by bib
-                            kindsel = subdlg.kindComboBox.GetValue()
-                            kind = kindsel[:1]
-                        exportsuccess = stream.write(path,
-                                    filenamebegins=filenamebegins,
-                                    filenameends=filenameends,
-                                    dateformat=dateformat,
-                                    mode=mode,
-                                    kind=kind,
-                                    comment=comment,
-                                    coverage=coverage,
-                                    format_type=fileformat)
-                else:
-                        exportsuccess = stream.write(path,
-                                    filenamebegins=filenamebegins,
-                                    filenameends=filenameends,
-                                    dateformat=dateformat,
-                                    mode=mode,
-                                    coverage=coverage,
-                                    format_type=fileformat)
-                #except:
-                #    self.menu_p.rep_page.logMsg("Writing failed - Permission problem?")
-                #    self.changeStatusbar("Exporting data failed ... Ready")
-                """
                 if exportsuccess:
                     self.menu_p.rep_page.logMsg("Data written to path: {}".format(self.guidict.get('exportpath')))
                     self.changeStatusbar("Data written ... Ready")
@@ -2993,6 +2907,268 @@ class MainFrame(wx.Frame):
         self.Destroy()  # Close the main window.
         sys.exit()
 
+
+    # ##################################################################################################################
+    # ####    Database Menu Bar                                #########################################################
+    # ##################################################################################################################
+
+    def db_on_connect(self, event):
+        """
+        DESCRIPTION
+            Control method:
+            fileMenu item -> fileOpen
+        """
+
+        dlg = DatabaseConnectDialog(None, title='MySQL Database: Connect to')
+        dlg.hostTextCtrl.SetValue(self.guidict.get('dbhost',''))
+        dlg.userTextCtrl.SetValue(self.guidict.get('dbuser',''))
+        dlg.passwdTextCtrl.SetValue(base64.b64decode(self.guidict.get('dbpwd','')))
+        dlg.dbTextCtrl.SetValue(self.guidict.get('dbname', ''))
+        if dlg.ShowModal() == wx.ID_OK:
+            self.guidict['dbhost'] = dlg.hostTextCtrl.GetValue()
+            self.guidict['dbuser'] = dlg.userTextCtrl.GetValue()
+            self.guidict['dbpwd'] = base64.b64encode(dlg.passwdTextCtrl.GetValue().encode()).decode()
+            self.guidict['dbname'] = dlg.dbTextCtrl.GetValue()
+            self.magpystate['dbtuple'] = (self.guidict.get('dbhost', ''), self.guidict.get('dbuser', ''),
+                                          base64.b64decode(self.guidict.get('dbpwd', '')),
+                                          self.guidict.get('dbname', ''))
+            db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+            # Assign the current state
+            self.magpystate['db'] = db
+            self.magpystate['databaseconnected'] = success
+
+        dlg.Destroy()
+
+
+    def db_on_init(self, event):
+        """
+        DESCRIPTION
+            Provide access for local network:
+            Open your /etc/mysql/my.cnf file in your editor.
+            scroll down to the entry:
+            bind-address = 127.0.0.1
+            and you can either hash that so it binds to all ip addresses assigned
+            #bind-address = 127.0.0.1
+            or you can specify an ipaddress to bind to. If your server is using dhcp then just hash it out.
+            Then you'll need to create a user that is allowed to connect to your database of choice from the host/ip your connecting from.
+            Login to your mysql console:
+            milkchunk@milkchunk-desktop:~$ mysql -uroot -p
+            GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass' WITH GRANT OPTION;
+            You change out the 'user' to whatever user your wanting to use and the '%' is a hostname wildcard. Meaning that you can connect from any hostname with it. You can change it to either specify a hostname or just use the wildcard.
+            Then issue the following:
+            FLUSH PRIVILEGES;
+            Be sure to restart your mysql (because of the config file editing):
+            /etc/init.d/mysql restart
+        """
+        # Open a message box to confirm that you really want to do that and to provide info on prerequisits
+        dlg = wx.MessageDialog(self, "Your are going to intitialize a new database\n"
+                        "Please make sure that the following points are fulfilled:\n"
+                        "1) MySQL is installed\n"
+                        "2) An empty database has been created:\n"
+                        "   $ CREATE DATABASE mydb;\n"
+                        "3) A new user has been added and access has been granted:\n"
+                        "   $ GRANT ALL PRIVILEGES ON mydb.* TO 'user'@'%' IDENTIFIED BY 'some_pass';\n"
+                        "4) $ FLUSH PRIVILEGES;\n",
+                        "Init database", wx.OK|wx.CANCEL)
+        if dlg.ShowModal() == wx.ID_OK:
+            dlg.Destroy()
+            # open dialog to select empty db or create new db if mysql is existing
+            dlg = DatabaseConnectDialog(None, title='MySQL Database: Initialize...')
+            db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+            dlg.hostTextCtrl.SetValue(self.guidict.get('dbhost',''))
+            dlg.userTextCtrl.SetValue(self.guidict.get('dbuser',''))
+            dlg.passwdTextCtrl.SetValue(base64.b64decode(self.guidict.get('dbpwd','')))
+
+            if not db:
+                dlg.dbTextCtrl.SetValue('None')
+            else:
+                dlg.dbTextCtrl.SetValue(self.guidict.get('dbname',''))
+            if dlg.ShowModal() == wx.ID_OK:
+                self.guidict['dbhost'] = dlg.hostTextCtrl.GetValue()
+                self.guidict['dbuser'] = dlg.userTextCtrl.GetValue()
+                self.guidict['dbpwd'] = base64.b64encode(dlg.passwdTextCtrl.GetValue().encode()).decode()
+                self.guidict['dbname'] = dlg.dbTextCtrl.GetValue()
+                self.magpystate['dbtuple'] = (self.guidict.get('dbhost', ''), self.guidict.get('dbuser', ''),
+                                              base64.b64decode(self.guidict.get('dbpwd', '')),
+                                              self.guidict.get('dbname', ''))
+                db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+                db.dbinit()
+                self.changeStatusbar("New database initiated - Ready")
+            dlg.Destroy()
+        else:
+            dlg.Destroy()
+
+
+    # ##################################################################################################################
+    # ####    DI Menu Bar                                      #########################################################
+    # ##################################################################################################################
+
+
+    # ##################################################################################################################
+    # ####    Memory Menu Bar                                  #########################################################
+    # ##################################################################################################################
+
+
+    # ##################################################################################################################
+    # ####    Specials Menu Bar                                #########################################################
+    # ##################################################################################################################
+
+
+    # ##################################################################################################################
+    # ####    Options Menu Bar                                 #########################################################
+    # ##################################################################################################################
+
+
+    def options_init(self, event):
+        """
+        DEFINITION
+            Change options
+        """
+        dlg = OptionsInitDialog(None, title='Options: Parameter specifications', guidict=self.guidict, analysisdict=self.analysisdict)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.guidict['dirname'] = dlg.dirnameTextCtrl.GetValue()
+            self.guidict['exportpath'] = dlg.exportTextCtrl.GetValue()
+            self.guidict['experimental'] = dlg.experimentalCheckBox.GetValue()
+            self.analysisdict['defaultstation'] = dlg.stationidTextCtrl.GetValue()
+            self.analysisdict['basefilter'] = 'gaussian'
+            self.analysisdict['fitfunction'] = dlg.fitfunctionComboBox.GetValue()
+            self.analysisdict['fitdegree'] = dlg.fitdegreeTextCtrl.GetValue()
+            self.analysisdict['fitknotstep'] = dlg.fitknotstepTextCtrl.GetValue()
+            self.analysisdict['martasscantime'] = dlg.martasscantimeTextCtrl.GetValue()
+            self.analysisdict['baselinedirect'] = dlg.baselinedirectCheckBox.GetValue()
+
+            # get stationlist - if defaultstation is not in stationlist then create station content
+            stationdict = self.analysisdict.get('stations')
+            stationlist = [el for el in stationdict]
+            if not self.analysisdict['defaultstation'] in stationlist:
+                stationdict[self.analysisdict.get('defaultstation').upper()] = stationdict.get(stationlist[0])
+
+            save_dict(self.guidict, path=self.guicfg)            # stored as config
+            save_dict(self.analysisdict, path=self.analysiscfg) # stored as config
+
+        dlg.Destroy()
+
+
+    def options_di(self, event):
+        """
+        DEFINITION
+            Change options
+        """
+
+        dlg = OptionsDIDialog(None, title='Options: DI Analysis parameters', analysisdict=self.analysisdict)
+
+        if dlg.ShowModal() == wx.ID_OK:
+            station = dlg.currentstation
+            stationcont = self.analysisdict.get('stations').get(station)
+            order=dlg.sheetorderTextCtrl.GetValue()
+            double=dlg.sheetdoubleCheckBox.GetValue()
+            scalevalue=dlg.sheetscaleCheckBox.GetValue()
+            stationcont['double'] = True
+            stationcont['scalevalue'] = True
+            if not double:
+                stationcont['double'] = False
+            if not scalevalue:
+                stationcont['scalevalue'] = False
+            stationcont['order'] = order
+
+            #save_dict(self.analysisdict, path=self.analysiscfg) # stored as config
+
+
+        dlg.Destroy()
+
+
+
+    # ##################################################################################################################
+    # ####    Help Menu Bar                                    #########################################################
+    # ##################################################################################################################
+
+    def help_about(self, event):
+
+        description = """MagPy is developed for geomagnetic analysis.
+    It supports various data formats, visualization,
+    advanced anaylsis routines, url/database accessability, DI analysis,
+    non-geomagnetic data and more.
+    """
+
+        licence = """Copyright (c) 2010-2020, MagPy developers
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+        * Redistributions of source code must retain the above copyright
+          notice, this list of conditions and the following disclaimer.
+        * Redistributions in binary form must reproduce the above copyright
+          notice, this list of conditions and the following disclaimer in the
+          documentation and/or other materials provided with the distribution.
+        * Neither the name of the MagPy developers nor the
+          names of its contributors may be used to endorse or promote products
+          derived from this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL MAGPY DEVELOPERS BE LIABLE FOR ANY
+    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
+
+        info = wxAboutDialogInfo()
+
+        try:
+            script_dir = os.path.dirname(__file__)
+            iconimage = os.path.join(script_dir, 'magpy128.xpm')
+            # Alternative:
+            # print ("Check", iconimage)
+            # if sys.platform.startswith('linux'):
+            info.SetIcon(wx.Icon(iconimage, wx.BITMAP_TYPE_XPM))
+        except:
+            pass
+        info.SetName('MagPy')
+        info.SetVersion(__version__)
+        info.SetDescription(description)
+        info.SetCopyright(
+            '(C) 2011 - 2022 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec, Stephan Bracke, Niko Kompein')
+        info.SetWebSite('https://cobs.geosphere.at')
+        info.SetLicence(licence)
+        info.AddDeveloper(
+            'Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec, Stephan Bracke, Niko Kompein')
+        info.AddDocWriter('Leonhardt')
+        info.AddArtist('Leonhardt')
+        info.AddTranslator('Bailey')
+
+        wxAboutBox(info)
+
+
+    def help_write_formats(self, event):
+        """
+        DESCRIPTION
+            Extract write formats and show
+        """
+        WriteFormats = ["{}: \t{}".format(key, SUPPORTED_FORMATS[key][1]) for key in SUPPORTED_FORMATS if
+                            'w' in SUPPORTED_FORMATS[key][0]]
+        message = "\n".join(WriteFormats)
+        dlg = ScrolledMessageDialog(self, message, 'Write formats:')
+        dlg.ShowModal()
+
+
+    def help_read_formats(self, event):
+        """
+        DESCRIPTION
+            Extract read formats and show
+        """
+        ReadFormats = ["{}: \t{}".format(key, SUPPORTED_FORMATS[key][1]) for key in SUPPORTED_FORMATS if
+                       'r' in SUPPORTED_FORMATS[key][0]]
+        message = "\n".join(ReadFormats)
+        dlg = ScrolledMessageDialog(self, message, 'Read formats:')
+        dlg.ShowModal()
+
+
+    # ##################################################################################################################
+    # ####    Data Panel                                       #########################################################
+    # ##################################################################################################################
 
     def get_adjacent_stream(self, mode='next'):
         """
@@ -3198,9 +3374,9 @@ class MainFrame(wx.Frame):
                 checkbox.SetValue(False)
         # Connect callback to the initial plot
         for idx, ax in enumerate(self.plot_p.axlist):
-            ax.callbacks.connect('xlim_changed', self.updateStatistics)
-            ax.callbacks.connect('ylim_changed', self.updateStatistics)
-        self.updateStatistics()
+            ax.callbacks.connect('xlim_changed', self._update_statistics)
+            ax.callbacks.connect('ylim_changed', self._update_statistics)
+        self._update_statistics()
         self.changeStatusbar("Ready")
 
 
@@ -3237,9 +3413,9 @@ class MainFrame(wx.Frame):
                 checkbox.SetValue(False)
         # Connect callback to the new plot
         for idx, ax in enumerate(self.plot_p.axlist):
-            ax.callbacks.connect('xlim_changed', self.updateStatistics)
-            ax.callbacks.connect('ylim_changed', self.updateStatistics)
-        self.updateStatistics()
+            ax.callbacks.connect('xlim_changed', self._update_statistics)
+            ax.callbacks.connect('ylim_changed', self._update_statistics)
+        self._update_statistics()
         self.changeStatusbar("Ready")
 
 
@@ -3271,81 +3447,6 @@ class MainFrame(wx.Frame):
 
     # ################
     # Top menu methods:
-
-
-    def OnHelpAbout(self, event):
-
-        description = """MagPy is developed for geomagnetic analysis.
-It supports various data formats, visualization,
-advanced anaylsis routines, url/database accessability, DI analysis,
-non-geomagnetic data and more.
-"""
-
-        licence = """Copyright (c) 2010-2020, MagPy developers
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the MagPy developers nor the
-      names of its contributors may be used to endorse or promote products
-      derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL MAGPY DEVELOPERS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
-
-
-        info = wxAboutDialogInfo()
-
-        try:
-            script_dir = os.path.dirname(__file__)
-            iconimage = os.path.join(script_dir,'magpy128.xpm')
-            # Alternative:
-            #print ("Check", iconimage)
-            #if sys.platform.startswith('linux'):
-            info.SetIcon(wx.Icon(iconimage, wx.BITMAP_TYPE_XPM))
-        except:
-            pass
-        info.SetName('MagPy')
-        info.SetVersion(__version__)
-        info.SetDescription(description)
-        info.SetCopyright('(C) 2011 - 2022 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec, Stephan Bracke, Niko Kompein')
-        info.SetWebSite('http://www.conrad-observatory.at')
-        info.SetLicence(licence)
-        info.AddDeveloper('Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec, Stephan Bracke, Niko Kompein')
-        info.AddDocWriter('Leonhardt')
-        info.AddArtist('Leonhardt')
-        info.AddTranslator('Bailey')
-
-        wxAboutBox(info)
-
-    def OnHelpWriteFormats(self, event):
-
-        WriteFormats = [ "{}: \t{}".format(key, SUPPORTED_FORMATS[key][1]) for key in SUPPORTED_FORMATS if 'w' in SUPPORTED_FORMATS[key][0]]
-
-        message = "\n".join(WriteFormats)
-        dlg = ScrolledMessageDialog(self, message, 'Write formats:')
-        dlg.ShowModal()
-
-    def OnHelpReadFormats(self, event):
-
-        ReadFormats = [ "{}: \t{}".format(key, SUPPORTED_FORMATS[key][1]) for key in SUPPORTED_FORMATS if 'r' in SUPPORTED_FORMATS[key][0]]
-
-        message = "\n".join(ReadFormats)
-        dlg = ScrolledMessageDialog(self, message, 'Read formats:')
-        dlg.ShowModal()
 
 
     def dailymeans_blv(self, datastream,debug=False):
@@ -3383,39 +3484,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         if debug:
             print ("Done",dm.ndarray)
         return dm, meanh, meanf
-
-    # ##################################################################################################################
-    # ####    Database Menu Bar                                    #########################################################
-    # ##################################################################################################################
-
-    def db_on_connect(self, event):
-        """
-        DESCRIPTION
-            Control method:
-            fileMenu item -> fileOpen
-        """
-
-        dlg = DatabaseConnectDialog(None, title='MySQL Database: Connect to')
-        dlg.hostTextCtrl.SetValue(self.guidict.get('dbhost',''))
-        dlg.userTextCtrl.SetValue(self.guidict.get('dbuser',''))
-        dlg.passwdTextCtrl.SetValue(base64.b64decode(self.guidict.get('dbpwd','')))
-        dlg.dbTextCtrl.SetValue(self.guidict.get('dbname', ''))
-        if dlg.ShowModal() == wx.ID_OK:
-            self.guidict['dbhost'] = dlg.hostTextCtrl.GetValue()
-            self.guidict['dbuser'] = dlg.userTextCtrl.GetValue()
-            self.guidict['dbpwd'] = base64.b64encode(dlg.passwdTextCtrl.GetValue().encode()).decode()
-            self.guidict['dbname'] = dlg.dbTextCtrl.GetValue()
-            self.magpystate['dbtuple'] = (self.guidict.get('dbhost', ''), self.guidict.get('dbuser', ''),
-                                          base64.b64decode(self.guidict.get('dbpwd', '')),
-                                          self.guidict.get('dbname', ''))
-            print ("HEERRREE", self.magpystate.get('dbtuple'))
-            db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-            # Assign the current state
-            print (db,success)
-            self.magpystate['db'] = db
-            self.magpystate['databaseconnected'] = success
-
-        dlg.Destroy()
 
 
     @deprecated("replaced by db_on_connect")
@@ -3455,59 +3523,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
         dlg.Destroy()
 
 
-    def db_on_init(self, event):
-        """
-        Provide access for local network:
-        Open your /etc/mysql/my.cnf file in your editor.
-        scroll down to the entry:
-        bind-address = 127.0.0.1
-        and you can either hash that so it binds to all ip addresses assigned
-        #bind-address = 127.0.0.1
-        or you can specify an ipaddress to bind to. If your server is using dhcp then just hash it out.
-        Then you'll need to create a user that is allowed to connect to your database of choice from the host/ip your connecting from.
-        Login to your mysql console:
-        milkchunk@milkchunk-desktop:~$ mysql -uroot -p
-        GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass' WITH GRANT OPTION;
-        You change out the 'user' to whatever user your wanting to use and the '%' is a hostname wildcard. Meaning that you can connect from any hostname with it. You can change it to either specify a hostname or just use the wildcard.
-        Then issue the following:
-        FLUSH PRIVILEGES;
-        Be sure to restart your mysql (because of the config file editing):
-        /etc/init.d/mysql restart
-        """
-        # Open a message box to confirm that you really want to do that and to provide info on prerequisits
-        dlg = wx.MessageDialog(self, "Your are going to intitialize a new database\n"
-                        "Please make sure that the following points are fulfilled:\n"
-                        "1) MySQL is installed\n"
-                        "2) An empty database has been created:\n"
-                        "   $ CREATE DATABASE mydb;\n"
-                        "3) A new user has been added and access has been granted:\n"
-                        "   $ GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass';\n",
-                        "Init database", wx.OK|wx.CANCEL)
-        if dlg.ShowModal() == wx.ID_OK:
-            dlg.Destroy()
-            # open dialog to select empty db or create new db if mysql is existing
-            dlg = DatabaseConnectDialog(None, title='MySQL Database: Initialize...')
-            dlg.hostTextCtrl.SetValue(self.guidict.get('dbhost',''))
-            dlg.userTextCtrl.SetValue(self.guidict.get('user',''))
-            dlg.passwdTextCtrl.SetValue(self.guidict.get('dbpwd',''))
-            if self.db == None or self.db == 'None' or not self.db:
-                dlg.dbTextCtrl.SetValue('None')
-            else:
-                dlg.dbTextCtrl.SetValue(self.options.get('dbname',''))
-            if dlg.ShowModal() == wx.ID_OK:
-                self.guidict['dbhost'] = dlg.hostTextCtrl.GetValue()
-                self.guidict['dbuser'] = dlg.userTextCtrl.GetValue()
-                self.guidict['dbpwd'] = base64.b64encode(dlg.passwdTextCtrl.GetValue().encode()).decode()
-                self.guidict['dbname'] = dlg.dbTextCtrl.GetValue()
-                self.magpystate['dbtuple'] = (self.guidict.get('dbhost', ''), self.guidict.get('dbuser', ''),
-                                              base64.b64decode(self.guidict.get('dbpwd', '')),
-                                              self.guidict.get('dbname', ''))
-                self._db_connect(*self.magpystate.get('dbtuple'))
-                self.db.dbinit()
-                self.changeStatusbar("New database initiated - Ready")
-            dlg.Destroy()
-        else:
-            dlg.Destroy()
 
 
     """
@@ -3525,111 +3540,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.on_save(event)
     """
 
-    def OnOptionsInit(self, event):
-        """
-        DEFINITION
-            Change options
-        """
-        dlg = OptionsInitDialog(None, title='Options: Parameter specifications',options=self.options)
-        if dlg.ShowModal() == wx.ID_OK:
-            self.options['host'] = dlg.hostTextCtrl.GetValue()
-            self.options['user'] = dlg.userTextCtrl.GetValue()
-            self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
-            #print (self.options['passwd'])
-            db = dlg.dbTextCtrl.GetValue()
-            if db == '':
-                self.options['dbname'] = 'None'
-            else:
-                self.options['dbname'] = db
-            self.options['dirname']=dlg.dirnameTextCtrl.GetValue()
-
-            self.options['stationid']=dlg.stationidTextCtrl.GetValue()
-
-            self.options['baselinedirect']=dlg.baselinedirectCheckBox.GetValue()
-            self.options['fitfunction']=dlg.fitfunctionComboBox.GetValue()
-            self.options['fitknotstep']=dlg.fitknotstepTextCtrl.GetValue()
-            self.options['fitdegree']=dlg.fitdegreeTextCtrl.GetValue()
-            # experimental methods
-            self.options['experimental']=dlg.experimentalCheckBox.GetValue()
-            # mqtt communication
-            self.options['martasscantime']=dlg.martasscantimeTextCtrl.GetValue()
-            # preferred output of baseline values in blv file
-            #orient=dlg.basevalueRadioBox.GetStringSelection()
-            #if orient == "HDZ":
-            #    orient = "HEZ"
-            #self.options['variometerorientation'] = orient
-
-            saveini(self.options)
-
-            inipara, check = loadini()
-            self.initParameter(inipara)
-
-        dlg.Destroy()
-
-    def OnOptionsDI(self, event):
-        """
-        DEFINITION
-            Change options
-        """
-
-        dlg = OptionsDIDialog(None, title='Options: DI Analysis parameters', options=self.options)
-
-        if dlg.ShowModal() == wx.ID_OK:
-            """
-            self.options['diexpD']=dlg.diexpDTextCtrl.GetValue()
-            self.options['diexpI']=dlg.diexpITextCtrl.GetValue()
-            self.options['dialpha']=dlg.dialphaTextCtrl.GetValue()
-            self.options['dideltaF']=dlg.dideltaFTextCtrl.GetValue()
-            self.options['ditype']=dlg.ditypeComboBox.GetValue()
-            self.options['divariopath']=dlg.divariopathTextCtrl.GetValue()
-            self.options['discalarpath']=dlg.discalarpathTextCtrl.GetValue()
-            self.options['diid']=dlg.diidTextCtrl.GetValue()
-            self.options['diazimuth']=dlg.diazimuthTextCtrl.GetValue()
-            self.options['dipier']=dlg.dipierTextCtrl.GetValue()
-            self.options['didbadd']=dlg.didbaddTextCtrl.GetValue()
-            # TODO to be added
-            self.options['diannualmean']=dlg.diannualmeanTextCtrl.GetValue()
-            self.options['dibeta']=dlg.dibetaTextCtrl.GetValue()
-            self.options['dideltaD']=dlg.dideltaDTextCtrl.GetValue()
-            self.options['dideltaI']=dlg.dideltaITextCtrl.GetValue()
-            self.dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
-            dipathlist = dlg.dipathlistTextCtrl.GetValue().split(',')
-            dipath = dipathlist[0]
-            if os.path.isfile(dipath):
-                dipath = os.path.split(dipath)[0]
-            self.options['dipathlist'] = [dipath]
-            """
-            order=dlg.sheetorderTextCtrl.GetValue()
-            double=dlg.sheetdoubleCheckBox.GetValue()
-            scalevalue=dlg.sheetscaleCheckBox.GetValue()
-            self.options['double'] = 'True'
-            self.options['scalevalue'] = 'True'
-            if not double:
-                self.options['double'] = 'False'
-            if not scalevalue:
-                self.options['scalevalue'] = 'False'
-            self.options['order'] = order
-
-            saveini(self.options)
-            inipara, check = loadini()
-            self.initParameter(inipara)
-
-        dlg.Destroy()
-
-
-    """
-    def OnOptionsObs(self, event):
-        dlg = OptionsObsDialog(None, title='Options: Observatory specifications')
-        dlg.ShowModal()
-        dlg.Destroy()
-
-        #dlg = wx.MessageDialog(self, "Coming soon:\n"
-        #                "Modify observatory specifications\n",
-        #                "PyMag by RL", wx.OK|wx.ICON_INFORMATION)
-        #dlg.ShowModal()
-        #dlg.Destroy()
-    """
-
     def onOpenAuxButton(self, event):
         if self.askUserForFilename(style=wx.OPEN,
                                    **self.default_file_dialog_options()):
@@ -3637,24 +3547,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
             self.menu_p.gen_page.AuxDataTextCtrl.SetValue(textfile.read())
             textfile.close()
 
-    def changeStatusbar(self,msg):
-        self.SetStatusText(msg)
-
-    def updateStatistics(self, event=None):
-        """
-        DESCRIPTION
-             Updates and sets the statistics if the statistics page
-             is displayed
-        """
-        if self.menu_p.ana_page.statsButton.GetLabel() == 'Hide Statistics':
-            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
-                    stream=self.plotstream.copy(),
-                    xlimits=self.plot_p.xlimits)
-            """
-            self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
-                    stream=self.plotstream.copy(),
-                    xlimits=self.plot_p.xlimits)
-            """
 
     def OnCheckOpenLog(self, event):
         """
