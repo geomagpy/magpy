@@ -66,7 +66,7 @@ Methods bound to elements:  on_incredible_button
 Major methods:              major_method
 
 
-| class          |  method  |  since version  |  until vers |  runtime test  |  calls  | manual  |  *tested by |
+| class          |  method  |  since version  |  until vers |  runtime test  |  calls  | manual  |  used by |
 | -------------- |  ------  |  -------------  |  ---------- |  ------------  |  -----  |---------|  ---------- |
 |  RedirectText  |          |          2.0.0  |             |            |             | -       |  core.activity |
 |  PlotPanel     |  __init__  |        2.0.0  |             | level 1    |             |         | |
@@ -89,24 +89,27 @@ Major methods:              major_method
 |  PlotPanel     |  AF.draw  |         2.0.0  |             |            |               |      | |
 |  MenuPanel     | __init__  |         2.0.0  |             |            |               |      | |
 |  MainFrame     | __init__  |         2.0.0  |             | level 1    |               |        |    |
-|  MainFrame     | __set_properties |  2.0.0  |             | level 1    |               |        |    |
-|  MainFrame     | _get_default_initialization |  2.0.0  |  | level 1    |               |        |    |
-|  MainFrame     | _set_plot_parameter |  2.0.0  |          | level 1    |               |        |    |
-|  MainFrame     | _create_menu_bar |  2.0.0  |             | level 1    |               |        |    |
-|  MainFrame     | _bind_controls  |   2.0.0  |             | level 1    |               |        |    |
-|  MainFrame     | _db_connect  |      2.0.0  |             | level 1    |               |        |    |
-|  MainFrame     | _deactivate_controls |  2.0.0  |         | level 1    |               |        |    |
-|  MainFrame     | _activate_controls |  2.0.0  |           | level 1    |               |        |   |
-|  MainFrame     | _initial_read  |    2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | _initial_plot  |    2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | _update_plot  |     2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | __set_properties |  2.0.0  |             | level 1    |               |        | init   |
+|  MainFrame     | _get_default_initialization |  2.0.0  |  | level 1    |               |        | init   |
+|  MainFrame     | _set_plot_parameter |  2.0.0  |          | level 1    |               |        | init   |
+|  MainFrame     | _create_menu_bar |  2.0.0  |             | level 1    |               |        | init   |
+|  MainFrame     | _bind_controls  |   2.0.0  |             | level 1    |               |        | init   |
+|  MainFrame     | _db_connect  |      2.0.0  |             | level 1    |               |        | init, db_, file_db |
+|  MainFrame     | _deactivate_controls |  2.0.0  |         | level 1    |               |        | init, file_on_open |
+|  MainFrame     | _activate_controls |  2.0.0  |           | level 1    |               |        | init, file_on_open |
+|  MainFrame     | _initial_read  |    2.0.0  |             | level 1    |               |        | file_on_open  |
+|  MainFrame     | _initial_plot  |    2.0.0  |             | level 1    |               |        | file_on_open  |
+|  MainFrame     | _update_plot  |     2.0.0  |             | level 1    |               |        | file_on_open  |
+|  MainFrame     | _do_plot  |         2.0.0  |             | level 1    |               |        | file_on_open  |
 |  MainFrame     | _update_cursor_status |  2.0.0  |        | level 1    |               |        |   |
-|  MainFrame     | _open_stream  |     2.0.0  |             | level 0    |               |        |   |
+|  MainFrame     | _open_stream  |     2.0.0  |             | level 0    |               |        | file_on_open  |
 |  MainFrame     | file_on_open_file  | 2.0.0  |            | level 1    |               |        |   |
 |  MainFrame     | file_on_open_dir  | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | file_on_open_url  | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 1    |               |        |   |
 |  MainFrame     | file_on_open_db  |  2.0.0  |             |            |               |        |   |
+|  MainFrame     | file_on_export |    2.0.0  |             | level 0    |               |        |   |
+|  MainFrame     | file_on_quit  |     2.0.0  |             | level 1    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
@@ -126,26 +129,18 @@ level 3 : level 2 also on Mac and Windows (level2w or level2m as temporary)
 
 * all tests are performed with the suggested configuration of the install recommendation
 
-
 Basic Processing:
 __init__ calls read and save_dict to get stored config, _get_default if empty, _set_plot_parameter, _create_menu_bar
                _bind_controls,  _db_connect and _deactivate_controls
-on_file_open reads data and calls _initial_read to set datadict, (with _deactivate_controls()), then _initial_plot 
-               (with _activate_controls, UpdatePlotCharacteristics
+file_on_open_...  reads data and calls _initial_read to set datadict, (with _deactivate_controls()), then _initial_plot 
+               (with _activate_controls, _update_plot and _do_plot)
 
-
-
-self._set_plot_parameter()
-
-Deprecated:
-
-saveini
-loadini
-PlotPanel.startMARCOSMonitor
-PlotPanel.startMARTASMonitor
-PlotPanel.monitorPlot
-PlotPanel.guiPlot
-PlotPanel.initialPlot
+# TESTING:
+file_on_open_file:   single file, all types, empty columns, multiple files, wrong files
+file_on_open_url:    single urls, url paths
+file_on_open_webserive: all webservices and selections
+file_on_open_db:     database tables 
+file_on_export:      all types
 
 """
 
@@ -230,208 +225,6 @@ def wxdate2pydate(date):
           return datetime.date(*ymd)
      else:
           return None
-
-@deprecated("Will be replaced by save_dict")
-def saveini(optionsdict):
-    """
-    Method for initializing default paremeters credentials
-    #dbname=None, user=None, passwd=None, host=None, dirname=None, compselect=None, abscompselect=None,
-    basecompselect=None, resolution=None, dipathlist = None, divariopath = None, discalarpath = None,
-    diexpD = None, diexpI = None, stationid = None, diid = None, ditype = None, diazimuth = None, dipier = None,
-    dialpha = None, dideltaF = None, didbadd = None, bookmarks = None):
-    """
-
-    try:
-        normalpath = os.path.expanduser('~')
-    except:
-        normalpath = os.path('/') # Test that
-
-    # Updating version info in file
-    from magpy.version import __version__
-    optionsdict['magpyversion'] = __version__
-
-    if optionsdict.get('dbname','') == '':
-        optionsdict['dbname'] = 'None'
-    if optionsdict.get('user','') == '':
-        optionsdict['user'] = 'Max'
-    if optionsdict.get('passwd','') == '':
-        passwd = 'Secret'
-    else:
-        passwd = optionsdict.get('passwd','')
-    if optionsdict.get('host','') == '':
-        optionsdict['host'] = 'localhost'
-    if optionsdict.get('dirname','') == '':
-        optionsdict['dirname'] = normalpath
-    if optionsdict.get('basefilter','') == '':
-        optionsdict['basefilter'] = 'spline'
-    if optionsdict.get('dipathlist','') == '':
-        optionsdict['dipathlist'] = [normalpath]
-    if optionsdict.get('divariopath','') == '':
-        optionsdict['divariopath'] = os.path.join(normalpath,'*')
-    if optionsdict.get('discalarpath','') == '':
-        optionsdict['discalarpath'] = os.path.join(normalpath,'*')
-    if optionsdict.get('diexpD','') == '':
-        optionsdict['diexpD'] = '0.0'
-    if optionsdict.get('diexpI','') == '':
-        optionsdict['diexpI'] = '0.0'
-    if optionsdict.get('stationid','') == '':
-        optionsdict['stationid'] = 'WIC'
-    if optionsdict.get('diid','') == '':
-        optionsdict['diid'] = ''
-    if optionsdict.get('ditype','') == '':
-        optionsdict['ditype'] = 'manual' #abstype = ''
-    if optionsdict.get('diazimuth','') == '':
-        optionsdict['diazimuth'] = ''
-    if optionsdict.get('dipier','') == '':
-        optionsdict['dipier'] = 'A2'
-    if optionsdict.get('dialpha','') == '':
-        optionsdict['dialpha'] = '0.0'
-    if optionsdict.get('dibeta','') == '':
-        optionsdict['dibeta'] = '0.0'
-    if optionsdict.get('dideltaF','') == '':
-        optionsdict['dideltaF'] = '0.0'
-    if optionsdict.get('dideltaD','') == '':
-        optionsdict['dideltaD'] = '0.0'
-    if optionsdict.get('dideltaI','') == '':
-        optionsdict['dideltaI'] = '0.0'
-    if optionsdict.get('blvoutput','') == '':
-        optionsdict['blvoutput'] = 'HDZ'
-    if optionsdict.get('fluxgateorientation','') == '':
-        optionsdict['fluxgateorientation'] = 'inline'
-    if optionsdict.get('diannualmean','') == '':
-        optionsdict['diannualmean'] = ''
-    if optionsdict.get('didbadd','') == '':
-        optionsdict['didbadd'] = 'False'
-    if optionsdict.get('didictionary','') == '':
-        # source 0 = file, 1 = DB, 2 = webservice
-        optionsdict['didictionary'] = { 'divariopath': normalpath,
-                                        'discalarpath': normalpath,
-                                        'didatapath': normalpath,
-                                        'divariourl' : '',
-                                        'discalarurl' : '',
-                                        'divarioDBinst': '1',
-                                        'discalarDBinst': '4',
-                                        'divariosource': 0,
-                                        'discalarsource': 0
-                                      }
-    if optionsdict.get('diparameter','') == '':
-        # to be used for setting DI analysis parameter in future
-        optionsdict['diparameter'] = { 'WIC': { 'diusedb' : False,
-                                                'stationid' : 'WIC',
-                                                'diazimuth' : '',
-                                                'divariocorr' : False,
-                                                'diexpD' : 0.0,
-                                                'diexpI' : 0.0,
-                                                'dialpha' : 0.0,
-                                                'dibeta' : 0.0,
-                                                'dideltaF' : 0.0,
-                                                'dideltaD' : 0.0,
-                                                'dideltaI' : 0.0,
-                                                'diid' : '',
-                                                'blvoutput' : 'HDZ',
-                                                'fluxgateorientation' : 'inline',
-                                                'dipier' : 'A2',
-                                                'diannualmean' : ''},
-                                       'TST': { 'diusedb' : True,
-                                                'stationid' : 'TST',
-                                                'diazimuth' : '179.9',
-                                                'divariocorr' : False,
-                                                'diexpD' : 0.0,
-                                                'diexpI' : 0.0,
-                                                'dialpha' : 0.0,
-                                                'dibeta' : 0.0,
-                                                'dideltaF' : 2.1,
-                                                'dideltaD' : 0.0,
-                                                'dideltaI' : 0.0,
-                                                'diid' : '',
-                                                'blvoutput' : 'XYZ',
-                                                'fluxgateorientation' : 'inline',
-                                                'dipier' : 'A8',
-                                                'diannualmean' : ''}
-                                      }
-    if optionsdict.get('bookmarks','') == '':
-        optionsdict['bookmarks'] = ['ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc','ftp://user:passwd@www.zamg.ac.at/data/magnetism/wic/variation/WIC20160627pmin.min','http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4','http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab']
-    if optionsdict.get('defaultservice','') == '':
-        optionsdict['defaultservice'] = 'conrad'
-    if optionsdict.get('webservices','') == '':
-        # default commands are:
-        # id, starttime, endtime, format, elements, type, sampling_period
-        # to change them, use commands dictionary below the webservice input:
-        # e.g. {'conrad' :  { 'commands' : {'format':'of'}, 'magnetism' : {...} } }
-        #                                      |       |
-        #    defaultvalue  <--------------------       ----------> conrad specification
-        optionsdict['webservices'] = { 'usgs':{
-                         'magnetism':{'address':'https://geomag.usgs.gov/ws/data/','format':['iaga2002', 'json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK'],'elements':'X,Y,Z,F','sampling':['60','1','3600'],'type':['variation', 'adjusted', 'quasi-definitive','definitive']},
-                         'basevalues':{'address':'https://geomag.usgs.gov/baselines/observation.json.php','format':['json'],'ids':['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL','CMO', 'CMT', 'DED', 'DHT', 'FRD', 'FRN', 'GUA','HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS','BLC', 'BRD', 'CBB', 'EUA', 'FCC', 'IQA', 'MEA','OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC', 'HAD','HER', 'KAK']},
-                         'commands':{} },
-                                      'conrad': {
-                         'magnetism':{'address':'https://cobs.zamg.ac.at/gsa/webservice/query.php','format':['iaga2002', 'json', 'csv'],'ids':['WIC', 'GAM', 'SWZ'],'elements':'X,Y,Z,F','sampling':['60'],'type':['adjusted']},
-                         'meteorology':{'address':'https://cobs.zamg.ac.at/gsa/webservice/query.php','format':['ascii', 'json', 'csv'],'ids':['WIC', 'SGO'],'sampling':['60'],'type':['adjusted']},
-                         'commands':{'format':'of'} },
-                                      'intermagnet': {
-                         'magnetism':{'address':'https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices','format':['iaga2002'],'ids':['WIC','ABK','AIA','API','ARS','ASC','ASP','BDV','BEL','BFE','BFO','CKI','CNB','CNH','CPL','CSY','CTA','CYG','DOU','ESK','EY2','EYR','FUR','GAN','GCK','GNA','GNG','GZH','HAD','HBK','HER','HLP','HRN','HUA','HYB','IRT','ISK','IZN','JCO','KDU','KEP','KHB','KIV','KMH','LER','LON','LRM','LVV','LYC','MAB','MAW','MCQ','MGD','MZL','NCK','NGK','NUR','NVS','ORC','PAG','PEG','PET','PIL','PST','SBA','SBL','SOD','SON','THY','TSU','UPS','VAL','WMQ','WNG','YAK'],'elements':'X,Y,Z,F','sampling':['minute','second'],'type':['adj-or-rep']},
-                         'extra':{'baseextension':'','additionalelements':'request=GetData','displaytype':'download','mintime':'day'},
-                         'commands':{'format':'Format','id':'observatoryIagaCode', 'starttime':'dataStartDate','endtime':'dataEndDate','type':'publicationState', 'sampling_period':'samplesPerDay'} } }
-    if optionsdict.get('scalevalue','') == '':
-        optionsdict['scalevalue'] = 'True'
-    if optionsdict.get('double','') == '':
-        optionsdict['double'] = 'True'
-    if optionsdict.get('order','') == '':
-        optionsdict['order'] = 'MU,MD,EU,WU,ED,WD,NU,SD,ND,SU'
-    if optionsdict.get('didbadd','') == '':
-        optionsdict['didbadd'] = 'False'
-    #calculation
-    if optionsdict.get('fitfunction','') == '':
-        optionsdict['fitfunction'] = 'spline'
-    if optionsdict.get('fitdegree','') == '':
-        optionsdict['fitdegree'] = '5'
-    if optionsdict.get('fitknotstep','') == '':
-        optionsdict['fitknotstep'] = '0.3'
-    if optionsdict.get('martasscantime','') == '':
-        optionsdict['martasscantime'] = '20'
-    if optionsdict.get('favoritemartas','') == '':
-        optionsdict['favoritemartas'] = ['www.example.com','192.168.178.42']
-    if optionsdict.get('experimental','') == '':
-        optionsdict['experimental'] = False
-
-    initpath = os.path.join(normalpath,'.magpyguiini')
-
-    try:
-        passwd = passwd.encode()
-    except:
-        pass
-    pwd = base64.b64encode(passwd)
-    optionsdict['passwd'] = pwd
-
-    saveobj(optionsdict, initpath)
-    print ("Initialization: Added data ")
-
-
-@deprecated("Will be replaced by read_dict")
-def loadini():
-    """
-    Load initialisation data
-
-    """
-    from magpy.version import __version__
-    home = os.path.expanduser('~')
-    initpath = os.path.join(home,'.magpyguiini')
-    print ("Trying to access initialization file:", initpath)
-
-    try:
-        initdata = loadobj(initpath)
-        magpyversion = __version__
-        if not initdata.get('magpyversion','') == magpyversion:
-            # version number has changes and thus eventually also the options ini
-            print ("MagPy version has changed ({}): inititalization parameters will be updated".format(magpyversion))
-            return initdata, True
-        print ("... success")
-    except:
-        print ("Initialization data not found: Setting defaults")
-        return {}, False
-
-    #print "Initialization data loaded"
-    return initdata, False
 
 
 class RedirectText(object):
@@ -966,6 +759,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             #force=False
             #width=10
             #height=4
+        print ("SYMBOLS in gui_plot", symbols)
 
         if debug:
             print (keys,colors,symbols,timecolumn,errorbars,yranges,fill,padding,showpatch,functions)
@@ -1811,7 +1605,7 @@ class MainFrame(wx.Frame):
         idx = (np.abs(self.plot_p.t - time)).argmin()
 
         try:
-            time = datetime.strftime(time,"%Y-%m-%d %H:%M:%S %Z")
+            time = time.strftime("%Y-%m-%d %H:%M:%S %Z")
         except:
             time = time
         try:
@@ -2245,6 +2039,8 @@ class MainFrame(wx.Frame):
         # active_id = stream_id
 
         datacont={}
+        # remove emtpy columns
+        stream = stream._remove_nancolumns()
         amount = len(stream)
         start, end = stream.timerange()
         sr = stream.samplingrate()
@@ -2299,6 +2095,7 @@ class MainFrame(wx.Frame):
         #if datadict.get('amount') > 200000:
         #    self.plotopt['symbols']= ['.'] * len(keylist)
 
+        print ("SYMBOLS after _update_plot", self.plotdict)
         #if not restore:
         #    self.streamkeylist.append(keylist)
         #    self.plotoptlist.append(self.plotopt)
@@ -2334,7 +2131,6 @@ class MainFrame(wx.Frame):
 
         # 2. get the existing plotdict input
         plotcont = self.plotdict.get(streamid)
-        print (plotcont)
         shownkeys = plotcont.get('shownkeys',keys)
         if not shownkeys or len(shownkeys) > len(keys):
             shownkeys = keys
@@ -2364,9 +2160,9 @@ class MainFrame(wx.Frame):
             plotcont['function'] = [stream.header.get('DataFunctionObject')] * lenshownkeys
         plotcont['title'] = stationid
         if coverage < 5 and coverage > 1:
-            self.plotopt['title'] = "{}: {} to {}".format(stationid,mintime.date(),maxtime.date())
+            plotcont['title'] = "{}: {} to {}".format(stationid,mintime.date(),maxtime.date())
         elif coverage <= 1:
-            self.plotopt['title'] = "{}: {}".format(stationid,mintime.date())
+            plotcont['title'] = "{}: {}".format(stationid,mintime.date())
         if datacont.get('flags'):
             plotcont['annotate'] = True                   # activate annotation
 
@@ -2375,15 +2171,15 @@ class MainFrame(wx.Frame):
         # ------------------------------
         if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
             if len(stream._get_column('x')) > 0:   # is a PYSTR or PYCDF file with basevalues
-                shownkeys = ['x','y','z','dx','dy','dz']
-                plotcont['padding'] = [0,0,0,5,0.05,5]
+                shownkeys = ['x','y','z','dx','dy','dz','df']
+                plotcont['padding'] = [0,0,0,5,0.05,5,2]
             else:                                  # is a BLV file with basevalues
                 shownkeys = ['dx','dy','dz']
-                self.plotopt['padding'] = [5,0.05,5]
-            plotcont['symbols'] =  ['o'] * lenshownkeys
+                plotcont['padding'] = [5,0.05,5,2]
+            plotcont['symbols'] =  ['.'] * len(shownkeys)
             plotcont['shownkeys'] = shownkeys
             colors = plotcont['colors']
-            plotcont['colors'] = colors[:lenshownkeys]
+            plotcont['colors'] = colors[:len(shownkeys)]
 
         # 5. If K values are shown: preselect bar chart
         # ------------------------------
@@ -2421,22 +2217,24 @@ class MainFrame(wx.Frame):
             else:
                 checkbox.SetValue(False)
         # Connect callback to the initial plot
-        for idx, ax in enumerate(self.plot_p.axlist):
+        for ax in self.plot_p.axlist:
             ax.callbacks.connect('xlim_changed', self.updateStatistics)
             ax.callbacks.connect('ylim_changed', self.updateStatistics)
         self.updateStatistics()
         self.changeStatusbar("Ready")
 
 
-    def _open_stream(self,path='',mintime=None,maxtime=None,extension=None):
+    def _open_stream(self, path=None, mintime=None, maxtime=None, extension=None):
         """
         DESCRIPTION:
             Opens time range dialog and loads data. Returns stream.
         USED BY:
             OnOpenDir and OnOpenDB , OnOpen
         """
+        if not path:
+            path = ''
         stream = DataStream()
-        dlg = LoadDataDialog(None, title='Select timerange:',mintime=mintime,maxtime=maxtime, extension=extension)
+        dlg = LoadDataDialog(None, title='Select timerange:', mintime=mintime, maxtime=maxtime, extension=extension)
         if dlg.ShowModal() == wx.ID_OK:
             stday = dlg.startDatePicker.GetValue()
             sttime = dlg.startTimePicker.GetValue()
@@ -2456,7 +2254,7 @@ class MainFrame(wx.Frame):
             loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
 
             if isinstance(path, basestring):
-                if not path=='':
+                if path:
                     self.menu_p.str_page.fileTextCtrl.SetValue(ext)
                     self.changeStatusbar("Loading data ... please be patient")
                     if path.find('//') > 0:
@@ -2467,8 +2265,9 @@ class MainFrame(wx.Frame):
                 # assume Database
                 try:
                     self.changeStatusbar("Loading data ... please be patient")
-                    db = path[0]
-                    print (db)
+                    #db = path[0]
+                    db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+                    #print ("HEEERRRR", db)
                     stream = db.read(path[1], starttime=start, endtime=end)
                 except:
                     print ("Reading failed")
@@ -2915,7 +2714,7 @@ class MainFrame(wx.Frame):
 
         if getdata:
             path = [db,datainfoid]
-            stream = self._open_stream(path=path,mintime=pydate2wxdate(mintime), maxtime=pydate2wxdate(maxtime),extension='MySQL Database')
+            stream = self._open_stream(path=path, mintime=pydate2wxdate(mintime), maxtime=pydate2wxdate(maxtime),extension='MySQL Database')
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(path[1],len(stream.ndarray[0])))
             streamid = self._initial_read(stream)
             if streamid: # will create a new input into datadict
@@ -2927,7 +2726,10 @@ class MainFrame(wx.Frame):
         DESCRIPTION
             Export the selected data set towrads the choosen destination
         """
+        allstreamids = [streamid for streamid in self.datadict]
         datad = self.datadict.get(self.active_id)
+        exportsuccess = False
+        debug = True # TODO set False
         # Default write options
         exportparameter = {'format_type': 'PYCDF',
                            'filenamebegins': 'myfile_',
@@ -2962,25 +2764,29 @@ class MainFrame(wx.Frame):
                            'environment': None
                            }
 
+        # convert all exportparameters to strings
+        exportoptions = {}
+        for el in exportparameter:
+            if not exportparameter.get(el):
+                exportoptions[el] = ''
+            else:
+                exportoptions[el] = str(exportparameter.get(el))
+
         self.changeStatusbar("Writing data ...")
-        dlg = ExportDataDialog(None, title='Export Data', path=self.guidict.get('exportpath'), datadict=datad, exportoptions=exportparameter)
+        dlg = ExportDataDialog(None, title='Export Data', path=self.guidict.get('exportpath'), datadict=datad, exportoptions=exportoptions, allstreamids=allstreamids)
         if dlg.ShowModal() == wx.ID_OK:
             exportoptions = dlg.exportoptions
-            filenamebegins = dlg.filenamebegins
-            filenameends = dlg.filenameends
-            dateformat = dlg.dateformat
-            coverage = dlg.coverage
-            mode = dlg.mode
-            path = dlg.selectedTextCtrl.GetValue()
+            exportpath = dlg.selectedTextCtrl.GetValue()
             fileformat = dlg.formatComboBox.GetValue()
-            checkPath = os.path.join(path, dlg.filenameTextCtrl.GetValue())
+            exportfilepath = os.path.join(exportpath, dlg.filenameTextCtrl.GetValue())
             # remember the save path
-            self.guidict['exportpath'] = pathlib.Path(checkPath).parent.absolute()
-            print ("HEERRRREE", self.guidict['exportpath'])
+            self.guidict['exportpath'] = exportpath
+            if debug:
+                print ("Chosen parameters for export:", exportparameter)
             export = False
-            if os.path.exists(checkPath):
-                msg = wx.MessageDialog(self, "The current export file will overwrite an existing file!\n"
-                    "Choose 'Ok' to apply the overwrite or 'Cancel' to stop exporting.\n",
+            if os.path.exists(exportfilepath) and exportparameter.get('mode') in ['overwrite','replace']:
+                msg = wx.MessageDialog(self, "You will overwrite an existing file!\n"
+                    "Choose 'Ok' to overwrite or 'Cancel'.\n",
                     "VerifyOverwrite", wx.OK|wx.CANCEL|wx.ICON_QUESTION)
                 if msg.ShowModal() == wx.ID_OK:
                     export = True
@@ -2988,15 +2794,70 @@ class MainFrame(wx.Frame):
             else:
                 export = True
 
-            print ("Export is true", export)
             if export == True:
-                #if filenamebegins == '':
-                #     filenamebegins='youforgottodefineafilename'
-                exportsuccess = True
-
+                stream = datad.get('dataset')
                 if stream.header.get('DataFormat') == 'MagPyDI':
                     divers = '1.0'
                     stream.header['DataType'] = "{}{}".format('MagPyDI',divers)
+                # convert all exportparameters from strings to desired values
+                for el in exportoptions:
+                    if not exportoptions.get(el):
+                        exportparameter[el] = None
+                    elif el == 'year' and exportoptions.get(el):
+                        exportparameter[el] = int(exportoptions.get(el))
+                    elif el in ['fillvalue', 'meanh', 'meanf', 'deltaf'] and methods.is_number(exportoptions.get(el)):
+                        exportparameter[el] = float(exportoptions.get(el))
+                    elif el == 'fillvalue' and exportoptions.get(el):
+                        exportparameter[el] = None
+                    elif el == 'addflags'and exportoptions.get(el) == 'True':
+                        exportparameter[el] = True
+                    elif el == 'addflags' and not exportoptions.get(el) == 'True':
+                        exportparameter[el] = None
+                    elif el in ['kvals','scalar','environment','diff'] and exportoptions.get(el):
+                        # get the dataset of the selected streamid
+                        selstreamid = int(exportoptions.get(el))
+                        datacont = self.datadict.get(selstreamid)
+                        exportparameter[el] = datacont.get('dataset')
+                    else:
+                        exportparameter[el] = exportoptions.get(el)
+
+                print ("EXPORT", exportparameter)
+
+                exportsuccess = stream.write(exportpath,
+                                             format_type=exportparameter.get('format_type'),
+                                             filenamebegins=exportparameter.get('filenamebegins'),
+                                             filenameends=exportparameter.get('filenameends'),
+                                             dateformat=exportparameter.get('dateformat'),
+                                             coverage=exportparameter.get('coverage'),
+                                             mode=exportparameter.get('mode'),
+                                             subdirectory=exportparameter.get('subdirectory'),
+                                             keys=exportparameter.get('keys'),
+                                             absinfo=exportparameter.get('absinfo'),
+                                             fitfunc=exportparameter.get('fitfunc'),
+                                             fitdegree=exportparameter.get('fitdegree'),
+                                             knotstep=exportparameter.get('knotstep'),
+                                             extradays=exportparameter.get('extradays'),
+                                             year=exportparameter.get('year'),
+                                             meanh=exportparameter.get('meanh'),
+                                             meanf=exportparameter.get('meanf'),
+                                             deltaF=exportparameter.get('deltaF'),
+                                             diff=exportparameter.get('diff'),
+                                             baseparam=exportparameter.get(' baseparam'),
+                                             version=exportparameter.get('version'),
+                                             gin=exportparameter.get('gin'),
+                                             datatype=exportparameter.get('datatype'),
+                                             kvals=exportparameter.get('kvals'),
+                                             kind=exportparameter.get('kind'),
+                                             comment=exportparameter.get('comment'),
+                                             useg=exportparameter.get('useg'),
+                                             skipcompression=exportparameter.get('skipcompression'),
+                                             addflags=exportparameter.get('addflags'),
+                                             fillvalue=exportparameter.get('fillvalue'),
+                                             scalar=exportparameter.get('scalar'),
+                                             environment=exportparameter.get('environment'))
+
+                # TODO: Eventually get additional options -> better do that with export options in Export Dialog
+                """
                 if fileformat == 'BLV':
                         #print ("Writing BLV data")  # add function here
                         #print ("Function", self.plotopt['function'])
@@ -3106,15 +2967,17 @@ class MainFrame(wx.Frame):
                                     mode=mode,
                                     coverage=coverage,
                                     format_type=fileformat)
-                if exportsuccess:
-                        self.menu_p.rep_page.logMsg("Data written to path: {}".format(path))
-                        self.changeStatusbar("Data written ... Ready")
-                else:
-                        self.menu_p.rep_page.logMsg("Exporting data failed. Please check required meta data, resolution and coverage for the selected output format")
-                        self.changeStatusbar("Exporting data failed ... Ready")
                 #except:
                 #    self.menu_p.rep_page.logMsg("Writing failed - Permission problem?")
                 #    self.changeStatusbar("Exporting data failed ... Ready")
+                """
+                if exportsuccess:
+                    self.menu_p.rep_page.logMsg("Data written to path: {}".format(self.guidict.get('exportpath')))
+                    self.changeStatusbar("Data written ... Ready")
+                else:
+                    self.menu_p.rep_page.logMsg(
+                            "Exporting data failed. Please check required meta data, resolution and coverage for the selected output format")
+                    self.changeStatusbar("Exporting data failed ... Ready")
         else:
             self.changeStatusbar("Ready")
         dlg.Destroy()

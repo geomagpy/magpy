@@ -25,10 +25,10 @@ import dateutil.parser
 
 | class          |  since version  |  until version  |  runtime test  |  manual  |  used by |
 | -------------- |  -------------  |  -------------  |  ------------  | -------- |  ---------- |
-| OpenWebAddressDialog |    2.0.0  |                 |  level 1       |          | on_open_url |
-| ConnectWebServiceDialog | 2.0.0  |                 |  level 1       |          | on_open_webservice |
-|  xxx     |  2.0.0  |            |             |               |      | |
-|  xxx     |  2.0.0  |            |             |               |      | |
+| OpenWebAddressDialog |    2.0.0  |                 |  level 1       |          | file_on_open_url |
+| ConnectWebServiceDialog | 2.0.0  |                 |  level 1       |          | file_on_open_webservice |
+| ExportDataDialog |        2.0.0  |                 |                |          | file_export_data  |
+| ExportModifyNameDialog |  2.0.0  |                 |                |          | ExportDataDialog  |
 
 runtime test:
 - : not tested
@@ -443,7 +443,7 @@ class ExportDataDialog(wx.Dialog):
     """
     Dialog for Exporting data
     """
-    def __init__(self, parent, title, path, datadict, exportoptions):
+    def __init__(self, parent, title, path, datadict, exportoptions, allstreamids):
         super(ExportDataDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
 
@@ -452,12 +452,13 @@ class ExportDataDialog(wx.Dialog):
         samplingrate = datadict.get('samplingrate')
         coverage = datadict.get('coverage')
         defaultformat = exportoptions.get('format_type')
+        self.streamids = allstreamids
 
         print (self.WriteFormats)
+        print (datadict)
         ALL = ['IAGA', 'WDC', 'IMF', 'IAF', 'BLV', 'BLV1_2', 'IYFV', 'DKA', 'DIDD', 'COVJSON', 'PYSTR', 'PYASCII', 'CSV',
          'IMAGCDF', 'PYCDF', 'LATEX']
         LOWRESOLUTIONFORMATS = ['WDC', 'IMF', 'IAF', 'IYFV', 'DKA', 'DIDD']
-        KVALUEFORMAT = ['DKA']
         EXPERIMENTALFORMATS = ['LATEX']
         BLVFORMATS = ['BLV','PYCDF','PYSTR']
         self.WriteFormats = [el for el in self.WriteFormats if not el in EXPERIMENTALFORMATS]
@@ -587,24 +588,38 @@ class ExportDataDialog(wx.Dialog):
 
     def OnModifyButton(self, event):
         # open a dialog to select filename specifications
-        helpdlg = ExportModifyNameDialog(None, title='File name specifications',exportoptions=self.exportoptions)
-        blvyear = None
+        helpdlg = ExportModifyNameDialog(None, title='Specify options',exportoptions=self.exportoptions, streamids=self.streamids)
         if helpdlg.ShowModal() == wx.ID_OK:
             self.exportoptions['filenamebegins'] = helpdlg.beginTextCtrl.GetValue()
             self.exportoptions['filenameends'] = helpdlg.endTextCtrl.GetValue()
             self.exportoptions['dateformat'] = helpdlg.dateTextCtrl.GetValue()
             self.exportoptions['coverage'] = helpdlg.coverageComboBox.GetValue()
             self.exportoptions['mode'] = helpdlg.modeComboBox.GetValue()
-            year = helpdlg.yearTextCtrl.GetValue()
-            if year:
-                try:
-                    blvyear = int(year)
-                except:
-                    blvyear = None
-            else:
-                blvyear = None
-        selformat = self.formatComboBox.GetValue()
-        self.filename = self.GetFilename(self.stream, selformat, self.filenamebegins, self.filenameends,self.coverage,self.dateformat, blvyear = blvyear)
+            self.exportoptions['subdirectory'] = helpdlg.subdirComboBox.GetValue()
+            format_type = self.exportoptions.get('format_type')
+            print (format_type)
+            if format_type == 'IMF':
+                self.exportoptions['version'] = helpdlg.versionTextCtrl.GetValue()
+                self.exportoptions['gin'] = helpdlg.ginTextCtrl.GetValue()
+                self.exportoptions['datatype'] = helpdlg.datatypeComboBox.GetValue()
+            if format_type == 'IAF':
+                self.exportoptions['kvals'] = helpdlg.kvalsComboBox.GetValue()
+            if format_type == 'IYFV':
+                self.exportoptions['comment'] = helpdlg.commentTextCtrl.GetValue()
+                self.exportoptions['kind'] = helpdlg.kindComboBox.GetValue()
+            if format_type == 'IMAGCDF':
+                self.exportoptions['addflags'] = helpdlg.addflagsComboBox.GetValue()
+                self.exportoptions['fillvalue'] = helpdlg.fillvalueTextCtrl.GetValue()
+                self.exportoptions['scalar'] = helpdlg.scalarComboBox.GetValue()
+                self.exportoptions['environment'] = helpdlg.environmentComboBox.GetValue()
+            if format_type == 'BLV':
+                self.exportoptions['absinfo'] = helpdlg.absinfoTextCtrl.GetValue()
+                self.exportoptions['year'] = helpdlg.yearTextCtrl.GetValue()
+                self.exportoptions['meanh'] = helpdlg.meanhTextCtrl.GetValue()
+                self.exportoptions['meanf'] = helpdlg.meanfTextCtrl.GetValue()
+                self.exportoptions['deltaf'] = helpdlg.deltafTextCtrl.GetValue()
+                self.exportoptions['diff'] = helpdlg.diffComboBox.GetValue()
+        self.filename = self.GetFilename(self.stream, exportoptions=self.exportoptions)
         self.filenameTextCtrl.SetValue(self.filename)
 
 
@@ -616,7 +631,7 @@ class ExportDataDialog(wx.Dialog):
         self.exportoptions['filenameends'] = None
         self.exportoptions['coverage'] = None
         self.exportoptions['dateformat'] = None
-        self.filename = self.GetFilename(self.stream, selformat, exportoptions=self.exportoptions)
+        self.filename = self.GetFilename(self.stream, exportoptions=self.exportoptions)
         self.filenameTextCtrl.SetValue(self.filename)
 
 
@@ -624,69 +639,199 @@ class ExportModifyNameDialog(wx.Dialog):
     """
     Helper Dialog for Exporting data
     """
-    def __init__(self, parent, title, exportoptions):
+    def __init__(self, parent, title, exportoptions, streamids):
         super(ExportModifyNameDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.exportoptions = exportoptions
+        self.streamids = streamids
+        self.elemlist = []
         self.createControls()
         self.doLayout()
 
 
     # Widgets
     def createControls(self):
+        """
+        DESCRIPTION
+            Create controls in dependency of the selected format type
+        :return:
+        """
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+        elemlist = []
 
-        self.beginLabel = wx.StaticText(self, label="Name(s) start with ...", size=(160,30))
-        self.endLabel = wx.StaticText(self, label="Name(s) end with ...", size=(160,30))
-        self.beginTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('filenamebegins'), size=(160,30))
-        self.endTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('filenameends'), size=(160,30))
-        self.dateformatLabel = wx.StaticText(self, label="Date looks like ...")
+        # General fiels:
+        self.beginLabel = wx.StaticText(self, label="Name(s) start with.", size=(160,-1))
+        elemlist.append((self.beginLabel, noOptions))
+        self.beginTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('filenamebegins'), size=(160,-1))
+        elemlist.append((self.beginTextCtrl, expandOption))
+        self.endLabel = wx.StaticText(self, label="Name(s) end with:", size=(160,-1))
+        elemlist.append((self.endLabel, noOptions))
+        self.endTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('filenameends'), size=(160,-1))
+        elemlist.append((self.endTextCtrl, expandOption))
+        self.dateformatLabel = wx.StaticText(self, label="Date format:")
+        elemlist.append((self.dateformatLabel, noOptions))
         self.dateTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('dateformat'), size=(160,-1))
-        self.coverageLabel = wx.StaticText(self, label="File covers ...")
+        elemlist.append((self.dateTextCtrl, expandOption))
+        self.coverageLabel = wx.StaticText(self, label="File coverage:")
+        elemlist.append((self.coverageLabel, noOptions))
         self.coverageComboBox = wx.ComboBox(self, choices=['hour','day','month','year','all'],
             style=wx.CB_DROPDOWN, value=self.exportoptions.get('coverage'),size=(160,-1))
-        self.modeLabel = wx.StaticText(self, label="Write mode ...")
+        elemlist.append((self.coverageComboBox, expandOption))
+        self.modeLabel = wx.StaticText(self, label="Write mode:")
+        elemlist.append((self.modeLabel, noOptions))
         self.modeComboBox = wx.ComboBox(self, choices=['replace','append', 'overwrite', 'skip'],
             style=wx.CB_DROPDOWN, value=self.exportoptions.get('mode'),size=(160,-1))
-        self.yearLabel = wx.StaticText(self, label="Year (BLV export):", size=(160,30))
-        self.yearTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('year'), size=(160,30))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,30))
+        elemlist.append((self.modeComboBox, expandOption))
+        self.subdirLabel = wx.StaticText(self, label="Create subdirectories:")
+        elemlist.append((self.subdirLabel, noOptions))
+        self.subdirComboBox = wx.ComboBox(self, choices=['','Y', 'Ym', 'Yj'],
+            style=wx.CB_DROPDOWN, value=self.exportoptions['subdirectory'],size=(160,-1))
+        elemlist.append((self.subdirComboBox, expandOption))
 
+        format_type=self.exportoptions.get('format_type')
+        if format_type == 'IMF':
+            """
+            - version       (str) file version
+            - gin           (gin) information node code
+            - datatype      (str) R: reported, A: adjusted, Q: quasi-definit, D: definite
+            """
+            self.versionLabel = wx.StaticText(self, label="IMF version:")
+            self.versionTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('version'), size=(160, -1))
+            elemlist.append((self.versionLabel, noOptions))
+            elemlist.append((self.versionTextCtrl, expandOption))
+            self.ginLabel = wx.StaticText(self, label="Geomagnetic information node (GIN):")
+            elemlist.append((self.ginLabel, noOptions))
+            self.ginTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('gin'), size=(160, -1))
+            elemlist.append((self.ginTextCtrl, expandOption))
+            self.datatypeLabel = wx.StaticText(self, label="Data type (Reported, Adjusted, Quasi, Definitive:")
+            elemlist.append((self.datatypeLabel, noOptions))
+            self.datatypeComboBox = wx.ComboBox(self, choices=['', 'R', 'A', 'G', 'D'],
+                                                style=wx.CB_DROPDOWN, value=self.exportoptions.get('datatype'),
+                                                size=(160, -1))
+            elemlist.append((self.datatypeComboBox, expandOption))
+
+        if format_type == 'IAF':
+            """
+            - kvals         (Datastream) contains K value for iaf storage
+            """
+            self.kvalsLabel = wx.StaticText(self, label="Select data set containing K values:")
+            elemlist.append((self.kvalsLabel, noOptions))
+            self.kvalsComboBox = wx.ComboBox(self, choices=self.streamids,
+                                                style=wx.CB_DROPDOWN, value=self.exportoptions.get('kvals'),
+                                                size=(160, -1))
+            elemlist.append((self.kvalsComboBox, expandOption))
+
+        if format_type == 'IYFV':
+            """
+            - comment       (string) some comment, currently used in IYFV
+            - kind          (string) one of 'A' (all), 'Q' quiet days, 'D' disturbed days,
+                                 currently used in IYFV
+            """
+            self.commentLabel = wx.StaticText(self, label="IYFV comment:")
+            elemlist.append((self.commentLabel, noOptions))
+            self.commentTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('comment'), size=(160, -1))
+            elemlist.append((self.commentTextCtrl, expandOption))
+            self.kindLabel = wx.StaticText(self, label="Data type (All, Quiet, Disturded")
+            elemlist.append((self.kindLabel, noOptions))
+            self.kindComboBox = wx.ComboBox(self, choices=['', 'A', 'Q', 'D'],
+                                                style=wx.CB_DROPDOWN, value=self.exportoptions.get('kind'),
+                                                size=(160, -1))
+            elemlist.append((self.kindComboBox, expandOption))
+
+        if format_type == 'IMAGCDF':
+            """
+            *Specific parameters:
+            - addflags      (BOOL) add flags to IMAGCDF output if True
+            - fillvalue     (float) define a fill value for non-existing data (default is np.nan)
+            - scalar        (DataStream) provide scalar data when sampling rate is different to vector data
+            - environment   (DataStream) provide environment data when sampling rate is different to vector data
+            """
+            self.addflagsLabel = wx.StaticText(self, label="Add flags:")
+            elemlist.append((self.addflagsLabel, noOptions))
+            self.addflagsComboBox = wx.ComboBox(self, choices=['False','True'],
+                                                style=wx.CB_DROPDOWN, value=self.exportoptions.get('addflags'),
+                                                size=(160, -1))
+            elemlist.append((self.addflagsComboBox, expandOption))
+            self.fillvalueLabel = wx.StaticText(self, label="Define missing data value (NaN if empty):")
+            elemlist.append((self.fillvalueLabel, noOptions))
+            self.fillvalueTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('fillvalue'), size=(160, -1))
+            elemlist.append((self.fillvalueTextCtrl, expandOption))
+            self.scalarLabel = wx.StaticText(self, label="Select separate scalar data set:")
+            elemlist.append((self.scalarLabel, noOptions))
+            self.scalarComboBox = wx.ComboBox(self, choices=self.streamids,
+                                                style=wx.CB_DROPDOWN, value=self.exportoptions.get('scalar'),
+                                                size=(160, -1))
+            elemlist.append((self.scalarComboBox, expandOption))
+            self.environmentLabel = wx.StaticText(self, label="Select separate temperature data set:")
+            elemlist.append((self.environmentLabel, noOptions))
+            self.environmentComboBox = wx.ComboBox(self, choices=self.streamids,
+                                                style=wx.CB_DROPDOWN, value=self.exportoptions.get('environment'),
+                                                size=(160, -1))
+            elemlist.append((self.environmentComboBox, expandOption))
+
+        if format_type == 'BLV':
+            """
+            *Specific parameters:
+            - absinfo       (str) parameter of DataAbsInfo
+            - fitfunc       
+            - fitdegree
+            - knotstep
+            - extradays
+            - year          (int) year
+            - meanh         (float) annual mean of H component
+            - meanf         (float) annual mean of F component
+            - deltaF        (float) given deltaF value between pier and f position
+            - diff          (DataStream) diff (deltaF) between vario and scalar
+            """
+            self.absinfoLabel = wx.StaticText(self, label="DataAbsoluteInfo:", size=(160, -1))
+            elemlist.append((self.absinfoLabel, noOptions))
+            self.absinfoTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('absinfo'), size=(160, -1))
+            elemlist.append((self.absinfoTextCtrl, expandOption))
+            self.yearLabel = wx.StaticText(self, label="Year (BLV export):", size=(160, -1))
+            elemlist.append((self.yearLabel, noOptions))
+            self.yearTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('year'), size=(160, -1))
+            elemlist.append((self.yearTextCtrl, expandOption))
+            self.meanhLabel = wx.StaticText(self, label="Define starting value for H:")
+            elemlist.append((self.meanhLabel, noOptions))
+            self.meanhTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('meanh'), size=(160, -1))
+            elemlist.append((self.meanhTextCtrl, expandOption))
+            self.meanfLabel = wx.StaticText(self, label="Define starting value for F:")
+            elemlist.append((self.meanfLabel, noOptions))
+            self.meanfTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('meanf'), size=(160, -1))
+            elemlist.append((self.meanfTextCtrl, expandOption))
+            self.deltafLabel = wx.StaticText(self, label="Define pier difference deltaF:")
+            elemlist.append((self.deltafLabel, noOptions))
+            self.deltafTextCtrl = wx.TextCtrl(self, value=self.exportoptions.get('deltaf'), size=(160, -1))
+            elemlist.append((self.deltafTextCtrl, expandOption))
+            self.diffLabel = wx.StaticText(self, label="Select data set with daily mean F differences:")
+            elemlist.append((self.diffLabel, noOptions))
+            self.diffComboBox = wx.ComboBox(self, choices=self.streamids,
+                                               style=wx.CB_DROPDOWN, value=self.exportoptions.get('diff'),
+                                               size=(160, -1))
+            elemlist.append((self.diffComboBox, expandOption))
+
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160, -1))
+        elemlist.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160, -1))
+        elemlist.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        self.elemlist = elemlist
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
         boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
 
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        elemlist = [(self.beginLabel, noOptions),
-                 (self.endLabel, noOptions),
-                 (self.beginTextCtrl, expandOption),
-                 (self.endTextCtrl, expandOption),
-                 (self.dateformatLabel, noOptions),
-                 (self.coverageLabel, noOptions),
-                 (self.dateTextCtrl, expandOption),
-                 (self.coverageComboBox, expandOption),
-                  emptySpace,
-                  emptySpace,
-                 (self.modeLabel, noOptions),
-                 (self.modeComboBox, expandOption),
-                 (self.yearLabel, noOptions),
-                 (self.yearTextCtrl, expandOption),
-                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
 
         # A GridSizer will contain the other controls:
         cols = 2
-        rows = int(np.ceil(len(elemlist)/float(cols)))
+        rows = int(np.ceil(len(self.elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
         # Add the controls to the sizers:
-        for control, options in elemlist:
+        for control, options in self.elemlist:
             gridSizer.Add(control, **options)
 
         for control, options in \
@@ -695,6 +840,7 @@ class ExportModifyNameDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+@deprecated("Included in ExportModifyName")
 class ExportBLVDialog(wx.Dialog):
     """
     Helper Dialog for Exporting BLV data
@@ -732,7 +878,7 @@ class ExportBLVDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         self.yearLabel = wx.StaticText(self, label="Year (BLV typically covers one year):")
-        self.yearTextCtrl = wx.TextCtrl(self, value=str(self.year), size=(160,30))
+        self.yearTextCtrl = wx.TextCtrl(self, value=str(self.year), size=(160,-1))
         self.diffsourceLabel = wx.StaticText(self, label="Representative delta F source (one-minute):")
         self.diffsourceComboBox = wx.ComboBox(self, choices=self.diffsourcechoices,
             style=wx.CB_DROPDOWN, value=self.diffsource,size=(160,-1))
@@ -740,8 +886,8 @@ class ExportBLVDialog(wx.Dialog):
         self.adoptedscalarComboBox = wx.ComboBox(self, choices=['default','mean', 'median'],
             style=wx.CB_DROPDOWN, value=self.deltaFsel,size=(160,-1))
         self.adoptedscalar2Label = wx.StaticText(self, label="(default will take selected fit of dF column)")
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply', size=(160,-1))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel', size=(160,-1))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -785,6 +931,7 @@ class ExportBLVDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+@deprecated("Included in ExportModifyName")
 class ExportIYFVDialog(wx.Dialog):
     """
     Helper Dialog for Exporting IYFV data

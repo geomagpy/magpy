@@ -137,7 +137,12 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
     """
     # This method requires the provision of data sets on which the get_gaps method has been applied
     def is_list_empty(testlist):
-        return isinstance(testlist, list) and all(map(is_list_empty, testlist))
+        # Replaces older testing method whether array like [[]] are empty
+        tester = min(np.array(testlist).shape)
+        if tester:
+            return False
+        else:
+            return True
 
     if not data:
         data = [DataStream()]
@@ -273,10 +278,13 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                     subplot = int("{}1{}".format(total_keys, total_pos + 1))
                 else:
                     subplot = int("{}1{}".format(len(keys[idx]), i + 1))
+                #if i == 0:  # Eventually do these changes
+                #    ax[i] = plt.subplot(subplot, sharex=True)
+                #ax[i] = plt.subplot(subplot)
                 ax = plt.subplot(subplot)
-                allaxes.append(ax)
-                if len(allaxes) > 0:
-                    ax.sharex(allaxes[0])
+                #allaxes.append(ax)
+                #if len(allaxes) > 0:
+                #    ax.sharex(allaxes[0])
                 # Symbols and color
                 # ------------------
                 symbol = symbols[idx][i]

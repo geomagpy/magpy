@@ -625,7 +625,7 @@ are *absinfo*, *year*, *meanh*, *meanf*, *deltaF* and *diff*. See section 7.6 fo
 
 The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute data products. The IMF format can be
 created from basically and data set in 1-minute resolution. Individual files cover one day. The data header of the
-IMF file contains an abbrevation of the geomagnetic information node GIN which by default is set to EDI
+IMF file contains an abbreviation of the geomagnetic information node GIN which by default is set to EDI
 (for Edinburgh). To change that use the "gin" option.
 
         data.write('/path/to/export/IMF/', format_type='IMF', gin="GOL")
@@ -2420,7 +2420,7 @@ configured by option `deltaF`. If a number is provided, this value is assumed to
 If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in 
 the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in 
 a `DataAbsInfo` meta information field, as shown above, will calculate and use the scalar baseline function. 
-The `meanstream` stream contains daily averages of delta F values between variometer and F measurements and the baseline 
+The `diff=meandata` stream contains daily averages of delta F values between variometer and F measurements and the baseline 
 adoption data in the meta-information. You can, however, provide all this information manually as well. The typical 
 way to obtain such a `meanstream` is sketched above.
 
