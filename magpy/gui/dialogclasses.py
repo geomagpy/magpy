@@ -27,7 +27,7 @@ import dateutil.parser
 | -------------- |  -------------  |  -------------  |  ------------  | -------- |  ---------- |
 | OpenWebAddressDialog |    2.0.0  |                 |  level 1       |          | file_on_open_url |
 | ConnectWebServiceDialog | 2.0.0  |                 |  level 1       |          | file_on_open_webservice |
-| LoadDataDialog |          2.0.0  |                 |                |          |       |
+| LoadDataDialog |          2.0.0  |                 |  level 1       |          | _open_stream      |
 | ExportDataDialog |        2.0.0  |                 |  level 1       |          | file_export_data  |
 | ExportModifyNameDialog |  2.0.0  |                 |  level 1       |          | ExportDataDialog  |
 | DatabaseConnectDialog |   2.0.0  |                 |  level 1       |          | db_on_connect |

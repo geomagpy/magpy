@@ -118,6 +118,7 @@ Major methods:              major_method
 |  MainFrame     | help_about  |       2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
+|  MainFrame     | help_open_log     | 2.0.0  |             | level 1    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
@@ -1320,15 +1321,13 @@ class MainFrame(wx.Frame):
         self.CheckDataMenu = wx.Menu()
         self.CheckDefinitiveDataSelect = wx.MenuItem(self.CheckDataMenu, 701, "Check &definitive data...\tCtrl+H", "Check data", wx.ITEM_NORMAL)
         self.CheckDataMenu.Append(self.CheckDefinitiveDataSelect)
-        self.OpenLogFileSelect = wx.MenuItem(self.CheckDataMenu, 702, "Open MagP&y log...\tCtrl+Y", "Open log", wx.ITEM_NORMAL)
-        self.CheckDataMenu.Append(self.OpenLogFileSelect)
         self.MainMenu.Append(self.CheckDataMenu, "Spe&cials")
         # ## Options Menu
         self.OptionsMenu = wx.Menu()
-        self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic initialisation parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
+        self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
         self.OptionsMenu.Append(self.OptionsInitItem)
         self.OptionsMenu.AppendSeparator()
-        self.OptionsDIItem = wx.MenuItem(self.OptionsMenu, 402, "DI &initialisation parameter\tCtrl+I", "Modify DI related parameters (e.g. thresholds, paths, input sheet layout)", wx.ITEM_NORMAL)
+        self.OptionsDIItem = wx.MenuItem(self.OptionsMenu, 402, "D&I parameter\tCtrl+I", "Modify DI related parameters (e.g. thresholds, paths, input sheet layout)", wx.ITEM_NORMAL)
         self.OptionsMenu.Append(self.OptionsDIItem)
         self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.HelpMenu = wx.Menu()
@@ -1338,6 +1337,8 @@ class MainFrame(wx.Frame):
         self.HelpMenu.Append(self.HelpReadFormatsItem)
         self.HelpWriteFormatsItem = wx.MenuItem(self.HelpMenu, 303, "Write Formats...", "Supported data formats to write", wx.ITEM_NORMAL)
         self.HelpMenu.Append(self.HelpWriteFormatsItem)
+        self.HelpLogFileSelect = wx.MenuItem(self.HelpMenu, 304, "Open MagP&y log...\tCtrl+Y", "Open log", wx.ITEM_NORMAL)
+        self.HelpMenu.Append(self.HelpLogFileSelect)
         self.MainMenu.Append(self.HelpMenu, "&Help")
         self.SetMenuBar(self.MainMenu)
         # Menu Bar end
@@ -1408,6 +1409,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.file_on_open_db, self.dbOpen)
         self.Bind(wx.EVT_MENU, self.file_export_data, self.exportData)
         self.Bind(wx.EVT_MENU, self.file_on_quit, self.fileQuitItem)
+        self.Bind(wx.EVT_CLOSE, self.file_on_quit)  #Bind the EVT_CLOSE event to FileQuit()
         # Database Menu
         self.Bind(wx.EVT_MENU, self.db_on_connect, self.DBConnect)
         self.Bind(wx.EVT_MENU, self.db_on_init, self.DBInit)
@@ -1424,9 +1426,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.help_about, self.HelpAboutItem)
         self.Bind(wx.EVT_MENU, self.help_read_formats, self.HelpReadFormatsItem)
         self.Bind(wx.EVT_MENU, self.help_write_formats, self.HelpWriteFormatsItem)
-        self.Bind(wx.EVT_CLOSE, self.file_on_quit)  #Bind the EVT_CLOSE event to FileQuit()
+        self.Bind(wx.EVT_MENU, self.help_open_log, self.HelpLogFileSelect)
+        # Specials menu
         self.Bind(wx.EVT_MENU, self.OnCheckDefinitiveData, self.CheckDefinitiveDataSelect)
-        self.Bind(wx.EVT_MENU, self.OnCheckOpenLog, self.OpenLogFileSelect)
         # BindingControls on the notebooks
         #       Stream Page
         # ------------------------
@@ -3083,7 +3085,6 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
 
 
-
     # ##################################################################################################################
     # ####    Help Menu Bar                                    #########################################################
     # ##################################################################################################################
@@ -3171,6 +3172,30 @@ class MainFrame(wx.Frame):
         dlg = ScrolledMessageDialog(self, message, 'Read formats:')
         dlg.ShowModal()
 
+
+    def help_open_log(self, event):
+        """
+        Definition:
+            open and display magpy log file
+        """
+
+        logfile=os.path.join(tempfile.gettempdir(),'magpy.log')
+        reportlst = []
+        if os.path.exists(logfile):
+            with open(logfile) as fobj:
+                for line in fobj:
+                    reportlst.append(line)
+        else:
+            # TODO create message box
+            pass
+        report = ''.join(reportlst)
+
+        dlg = CheckOpenLogDialog(None, title='MagPy Logging data', report = report)
+        if dlg.ShowModal() == wx.ID_OK:
+            pass
+        else:
+            dlg.Destroy()
+            return
 
     # ##################################################################################################################
     # ####    Data Panel                                       #########################################################
@@ -3552,31 +3577,6 @@ class MainFrame(wx.Frame):
             textfile = open(os.path.join(self.last_dir, self.filename), 'r')
             self.menu_p.gen_page.AuxDataTextCtrl.SetValue(textfile.read())
             textfile.close()
-
-
-    def OnCheckOpenLog(self, event):
-        """
-        Definition:
-            open and display magpy log file
-        """
-
-        logfile=os.path.join(tempfile.gettempdir(),'magpy.log')
-        reportlst = []
-        if os.path.exists(logfile):
-            with open(logfile) as fobj:
-                for line in fobj:
-                    reportlst.append(line)
-        else:
-            # TODO create message box
-            pass
-        report = ''.join(reportlst)
-
-        dlg = CheckOpenLogDialog(None, title='MagPy Logging data', report = report)
-        if dlg.ShowModal() == wx.ID_OK:
-            pass
-        else:
-            dlg.Destroy()
-            return
 
 
     def OnCheckDefinitiveData(self, event):
