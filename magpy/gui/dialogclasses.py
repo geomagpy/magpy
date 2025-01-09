@@ -27,12 +27,12 @@ import dateutil.parser
 | -------------- |  -------------  |  -------------  |  ------------  | -------- |  ---------- |
 | OpenWebAddressDialog |    2.0.0  |                 |  level 1       |          | file_on_open_url |
 | ConnectWebServiceDialog | 2.0.0  |                 |  level 1       |          | file_on_open_webservice |
-| LoadDataDialog |        2.0.0    |                 |                |          | file_export_data  |
+| LoadDataDialog |          2.0.0  |                 |                |          |       |
 | ExportDataDialog |        2.0.0  |                 |  level 1       |          | file_export_data  |
 | ExportModifyNameDialog |  2.0.0  |                 |  level 1       |          | ExportDataDialog  |
-| DatabaseConnectDialog |  2.0.0   |                 |  level 1       |          | db_on_connect |
-| OptionsInitDialog |      2.0.0   |                 |  level 1       |          | options_init |
-| xx |  2.0.0   |                 |               |          | xx |
+| DatabaseConnectDialog |   2.0.0  |                 |  level 1       |          | db_on_connect |
+| OptionsInitDialog |       2.0.0  |                 |  level 1       |          | options_init |
+| OptionsDIDialog |         2.0.0  |                 |  level 2       |          | options_di |
 | xx |  2.0.0   |                 |               |          | xx |
 | xx |  2.0.0   |                 |               |          | xx |
 | xx |  2.0.0   |                 |               |          | xx |
@@ -1245,6 +1245,7 @@ class OptionsDIDialog(wx.Dialog):
         self.stations = self.analysisdict.get('stations')
         self.stationlist = [el for el in self.stations]
         self.dicontent = self.stations.get(defaultstation)
+        self.newdicontent = self.dicontent.copy()
 
         self.sheetorder = self.dicontent.get('order','')
         self.sheetdouble = self.dicontent.get('double',False)
@@ -1255,22 +1256,21 @@ class OptionsDIDialog(wx.Dialog):
             self.sheetscale = True
         self.createControls()
         self.doLayout()
+        self.bindControls()
+
 
     # Widgets
     def createControls(self):
         # General paths
         self.stationLabel = wx.StaticText(self, label="Select station code",size=(160,-1))
         self.stationComboBox = wx.ComboBox(self, choices=self.stationlist,
-                              style=wx.CB_DROPDOWN, value=self.currentstation,size=(160,-1))
+                              style=wx.CB_DROPDOWN, value=self.currentstation,size=(240,-1))
         # Thresholds and defaults
         self.diinputLabel = wx.StaticText(self, label="Input sheet:",size=(160,-1))
-        self.sheetorderTextCtrl = wx.TextCtrl(self, value=self.sheetorder,size=(160,-1))
+        self.sheetorderTextCtrl = wx.TextCtrl(self, value=self.sheetorder,size=(240,-1))
         self.sheetdoubleCheckBox = wx.CheckBox(self, label="Repeated positions",size=(160,-1))
         self.sheetscaleCheckBox = wx.CheckBox(self, label="Scale value",size=(160,-1))
 
-        f = self.diinputLabel.GetFont()
-        newf = wx.Font(14, wx.DECORATIVE, wx.ITALIC, wx.BOLD)
-        self.diinputLabel.SetFont(newf)
         self.sheetdoubleCheckBox.SetValue(self.sheetdouble)
         self.sheetscaleCheckBox.SetValue(self.sheetscale)
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
@@ -1318,8 +1318,10 @@ class OptionsDIDialog(wx.Dialog):
 
     def OnStationChange(self, event):
         # call stream._write_format to determine self.filename
-        self.currentstation = self.formatComboBox.GetValue()
+        self.currentstation = self.stationComboBox.GetValue()
         self.dicontent = self.stations.get(self.currentstation)
+        print (self.currentstation)
+        print (self.dicontent)
         self.sheetorderTextCtrl.SetValue(self.dicontent.get('order',''))
         self.sheetdoubleCheckBox.SetValue(self.dicontent.get('double',False))
         self.sheetscaleCheckBox.SetValue(self.dicontent.get('scalevalue',False))

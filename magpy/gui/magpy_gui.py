@@ -3040,8 +3040,12 @@ class MainFrame(wx.Frame):
             # get stationlist - if defaultstation is not in stationlist then create station content
             stationdict = self.analysisdict.get('stations')
             stationlist = [el for el in stationdict]
+            newstationdict = {}
             if not self.analysisdict['defaultstation'] in stationlist:
-                stationdict[self.analysisdict.get('defaultstation').upper()] = stationdict.get(stationlist[0])
+                oldstationdict = stationdict.get(stationlist[0])
+                for el in oldstationdict:
+                    newstationdict[el] = oldstationdict[el]
+                stationdict[self.analysisdict.get('defaultstation').upper()] = newstationdict
 
             save_dict(self.guidict, path=self.guicfg)            # stored as config
             save_dict(self.analysisdict, path=self.analysiscfg) # stored as config
@@ -3058,8 +3062,9 @@ class MainFrame(wx.Frame):
         dlg = OptionsDIDialog(None, title='Options: DI Analysis parameters', analysisdict=self.analysisdict)
 
         if dlg.ShowModal() == wx.ID_OK:
-            station = dlg.currentstation
-            stationcont = self.analysisdict.get('stations').get(station)
+            station = dlg.stationComboBox.GetValue()
+            stations = self.analysisdict.get('stations')
+            stationcont = stations.get(station)
             order=dlg.sheetorderTextCtrl.GetValue()
             double=dlg.sheetdoubleCheckBox.GetValue()
             scalevalue=dlg.sheetscaleCheckBox.GetValue()
@@ -3070,9 +3075,10 @@ class MainFrame(wx.Frame):
             if not scalevalue:
                 stationcont['scalevalue'] = False
             stationcont['order'] = order
+            stations[station] = stationcont
+            self.analysisdict['stations'] = stations
 
-            #save_dict(self.analysisdict, path=self.analysiscfg) # stored as config
-
+            save_dict(self.analysisdict, path=self.analysiscfg) # stored as config
 
         dlg.Destroy()
 

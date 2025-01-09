@@ -18,18 +18,18 @@ Typical usage of the basic MagPy package for reading and visualising data looks 
 Below you will find a quick guide to usage of the basic MagPy package. For instructions on *xmagpy* please refer to the document "[An introduction to XMagPy]" in the docs. You can also subscribe to our information channel at [Telegram] for further information on updates and current issues.
 
 
-### Contents
+### Table of Contents
 
-1. Installation and requirements
-2. Quick guide with often used commands
-3. Reading and writing, data typs
-4. Figures
-5. Timeseries methods
-6. Annotating data and flagging
-7. DI-flux measurements, basevalues and baselines
-8. Geomagnetic activity analysis
-9. Database support
-10. Additional tools and applications
+1. [Installation and requirements](#1-installation-and-requirements)
+2. [Quick guide](#2-a-quick-guide-to-magpy)
+3. [Reading and writing data](#3-reading-and-writing-data)
+4. [Figures](#4-figures)
+5. [Timeseries methods](#5-timeseries-methods)
+6. [Annotating data and flagging](#6-annotating-data-and-flagging)
+7. [DI-flux measurements, basevalues and baselines](#7-di-flux-measurements-basevalues-and-baselines)
+8. [Geomagnetic activity analysis](#8-geomagnetic-activity)
+9. [SQL Databases](#9-sql-databases)
+10. [Additional tools and applications](#10-additional-methods-and-functions)
 
 ## 1. INSTALLATION AND REQUIREMENTS
 
@@ -2868,7 +2868,7 @@ Full application of the joint Sq technique in MagPy works as follows:
         sqcurce = act.sqbase(data, components=['x','y'], baseline_type='joint')
 
 
-## 9. MySQL Databases
+## 9. SQL Databases
 
 
 ### 9.1 Database support
@@ -3054,7 +3054,7 @@ for the selected date. If no date is provided, then the currently valid paramete
         baseline_adoption = db.get_baseline('LEMI036_2_0001', date="2021-01-01")
 
 
-## 10. Additional methods and functions - TODO
+## 10. Additional methods and functions
 
 ### 10.1 Converting the internal data structure
 
