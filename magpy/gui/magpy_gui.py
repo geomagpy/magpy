@@ -114,11 +114,12 @@ Major methods:              major_method
 |  MainFrame     | file_on_quit  |     2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | db_on_connect  |    2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | db_on_init  |       2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | options_init |      2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | options_init |      2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | options_di   |      2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_about  |       2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | help_open_log     | 2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
@@ -1088,6 +1089,24 @@ class MainFrame(wx.Frame):
         # --------------------------
         self._deactivate_controls()
 
+
+    def _check_db(self, level='minimal'):
+        """
+        DESCRIPTION
+            Checks if the database is still connected and eventually reconnect
+            TODO: check if really necessary
+        USED BY
+            many database methods
+        """
+        if not self.magpystate.get('databaseconnected'):
+            try:
+                dbank, connect = self._db_connect(*self.magpystate.get('dbtuple'))
+                dbank.db.info(destination='stdout',level='minimal')#,level='full') # use level ='minimal'
+            except:
+                logger.info("Database not connected any more -- reconnecting")
+                dbank, connect = self._db_connect(*self.magpystate.get('dbtuple'))
+
+
     def _set_default_initialization(self):
         """
         DESCRIPTION
@@ -1414,8 +1433,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.db_on_connect, self.DBConnect)
         self.Bind(wx.EVT_MENU, self.db_on_init, self.DBInit)
         # Memory Menu
-        self.Bind(wx.EVT_MENU, self.OnStreamList, self.StreamListSelect)
-        self.Bind(wx.EVT_MENU, self.OnStreamAdd, self.StreamAddListSelect)
+        self.Bind(wx.EVT_MENU, self.memory_select, self.StreamListSelect)
+        self.Bind(wx.EVT_MENU, self.memory_add, self.StreamAddListSelect)
         # DI Menu
         self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
         self.Bind(wx.EVT_MENU, self.onInputSheet, self.DIInputSheet)
@@ -2093,24 +2112,25 @@ class MainFrame(wx.Frame):
         """
         debug = True
         # Get current plot parameters
+        if debug:
+            print ("plotdict BEFORE _set_plot_parameters", self.plotdict)
         self.plotdict[streamid] = self._set_plot_parameter()
+        if debug:
+            print ("plotdict AFTER _set_plot_parameters", self.plotdict)
         # Init Controls
         self._activate_controls(streamid)
 
         # Override initial controls: Set setting (like keylist, basic plot options and basevalue selection)
-        #keylist = self.UpdatePlotCharacteristics(plotstream) # does the same as the following code
         self.plotdict[streamid] = self._update_plot(streamid)
 
         self.menu_p.rep_page.logMsg('- keys: %s' % (', '.join(self.plotdict.get(streamid).get('shownkeys'))))
-        # Eventually change symbol as matplotlib reports errors for line plot with many points
-        #if datadict.get('amount') > 200000:
-        #    self.plotopt['symbols']= ['.'] * len(keylist)
 
-        print ("SYMBOLS after _update_plot", self.plotdict)
+        if debug:
+            print ("plotdict AFTER _update_plot", self.plotdict)
         #if not restore:
         #    self.streamkeylist.append(keylist)
         #    self.plotoptlist.append(self.plotopt)
-        self._do_plot(streamid)
+        self._do_plot([streamid])
 
 
 
@@ -2139,6 +2159,11 @@ class MainFrame(wx.Frame):
         mintime = datacont.get('start')
         maxtime = datacont.get('end')
         coverage = datacont.get('coverage')
+        debug = True
+
+        if debug:
+            print ("Plotdict BEFORE _update_plot:")
+            print (self.plotdict)
 
         # 2. get the existing plotdict input
         plotcont = self.plotdict.get(streamid)
@@ -2202,36 +2227,36 @@ class MainFrame(wx.Frame):
         return plotcont
 
 
-    def _do_plot(self, streamid):
+    def _do_plot(self, streamids):
         """
         DEFINITION:
             read stream and display
         """
         self.changeStatusbar("Plotting...")
 
-        # Get data parameters
-        datadict = self.datadict.get(streamid)
-        plotstream = datadict.get('dataset')
+        self.plot_p.gui_plot(streamids, self.datadict, self.plotdict)
 
-        self.plot_p.gui_plot([streamid], self.datadict, self.plotdict)
+        if len(streamids) == 1:
+            streamid = streamids[0]
+            datadict = self.datadict.get(streamid)
+            plotstream = datadict.get('dataset')
+            shownkeylist = self.plotdict.get(streamid).get('shownkeys')
+            boxes = ['x','y','z','f']
+            for box in boxes:
+                checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
+                if box in shownkeylist:
+                    checkbox.Enable()
+                    colname = plotstream.header.get('col-'+box, '')
+                    if not colname == '':
+                        checkbox.SetLabel(colname)
+                else:
+                    checkbox.SetValue(False)
+            # Connect callback to the initial plot
+            for ax in self.plot_p.axlist:
+                ax.callbacks.connect('xlim_changed', self._update_statistics)
+                ax.callbacks.connect('ylim_changed', self._update_statistics)
+            self._update_statistics()
 
-        self.shownkeylist = self.plotdict.get(streamid).get('shownkeys')
-
-        boxes = ['x','y','z','f']
-        for box in boxes:
-            checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
-            if box in self.shownkeylist:
-                checkbox.Enable()
-                colname = plotstream.header.get('col-'+box, '')
-                if not colname == '':
-                    checkbox.SetLabel(colname)
-            else:
-                checkbox.SetValue(False)
-        # Connect callback to the initial plot
-        for ax in self.plot_p.axlist:
-            ax.callbacks.connect('xlim_changed', self._update_statistics)
-            ax.callbacks.connect('ylim_changed', self._update_statistics)
-        self._update_statistics()
         self.changeStatusbar("Ready")
 
 
@@ -2703,7 +2728,7 @@ class MainFrame(wx.Frame):
         datainfoid = ''
         mintime = None
         maxtime = None
-        self.checkDB('minimal')
+        self._check_db('minimal')
 
         getdata = False
         stream = DataStream()
@@ -3009,6 +3034,102 @@ class MainFrame(wx.Frame):
     # ##################################################################################################################
     # ####    Memory Menu Bar                                  #########################################################
     # ##################################################################################################################
+
+    def memory_select(self,event):
+        """
+        DESCRIPTION:
+            Open window for multiple stream selection.
+            Will access the data dictionary for data specific information and plot dictionary for projected keys
+            Layout of the multiple stream page:
+
+            checkbox    id                data-description               button-with-keys          method-buttons
+              [ ]     active_id    sensorid,startdate,enddate,sr           [x,y,z]                    Select
+              [ ]       id         sensorid,startdate,enddate,sr           [x,y,z,f]                Plot in same
+
+            Further methods:
+            join, merge, subtract
+
+            Merge, join and subtract will generate a new stream_id
+        """
+        plotids = []
+        plotkeys = []
+        activeid = self.active_id
+
+        debug =False
+        if debug:
+            print ("Check contents of datadict and plotdict BEFORE memory select:")
+            print (self.datadict)
+            print (self.plotdict)
+
+        # all other list like plot parameters
+        self.changeStatusbar("Selecting data sets ...")
+
+        dlg = MultiStreamDialog(None, title='Select data set(s):', datadict=self.datadict, active=self.active_id, plotdict=self.plotdict)
+        if dlg.ShowModal() == wx.ID_OK:
+            streamids = [selid for selid in self.datadict]
+            for elem in streamids:
+                val = eval('dlg.panel.id{}CheckBox.GetValue()'.format(elem))
+                if val:
+                    # create lists for plotdict
+                    plotcont = self.plotdict.get(elem)
+                    plotids.append(elem)
+                    plotkeys.append(plotcont.get("shownkeys"))
+                    activeid = elem
+            if len(plotids) > 1:
+                #  deactivate all Meta; Analysis methods
+                self._deactivate_controls()
+            else:
+                self._deactivate_controls()
+                self._activate_controls(activeid)
+                self.active_id = activeid
+            self._do_plot(plotids)
+        else:
+            mod = dlg.panel.modify
+            if mod == True:
+                self.streamlist.append(dlg.panel.result)
+                self.streamkeylist.append(dlg.panel.resultkeys)
+                self.currentstreamindex = len(self.streamlist)-1
+                self.plotstream = self.streamlist[-1]
+                self.headerlist.append(self.plotstream.header)
+                self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
+                self.ActivateControls(self.plotstream)
+                self.plotoptlist.append(self.plotopt)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+        dlg.Destroy()
+
+        if debug:
+            print ("Check contents of datadict and plotdict AFTER memory select:")
+            print (self.datadict)
+            print (self.plotdict)
+
+
+    def memory_add(self,event):
+        """
+        DESCRIPTION
+            Will add the current working state to the datadict and create a new ID.
+            The is function will also update the plotdict.
+        :param event:
+        :return:
+        """
+        active_id = self.active_id
+        # get the current stream including its modifications
+        # two possibilities:
+        # 1. create a new streamid whenever ID relevant parameters are changed
+        # done by calling _initial_read (datadict), and _update_plot (plotdict)
+        # 2. create a temporary id when chaning anything. Make a new id when this function is called
+        """
+        currentstreamindex = len(self.streamlist)
+        self.streamlist.append(self.plotstream)
+        self.streamkeylist.append(self.shownkeylist)
+        self.headerlist.append(self.plotstream.header)
+        self.currentstreamindex = currentstreamindex
+        self.plotoptlist.append(self.plotopt)
+        if self.plotstream.header.get('DataFormat','').startswith('MagPyDI'):
+            basename = self.plotstream.header.get('DataID','')
+            print ("Adding a new baselinestream", currentstreamindex, basename)
+            self.append_baseline(self.plotstream._get_min('time'),self.plotstream._get_max('time'),basename,currentstreamindex)
+        """
+
 
 
     # ##################################################################################################################
@@ -3350,6 +3471,7 @@ class MainFrame(wx.Frame):
         return dict(message='Choose a file', defaultDir=default_dir,
                     wildcard='*.*')
 
+    @deprecated("Aux file not used any more")
     def askUserForFilename(self, **dialogOptions):
         dialog = wx.FileDialog(self, **dialogOptions)
         if dialog.ShowModal() == wx.ID_OK:
@@ -3362,6 +3484,7 @@ class MainFrame(wx.Frame):
         return user_provided_filename
 
 
+    @deprecated("To be replaced")
     def OnInitialPlot(self, stream, restore = False):
         """
         DEFINITION:
@@ -3450,6 +3573,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
+    @deprecated("To be replaced")
     def OnMultiPlot(self, streamlst, keylst, padding=None, specialdict={},errorbars=None,
         colorlist=None,symbollist=None,annotate=None,stormphases=None,
         t_stormphases={},includeid=False,function=None,plottype='discontinuous',
@@ -3571,6 +3695,7 @@ class MainFrame(wx.Frame):
             self.on_save(event)
     """
 
+    @deprecated("Not used any more")
     def onOpenAuxButton(self, event):
         if self.askUserForFilename(style=wx.OPEN,
                                    **self.default_file_dialog_options()):
@@ -3579,6 +3704,2640 @@ class MainFrame(wx.Frame):
             textfile.close()
 
 
+    # ################
+    # page methods:
+
+    # pages: stream (plot, coordinate), analysis (smooth, filter, fit, baseline etc),
+    #          specials(spectrum, power), absolutes (), report (log), monitor (access web socket)
+
+
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Analysis functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+    def onFilterButton(self, event):
+        """
+        Method for filtering
+        """
+        self.changeStatusbar("Filtering...")
+
+        # open dialog to modify filter parameters
+        #keystr = self.menu_p.met_page.keysTextCtrl.GetValue().encode('ascii','ignore')
+        #keys = keystr.split(',')
+        sr = self.plotstream.samplingrate()
+
+        filter_type = 'gaussian'
+        resample_offset = 0.0
+
+        if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
+                filter_width = timedelta(seconds=3.33333333)
+                resample_period = 1.0
+        elif sr < 50: # use 1 minute filter with 0.008 Hz cut off as default
+                filter_width = timedelta(minutes=2)
+                resample_period = 60.0
+        else: # use 1 hour flat filter
+                filter_width = timedelta(minutes=60)
+                resample_period = 3600.0
+                resample_offset = 1800.0
+                filter_type = 'flat'
+        miss = 'conservative'
+
+        dlg = AnalysisFilterDialog(None, title='Analysis: Filter', samplingrate=sr, resample=True, winlen=filter_width.total_seconds(), resint=resample_period, resoff= resample_offset, filtertype=filter_type)
+        if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
+            dlg.methodRadioBox.SetStringSelection('conservative')
+
+        if dlg.ShowModal() == wx.ID_OK:
+            filtertype = dlg.filtertypeComboBox.GetValue()
+            filterlength = float(dlg.lengthTextCtrl.GetValue())
+            resampleinterval = float(dlg.resampleTextCtrl.GetValue())
+            resampleoffset = float(dlg.resampleoffsetTextCtrl.GetValue())
+            missingdata = dlg.methodRadioBox.GetStringSelection()
+            #print (filtertype,filterlength,missingdata,resampleinterval,resampleoffset)
+            if missingdata == 'IAGA':
+                miss = 'mean'
+            elif missingdata == 'interpolate':
+                miss = 'interpolate'
+
+            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),resample_period=resampleinterval,resampleoffset=timedelta(seconds=resampleoffset),missingdata=miss,resample=True)
+            self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
+
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+
+    def onDerivativeButton(self, event):
+        """
+        Method for derivative
+        """
+        self.changeStatusbar("Calculating derivative ...")
+        keys = self.shownkeylist
+
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
+
+        self.menu_p.rep_page.logMsg("- calculating derivative")
+        self.plotstream = self.plotstream.differentiate(keys=keys,put2keys=keys)
+
+        self.menu_p.rep_page.logMsg('- derivative calculated')
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+    def onFitButton(self, event):
+        """
+        Method for fitting
+        """
+        self.changeStatusbar("Fitting ...")
+        keys = self.shownkeylist
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
+        self.xlimits = self.plot_p.xlimits
+        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter',
+                options=self.options,last_dir = self.last_dir, stream = self.plotstream,
+                shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotopt, hide_file=False)
+        startdate=self.xlimits[0]
+        enddate=self.xlimits[1]
+        dlg.setTimeRange(startdate, enddate)
+        if dlg.ShowModal() == wx.ID_OK:
+            params = dlg.getFitParameters()
+            self.options['fitfunction'] = params['fitfuncname']
+            self.options['fitknotstep'] = str(params['knotstep'])
+            self.options['fitdegree'] = str(params['fitdegree'])
+            self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
+                    params['fitfuncname'], params['knotstep'], params['fitdegree']))
+            if len(self.plotstream.ndarray[0]) > 0:
+                func = self.plotstream.fit(keys=keys,
+                        fitfunc=params['fitfunc'],
+                        fitdegree=params['fitdegree'], knotstep=params['knotstep'],
+                        starttime=params['starttime'],
+                        endtime=params['endtime'])
+                if params['fitfunc'] == 'none':
+                    self.plotopt['function'] = []
+                elif isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
+                    self.plotopt['function'].append(func)
+                else:
+                    self.plotopt['function'] = [func]
+                #self.function = func
+                #self.plotopt['function'] = func
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+            else:
+                # Msgbox to load data first
+                pass
+        else:
+            parameter = dlg.fitparameter
+            if parameter:
+                funclist = []
+                for key in parameter:
+                    params=parameter[key]
+                    funclist.append(self.plotstream.fit(keys=keys,
+                        fitfunc=params['fitfunc'],
+                        fitdegree=params['fitdegree'], knotstep=params['knotstep'],
+                        starttime=params['starttime'],
+                        endtime=params['endtime']))
+                self.plotopt['function'] = funclist
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+
+        dlg.Destroy()
+        self.menu_p.rep_page.logMsg('- data fitted')
+        self.changeStatusbar("Ready")
+
+
+    def onOffsetButton(self, event):
+        """
+        Method for offset correction
+        """
+        # Check whether DB still available
+        self._check_db('minimal')
+
+        self.changeStatusbar("Adding offsets ...")
+        keys = self.shownkeylist
+        offsetdict = {}
+
+        # get currently zoomed time limits and use as timerange
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits:
+            self.xlimits = [num2date(self.plotstream.ndarray[0][0]),num2date(self.plotstream.ndarray[0][-1])]
+        else:
+            self.xlimits = [num2date(self.xlimits[0]),num2date(self.xlimits[-1])]
+
+        # get existing deltas from database
+        deltas = self.plotstream.header.get('DataDeltaValues','')
+
+        if deltas == '':
+            # Check data compensation values
+            try:
+                xcorr = float(self.plotstream.header.get('DataCompensationX',''))
+                ycorr = float(self.plotstream.header.get('DataCompensationY',''))
+                zcorr = float(self.plotstream.header.get('DataCompensationZ',''))
+                if not xcorr=='' and not ycorr=='' and not zcorr=='':
+                    deltas = 'x_{},y_{},z_{}'.format(-1*xcorr*1000.,-1*ycorr*1000.,-1*zcorr*1000.)
+            except:
+                pass
+        #print ("Delta", deltas)
+
+        dlg = AnalysisOffsetDialog(None, title='Analysis: define offsets', keylst=keys, xlimits=self.xlimits, deltas=deltas)
+        if dlg.ShowModal() == wx.ID_OK:
+            for key in keys:
+                offset = eval('dlg.'+key+'TextCtrl.GetValue()')
+                if not offset in ['','0']:
+                    if not float(offset) == 0:
+                        offsetdict[key] = float(offset)
+            val = dlg.offsetRadioBox.GetStringSelection()
+            #print ("Offset", val)
+            if str(val) == 'all':
+                toffset = dlg.timeshiftTextCtrl.GetValue()
+                if not self.plotstream._is_number(toffset):
+                    toffset = 0
+                if not float(toffset) == 0:
+                    offsetdict['time'] = timedelta(seconds=float(toffset))
+                self.plotstream = self.plotstream.offset(offsetdict)
+            else:
+                stday = dlg.StartDatePicker.GetValue()
+                sttime = str(dlg.StartTimeTextCtrl.GetValue())
+                sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+                st= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+                edday = dlg.EndDatePicker.GetValue()
+                edtime = str(dlg.EndTimeTextCtrl.GetValue())
+                ed = datetime.strftime(datetime.fromtimestamp(edday.GetTicks()), "%Y-%m-%d")
+                et= datetime.strptime(str(ed)+'_'+edtime, "%Y-%m-%d_%H:%M:%S")
+                self.plotstream = self.plotstream.offset(offsetdict, starttime=st, endtime=et)
+
+            self.plotstream.header['DataDeltaValuesApplied'] = 1
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+
+    def onResampleButton(self, event):
+        """
+        Method for offset correction
+        """
+        self.changeStatusbar("Resampling ...")
+        keys = self.shownkeylist
+        sr = self.plotstream.samplingrate()
+
+        dlg = AnalysisResampleDialog(None, title='Analysis: resampling parameters', keylst=keys, period=sr)
+        if dlg.ShowModal() == wx.ID_OK:
+            newperiod = dlg.periodTextCtrl.GetValue()
+            self.plotstream = self.plotstream.resample(keys, period=float(newperiod), debugmode=False)
+            self.menu_p.rep_page.logMsg('- resampled stream at period {} second'.format(newperiod))
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+    def onActivityButton(self, event):
+        """
+        Method for offset correction
+        """
+        self.changeStatusbar("Getting activity (FMI method)...")
+
+        keys = self.shownkeylist
+        offsetdict = {}
+
+        #dlg = AnalysisActivityDialog(None, title='Analysis: get k values (FMI)')
+        #if dlg.ShowModal() == wx.ID_OK:
+        backup = self.plotstream.copy()
+        stream = self.plotstream.k_fmi()
+        self.streamlist.append(stream)
+        self.streamkeylist.append(stream._get_key_headers())
+        self.currentstreamindex = len(self.streamlist)-1
+        self.plotstream = self.streamlist[-1]
+        #self.headerlist.append(self.plotstream.header)
+        self.headerlist.append(stream.header)
+        self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
+        if self.plotstream and len(self.plotstream.ndarray[0]) > 0:
+            self.ActivateControls(self.plotstream)
+            keylist = self.UpdatePlotCharacteristics(self.plotstream)
+            self.plotoptlist.append(self.plotopt)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+        else:
+            self.plotstream = backup.copy()
+
+        self.changeStatusbar("Ready")
+
+    def onRotationButton(self, event):
+        """
+        Method for offset correction
+        """
+        self.changeStatusbar("Rotating data ...")
+
+        if len(self.plotstream.ndarray[0]) > 0:
+            # XXX Eventually SetValues from init
+            dlg = AnalysisRotationDialog(None, title='Analysis: rotate data')
+            if dlg.ShowModal() == wx.ID_OK:
+                alphat = dlg.alphaTextCtrl.GetValue()
+                betat = dlg.betaTextCtrl.GetValue()
+                try:
+                    alpha = float(alphat)
+                except:
+                    alpha = 0.0
+                try:
+                    beta = float(betat)
+                except:
+                    beta = 0.0
+
+                self.plotstream = self.plotstream.rotation(alpha=alpha, beta=beta)
+                self.menu_p.rep_page.logMsg('- rotated stream by alpha = %s and beta = %s' % (alphat,betat))
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+    def onMeanButton(self, event):
+        """
+        DESCRIPTION
+             Calculates means values for all keys of shownkeylist
+        """
+        self.changeStatusbar("Calculating means ...")
+        keys = self.shownkeylist
+        meanfunc = 'mean'
+
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+
+        mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys]
+        t_limits = teststream._find_t_limits()
+        trange = '- mean - timerange: {} to {}'.format(t_limits[0],t_limits[1])
+        self.menu_p.rep_page.logMsg(trange)
+        for idx,me in enumerate(mean):
+            meanline = '- mean - key: {} = {} +/- {}'.format(keys[idx],me[0],me[1])
+            self.menu_p.rep_page.logMsg(meanline)
+            trange = trange + '\n' + meanline
+        # open message dialog
+        dlg = wx.MessageDialog(self, "Means:\n"+
+                        str(trange),
+                        "Analysis: Mean values", wx.OK|wx.ICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+    def onMaxButton(self, event):
+        """
+        DESCRIPTION
+             Calculates max values for all keys of shownkeylist
+        """
+        self.changeStatusbar("Calculating maxima ...")
+        keys = self.shownkeylist
+
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
+        t_limits = teststream._find_t_limits()
+        trange = '- maxima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
+        self.menu_p.rep_page.logMsg(trange)
+        for idx,me in enumerate(maxi):
+            meanline = '- maxima - key: {} = {} at {}'.format(keys[idx],me[0],num2date(me[1]))
+            self.menu_p.rep_page.logMsg(meanline)
+            trange = trange + '\n' + meanline
+        # open message dialog
+        dlg = wx.MessageDialog(self, "Maxima:\n"+
+                        str(trange),
+                        "Analysis: Maximum values", wx.OK|wx.ICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+    def onMinButton(self, event):
+        """
+        DESCRIPTION
+             Calculates means values for all keys of shownkeylist
+        """
+        self.changeStatusbar("Calculating minima ...")
+        keys = self.shownkeylist
+
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
+        t_limits = teststream._find_t_limits()
+        trange = '- minima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
+        self.menu_p.rep_page.logMsg(trange)
+        for idx,me in enumerate(mini):
+            meanline = '- minima - key: {} = {} at {}'.format(keys[idx],me[0],num2date(me[1]))
+            self.menu_p.rep_page.logMsg(meanline)
+            trange = trange + '\n' + meanline
+        # open message dialog
+        dlg = wx.MessageDialog(self, "Minima:\n"+
+                        str(trange),
+                        "Analysis: Minimum values", wx.OK|wx.ICON_INFORMATION)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+
+    def onFlagmodButton(self, event):
+        """
+        DESCRIPTION
+             Shows Flagilist statistics and allows to change flag contents
+        """
+        self.changeStatusbar("Flaglist contents ...")
+        keys = self.shownkeylist
+
+        if not self.flaglist or not len(self.flaglist) > 0:
+            self.changeStatusbar("no flags available ... Ready")
+            return
+
+        stats = self.plotstream.flagliststats(self.flaglist, intensive=True, output='string')
+
+        self.menu_p.rep_page.logMsg(stats)
+        """
+        for idx,me in enumerate(mean):
+            meanline = '- mean - key: {} = {} +/- {}'.format(keys[idx],me[0],me[1])
+            self.menu_p.rep_page.logMsg(meanline)
+            trange = trange + '\n' + meanline
+        """
+        # open message dialog
+        dlg = AnalysisFlagsDialog(None, title='Analysis: Flags', stats=stats, flaglist=self.flaglist, stream=self.plotstream)
+        if dlg.ShowModal() == wx.ID_OK:
+            if dlg.mod:
+                self.changeStatusbar("Applying new flags ...")
+                self.menu_p.rep_page.logMsg('Flags have been modified: ')
+                self.flaglist = dlg.newfllist
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+                self.plotstream = self.plotstream.flag(self.flaglist)
+                self.menu_p.rep_page.logMsg('- applied {} modified flags'.format(len(self.flaglist)))
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+            else:
+                pass
+            pass
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
+
+
+    def onSmoothButton(self, event):
+        """
+        DESCRIPTION
+             Calculates smoothed curve
+        """
+        self.changeStatusbar("Smoothing ... be patient")
+        sr = self.plotstream.samplingrate()
+
+        filter_type = 'gaussian'
+        resample_offset = 0.0
+        if sr < 0.2: # use 1 second filter with 0.3 Hz cut off as default
+                filter_width = timedelta(seconds=3.33333333)
+                resample_period = 1.0
+        elif sr < 50: # use 1 minute filter with 0.008 Hz cut off as default
+                filter_width = timedelta(minutes=2)
+                resample_period = 60.0
+        else: # use 1 hour flat filter
+                filter_width = timedelta(minutes=60)
+                resample_period = 3600.0
+                resample_offset = 1800.0
+                filter_type = 'flat'
+        miss = 'conservative'
+
+        dlg = AnalysisFilterDialog(None, title='Analysis: Filter', samplingrate=sr, resample=False, winlen=filter_width.seconds, resint=resample_period, resoff= resample_offset, filtertype=filter_type)
+        if dlg.ShowModal() == wx.ID_OK:
+            filtertype = dlg.filtertypeComboBox.GetValue()
+            filterlength = float(dlg.lengthTextCtrl.GetValue())
+            missingdata = dlg.methodRadioBox.GetStringSelection()
+            if missingdata == 'IAGA':
+                miss = 'mean'
+            elif missingdata == 'interpolate':
+                miss = 'interpolate'
+
+            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),missingdata=miss,resample=False,noresample=True)
+            self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
+
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+    def onBaselineButton(self, event):
+        """
+        DESCRIPTION
+             Calculates baseline correction
+        """
+        self.changeStatusbar("Baseline adoption ...")
+        if self.plotstream.header.get('DataAbsInfo'):
+            #print ("Baseline has been calculated already - existing adopted baseline will be replaced")
+            existdlg = wx.MessageDialog(self, "Baseline date already connected to timeseries\n"
+                        "Append new data (YES) or replace (No)\n".format(time),
+                        "Baseline data existing", wx.YES_NO|wx.ICON_INFORMATION)
+            if existdlg.ShowModal() == wx.ID_NO:
+                self.plotstream.header['DataAbsInfo'] = ''
+                self.plotstream.header['DataBaseValues'] = None
+            existdlg.Destroy()
+
+        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst,
+                                     dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream,
+                                     shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotoptlist,
+                                     last_dir = self.last_dir)
+        # open dlg which allows to choose baseline data stream, function and parameters
+        # Drop down for baseline data stream (idx: filename)
+        # Text window describing baseline parameter
+        # button to modify baseline parameter
+        #print ("BASELINEDICT CoNTENTS:", self.baselinedictlst,self.baselineidxlst)
+        if dlg.ShowModal() == wx.ID_OK:
+            # return active stream idx ()
+            #print ("Here", dlg.absstreamComboBox.GetStringSelection())
+            #print ("Here2", dlg.absstreamComboBox.GetValue())
+            self.options = dlg.options
+            # fitparameters is a dictionary containing fitting parameters
+            # like fitdict = {1: {"keys":None, "fitfunc":"poly","fitdegree":5, "knotstep":0.3, "starttime":starttime,"endtime":endtime},
+            #             2: {"keys":None, "fitfunc":"mean","fitdegree":5, "knotstep":0.3, "starttime":starttime,"endtime":endtime}}
+            fitparameters = dlg.fitparameters
+            # basedict contains ?
+            basedict = dlg.selecteddict # tmpbasedict[0]
+            absstream = self.streamlist[int(basedict.get('streamidx'))]
+
+            #print ("CHECKING BASE", starttime, endtime, knotstep, fitfunc, degree, absstream.length()[0])
+            #baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(knotstep), fitdegree=int(degree), startabs=starttime, endabs=endtime)
+            baselinefunclist = []
+            if not fitparameters:
+                self.menu_p.rep_page.logMsg('- baseline adoption aborted as no fit function defined')
+                self.changeStatusbar("Ready")
+            else:
+                for fitparameter in fitparameters:
+                    fitpara = fitparameters.get(fitparameter)
+                    #print ("Correcting with ", fitpara)
+                    baselinefunclist.append(self.plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
+
+                #keys = self.shownkeylist
+                self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
+                # add new stream, with baselinecorr
+                # BASECORR
+                # provide possibility to directly calculate bc
+                calc_bc = self.options.get("baselinedirect")
+                if calc_bc:
+                    msgtext = "Baseline correction performed - Ready"
+                    self.plotstream = self.plotstream.bc(function=baselinefunclist)
+                    # Eventually update delta F
+                    if 'df' in self.plotstream._get_key_headers():
+                        self.plotstream = self.plotstream.delta_f()
+                    currentstreamindex = len(self.streamlist)
+                    self.streamlist.append(self.plotstream)
+                    self.streamkeylist.append(self.shownkeylist)
+                    self.headerlist.append(self.plotstream.header)
+                    self.currentstreamindex = currentstreamindex
+                    self.plotoptlist.append(self.plotopt)
+                else:
+                    msgtext = "BC function available - Ready"
+                    dlg = wx.MessageDialog(self, "Adopted baseline calculated.\n"
+                               "Baseline parameters added to meta information and option 'Baseline Corr' on 'Data' panel now enabled.\n",
+                               "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
+                    dlg.ShowModal()
+                    dlg.Destroy()
+
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar(msgtext)
+        else:
+            self.changeStatusbar("Ready")
+
+    def onDeltafButton(self, event):
+        """
+        DESCRIPTION
+             Calculates delta F values
+        """
+        self.changeStatusbar("Delta F ...")
+
+        self.plotstream = self.plotstream.delta_f()
+        #self.streamlist[self.currentstreamindex].delta_f()
+        #print (self.plotstream._get_key_headers())
+        if 'df' in self.plotstream._get_key_headers() and not 'df' in self.shownkeylist:
+            self.shownkeylist.append('df')
+        self.menu_p.rep_page.logMsg('- determined delta F between x,y,z and f')
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+
+    def onCalcfButton(self, event):
+        """
+        DESCRIPTION
+             Calculates delta F values
+        """
+
+        cont = True
+        if 'f' in self.plotstream._get_key_headers():
+            existdlg = wx.MessageDialog(self, "F data already existing\n"
+                        "Replace with vector sum?\n".format(time),
+                        "F data existing", wx.YES_NO|wx.ICON_INFORMATION)
+            if existdlg.ShowModal() == wx.ID_YES:
+                existdlg.Destroy()
+                #self.Close(True)
+            else:
+                existdlg.Destroy()
+                #self.Close(True)
+                cont = False
+
+        if cont:
+            self.changeStatusbar("Calculating F from components ...")
+
+            self.plotstream = self.plotstream.calc_f(skipdelta=True)
+            #self.streamlist[self.currentstreamindex].calc_f()
+            #print (self.plotstream._get_key_headers())
+            if 'f' in self.plotstream._get_key_headers() and not 'f' in self.shownkeylist:
+                self.shownkeylist.append('f')
+            if 'df' in self.plotstream._get_key_headers():
+                self.plotstream = self.plotstream.delta_f()
+            self.menu_p.rep_page.logMsg('- determined f from x,y,z')
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+    def onPowerButton(self, event):
+        """
+        DESCRIPTION
+             Calculates Power spectrum of one component
+        """
+        self.changeStatusbar("Power spectrum ...")
+        comp = self.getComponent()
+        if comp is not None:
+            fig = mp.plotPS(self.plotstream, comp, noshow=True)
+            # TODO works fine in linux but not on windows
+            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig, xsize=650,ysize=600)
+            dlg.ShowModal()
+            dlg.Destroy()
+            fig.clear()
+
+    def onSpectrumButton(self, event):
+        """
+        DESCRIPTION
+             Calculates Power spectrum of one component
+        """
+        self.changeStatusbar("Spectral plot ...")
+        comp = self.getComponent()
+        if comp is not None:
+            #mp.plotSpectrogram(self.plotstream, comp, gui=True)
+            fig = mp.plotSpectrogram(self.plotstream, comp, figure=True)
+            # TODO works fine in linux but not on windows
+            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig,xsize=700,ysize=600)
+            dlg.ShowModal()
+            dlg.Destroy()
+            fig.clear()
+
+    def onStatsButton(self, event):
+        """
+        DESCRIPTION
+             Creates/Destroys the statistics element below main window
+             and sets the statistics
+        """
+
+        status = self.menu_p.ana_page.statsButton.GetLabel()
+        if status == 'Show Statistics':
+            self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
+            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
+                    stream=self.plotstream.copy(),
+                    xlimits=self.plot_p.xlimits)
+            self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
+        if status == 'Hide Statistics':
+            self.sp.Unsplit(self.stats_p)
+            self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
+
+        """
+        status = self.menu_p.ana_page.statsButton.GetLabel()
+        if status == 'Show Statistics':
+            # Remove last pages
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.abs_page.Hide()
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.rep_page.Hide()
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.com_page.Hide()
+            # Add new page next to the Analysis page
+            self.menu_p.nb.AddPage(self.menu_p.stats_page, "Statistics",
+                    True)
+            # Add back the last pages
+            self.menu_p.nb.AddPage(self.menu_p.abs_page, "DI")
+            self.menu_p.nb.AddPage(self.menu_p.rep_page, "Report")
+            self.menu_p.nb.AddPage(self.menu_p.com_page, "Monitor")
+            self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
+                    stream=self.plotstream.copy(),
+                    xlimits=self.plot_p.xlimits)
+            self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
+        if status == 'Hide Statistics':
+            self.menu_p.nb.RemovePage(4)
+            self.menu_p.stats_page.Hide()
+            self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
+        """
+
+    def getComponent(self):
+        """
+        DESCRIPTION
+             Calls a dialog where the user can choose a component
+        """
+        dlg = SelectFromListDialog(None, title='Select sensor',
+                selectlist=self.shownkeylist, name='Component')
+        try:
+            if dlg.ShowModal() == wx.ID_OK:
+                comp = dlg.getComponent()
+                return comp
+            else:
+                return None
+        finally:
+            dlg.Destroy()
+
+
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Stream page functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+    def onErrorBarCheckBox(self,event):
+        """
+        DESCRIPTION
+            Switch display of error bars.
+        RETURNS
+            kwarg for OnPlot method
+        """
+
+        if not self.menu_p.str_page.errorBarsCheckBox.GetValue():
+            self.errorbars=False
+            self.plotopt['errorbars'] = [[False]*len(self.shownkeylist)]
+            self.menu_p.str_page.errorBarsCheckBox.SetValue(False)
+        else:
+            self.errorbars=True
+            self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
+            self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
+        self.ActivateControls(self.plotstream)
+        if self.plotstream.length()[0] > 0:
+            self.OnPlot(self.plotstream,self.shownkeylist)
+            self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("Failure")
+
+
+    def onConfinexCheckBox(self,event):
+        """
+        DESCRIPTION
+            Switch display of error bars.
+        RETURNS
+            kwarg for OnPlot method
+        """
+        if not self.menu_p.str_page.confinexCheckBox.GetValue():
+            self.confinex=False
+            self.plotopt['confinex'] = False
+            self.menu_p.str_page.confinexCheckBox.SetValue(False)
+        else:
+            self.confinex=True
+            self.plotopt['confinex'] = True
+            self.menu_p.str_page.confinexCheckBox.SetValue(True)
+        self.ActivateControls(self.plotstream)
+        if self.plotstream.length()[0] > 0:
+            self.OnPlot(self.plotstream,self.shownkeylist)
+            self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("Failure")
+
+
+    def onTrimStreamButton(self,event):
+        """
+        DESCRIPTION
+        """
+        stday = self.menu_p.str_page.startDatePicker.GetValue()
+        sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
+        try:
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+        except:
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered startdate is not valid.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
+
+        start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+        enday = self.menu_p.str_page.endDatePicker.GetValue()
+        entime = str(self.menu_p.str_page.endTimePicker.GetValue())
+        try:
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
+                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+        except:
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered enddate is not valid.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
+
+        end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+        #print ("Range", start, end)
+
+        if end > start:
+            try:
+                self.changeStatusbar("Trimming stream ...")
+                newarray = self.plotstream._select_timerange(starttime=start, endtime=end)
+                self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
+                self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
+            except:
+                self.menu_p.rep_page.logMsg('- Trimming failed')
+
+            self.ActivateControls(self.plotstream)
+            if self.plotstream.length()[0] > 0:
+                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar("Ready")
+            else:
+                self.changeStatusbar("Failure")
+        else:
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered dates are out of order.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
+
+
+    def onSelectKeys(self,event):
+        """
+        DESCRIPTION
+            open dialog to select shown keys (check boxes)
+        """
+
+        self.changeStatusbar("Selecting keys ...")
+
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
+        keylist = self.plotstream._get_key_headers(numerical=True)
+        self.keylist = keylist
+        shownkeylist = [el for el in self.shownkeylist if el in DataStream().NUMKEYLIST]
+
+        namelist = []
+        unitlist = []
+        for key in keylist:
+            if not len(self.plotstream.ndarray[DataStream().KEYLIST.index(key)]) == 0:
+                value = self.plotstream.header.get('col-'+key)
+                unit = self.plotstream.header.get('unit-col-'+key)
+                if not value == '':
+                    namelist.append(value)
+                else:
+                    namelist.append(key)
+                if not unit == '':
+                    unitlist.append(unit)
+                else:
+                    unitlist.append('')
+
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
+            for elem in shownkeylist:
+                exec('dlg.'+elem+'CheckBox.SetValue(True)')
+            if dlg.ShowModal() == wx.ID_OK:
+                shownkeylist = []
+                for elem in keylist:
+                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
+                    if boolval:
+                        shownkeylist.append(elem)
+                if len(shownkeylist) == 0:
+                    shownkeylist = self.shownkeylist
+                else:
+                    self.shownkeylist = shownkeylist
+                self.symbollist = [self.symbollist[0]]*len(shownkeylist)
+                self.plotopt['symbollist'] =  [self.symbollist[0]]*len(shownkeylist)
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("Failure")
+
+
+    def onDropKeys(self,event):
+        """
+        DESCRIPTION
+            open dialog to select shown keys (check boxes)
+        """
+
+        self.changeStatusbar("Dropping keys ...")
+
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
+        keylist = self.plotstream._get_key_headers(numerical=True)
+        self.keylist = keylist
+        shownkeylist = [el for el in self.shownkeylist if el in DataStream().NUMKEYLIST]
+
+        namelist = []
+        unitlist = []
+        for key in keylist:
+            if not len(self.plotstream.ndarray[DataStream().KEYLIST.index(key)]) == 0:
+                value = self.plotstream.header.get('col-'+key)
+                unit = self.plotstream.header.get('unit-col-'+key)
+                if not value == '':
+                    namelist.append(value)
+                else:
+                    namelist.append(key)
+                if not unit == '':
+                    unitlist.append(unit)
+                else:
+                    unitlist.append('')
+
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
+            #for elem in shownkeylist:
+            #    exec('dlg.'+elem+'CheckBox.SetValue(True)')
+            if dlg.ShowModal() == wx.ID_OK:
+                dropkeylist = []
+                for elem in keylist:
+                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
+                    if boolval:
+                        dropkeylist.append(elem)
+                        self.plotstream = self.plotstream._drop_column(elem)
+                if len(dropkeylist) == 0:
+                    self.changeStatusbar("Ready")
+                else:
+                    self.shownkeylist = [el for el in shownkeylist if not el in dropkeylist]
+                    self.symbollist = [self.symbollist[0]]*len(self.shownkeylist)
+                    self.plotopt['symbollist'] =  [self.symbollist[0]]*len(self.shownkeylist)
+                    self.ActivateControls(self.plotstream)
+                    self.OnPlot(self.plotstream,self.shownkeylist)
+                    self.changeStatusbar("Ready")
+        else:
+            self.changeStatusbar("Failure")
+
+
+    def onExtractData(self,event):
+        """
+        DESCRIPTION:
+            open dialog to choose extract parameter (paramater compare value)
+            up to three possibilities
+        """
+
+        if len(self.plotstream.ndarray[0]) == 0:
+            self.plotstream = self.stream.copy()
+        keylist = self.shownkeylist
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = StreamExtractValuesDialog(None, title='Extract:',keylst=keylist)
+            if dlg.ShowModal() == wx.ID_OK:
+                key1 = dlg.key1ComboBox.GetValue()
+                comp1 = dlg.compare1ComboBox.GetValue()
+                val1 = dlg.value1TextCtrl.GetValue()
+                logic2 = dlg.logic2ComboBox.GetValue()
+                logic3 = dlg.logic3ComboBox.GetValue()
+                extractedstream = self.plotstream.extract(key1,val1,comp1)
+                if len(extractedstream) < 2 and extractedstream.length()[0] < 2:
+                    # Empty stream returned -- looks complex because of old LineStruct rubbish
+                    self.menu_p.rep_page.logMsg('Extract: criteria would return an empty data stream - skipping')
+                    extractedstream = self.plotstream
+                val2 = dlg.value2TextCtrl.GetValue()
+                if not val2 == '':
+                    key2 = dlg.key2ComboBox.GetValue()
+                    comp2 = dlg.compare2ComboBox.GetValue()
+                    if logic2 == 'and':
+                        extractedstream = extractedstream.extract(key2,val2,comp2)
+                    else:
+                        extractedstream2 = self.plotstream.extract(key2,val2,comp2)
+                        extractedstream.extend(extractedstream2.container, extractedstream2.header,extractedstream2.ndarray)
+                        extractedstream = extractedstream.removeduplicates()
+                        extractedstream = extractedstream.sorting()
+                        extractedstream = extractedstream.get_gaps()
+                    val3 = dlg.value3TextCtrl.GetValue()
+                    if not val3 == '':
+                        key3 = dlg.key3ComboBox.GetValue()
+                        comp3 = dlg.compare3ComboBox.GetValue()
+                        if logic3 == 'and':
+                            extractedstream = extractedstream.extract(key3,val3,comp3)
+                        else:
+                            extractedstream3 = self.plotstream.extract(key3,val3,comp3)
+                            extractedstream.extend(extractedstream3.container, extractedstream3.header,extractedstream3.ndarray)
+                            extractedstream = extractedstream.removeduplicates()
+                            extractedstream = extractedstream.sorting()
+                            extractedstream = extractedstream.get_gaps()
+                self.plotstream = extractedstream
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar("Ready")
+        else:
+            self.menu_p.rep_page.logMsg("Extract: No data available so far")
+        # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
+
+
+    def onChangePlotOptions(self,event):
+        """
+        DESCRIPTION:
+            open dialog to modify plot options (general (e.g. bgcolor) and  key
+            specific (key: symbol color errorbar etc)
+        """
+
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = StreamPlotOptionsDialog(None, title='Plot Options:',optdict=self.plotopt)
+            if dlg.ShowModal() == wx.ID_OK:
+                for elem in self.plotopt:
+                    if not elem in ['function']:
+                        val = eval('dlg.'+elem+'TextCtrl.GetValue()')
+                        if val in ['False','True','None'] or val.startswith('[') or val.startswith('{'):
+                            val = eval(val)
+                        if elem in ['opacity','bartrange']:
+                            val = float(val)
+                        if not val == self.plotopt[elem]:
+                            self.plotopt[elem] = val
+
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+
+    def onRestoreData(self,event):
+        """
+        Restore originally loaded data
+        """
+        self.flaglist = []
+
+        if not len(self.stream.ndarray[0]) > 0:
+            self.DeactivateAllControls()
+            self.changeStatusbar("No data available")
+            return False
+        #print ("Restoring (works only for latest stream):", self.currentstreamindex, len(self.streamlist), self.stream.length()[0], self.streamlist[self.currentstreamindex].length()[0])
+        #print ("Header", self.headerlist)
+        self.plotstream = self.streamlist[self.currentstreamindex].copy()
+        #self.plotstream = self.stream.copy()
+        self.plotstream.header = self.headerlist[self.currentstreamindex]
+
+        self.menu_p.rep_page.logMsg('Original data restored...')
+        #self.InitPlotParameter()
+        #self.ActivateControls(self.stream)
+        self.OnInitialPlot(self.plotstream, restore=True)
+
+    def onDailyMeansButton(self,event):
+        """
+        Restore originally loaded data
+        """
+        if self.plotstream.header.get('DataFormat') == 'MagPyDI' or self.plotstream.header.get('DataType','').startswith('MagPyDI'):
+            keys=['dx','dy','dz']
+        else:
+            keys = False
+        self.plotstream = self.plotstream.dailymeans(keys)
+        self.shownkeylist = self.plotstream._get_key_headers(numerical=True)[:3]
+        self.symbollist = self.symbollist[0]*len(self.shownkeylist)
+
+        self.plotopt['symbollist'] = self.symbollist[0]*len(self.shownkeylist)
+        self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
+
+        self.ActivateControls(self.plotstream)
+        self.errorbars = True
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
+        self.menu_p.str_page.errorBarsCheckBox.Enable()
+        self.changeStatusbar("Ready")
+
+
+    def onApplyBCButton(self,event):
+        """
+        Apply baselinecorrection
+        """
+        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
+        #print ("BC - Ans info", self.plotstream.header.get('DataAbsInfo'))
+        self.changeStatusbar("Applying baseline ...")
+
+        self.plotstream = self.plotstream.bc()
+        # Eventually update delta F
+        if 'df' in self.plotstream._get_key_headers():
+            self.plotstream = self.plotstream.delta_f()
+        currentstreamindex = len(self.streamlist)
+        self.streamlist.append(self.plotstream)
+        self.streamkeylist.append(self.shownkeylist)
+        self.headerlist.append(self.plotstream.header)
+        self.currentstreamindex = currentstreamindex
+        self.plotoptlist.append(self.plotopt)
+
+        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+    def onGetGapsButton(self,event):
+        """
+        get gaps in timeseries (eventually missing data assuming periodic signals
+        and add this info (0,1) to var5 key
+        """
+        self.changeStatusbar("Identifying gaps ...")
+        self.plotstream = self.plotstream.get_gaps()
+        print (self.plotstream._get_key_headers())
+        """
+                    self.shownkeylist = [el for el in shownkeylist if not el in dropkeylist]
+                    self.symbollist = [self.symbollist[0]]*len(self.shownkeylist)
+                    self.plotopt['symbollist'] =  [self.symbollist[0]]*len(self.shownkeylist)
+                    self.ActivateControls(self.plotstream)
+                    self.OnPlot(self.plotstream,self.shownkeylist)
+                    self.changeStatusbar("Ready")
+        """
+        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+
+    def onAnnotateCheckBox(self,event):
+        """
+        Restore originally loaded data
+        """
+        #### get True or False
+        if not self.menu_p.str_page.annotateCheckBox.GetValue():
+            #self.annotate=False
+            self.plotopt['annotate'] = False
+            self.menu_p.str_page.annotateCheckBox.SetValue(False)
+        else:
+            #self.annotate=True
+            self.plotopt['annotate'] = True
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+
+        #mp.plot(self.plotstream,annotate=True)
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+
+    def onChangeComp(self, event):
+        orgcomp = self.compselect
+        self.compselect = self.menu_p.str_page.comp[event.GetInt()]
+        coordinate = orgcomp+'2'+self.compselect
+        self.changeStatusbar("Transforming ... {}".format(coordinate))
+        print("Transforming ... {}".format(coordinate))
+        self.plotstream = self.plotstream._convertstream(coordinate)
+        self.ActivateControls(self.plotstream)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+
+    def on_change_symbol(self, event):
+        #orgsymbol = self.symbolselect
+        symbolselect = self.menu_p.str_page.symbol[event.GetInt()]
+        self.changeStatusbar("Transforming ...")
+        self._activate_controls(self.active_id)
+        plotcont = self.plotdict.get(self.active_id)
+        if symbolselect == 'line':
+            plotcont['symbols'] =  ['-' for elem in plotcont.get('shownkeys')]
+        elif symbolselect == 'point':
+            plotcont['symbols'] =  ['.' for elem in plotcont.get('shownkeys')]
+        self.plotdict[self.active_id] = plotcont
+        self._do_plot(self.active_id)
+
+        self.changeStatusbar("Ready")
+
+    def OnFlagClick(self, event):
+        """Mouse event for flagging with double click."""
+        if not event.inaxes or not event.dblclick:
+            return
+        else:
+            sensid = self.plotstream.header.get('SensorID','')
+            dataid = self.plotstream.header.get('DataID','')
+            if sensid == '' and not dataid == '':
+                sensid = dataid[:-5]
+            if sensid == '':
+                dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
+                                "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+            else:
+                flaglist = []
+                xdata = self.plot_p.t
+                xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+                pickX = event.xdata
+                idx = (np.abs(xdata - pickX)).argmin()
+                time = self.plotstream.ndarray[DataStream().KEYLIST.index('time')][idx]
+                starttime = num2date(time - xtol)
+                endtime = num2date(time + xtol)
+                print ("Double click disabled because of freezing")
+                """
+                print ("Opening Dialog")
+                dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
+                print ("Waiting for OK ...")
+                if dlg.ShowModal() == wx.ID_OK:
+                    keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                    keys2flag = keys2flag.split(',')
+                    keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
+                    flagid = dlg.FlagIDComboBox.GetValue()
+                    flagid = int(flagid[0])
+                    comment = dlg.CommentTextCtrl.GetValue()
+                    if comment == '' and flagid != 0:
+                        comment = 'Point flagged with unspecified reason'
+                    flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
+                    self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+                if len(flaglist) > 0:
+                    self.flaglist.extend(flaglist)
+                    self.plotstream = self.plotstream.flag(flaglist)
+                    self.ActivateControls(self.plotstream)
+                    self.plotopt['annotate'] = True
+                    self.menu_p.str_page.annotateCheckBox.SetValue(True)
+                    self.OnPlot(self.plotstream,self.shownkeylist)
+                self.changeStatusbar("Ready")
+                """
+
+    def onFlagSelectionButton(self,event):
+        """
+        DESCRIPTION
+            Flag all data within the zoomed region
+        """
+
+        debug = False
+        flaglist = []
+        sensid = self.plotstream.header.get('SensorID','')
+        dataid = self.plotstream.header.get('DataID','')
+        if sensid == '' and not dataid == '':
+            sensid = dataid[:-5]
+
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        self.xlimits = self.plot_p.xlimits
+        self.ylimits = self.plot_p.ylimits
+        selplt = self.plot_p.selplt
+        selkey=[self.shownkeylist[selplt]] # Get the marked key here
+
+        if sensid == '':
+            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
+                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            self.changeStatusbar("Flagging selection ...")
+            dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
+            if dlg.ShowModal() == wx.ID_OK:
+                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                keys2flag = keys2flag.split(',')
+                keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
+                comment = dlg.CommentTextCtrl.GetValue()
+                flagid = dlg.FlagIDComboBox.GetValue()
+                flagid = int(flagid[0])
+
+                above = min(self.ylimits)
+                below = max(self.ylimits)
+                starttime =num2date(min(self.xlimits))
+                endtime = num2date(max(self.xlimits))
+
+                if debug:
+                    print ("GUI FlagID:", flagid, starttime, endtime)
+                flaglist = self.plotstream.flag_range(keys=selkey,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
+                self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(flaglist)))
+                if debug:
+                    print ("GUI Flaglist", flaglist)
+
+        if len(flaglist) > 0:
+            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
+            #print ("TEst", flaglist)
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+
+            #print (self.plotstream.ndarray)
+            self.ActivateControls(self.plotstream)
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+    def onFlagClearButton(self, event):
+        """
+        DESCRIPTION
+            Clear current flaglist
+        """
+        self.changeStatusbar("Deleting flaglist ...")
+        self.flaglist = []
+        self.plotstream = self.plotstream._drop_column('flag')
+        self.plotstream = self.plotstream._drop_column('comment')
+        self.ActivateControls(self.plotstream)
+        self.plotopt['annotate'] = False
+        self.menu_p.str_page.annotateCheckBox.SetValue(False)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+        self.changeStatusbar("Ready")
+
+
+    def onFlagOutlierButton(self, event):
+        """
+        DESCRIPTION
+            Method for Outlier
+        """
+        self.changeStatusbar("Flagging outliers ...")
+        sr = self.menu_p.met_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
+        keys = self.shownkeylist
+        timerange = float(sr)*600.
+        threshold=5.0
+        markall = False
+
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        # Open Dialog and return the parameters threshold, keys, timerange
+        dlg = StreamFlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange)
+        if dlg.ShowModal() == wx.ID_OK:
+            threshold = dlg.ThresholdTextCtrl.GetValue()
+            timerange = dlg.TimerangeTextCtrl.GetValue()
+            markall = dlg.MarkAllCheckBox.GetValue()
+            try:
+                threshold = float(threshold)
+                timerange = float(timerange)
+                timerange = timedelta(seconds=timerange)
+                flaglist = self.plotstream.flag_outlier(stdout=True,returnflaglist=True, keys=keys,threshold=threshold,timerange=timerange,markall=markall)
+                self.flaglist.extend(flaglist)
+                #self.plotstream = self.plotstream.flag_outlier(stdout=True, keys=keys,threshold=threshold,timerange=timerange)
+                self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(flaglist)))
+                if markall:
+                    self.menu_p.rep_page.logMsg('- flagged outliers: used option markall')
+            except:
+                print("flag outliers failed: check parameter")
+                self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
+
+            self.ActivateControls(self.plotstream)
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.changeStatusbar("Ready")
+
+
+    def onFlagRangeButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to select the range to be flagged
+        """
+        flaglist = []
+        sensid = self.plotstream.header.get('SensorID','')
+        dataid = self.plotstream.header.get('DataID','')
+        if sensid == '' and not dataid == '':
+            sensid = dataid[:-5]
+
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        self.xlimits = self.plot_p.xlimits
+
+        if sensid == '':
+            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
+                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            self.changeStatusbar("Flagging range ...")
+            dlg = StreamFlagRangeDialog(None, title='Stream: Flag range', stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
+            startdate=self.xlimits[0]
+            enddate=self.xlimits[1]
+            starttime = num2date(startdate).strftime('%X')
+            endtime = num2date(enddate).strftime('%X')
+            try:
+                dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
+                dlg.startFlagTimePicker.SetValue(starttime)
+            except:
+                pass
+            try:
+                dlg.endFlagDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
+                dlg.endFlagTimePicker.SetValue(endtime)
+            except:
+                pass
+            if dlg.ShowModal() == wx.ID_OK:
+                # get values from dlg
+                flagtype = dlg.rangeRadioBox.GetStringSelection()
+                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                keys2flag = keys2flag.split(',')
+                keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
+                comment = dlg.CommentTextCtrl.GetValue()
+                flagid = dlg.FlagIDComboBox.GetValue()
+                flagid = int(flagid[0])
+                if flagtype == 'value':
+                     keys = str(dlg.SelectKeyComboBox.GetValue())
+                     above = dlg.LowerLimitTextCtrl.GetValue()
+                     below = dlg.UpperLimitTextCtrl.GetValue()
+                     flagval = True
+                     if not below == '' and not above == '':
+                         above = float(above)
+                         below = float(below)
+                         #below = None
+                         self.menu_p.rep_page.logMsg('- flagging values between {} and {}'.format(above, below))
+                     elif not below == '':
+                         below = float(below)
+                         above = None
+                         self.menu_p.rep_page.logMsg('- flagging values below {}'.format(below))
+                     elif not above == '':
+                         above = float(above)
+                         below = None
+                         self.menu_p.rep_page.logMsg('- flagging values above {}'.format(above))
+                     else:
+                         flagval = False
+                     if flagval:
+                         #print ("Above , Below:", above, below)
+                         flaglist = self.plotstream.flag_range(keys=[keys],flagnum=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
+                         self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(flaglist)))
+                elif flagtype == 'time':
+                     if comment == '':
+                         comment = 'Time range flagged with unspecified reason'
+                     stday = dlg.startFlagDatePicker.GetValue()
+                     sttime = str(dlg.startFlagTimePicker.GetValue())
+                     if sttime.endswith('AM') or sttime.endswith('am'):
+                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+                     if sttime.endswith('pm') or sttime.endswith('PM'):
+                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+                     sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+                     starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+                     enday = dlg.endFlagDatePicker.GetValue()
+                     entime = str(dlg.endFlagTimePicker.GetValue())
+                     if entime.endswith('AM') or entime.endswith('am'):
+                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+                     if entime.endswith('pm') or entime.endswith('PM'):
+                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+                     ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+                     endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+                     #print ("Range", starttime, endtime, keys2flag)
+                     flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
+                     self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+                else:
+                     pass
+
+        if len(flaglist) > 0:
+            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
+            #print ("TEst", flaglist)
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+
+            self.ActivateControls(self.plotstream)
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.changeStatusbar("Ready")
+
+
+    def onFlagLoadButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to load flags either from a DB or from file
+        """
+        # Check whether DB still available
+        self._check_db('minimal')
+
+        sensorid = self.plotstream.header.get('SensorID','')
+        # Open Dialog and return the parameters threshold, keys, timerange
+        self.changeStatusbar("Loading flags ... please be patient")
+        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid, start=self.plotstream.start(),
+                                   end=self.plotstream.end(),last_dir = self.last_dir)
+        dlg.ShowModal()
+        if len(dlg.flaglist) > 0:
+            flaglist = dlg.flaglist
+            #print ("Loaded flags like", flaglist[0], self.flaglist[0])
+            self.flaglist.extend(flaglist)
+            #print ("extended flaglist looking like", self.flaglist)
+            self.changeStatusbar("Applying flags ... please be patient")
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))
+
+            self.ActivateControls(self.plotstream)
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
+            #self.menu_p.str_page.annotateCheckBox.SetValue(False)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.changeStatusbar("Ready")
+
+
+    def onFlagSaveButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to save flags either to DB or to file
+        """
+        # Check whether DB still available
+        self._check_db('minimal')
+
+        currentlen = len(self.flaglist)
+
+        #print ("FlagSave", self.flaglist)
+
+        self.changeStatusbar("Saving flags ...")
+        dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist,
+                                   last_dir=self.last_dir)
+        if dlg.ShowModal() == wx.ID_OK:
+            #flaglist = dlg.flaglist
+            pass
+
+        #self.flaglist = []
+        self.changeStatusbar("Flaglist saved and reset - Ready")
+
+
+    def onFlagDropButton(self,event):
+        """
+        DESCRIPTION
+            Drops all flagged data
+        """
+        self.changeStatusbar("Dropping flagged data ...")
+
+        #dlg = wx.MessageDialog(self, "Please select:\n"
+        #       "Yes: drop data from all columns\nNo: drop only selected data\n","Drop", wx.YES_NO |wx.ICON_INFORMATION)
+        #if dlg.ShowModal() == wx.ID_YES:
+        #    self.plotstream = self.plotstream.flag(self.shownkeylist)
+        #else:
+        self.plotstream = self.plotstream.remove_flagged()
+        flagid = DataStream().KEYLIST.index('flag')
+        check = [el for el in self.plotstream.ndarray[flagid] if '0' in el or '2' in el or '4' in el]
+        if not len(check) > 0:
+           self.plotstream = self.plotstream._drop_column('flag')
+           self.plotstream = self.plotstream._drop_column('comment')
+           #self.plotopt['annotate'] = False
+        else:
+           pass
+           #self.plotopt['annotate'] = True
+
+        self.menu_p.rep_page.logMsg('- flagged data removed')
+
+        self.flaglist = []
+        self.ActivateControls(self.plotstream)
+
+        self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.changeStatusbar("Ready")
+
+    def onFlagMinButton(self,event):
+        """
+        DESCRIPTION
+            Flags minimum value in zoomed region
+        """
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged minimum'
+        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
+        if flagid == 0:
+            comment = ''
+        for idx,me in enumerate(mini):
+            if not keys[idx] == 'df':
+                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
+                if checkbox.IsChecked():
+                    starttime = num2date(me[1] - xtol)
+                    endtime = num2date(me[1] + xtol)
+                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+        if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged minimum: added {} flags'.format(len(flaglist)))
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+    def onFlagMaxButton(self,event):
+        """
+        DESCRIPTION
+            Flags maximum value in zoomed region
+        """
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged maximum'
+        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
+        if flagid == 0:
+            comment = ''
+        for idx,me in enumerate(maxi):
+            if not keys[idx] == 'df':
+                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
+                if checkbox.IsChecked():
+                    starttime = num2date(me[1] - xtol)
+                    endtime = num2date(me[1] + xtol)
+                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+        if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Meta page functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+
+    def onMetaGetDBButton(self,event):
+        # TODO Move to Meta page
+        """
+        DESCRIPTION
+            get Meta data for the current sensorid from database
+        """
+        # Test whether DB is still connected
+        self._check_db('minimal')
+
+        # open dialog with all header info
+        dataid = self.plotstream.header.get('DataID','')
+        if dataid == '':
+            dlg = wx.MessageDialog(self, "No Data ID available!\n"
+                            "You need to specify a unique Data ID\nfor which meta information is obtained.\n","Undefined Data ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.menu_p.rep_page.logMsg(" - failed to add meta information from DB")
+        else:
+            self.plotstream.header = self.db.fields_to_dict(dataid)
+            self.menu_p.rep_page.logMsg(" - added meta information for {} from DB".format(dataid))
+            self.ActivateControls(self.plotstream)
+
+
+    def onMetaPutDBButton(self,event):
+        """
+        DESCRIPTION
+            write meta data to the database
+        """
+        # Check whether DB still available
+        self._check_db('minimal')
+
+        # open dialog with all header info
+        dataid = self.plotstream.header.get('DataID','')
+        if dataid == '':
+            dlg = wx.MessageDialog(self, "No Data ID available!\n"
+                            "You need to specify a unique Data ID\nfor which meta information is stored.\n","Undefined Data ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.menu_p.rep_page.logMsg(" - failed to add meta information to DB")
+        else:
+            dlg = wx.MessageDialog(self, "Please confirm!\n"
+                            "I want to replace the Meta information\nfrom the DB with data provided.\n","Confirm", wx.YES_NO |wx.ICON_INFORMATION)
+            if dlg.ShowModal() == wx.ID_YES:
+                self.db.dict_to_fields(self.plotstream.header)
+                self.menu_p.rep_page.logMsg(" - added meta information for {} to DB".format(dataid))
+            self.ActivateControls(self.plotstream)
+
+    def onMetaDataButton(self,event):
+        """
+        DESCRIPTION
+            open dialog to modify plot options (general (e.g. bgcolor) and  key
+            specific (key: symbol color errorbar etc)
+        """
+        # open dialog with all header info
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='DATAINFO')
+            if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
+                for key in self.db.DATAINFODataStream().KEYLIST:
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
+                    try:
+                        if not d['value'] == dlg.header.get(key,''):
+                            self.plotstream.header[key] = d['value']
+                    except:
+                        # might fail for arrays
+                        pass
+                self.ActivateControls(self.plotstream)
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
+
+
+    def onMetaSensorButton(self,event):
+        # TODO Move to Meta page
+        """
+        DESCRIPTION
+        open dialog to modify plot options (general (e.g. bgcolor) and  key
+        specific (key: symbol color errorbar etc)
+        """
+        # open dialog with all header info
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='SENSORS')
+            if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
+                for key in self.db.SENSORSDataStream().KEYLIST:
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
+                    if not d['value'] == dlg.header.get(key,''):
+                        self.plotstream.header[key] = d['value']
+                self.ActivateControls(self.plotstream)
+
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
+
+
+    def onMetaStationButton(self,event):
+        # TODO Move to Meta page
+        """
+        DESCRIPTION
+        open dialog to modify plot options (general (e.g. bgcolor) and  key
+        specific (key: symbol color errorbar etc)
+        """
+        # open dialog with all header info
+        if len(self.plotstream.ndarray[0]) > 0:
+            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='STATIONS')
+            if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
+                for key in self.db.STATIONSDataStream().KEYLIST:
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
+                    if not d['value'] == dlg.header.get(key,''):
+                        self.plotstream.header[key] = d['value']
+                self.ActivateControls(self.plotstream)
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
+
+    # ------------------------------------------------------------------------------------------
+    # ####################
+    # Stream Operations functions
+    # ####################
+    # ------------------------------------------------------------------------------------------
+
+
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Absolute functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+
+    def onLoadDI(self,event):
+        """
+        open dialog to load DI data
+        """
+        """
+        if isinstance(self.dipathlist, str):
+            dipathlist = self.dipathlist
+        elif isinstance(self.dipathlist, dict):
+            dipathlist = "DB"
+        else:
+            dipathlist = self.dipathlist[0]
+        """
+        defaultpath = self.options.get('didictionary',{}).get('didatapath','')
+
+        if os.path.isfile(defaultpath):
+            defaultpath = os.path.split(defaultpath)[0]
+
+        services = self.options.get('webservices',{})
+        default = self.options.get('defaultservice','conrad')
+
+        dlg = LoadDIDialog(None, title='Get DI data', dirname=defaultpath, db=self.db, services=services, defaultservice=default)
+        dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.options.get('dbname','')))
+        dlg.ShowModal()
+        if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
+            self.menu_p.rep_page.logMsg("- loaded DI data")
+            self.dipathlist = dlg.pathlist
+            if isinstance(self.dipathlist,list):
+                self.menu_p.abs_page.diTextCtrl.SetValue(','.join(self.dipathlist))
+                if os.path.isfile(dlg.pathlist[0]):
+                    dlgpath = os.path.split(dlg.pathlist[0])[0]
+                else:
+                    dlgpath = dlg.pathlist[0]
+                self.options['dipathlist'] = [dlgpath]
+                self.menu_p.abs_page.diSourceLabel.SetLabel('Source: files')
+            elif isinstance(self.dipathlist,dict):
+                info = "{}: {} dataset(s)".format(self.dipathlist.get('station'),len(self.dipathlist.get('absdata')))
+                self.menu_p.abs_page.diTextCtrl.SetValue(info)
+                self.menu_p.abs_page.diSourceLabel.SetLabel("Source: {}".format(self.dipathlist.get('source')))
+            # Update di data path
+            didict = self.options.get('didictionary')
+            didict['didatapath'] = dlg.dirname
+            self.options['didictionary'] = didict
+            self.menu_p.abs_page.AnalyzeButton.Enable()
+        dlg.Destroy()
+
+        # Used for checking while switching to dictionary structure
+        #if isinstance(self.dipathlist,dict):
+        #    print ("onLoadDI: Obtained DI data in a dictionary")
+        #    print (self.dipathlist.get('absdata')[0])
+
+
+    def onDIParameter(self,event):
+        """
+        open dialog to modify analysis parameters for DI
+        """
+        saveoptions = False
+        ok = False
+        try:
+            stationid = self.dipathlist.get('station','')
+        except:
+            stationid = ''
+        dipara = self.options.get('diparameter',{})
+        #dipara = self.options.get('webservices',{})
+        tmppathlist = self.dipathlist
+
+        dlg = ParameterDictDialog(None, title="Modify DI analysis parameter", dictionary=dipara, preselect=[stationid])
+        if dlg.ShowModal() == wx.ID_OK:
+            ok = True
+            valuedict = {}
+            for el in dlg.panel.elementlist:
+                if not el[1].GetName() == 'Label':
+                    try:
+                        val = el[1].GetValue()
+                        valuedict[el[1].GetName()] = val
+                    except:
+                        try:
+                            val = el[1].GetStringSelection()
+                            if val == 'False':
+                                val = False
+                            if val == 'True':
+                                val = True
+                            valuedict[el[1].GetName()] = val
+                            #print ("Val:", el[1].GetName(), val)
+                        except:
+                            pass
+
+        dlg.Destroy()
+
+        # Test if modified
+
+        if ok:
+            #print ("Station", valuedict.get('stationid'))
+            stationid = valuedict.get('stationid')
+            exvals = dipara.get(valuedict.get('stationid'),{})
+            if not exvals == {} and not (valuedict == exvals):
+                exstationid =  dipara.get(valuedict.get('stationid')).get('stationid','')
+                #print ("StationID existing")
+                # Update
+                dipara[stationid] = valuedict
+                self.options['diparameter'] = dipara
+                # Modify data permanently?
+                updatedlg = wx.MessageDialog(self, "Update input\n"
+                        "Remember new settings?\n".format(time),
+                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
+
+                if updatedlg.ShowModal() == wx.ID_YES:
+                    saveoptions = True
+                    updatedlg.Destroy()
+
+            elif not (valuedict == exvals):
+                #print ("StationID not yet existing")
+                # add new station information?
+                updatedlg = wx.MessageDialog(self, "New Station ID\n"
+                        "Add new parameters for StationID {} ?\n".format(stationid),
+                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
+
+                if updatedlg.ShowModal() == wx.ID_YES:
+                    saveoptions = True
+                    updatedlg.Destroy()
+                if saveoptions:
+                    dipara[stationid] = valuedict
+                    self.options['diparameter'] = dipara
+
+            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('options')
+
+        if saveoptions:
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            self.dipathlist = tmppathlist
+
+    def onDefineVarioScalar(self,event):
+        """
+        open dialog to load DI data
+        """
+        if len(self.stream) > 0:
+            pass
+            # send a message box that this data will be erased
+
+        def getPathFromDict(typ, dictionary):
+            filepath = dictionary.get('di{}path'.format(typ),'')
+            selection = dictionary.get('di{}source'.format(typ),0)
+            url = dictionary.get('di{}url'.format(typ),'')
+            dbtable = dictionary.get('di{}DBinst'.format(typ),'')
+            if selection == 0:
+                return filepath
+            elif selection == 1:
+                return [self.db, dbtable]
+            elif selection == 2:
+                return url
+
+        def display(value):
+            if isinstance(value, list):
+                display = str(value[-1])
+            else:
+                display = str(value)
+            return display
+
+        saveoptions = False
+        tmppathlist = self.dipathlist
+        didict = self.options.get('didictionary',{})
+        discalarpath = didict.get('discalarpath','')
+        divariopath = didict.get('divariopath','')
+        discalarurl = didict.get('discalarurl','')
+        divariourl = didict.get('divariourl','')
+        vselection = didict.get('divariosource',0)
+        sselection = didict.get('discalarsource',0)
+        varioDB = didict.get('divarioDBinst','1')
+        scalarDB = didict.get('discalarDBinst','4')
+        sourcelist = ['file','database','webservice']
+
+        dialog = LoadVarioScalarDialog(None, title="Choose data source", vselection=vselection, sselection=sselection, defaultvariopath=divariopath, defaultscalarpath=discalarpath, db=self.db, defaultvariotable=varioDB, defaultscalartable=scalarDB, services=self.options.get('webservices',{}), defaultservice=self.options.get('defaultservice','conrad'))
+        if dialog.ShowModal() == wx.ID_OK:
+            # get selected options:
+            didict['divariosource'] = dialog.vchoice
+            didict['discalarsource'] = dialog.schoice
+            varioext = dialog.varioExtComboBox.GetValue()
+            scalarext = dialog.scalarExtComboBox.GetValue()
+            didict['discalarpath'] = os.path.join(dialog.defaultscalarpath,scalarext)
+            didict['divariopath'] = os.path.join(dialog.defaultvariopath,varioext)
+            didict['divarioDBinst'] = dialog.varioDBComboBox.GetValue()
+            didict['discalarDBinst'] = dialog.scalarDBComboBox.GetValue()
+            didict['divariourl'] = dialog.divariows
+            didict['discalarurl'] = dialog.discalarws
+            #print (dialog.vchoice, dialog.defaultvariopath, varioext)
+            self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[dialog.vchoice]))
+            self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[dialog.schoice]))
+            res_divariopath = getPathFromDict("vario",didict)
+            res_discalarpath = getPathFromDict("scalar",didict)
+
+            self.menu_p.abs_page.varioTextCtrl.SetValue("{}".format(display(res_divariopath)))
+            self.menu_p.abs_page.scalarTextCtrl.SetValue("{}".format(display(res_discalarpath)))
+            self.options['didictionary'] = didict
+            self.options['divariopath'] = res_divariopath
+            self.options['discalarpath'] = res_discalarpath
+            saveoptions=True
+
+        dialog.Destroy()
+
+        if saveoptions:
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            self.dipathlist = tmppathlist
+
+
+
+    def onDIAnalyze(self,event):
+        """
+        open dialog to load DI data
+        """
+
+        divariopath = self.options.get('divariopath','')
+        discalarpath = self.options.get('discalarpath','')
+
+        # Get parameters from options
+        didict = self.options.get('didictionary')
+        dipara = self.options.get('diparameter')
+
+        # Get didictionary variables directly obtained from file/DB/WS
+        #print (self.dipathlist)
+        f_azimuth = self.dipathlist.get('azimuth')
+        f_pier = self.dipathlist.get('selectedpier',None)
+        stationid= self.dipathlist.get('station','')
+
+        # Select appropriate diparameters for station from options
+        # if specified to use parameters
+        primaryparametersource = self.menu_p.abs_page.parameterRadioBox.GetStringSelection()
+
+        # Currently not all parameters are in use
+        # only expD, expI, alpha, beta and all delta values are considered
+        # (and azimuth)
+        # Please note: station and pier are always taken from the file (dipathlist dictionary)
+        expD=0.0
+        expI=0.0
+        alpha=0.0
+        beta=0.0
+        deltaF=0.0
+        deltaD=0.0
+        deltaI=0.0
+        abstype= 'manual'   # is tested in absoluteAnalysis and not necessary
+        azimuth = None
+        variometerorientation=None
+        residualsign = 1
+        db = None
+        magrotation = None
+        usedb = False
+        annualmeans=None
+
+        stationpara = dipara.get(stationid,{})
+        if primaryparametersource == 'options' and stationpara == {}:
+            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('file')
+
+        if primaryparametersource == 'options' and not (f_pier == stationpara.get('dipier') and not stationpara == {}):
+            print ("Careful: pier in options differs from pier in file -> using file")
+
+        for el in stationpara:
+            value = stationpara[el]
+            if DataStream()._is_number(value):
+                value = float(value)
+            elif value == 'False':
+                value = False
+            elif value == 'True':
+                value = True
+            elif value.startswith('['):
+                value = value.replace('[','').replace(']','').replace('"','').replace("'",'').split(',')
+                value = [float(el) for el in value]
+            elif value == '':
+                value = None
+
+            if primaryparametersource == 'options':
+                if not value == 0 or value == '':
+                    if el == 'diexpD':
+                        expD = value
+                    elif el == 'diexpI':
+                        expI = value
+                    elif el == 'dideltaD':
+                        deltaD = value
+                    elif el == 'dideltaI':
+                        deltaI = value
+                    elif el == 'dideltaF':
+                        deltaF = value
+                    elif el == 'dialpha':
+                        alpha = value
+                    elif el == 'dibeta':
+                        beta = value
+                    elif el == 'diid':
+                        diid = value
+                    elif el == 'blvoutput':
+                        if value.lower().startswith("xyz"):
+                            #print (" Selected Variometerorientation in xyz")
+                            variometerorientation = "XYZ"
+                    elif el == 'fluxgateorientation':
+                        if value.lower().startswith("opp"):
+                            print (" Selected opposite fluxgate orientation for DI flux")
+                            residualsign = -1
+                        else:
+                            residualsign = 1
+                    elif el == 'diannualmean':
+                        annualmeans = value
+                    elif el == 'diazimuth':
+                        azimuth = value
+                    elif el == 'diusedb':
+                        usedb = value
+                        if usedb and self.db:
+                            db = self.db
+                    elif el == 'divariocorr':
+                        magrotation = value
+                        # does only work with db? compensation data is path of the vario source
+            elif primaryparametersource == 'file':
+                pass
+
+        if len(self.dipathlist) > 0:
+            # Identify source -> Future version: use absolutClass which contains raw data
+            #                    and necessary variation,scalar data
+            activatereport = True
+            if activatereport:
+                prev_redir = sys.stdout
+                redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
+                sys.stdout=redir
+            absstream = DataStream()
+
+            if db:
+                print ("Database {} connected".format(self.options.get('dbname','')))
+            elif usedb and not db:
+                print ("No database connected")
+
+            if isinstance(self.dipathlist,dict):
+                # Dictionary is the new default - all processes will return a dictionary
+                self.changeStatusbar("Processing DI data ... please be patient")
+                stationid = self.dipathlist.get('station')
+                starttime = self.dipathlist.get('mindatetime')
+                endtime = self.dipathlist.get('maxdatetime')
+                pier = self.dipathlist.get('selectedpier')
+                abstable = "DIDATA_{}".format(stationid.upper())
+                absdata = self.dipathlist.get('absdata')
+                f_azimuth = self.dipathlist.get('azimuth')
+                if variometerorientation and variometerorientation.lower().startswith("xyz"):
+                    print(" Selected basevalue output in xyz components")
+                if azimuth:
+                    print ("Using aziumth from options menu: {}".format(azimuth))
+                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
+                    # abstream... aziumth =
+                elif not f_azimuth or np.isnan(f_azimuth) or f_azimuth == 'nan' or f_azimuth == None:
+                    print ("no aziumth so far - please define")
+                    # open dialog
+                    ok = False
+                    dlg = SetAzimuthDialog(None, title='Define azimuth', azimuth=0.0)
+                    if dlg.ShowModal() == wx.ID_OK:
+                        print (dlg.AzimuthTextCtrl.GetValue())
+                        azimuth = float(dlg.AzimuthTextCtrl.GetValue())
+                        ok = True
+                        #except:
+                        #    pass
+                    dlg.Destroy()
+                    if ok:
+                        print ("Using given aziumth: {}".format(azimuth))
+                        absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
+                else:
+                    # Please NOte: observer selection does not yet work #  db=self.db
+                    print ("Using aziumth values from data sources")
+                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
+
+            elif isinstance(self.dipathlist,list):
+                self.changeStatusbar("Processing DI data from file(s) ... please be patient")
+                if azimuth and not azimuth == '':
+                    azimuth = float(azimuth)
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF,variometerorientation=variometerorientation,residualsign=residualsign)
+                else:
+                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF,variometerorientation=variometerorientation,residualsign=residualsign)
+            else:
+                print ("Could not identify absolute data")
+                absstream = DataStream()
+
+            try:
+                if not divariopath == '' and not discalarpath == '':
+                    variid = absstream.header.get('SensorID').split('_')[1]
+                    scalid = absstream.header.get('SensorID').split('_')[2]
+                    msgtxt = ''
+                    if variid == 'None' or variid == 'Unkown':
+                        msgtxt = 'variometer'
+                        if scalid == 'None' or scalid == 'Unkown':
+                            msgtxt = 'variometer and scalar magnetometer'
+                    elif scalid == 'None' or scalid == 'Unkown':
+                        msgtxt = 'scalar magnetometer'
+                    if not msgtxt == '':
+                        fulltxt = "Could not identify {} data.\n Please check paths.".format(msgtxt)
+                        dlg = wx.MessageDialog(self, fulltxt, "Data paths", wx.OK|wx.ICON_INFORMATION)
+                        dlg.ShowModal()
+                        dlg.Destroy()
+            except:
+               pass
+
+            if activatereport:
+                sys.stdout=prev_redir
+
+            # only if more than one point is selected
+            self.changeStatusbar("Ready")
+            if absstream and len(absstream.length()) > 1 and absstream.length()[0] > 0:
+                # Convert absstream
+                array = [[] for el in DataStream().KEYLIST]
+                for idx,el in enumerate(absstream.ndarray):
+                    if DataStream().KEYLIST[idx] in DataStream().NUMKEYLIST or DataStream().KEYLIST[idx] == 'time':
+                        array[idx] = np.asarray(el).astype(float)
+                    else:
+                        array[idx] = np.asarray(el)
+                absstream.ndarray = np.asarray(array,dtype=object)
+                self.stream = absstream.copy()
+                self.plotstream = absstream.copy()
+                currentstreamindex = len(self.streamlist)
+                self.streamlist.append(self.stream)
+                # self.streamkeylist.append(absstream._get_key_headers()) -> This is done in OnInitialPlot
+                self.headerlist.append(self.stream.header)
+                self.currentstreamindex = currentstreamindex
+                #self.ActivateControls(self.plotstream)
+                self.OnInitialPlot(self.plotstream)
+                #self.plotoptlist.append(self.plotopt)
+                if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
+                    self.menu_p.abs_page.ClearLogButton.Enable()
+                    self.menu_p.abs_page.SaveLogButton.Enable()
+            else:
+                if absstream:
+                    self.ActivateControls(self.plotstream)
+                    if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
+                        self.menu_p.abs_page.ClearLogButton.Enable()
+                        self.menu_p.abs_page.SaveLogButton.Enable()
+                # set load di to something useful (seems to be empty now)
+
+
+    """
+    def onDISetParameter(self,event):
+        #""
+        open parameter box for DI analysis
+        #""
+
+        dlg = DISetParameterDialog(None, title='Set Parameter')
+        dlg.expDTextCtrl.SetValue(self.options.get('diexpD',''))
+        dlg.deltaFTextCtrl.SetValue(self.options.get('dideltaF',''))
+        dlg.azimuthTextCtrl.SetValue(self.options.get('diazimuth',''))
+        dlg.alphaTextCtrl.SetValue(self.options.get('dialpha',''))
+        dlg.pierTextCtrl.SetValue(self.options.get('dipier',''))
+        dlg.abstypeComboBox.SetStringSelection(self.options.get('ditype',''))
+
+        if dlg.ShowModal() == wx.ID_OK:
+            if not dlg.expDTextCtrl.GetValue() == '':
+                self.options['diexpD'] = dlg.expDTextCtrl.GetValue()
+            if not dlg.azimuthTextCtrl.GetValue() == '':
+                self.options['diazimuth'] = dlg.azimuthTextCtrl.GetValue()
+            if not dlg.pierTextCtrl.GetValue() == '':
+                self.options['dipier'] = dlg.pierTextCtrl.GetValue()
+            if not dlg.alphaTextCtrl.GetValue() == '':
+                self.options['dialpha'] = dlg.alphaTextCtrl.GetValue()
+            if not dlg.deltaFTextCtrl.GetValue() == '':
+                self.options['dideltaF'] = dlg.deltaFTextCtrl.GetValue()
+            self.options['ditype'] =  dlg.abstypeComboBox.GetValue()
+
+        dlg.Destroy()
+    """
+
+
+    def onInputSheet(self,event):
+        """
+        DESCRITPTION:
+            open dialog to input DI data
+        """
+
+        #print (self.dipathlist)
+        if isinstance(self.dipathlist, dict):
+            dipath = self.options.get('didictionary',{}).get('didatapath','')
+        elif isinstance(self.dipathlist, str):
+            dipath = self.dipathlist
+        else:
+            dipath = self.dipathlist[0]
+        dipath = self.last_dir # new: use last dir
+        if os.path.isfile(dipath):
+            dipath = os.path.split(dipath)[0]
+
+
+        self.dilayout = {}
+        self.dilayout['scalevalue'] = self.options['scalevalue']
+        self.dilayout['double'] = self.options['double']
+        self.dilayout['order'] = self.options['order'].split(',')
+        #self.dilayout = {'order':['MU','MD','EU','WU','ED','WD','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'True'}
+        #self.dilayout = {'order':['MU','MD','WU','EU','WD','ED','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'False'}
+        defaults = self.options
+        cdate = pydate2wxdate(datetime.utcnow())
+        dlg = InputSheetDialog(None, title='Add DI data',path=dipath,layout=self.dilayout, defaults=defaults, cdate=cdate, db = self.db, dipathdict=self.dipathlist)
+        if dlg.ShowModal() == wx.ID_OK:
+            pass
+        dlg.Destroy()
+
+
+    def onSaveDIData(self, event):
+        """
+        DESCRIPTION
+            Save data of the logger to file
+        """
+        # TODO When starting ANalysis -> stout is redirected .. switch back to normal afterwards
+        saveFileDialog = wx.FileDialog(self, "Save As", "", self.last_dir,
+                                       "DI analysis report (*.txt)|*.txt",
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        saveFileDialog.ShowModal()
+        savepath = saveFileDialog.GetPath()
+        text = self.menu_p.abs_page.dilogTextCtrl.GetValue()
+        saveFileDialog.Destroy()
+
+        difile = open(savepath, "w")
+        difile.write(text)
+        difile.close()
+
+        self.last_dir = savepath
+
+    def onClearDIData(self, event):
+        self.menu_p.abs_page.dilogTextCtrl.SetValue('')
+
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Report page functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+
+    def onSaveLogButton(self, event):
+        saveFileDialog = wx.FileDialog(self, "Save As", "", self.last_dir,
+                                       "Log files (*.log)|*.log",
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        saveFileDialog.ShowModal()
+        savepath = saveFileDialog.GetPath()
+        text = self.menu_p.rep_page.logger.GetValue()
+        saveFileDialog.Destroy()
+
+        logfile = open(savepath, "w")
+        logfile.write(text)
+        logfile.close()
+
+
+    # ------------------------------------------------------------------------------------------
+    # ################
+    # Monitor page functions
+    # ################
+    # ------------------------------------------------------------------------------------------
+
+
+    def onConnectMARCOSButton(self, event):
+        # active if database is connected
+        # open dlg
+
+        # Check whether DB still available
+        self._check_db('minimal')
+
+        def dataAvailabilityCheck(db, datainfoidlist):
+            existinglist = []
+            if not len(datainfoidlist) > 0:
+                return datainfoidlist
+            for dataid in datainfoidlist:
+                ar = db.select('time', dataid, expert="ORDER BY time DESC LIMIT 10")
+                if len(ar) > 0:
+                    existinglist.append(dataid)
+            return existinglist
+
+
+        self.menu_p.rep_page.logMsg('- Selecting MARCOS table for monitoring ...')
+        output = self.db.select('DataID,DataMinTime,DataMaxTime','DATAINFO')
+        datainfoidlist = [elem[0] for elem in output]
+        datainfoidlist = dataAvailabilityCheck(self.db, datainfoidlist)
+
+        if len(datainfoidlist) < 1:
+            dlg = wx.MessageDialog(self, "No data tables available!\n"
+                            "please check your database\n",
+                            "OpenDB", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+        # select table
+        sr = 1
+        dlg = AGetMARCOSDialog(None, title='Select table',datalst=datainfoidlist)
+        if dlg.ShowModal() == wx.ID_OK:
+            datainfoid = dlg.dataComboBox.GetValue()
+            vals = self.db.select('SensorID,DataSamplingRate,ColumnContents,ColumnUnits,StationID','DATAINFO', 'DataID = "'+datainfoid+'"')
+            vals = vals[0]
+            sensid= vals[0]
+            sr= float(vals[1].strip('sec'))
+            keys= vals[2].split(',')
+            units= vals[3].split(',')
+            stationid= vals[4]
+        else:
+            dlg.Destroy()
+            return
+        # get all parameters
+
+        pad = 5
+        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
+
+        # start monitoring parameters
+        period = float(self.menu_p.com_page.frequSlider.GetValue())
+        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+        coverage = covval/sr
+        limit = period/sr
+        unitlist = []
+        for idx,key in enumerate(keys):
+           if not key == '':
+               unitlist.append([key, units[idx]])
+
+        parameter = ','.join([DataStream().KEYLIST[idx+1] for idx,key in enumerate(keys) if not key=='' and DataStream().KEYLIST[idx+1] in DataStream().NUMKEYLIST])
+
+        self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 15: stationid}
+        self.monitorSource='MARCOS'
+
+        success = True
+        if success:
+            self.menu_p.com_page.startMonitorButton.Enable()
+            self.menu_p.com_page.getMARTASButton.Disable()
+            #self.menu_p.com_page.getMQTTButton.Disable()
+            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
+            self.menu_p.com_page.logMsg('Begin monitoring...')
+            self.menu_p.com_page.logMsg(' - Selected MARCOS database')
+            self.menu_p.com_page.logMsg(' - Table: {}'.format(datainfoid))
+            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+            self.menu_p.com_page.frequSlider.Enable()         # always
+
+
+    def onConnectMARTASButton(self, event):
+
+        success = False
+        oldopt = self.options.get('favoritemartas',[])
+        dlg = SelectMARTASDialog(None, title='Select MARTAS',options=self.options)
+        if dlg.ShowModal() == wx.ID_OK:
+            martasaddress = dlg.addressComboBox.GetValue()
+            martasport = dlg.portTextCtrl.GetValue()
+            #martasdelay = dlg.delayTextCtrl.GetValue()
+            martasstationid = dlg.stationidTextCtrl.GetValue()
+            martasuser = dlg.userTextCtrl.GetValue()
+            martaspasswd = dlg.pwdTextCtrl.GetValue()
+            self.options['favoritemartas'] = dlg.favoritemartas
+            martasdelay = 60
+            martasprotocol = 'mqtt' # dlg.pwdTextCtrl.GetValue()
+            success = True
+            #if not oldopt == self.options['favoritemartas']:
+            saveini(self.options)
+            inipara, check = loadini()
+            self.initParameter(inipara)
+            dlg.Destroy()
+        else:
+            self.options['favoritemartas'] = dlg.favoritemartas
+            if not oldopt == self.options['favoritemartas']:
+                saveini(self.options)
+                inipara, check = loadini()
+                self.initParameter(inipara)
+            dlg.Destroy()
+            return
+
+        #if not oldopt == self.options['favoritemartas']:
+        #    saveini(self.options)
+        #    inipara, check = loadini()
+        #    self.initParameter(inipara)
+        self.menu_p.rep_page.logMsg('- Selected MARTAS maschine ({},{}) for monitoring ...'.format(martasaddress,martasprotocol))
+
+        pad = 5
+        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
+        # start monitoring parameters
+        unitlist = []
+
+        # get header information from data stream
+        try:
+            import paho.mqtt.client as mqtt
+            #from magpy.collector import collectormethods as colsup
+            mqttimport = True
+        except:
+            mqttimport = False
+            dlg = wx.MessageDialog(self, "Could not import required packages!\n"
+                        "Make sure that the python package paho-mqtt is installed\n",
+                        "MARTAS monitor failed", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Using MQTT monitor failed ... Ready")
+            dlg.Destroy()
+        #print ("TEST", colsup.identifier)
+
+        if mqttimport:
+            client = mqtt.Client()
+
+            if not martasuser in ['',None,'None','-']:
+                #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
+                client.username_pw_set(martasuser, password=martaspasswd)  # defined on broker by mosquitto_passwd -c passwordfile user
+
+            #client.on_connect = colsup.on_connect
+            #client.on_message = colsup.on_message
+
+            #print (martasaddress)
+            #client.connect("192.168.178.84", 1883, 60)
+            try:
+                client.connect(martasaddress, int(martasport), int(martasdelay))
+            except:
+                dlg = wx.MessageDialog(self, "Connection to MQTT broker failed\n"
+                        "Check your internet connection or credentials\n",
+                        "Connection failed", wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+                return
+            qos = 0
+            client.subscribe("{}/#".format(martasstationid), qos)
+
+            loopcnt = 0
+            success = True
+            try:
+                maxloop = int(self.options.get('martasscantime'))*10
+                #print ("Got data from init - remove this message ater 0.3.99", maxloop)
+            except:
+                print ("Could not get scantime from options - using approx 20 seconds")
+                maxloop = 200
+            self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))
+            try:
+                self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
+                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
+                    loopcnt += 1
+                    client.loop(.1) #blocks for 100ms
+                    self.progress.Update(loopcnt)
+                    if loopcnt > 600:
+                        success = False
+                        break
+                self.progress.Destroy()
+            except:  # test fallback for MacOS
+                proDlg = WaitDialog(None, "Scanning...", "Scanning for MQTT broadcasts.\nPlease wait....")
+                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
+                    loopcnt += 1
+                    client.loop(.1) #blocks for 100ms
+                    self.progress.Update(loopcnt)
+                    if loopcnt > 600:
+                        success = False
+                        break
+                proDlg.Destroy()
+
+            #print ("here", colsup.identifier)
+
+            if success: # and len(colsup.identifier) > 0:
+                self.changeStatusbar("Scanning for MQTT broadcasts ... found sensor(s)")
+                self.menu_p.com_page.startMonitorButton.Enable()
+                self.menu_p.com_page.getMARTASButton.Disable()
+                #self.menu_p.com_page.getMQTTButton.Disable()
+                self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
+                self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(martasaddress))
+                self.menu_p.com_page.logMsg('Begin monitoring...')
+                self.menu_p.com_page.logMsg(' - Selected MARTAS {} protocol'.format(martasprotocol))
+                self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+                self.menu_p.com_page.frequSlider.Enable()         # always
+
+                sensorlist = []
+                for key in colsup.identifier:
+                    #print ("key", key)
+                    sensorid = key.split(':')[0]
+                    if not sensorid in sensorlist:
+                        sensorlist.append(sensorid)
+
+                dlg = SelectFromListDialog(None, title='Select sensor', selectlist=sensorlist, name='Sensor')
+                if dlg.ShowModal() == wx.ID_OK:
+                    sensorid = dlg.selectComboBox.GetValue()
+                else:
+                    self.menu_p.com_page.getMARTASButton.Enable()
+                    self.ActivateControls(self.plotstream)
+                    sensorid = sensorlist[0]
+
+                dlg.Destroy()
+
+                self.menu_p.com_page.logMsg(' - selected Sensor: {}'.format(sensorid))
+
+                pad = 5
+                currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
+                parameter = colsup.identifier.get(sensorid+':keylist')
+                parameter = ','.join(parameter)
+                unitlist = colsup.identifier.get(sensorid+':unitlist')
+                period = float(self.menu_p.com_page.frequSlider.GetValue())
+                covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+                sr = 1
+                coverage = covval/sr
+                limit = period/sr
+                datainfoid = sensorid+'_0001'
+
+                self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol, 13: martasuser, 14: martaspasswd, 15: martasstationid, 16: qos}
+                self.monitorSource='MARTAS'
+            else:
+                self.changeStatusbar("Scanning for MQTT broadcasts ... no sensor found")
+                #self.menu_p.com_page.mqttLabel.SetValue('unable to connect to {}'.format(martasaddress))
+
+
+    def onStartMonitorButton(self, event):
+        self.DeactivateAllControls()
+        self.MainMenu.EnableTop(0, False)
+        self.MainMenu.EnableTop(1, False)
+        self.MainMenu.EnableTop(2, False)
+        self.MainMenu.EnableTop(3, False)
+        self.MainMenu.EnableTop(4, False)
+        self.MainMenu.EnableTop(5, False)
+        self.menu_p.com_page.getMARTASButton.Disable()
+        self.menu_p.com_page.getMARCOSButton.Disable()
+        #self.menu_p.com_page.getMQTTButton.Disable()
+        self.menu_p.com_page.stopMonitorButton.Enable()
+        if self.options.get('experimental'):
+            self.menu_p.com_page.saveMonitorButton.Enable()   # if experimental
+
+        # start monitoring parameters
+        period = float(self.menu_p.com_page.frequSlider.GetValue())
+        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+        sr = self.plot_p.datavars[7]/self.plot_p.datavars[2]
+        coverage = covval/sr
+        limit = period/sr
+        self.plot_p.datavars[2] = limit
+        self.plot_p.datavars[6] = coverage
+        self.plot_p.datavars[7] = period
+
+        self.changeStatusbar("Running monitor ...")
+        # Obtain the last values from the data base with given dataid and limit
+        # A DB query for 10 min 10Hz data needs approx 0.3 sec
+        if  self.monitorSource=='MARCOS':
+            self.plot_p.t1_stop.clear()
+            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
+            self.plot_p.startMARCOSMonitor()
+            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
+        elif self.monitorSource=='MARTAS':
+            self.plot_p.t1_stop.clear()
+            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
+            self.plot_p.startMARTASMonitor(self.plot_p.datavars.get(12))
+            # MARTASmonitor calls subscribe2client  - output in temporary file (to start with) and access global array from storeData (move array to global)
+            self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(self.plot_p.datavars.get(9)))
+
+    def _monitor2stream(self,array, db=None, dataid=None,header = {}):
+        """
+        DESCRIPTION:
+            creates self.plotstream object from monitor data
+        """
+        #header = {}
+        if db:
+            header = db.fields_to_dict(dataid)
+        if len(array[0]) > 0:
+            if isinstance(array[0][-1], datetime):
+                array[0] = date2num(array[0])
+        stream = DataStream([LineStruct()],header,array)
+        stream = stream.sorting()
+        return stream
+
+    def onStopMonitorButton(self, event):
+        dataid = self.plot_p.datavars[0]
+        self.plot_p.t1_stop.set()
+        #self.plot_p.client.loop_stop()
+        self.menu_p.com_page.logMsg(' > Read cycle stopped')
+        self.menu_p.com_page.logMsg(' - {} disconnected'.format(self.monitorSource))
+        self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
+        # delete old array
+        self.plot_p.array = [[] for el in DataStream().KEYLIST]
+        self.stream.header['StationID'] = self.plot_p.datavars.get(15)
+        self.stream.header['SensorID'] = self.plot_p.datavars.get(0)[:-5]
+        self.stream.header['DataID'] = self.plot_p.datavars.get(0)
+        self.plotstream = self.stream.copy()
+        currentstreamindex = len(self.streamlist)
+        self.streamlist.append(self.plotstream)
+        self.streamkeylist.append(self.plotstream._get_key_headers())
+        self.headerlist.append(self.plotstream.header)
+        self.currentstreamindex = currentstreamindex
+
+        self.menu_p.com_page.stopMonitorButton.Disable()
+        self.menu_p.com_page.saveMonitorButton.Disable()
+        self.ActivateControls(self.plotstream)
+        self.shownkeylist = self.UpdatePlotCharacteristics(self.plotstream)
+        self.plotoptlist.append(self.plotopt)
+        self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.MainMenu.EnableTop(0, True)
+        self.MainMenu.EnableTop(1, True)
+        self.MainMenu.EnableTop(2, True)
+        self.MainMenu.EnableTop(3, True)
+        self.MainMenu.EnableTop(4, True)
+        self.MainMenu.EnableTop(5, True)
+
+        self.menu_p.com_page.getMARTASButton.Enable()
+        self.menu_p.com_page.getMARCOSButton.Enable()
+        #self.menu_p.com_page.getMQTTButton.Enable()
+        self.menu_p.com_page.marcosLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.martasLabel.SetBackgroundColour((255,23,23))
+        #self.menu_p.com_page.mqttLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.marcosLabel.SetValue('not connected')
+        self.menu_p.com_page.martasLabel.SetValue('not connected')
+        #self.menu_p.com_page.mqttLabel.SetValue('not connected')
+        self.changeStatusbar("Ready")
+
+
+    def onLogDataButton(self, event):
+        # open dialog with pathname
+        # then use data_2_file method for binary writing
+        pass
+
+
+    # TODO Clean this method up and make it consisting of modules
     def OnCheckDefinitiveData(self, event):
         """
         Definition:
@@ -4881,2703 +7640,8 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Check data finished - Ready")
 
 
-    # ################
-    # page methods:
 
-    # pages: stream (plot, coordinate), analysis (smooth, filter, fit, baseline etc),
-    #          specials(spectrum, power), absolutes (), report (log), monitor (access web socket)
 
-    def checkDB(self, level='minimal'):
-        if self.magpystate.get('databaseconnected'):
-            try:
-                dbank, connect = self._db_connect(*self.magpystate.get('dbtuple'))
-                dbank.db.info(destination='stdout',level='minimal')#,level='full') # use level ='minimal'
-            except:
-                logger.info("Database not connected any more -- reconnecting")
-                dbank, connect = self._db_connect(*self.magpystate.get('dbtuple'))
-
-
-
-    # ------------------------------------------------------------------------------------------
-    # ################
-    # Analysis functions
-    # ################
-    # ------------------------------------------------------------------------------------------
-
-    def onFilterButton(self, event):
-        """
-        Method for filtering
-        """
-        self.changeStatusbar("Filtering...")
-
-        # open dialog to modify filter parameters
-        #keystr = self.menu_p.met_page.keysTextCtrl.GetValue().encode('ascii','ignore')
-        #keys = keystr.split(',')
-        sr = self.plotstream.samplingrate()
-
-        filter_type = 'gaussian'
-        resample_offset = 0.0
-
-        if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
-                filter_width = timedelta(seconds=3.33333333)
-                resample_period = 1.0
-        elif sr < 50: # use 1 minute filter with 0.008 Hz cut off as default
-                filter_width = timedelta(minutes=2)
-                resample_period = 60.0
-        else: # use 1 hour flat filter
-                filter_width = timedelta(minutes=60)
-                resample_period = 3600.0
-                resample_offset = 1800.0
-                filter_type = 'flat'
-        miss = 'conservative'
-
-        dlg = AnalysisFilterDialog(None, title='Analysis: Filter', samplingrate=sr, resample=True, winlen=filter_width.total_seconds(), resint=resample_period, resoff= resample_offset, filtertype=filter_type)
-        if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
-            dlg.methodRadioBox.SetStringSelection('conservative')
-
-        if dlg.ShowModal() == wx.ID_OK:
-            filtertype = dlg.filtertypeComboBox.GetValue()
-            filterlength = float(dlg.lengthTextCtrl.GetValue())
-            resampleinterval = float(dlg.resampleTextCtrl.GetValue())
-            resampleoffset = float(dlg.resampleoffsetTextCtrl.GetValue())
-            missingdata = dlg.methodRadioBox.GetStringSelection()
-            #print (filtertype,filterlength,missingdata,resampleinterval,resampleoffset)
-            if missingdata == 'IAGA':
-                miss = 'mean'
-            elif missingdata == 'interpolate':
-                miss = 'interpolate'
-
-            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),resample_period=resampleinterval,resampleoffset=timedelta(seconds=resampleoffset),missingdata=miss,resample=True)
-            self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
-
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-
-    def onDerivativeButton(self, event):
-        """
-        Method for derivative
-        """
-        self.changeStatusbar("Calculating derivative ...")
-        keys = self.shownkeylist
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-
-        self.menu_p.rep_page.logMsg("- calculating derivative")
-        self.plotstream = self.plotstream.differentiate(keys=keys,put2keys=keys)
-
-        self.menu_p.rep_page.logMsg('- derivative calculated')
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-    def onFitButton(self, event):
-        """
-        Method for fitting
-        """
-        self.changeStatusbar("Fitting ...")
-        keys = self.shownkeylist
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-        self.xlimits = self.plot_p.xlimits
-        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter',
-                options=self.options,last_dir = self.last_dir, stream = self.plotstream,
-                shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotopt, hide_file=False)
-        startdate=self.xlimits[0]
-        enddate=self.xlimits[1]
-        dlg.setTimeRange(startdate, enddate)
-        if dlg.ShowModal() == wx.ID_OK:
-            params = dlg.getFitParameters()
-            self.options['fitfunction'] = params['fitfuncname']
-            self.options['fitknotstep'] = str(params['knotstep'])
-            self.options['fitdegree'] = str(params['fitdegree'])
-            self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
-                    params['fitfuncname'], params['knotstep'], params['fitdegree']))
-            if len(self.plotstream.ndarray[0]) > 0:
-                func = self.plotstream.fit(keys=keys,
-                        fitfunc=params['fitfunc'],
-                        fitdegree=params['fitdegree'], knotstep=params['knotstep'],
-                        starttime=params['starttime'],
-                        endtime=params['endtime'])
-                if params['fitfunc'] == 'none':
-                    self.plotopt['function'] = []
-                elif isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
-                    self.plotopt['function'].append(func)
-                else:
-                    self.plotopt['function'] = [func]
-                #self.function = func
-                #self.plotopt['function'] = func
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-            else:
-                # Msgbox to load data first
-                pass
-        else:
-            parameter = dlg.fitparameter
-            if parameter:
-                funclist = []
-                for key in parameter:
-                    params=parameter[key]
-                    funclist.append(self.plotstream.fit(keys=keys,
-                        fitfunc=params['fitfunc'],
-                        fitdegree=params['fitdegree'], knotstep=params['knotstep'],
-                        starttime=params['starttime'],
-                        endtime=params['endtime']))
-                self.plotopt['function'] = funclist
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-
-        dlg.Destroy()
-        self.menu_p.rep_page.logMsg('- data fitted')
-        self.changeStatusbar("Ready")
-
-
-    def onOffsetButton(self, event):
-        """
-        Method for offset correction
-        """
-        # Check whether DB still available
-        self.checkDB('minimal')
-
-        self.changeStatusbar("Adding offsets ...")
-        keys = self.shownkeylist
-        offsetdict = {}
-
-        # get currently zoomed time limits and use as timerange
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits:
-            self.xlimits = [num2date(self.plotstream.ndarray[0][0]),num2date(self.plotstream.ndarray[0][-1])]
-        else:
-            self.xlimits = [num2date(self.xlimits[0]),num2date(self.xlimits[-1])]
-
-        # get existing deltas from database
-        deltas = self.plotstream.header.get('DataDeltaValues','')
-
-        if deltas == '':
-            # Check data compensation values
-            try:
-                xcorr = float(self.plotstream.header.get('DataCompensationX',''))
-                ycorr = float(self.plotstream.header.get('DataCompensationY',''))
-                zcorr = float(self.plotstream.header.get('DataCompensationZ',''))
-                if not xcorr=='' and not ycorr=='' and not zcorr=='':
-                    deltas = 'x_{},y_{},z_{}'.format(-1*xcorr*1000.,-1*ycorr*1000.,-1*zcorr*1000.)
-            except:
-                pass
-        #print ("Delta", deltas)
-
-        dlg = AnalysisOffsetDialog(None, title='Analysis: define offsets', keylst=keys, xlimits=self.xlimits, deltas=deltas)
-        if dlg.ShowModal() == wx.ID_OK:
-            for key in keys:
-                offset = eval('dlg.'+key+'TextCtrl.GetValue()')
-                if not offset in ['','0']:
-                    if not float(offset) == 0:
-                        offsetdict[key] = float(offset)
-            val = dlg.offsetRadioBox.GetStringSelection()
-            #print ("Offset", val)
-            if str(val) == 'all':
-                toffset = dlg.timeshiftTextCtrl.GetValue()
-                if not self.plotstream._is_number(toffset):
-                    toffset = 0
-                if not float(toffset) == 0:
-                    offsetdict['time'] = timedelta(seconds=float(toffset))
-                self.plotstream = self.plotstream.offset(offsetdict)
-            else:
-                stday = dlg.StartDatePicker.GetValue()
-                sttime = str(dlg.StartTimeTextCtrl.GetValue())
-                sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-                st= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-                edday = dlg.EndDatePicker.GetValue()
-                edtime = str(dlg.EndTimeTextCtrl.GetValue())
-                ed = datetime.strftime(datetime.fromtimestamp(edday.GetTicks()), "%Y-%m-%d")
-                et= datetime.strptime(str(ed)+'_'+edtime, "%Y-%m-%d_%H:%M:%S")
-                self.plotstream = self.plotstream.offset(offsetdict, starttime=st, endtime=et)
-
-            self.plotstream.header['DataDeltaValuesApplied'] = 1
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
-
-
-    def onResampleButton(self, event):
-        """
-        Method for offset correction
-        """
-        self.changeStatusbar("Resampling ...")
-        keys = self.shownkeylist
-        sr = self.plotstream.samplingrate()
-
-        dlg = AnalysisResampleDialog(None, title='Analysis: resampling parameters', keylst=keys, period=sr)
-        if dlg.ShowModal() == wx.ID_OK:
-            newperiod = dlg.periodTextCtrl.GetValue()
-            self.plotstream = self.plotstream.resample(keys, period=float(newperiod), debugmode=False)
-            self.menu_p.rep_page.logMsg('- resampled stream at period {} second'.format(newperiod))
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
-
-    def onActivityButton(self, event):
-        """
-        Method for offset correction
-        """
-        self.changeStatusbar("Getting activity (FMI method)...")
-
-        keys = self.shownkeylist
-        offsetdict = {}
-
-        #dlg = AnalysisActivityDialog(None, title='Analysis: get k values (FMI)')
-        #if dlg.ShowModal() == wx.ID_OK:
-        backup = self.plotstream.copy()
-        stream = self.plotstream.k_fmi()
-        self.streamlist.append(stream)
-        self.streamkeylist.append(stream._get_key_headers())
-        self.currentstreamindex = len(self.streamlist)-1
-        self.plotstream = self.streamlist[-1]
-        #self.headerlist.append(self.plotstream.header)
-        self.headerlist.append(stream.header)
-        self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
-        if self.plotstream and len(self.plotstream.ndarray[0]) > 0:
-            self.ActivateControls(self.plotstream)
-            keylist = self.UpdatePlotCharacteristics(self.plotstream)
-            self.plotoptlist.append(self.plotopt)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-        else:
-            self.plotstream = backup.copy()
-
-        self.changeStatusbar("Ready")
-
-    def onRotationButton(self, event):
-        """
-        Method for offset correction
-        """
-        self.changeStatusbar("Rotating data ...")
-
-        if len(self.plotstream.ndarray[0]) > 0:
-            # XXX Eventually SetValues from init
-            dlg = AnalysisRotationDialog(None, title='Analysis: rotate data')
-            if dlg.ShowModal() == wx.ID_OK:
-                alphat = dlg.alphaTextCtrl.GetValue()
-                betat = dlg.betaTextCtrl.GetValue()
-                try:
-                    alpha = float(alphat)
-                except:
-                    alpha = 0.0
-                try:
-                    beta = float(betat)
-                except:
-                    beta = 0.0
-
-                self.plotstream = self.plotstream.rotation(alpha=alpha, beta=beta)
-                self.menu_p.rep_page.logMsg('- rotated stream by alpha = %s and beta = %s' % (alphat,betat))
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
-
-    def onMeanButton(self, event):
-        """
-        DESCRIPTION
-             Calculates means values for all keys of shownkeylist
-        """
-        self.changeStatusbar("Calculating means ...")
-        keys = self.shownkeylist
-        meanfunc = 'mean'
-
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-
-        mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys]
-        t_limits = teststream._find_t_limits()
-        trange = '- mean - timerange: {} to {}'.format(t_limits[0],t_limits[1])
-        self.menu_p.rep_page.logMsg(trange)
-        for idx,me in enumerate(mean):
-            meanline = '- mean - key: {} = {} +/- {}'.format(keys[idx],me[0],me[1])
-            self.menu_p.rep_page.logMsg(meanline)
-            trange = trange + '\n' + meanline
-        # open message dialog
-        dlg = wx.MessageDialog(self, "Means:\n"+
-                        str(trange),
-                        "Analysis: Mean values", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
-
-    def onMaxButton(self, event):
-        """
-        DESCRIPTION
-             Calculates max values for all keys of shownkeylist
-        """
-        self.changeStatusbar("Calculating maxima ...")
-        keys = self.shownkeylist
-
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-
-        maxi = [teststream._get_max(key,returntime=True) for key in keys]
-        t_limits = teststream._find_t_limits()
-        trange = '- maxima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
-        self.menu_p.rep_page.logMsg(trange)
-        for idx,me in enumerate(maxi):
-            meanline = '- maxima - key: {} = {} at {}'.format(keys[idx],me[0],num2date(me[1]))
-            self.menu_p.rep_page.logMsg(meanline)
-            trange = trange + '\n' + meanline
-        # open message dialog
-        dlg = wx.MessageDialog(self, "Maxima:\n"+
-                        str(trange),
-                        "Analysis: Maximum values", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
-
-    def onMinButton(self, event):
-        """
-        DESCRIPTION
-             Calculates means values for all keys of shownkeylist
-        """
-        self.changeStatusbar("Calculating minima ...")
-        keys = self.shownkeylist
-
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-
-        mini = [teststream._get_min(key,returntime=True) for key in keys]
-        t_limits = teststream._find_t_limits()
-        trange = '- minima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
-        self.menu_p.rep_page.logMsg(trange)
-        for idx,me in enumerate(mini):
-            meanline = '- minima - key: {} = {} at {}'.format(keys[idx],me[0],num2date(me[1]))
-            self.menu_p.rep_page.logMsg(meanline)
-            trange = trange + '\n' + meanline
-        # open message dialog
-        dlg = wx.MessageDialog(self, "Minima:\n"+
-                        str(trange),
-                        "Analysis: Minimum values", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
-
-
-    def onFlagmodButton(self, event):
-        """
-        DESCRIPTION
-             Shows Flagilist statistics and allows to change flag contents
-        """
-        self.changeStatusbar("Flaglist contents ...")
-        keys = self.shownkeylist
-
-        if not self.flaglist or not len(self.flaglist) > 0:
-            self.changeStatusbar("no flags available ... Ready")
-            return
-
-        stats = self.plotstream.flagliststats(self.flaglist, intensive=True, output='string')
-
-        self.menu_p.rep_page.logMsg(stats)
-        """
-        for idx,me in enumerate(mean):
-            meanline = '- mean - key: {} = {} +/- {}'.format(keys[idx],me[0],me[1])
-            self.menu_p.rep_page.logMsg(meanline)
-            trange = trange + '\n' + meanline
-        """
-        # open message dialog
-        dlg = AnalysisFlagsDialog(None, title='Analysis: Flags', stats=stats, flaglist=self.flaglist, stream=self.plotstream)
-        if dlg.ShowModal() == wx.ID_OK:
-            if dlg.mod:
-                self.changeStatusbar("Applying new flags ...")
-                self.menu_p.rep_page.logMsg('Flags have been modified: ')
-                self.flaglist = dlg.newfllist
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-                self.plotstream = self.plotstream.flag(self.flaglist)
-                self.menu_p.rep_page.logMsg('- applied {} modified flags'.format(len(self.flaglist)))
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-            else:
-                pass
-            pass
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
-
-
-    def onSmoothButton(self, event):
-        """
-        DESCRIPTION
-             Calculates smoothed curve
-        """
-        self.changeStatusbar("Smoothing ... be patient")
-        sr = self.plotstream.samplingrate()
-
-        filter_type = 'gaussian'
-        resample_offset = 0.0
-        if sr < 0.2: # use 1 second filter with 0.3 Hz cut off as default
-                filter_width = timedelta(seconds=3.33333333)
-                resample_period = 1.0
-        elif sr < 50: # use 1 minute filter with 0.008 Hz cut off as default
-                filter_width = timedelta(minutes=2)
-                resample_period = 60.0
-        else: # use 1 hour flat filter
-                filter_width = timedelta(minutes=60)
-                resample_period = 3600.0
-                resample_offset = 1800.0
-                filter_type = 'flat'
-        miss = 'conservative'
-
-        dlg = AnalysisFilterDialog(None, title='Analysis: Filter', samplingrate=sr, resample=False, winlen=filter_width.seconds, resint=resample_period, resoff= resample_offset, filtertype=filter_type)
-        if dlg.ShowModal() == wx.ID_OK:
-            filtertype = dlg.filtertypeComboBox.GetValue()
-            filterlength = float(dlg.lengthTextCtrl.GetValue())
-            missingdata = dlg.methodRadioBox.GetStringSelection()
-            if missingdata == 'IAGA':
-                miss = 'mean'
-            elif missingdata == 'interpolate':
-                miss = 'interpolate'
-
-            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),missingdata=miss,resample=False,noresample=True)
-            self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
-
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-    def onBaselineButton(self, event):
-        """
-        DESCRIPTION
-             Calculates baseline correction
-        """
-        self.changeStatusbar("Baseline adoption ...")
-        if self.plotstream.header.get('DataAbsInfo'):
-            #print ("Baseline has been calculated already - existing adopted baseline will be replaced")
-            existdlg = wx.MessageDialog(self, "Baseline date already connected to timeseries\n"
-                        "Append new data (YES) or replace (No)\n".format(time),
-                        "Baseline data existing", wx.YES_NO|wx.ICON_INFORMATION)
-            if existdlg.ShowModal() == wx.ID_NO:
-                self.plotstream.header['DataAbsInfo'] = ''
-                self.plotstream.header['DataBaseValues'] = None
-            existdlg.Destroy()
-
-        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst,
-                                     dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream,
-                                     shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotoptlist,
-                                     last_dir = self.last_dir)
-        # open dlg which allows to choose baseline data stream, function and parameters
-        # Drop down for baseline data stream (idx: filename)
-        # Text window describing baseline parameter
-        # button to modify baseline parameter
-        #print ("BASELINEDICT CoNTENTS:", self.baselinedictlst,self.baselineidxlst)
-        if dlg.ShowModal() == wx.ID_OK:
-            # return active stream idx ()
-            #print ("Here", dlg.absstreamComboBox.GetStringSelection())
-            #print ("Here2", dlg.absstreamComboBox.GetValue())
-            self.options = dlg.options
-            # fitparameters is a dictionary containing fitting parameters
-            # like fitdict = {1: {"keys":None, "fitfunc":"poly","fitdegree":5, "knotstep":0.3, "starttime":starttime,"endtime":endtime},
-            #             2: {"keys":None, "fitfunc":"mean","fitdegree":5, "knotstep":0.3, "starttime":starttime,"endtime":endtime}}
-            fitparameters = dlg.fitparameters
-            # basedict contains ?
-            basedict = dlg.selecteddict # tmpbasedict[0]
-            absstream = self.streamlist[int(basedict.get('streamidx'))]
-
-            #print ("CHECKING BASE", starttime, endtime, knotstep, fitfunc, degree, absstream.length()[0])
-            #baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(knotstep), fitdegree=int(degree), startabs=starttime, endabs=endtime)
-            baselinefunclist = []
-            if not fitparameters:
-                self.menu_p.rep_page.logMsg('- baseline adoption aborted as no fit function defined')
-                self.changeStatusbar("Ready")
-            else:
-                for fitparameter in fitparameters:
-                    fitpara = fitparameters.get(fitparameter)
-                    #print ("Correcting with ", fitpara)
-                    baselinefunclist.append(self.plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
-
-                #keys = self.shownkeylist
-                self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
-                # add new stream, with baselinecorr
-                # BASECORR
-                # provide possibility to directly calculate bc
-                calc_bc = self.options.get("baselinedirect")
-                if calc_bc:
-                    msgtext = "Baseline correction performed - Ready"
-                    self.plotstream = self.plotstream.bc(function=baselinefunclist)
-                    # Eventually update delta F
-                    if 'df' in self.plotstream._get_key_headers():
-                        self.plotstream = self.plotstream.delta_f()
-                    currentstreamindex = len(self.streamlist)
-                    self.streamlist.append(self.plotstream)
-                    self.streamkeylist.append(self.shownkeylist)
-                    self.headerlist.append(self.plotstream.header)
-                    self.currentstreamindex = currentstreamindex
-                    self.plotoptlist.append(self.plotopt)
-                else:
-                    msgtext = "BC function available - Ready"
-                    dlg = wx.MessageDialog(self, "Adopted baseline calculated.\n"
-                               "Baseline parameters added to meta information and option 'Baseline Corr' on 'Data' panel now enabled.\n",
-                               "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    dlg.Destroy()
-
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar(msgtext)
-        else:
-            self.changeStatusbar("Ready")
-
-    def onDeltafButton(self, event):
-        """
-        DESCRIPTION
-             Calculates delta F values
-        """
-        self.changeStatusbar("Delta F ...")
-
-        self.plotstream = self.plotstream.delta_f()
-        #self.streamlist[self.currentstreamindex].delta_f()
-        #print (self.plotstream._get_key_headers())
-        if 'df' in self.plotstream._get_key_headers() and not 'df' in self.shownkeylist:
-            self.shownkeylist.append('df')
-        self.menu_p.rep_page.logMsg('- determined delta F between x,y,z and f')
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-
-    def onCalcfButton(self, event):
-        """
-        DESCRIPTION
-             Calculates delta F values
-        """
-
-        cont = True
-        if 'f' in self.plotstream._get_key_headers():
-            existdlg = wx.MessageDialog(self, "F data already existing\n"
-                        "Replace with vector sum?\n".format(time),
-                        "F data existing", wx.YES_NO|wx.ICON_INFORMATION)
-            if existdlg.ShowModal() == wx.ID_YES:
-                existdlg.Destroy()
-                #self.Close(True)
-            else:
-                existdlg.Destroy()
-                #self.Close(True)
-                cont = False
-
-        if cont:
-            self.changeStatusbar("Calculating F from components ...")
-
-            self.plotstream = self.plotstream.calc_f(skipdelta=True)
-            #self.streamlist[self.currentstreamindex].calc_f()
-            #print (self.plotstream._get_key_headers())
-            if 'f' in self.plotstream._get_key_headers() and not 'f' in self.shownkeylist:
-                self.shownkeylist.append('f')
-            if 'df' in self.plotstream._get_key_headers():
-                self.plotstream = self.plotstream.delta_f()
-            self.menu_p.rep_page.logMsg('- determined f from x,y,z')
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-    def onPowerButton(self, event):
-        """
-        DESCRIPTION
-             Calculates Power spectrum of one component
-        """
-        self.changeStatusbar("Power spectrum ...")
-        comp = self.getComponent()
-        if comp is not None:
-            fig = mp.plotPS(self.plotstream, comp, noshow=True)
-            # TODO works fine in linux but not on windows
-            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig, xsize=650,ysize=600)
-            dlg.ShowModal()
-            dlg.Destroy()
-            fig.clear()
-
-    def onSpectrumButton(self, event):
-        """
-        DESCRIPTION
-             Calculates Power spectrum of one component
-        """
-        self.changeStatusbar("Spectral plot ...")
-        comp = self.getComponent()
-        if comp is not None:
-            #mp.plotSpectrogram(self.plotstream, comp, gui=True)
-            fig = mp.plotSpectrogram(self.plotstream, comp, figure=True)
-            # TODO works fine in linux but not on windows
-            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig,xsize=700,ysize=600)
-            dlg.ShowModal()
-            dlg.Destroy()
-            fig.clear()
-
-    def onStatsButton(self, event):
-        """
-        DESCRIPTION
-             Creates/Destroys the statistics element below main window
-             and sets the statistics
-        """
-
-        status = self.menu_p.ana_page.statsButton.GetLabel()
-        if status == 'Show Statistics':
-            self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
-            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
-                    stream=self.plotstream.copy(),
-                    xlimits=self.plot_p.xlimits)
-            self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
-        if status == 'Hide Statistics':
-            self.sp.Unsplit(self.stats_p)
-            self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
-
-        """
-        status = self.menu_p.ana_page.statsButton.GetLabel()
-        if status == 'Show Statistics':
-            # Remove last pages
-            self.menu_p.nb.RemovePage(4)
-            self.menu_p.abs_page.Hide()
-            self.menu_p.nb.RemovePage(4)
-            self.menu_p.rep_page.Hide()
-            self.menu_p.nb.RemovePage(4)
-            self.menu_p.com_page.Hide()
-            # Add new page next to the Analysis page
-            self.menu_p.nb.AddPage(self.menu_p.stats_page, "Statistics",
-                    True)
-            # Add back the last pages
-            self.menu_p.nb.AddPage(self.menu_p.abs_page, "DI")
-            self.menu_p.nb.AddPage(self.menu_p.rep_page, "Report")
-            self.menu_p.nb.AddPage(self.menu_p.com_page, "Monitor")
-            self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
-                    stream=self.plotstream.copy(),
-                    xlimits=self.plot_p.xlimits)
-            self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
-        if status == 'Hide Statistics':
-            self.menu_p.nb.RemovePage(4)
-            self.menu_p.stats_page.Hide()
-            self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
-        """
-
-    def getComponent(self):
-        """
-        DESCRIPTION
-             Calls a dialog where the user can choose a component
-        """
-        dlg = SelectFromListDialog(None, title='Select sensor',
-                selectlist=self.shownkeylist, name='Component')
-        try:
-            if dlg.ShowModal() == wx.ID_OK:
-                comp = dlg.getComponent()
-                return comp
-            else:
-                return None
-        finally:
-            dlg.Destroy()
-
-
-    # ------------------------------------------------------------------------------------------
-    # ################
-    # Stream page functions
-    # ################
-    # ------------------------------------------------------------------------------------------
-
-    def onErrorBarCheckBox(self,event):
-        """
-        DESCRIPTION
-            Switch display of error bars.
-        RETURNS
-            kwarg for OnPlot method
-        """
-
-        if not self.menu_p.str_page.errorBarsCheckBox.GetValue():
-            self.errorbars=False
-            self.plotopt['errorbars'] = [[False]*len(self.shownkeylist)]
-            self.menu_p.str_page.errorBarsCheckBox.SetValue(False)
-        else:
-            self.errorbars=True
-            self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
-            self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
-        self.ActivateControls(self.plotstream)
-        if self.plotstream.length()[0] > 0:
-            self.OnPlot(self.plotstream,self.shownkeylist)
-            self.changeStatusbar("Ready")
-        else:
-            self.changeStatusbar("Failure")
-
-
-    def onConfinexCheckBox(self,event):
-        """
-        DESCRIPTION
-            Switch display of error bars.
-        RETURNS
-            kwarg for OnPlot method
-        """
-        if not self.menu_p.str_page.confinexCheckBox.GetValue():
-            self.confinex=False
-            self.plotopt['confinex'] = False
-            self.menu_p.str_page.confinexCheckBox.SetValue(False)
-        else:
-            self.confinex=True
-            self.plotopt['confinex'] = True
-            self.menu_p.str_page.confinexCheckBox.SetValue(True)
-        self.ActivateControls(self.plotstream)
-        if self.plotstream.length()[0] > 0:
-            self.OnPlot(self.plotstream,self.shownkeylist)
-            self.changeStatusbar("Ready")
-        else:
-            self.changeStatusbar("Failure")
-
-
-    def onTrimStreamButton(self,event):
-        """
-        DESCRIPTION
-        """
-        stday = self.menu_p.str_page.startDatePicker.GetValue()
-        sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
-        try:
-            if sttime.endswith('AM') or sttime.endswith('am'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            if sttime.endswith('pm') or sttime.endswith('PM'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-        except:
-            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
-                        "Entered startdate is not valid.\n",
-                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Trimming timerange failed ... Ready")
-            dlg.Destroy()
-
-        start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-        enday = self.menu_p.str_page.endDatePicker.GetValue()
-        entime = str(self.menu_p.str_page.endTimePicker.GetValue())
-        try:
-            if entime.endswith('AM') or entime.endswith('am'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            if entime.endswith('pm') or entime.endswith('PM'):
-                #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
-        except:
-            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
-                        "Entered enddate is not valid.\n",
-                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Trimming timerange failed ... Ready")
-            dlg.Destroy()
-
-        end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-        #print ("Range", start, end)
-
-        if end > start:
-            try:
-                self.changeStatusbar("Trimming stream ...")
-                newarray = self.plotstream._select_timerange(starttime=start, endtime=end)
-                self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
-                self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
-            except:
-                self.menu_p.rep_page.logMsg('- Trimming failed')
-
-            self.ActivateControls(self.plotstream)
-            if self.plotstream.length()[0] > 0:
-                self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar("Ready")
-            else:
-                self.changeStatusbar("Failure")
-        else:
-            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
-                        "Entered dates are out of order.\n",
-                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Trimming timerange failed ... Ready")
-            dlg.Destroy()
-
-
-    def onSelectKeys(self,event):
-        """
-        DESCRIPTION
-            open dialog to select shown keys (check boxes)
-        """
-
-        self.changeStatusbar("Selecting keys ...")
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-        keylist = self.plotstream._get_key_headers(numerical=True)
-        self.keylist = keylist
-        shownkeylist = [el for el in self.shownkeylist if el in DataStream().NUMKEYLIST]
-
-        namelist = []
-        unitlist = []
-        for key in keylist:
-            if not len(self.plotstream.ndarray[DataStream().KEYLIST.index(key)]) == 0:
-                value = self.plotstream.header.get('col-'+key)
-                unit = self.plotstream.header.get('unit-col-'+key)
-                if not value == '':
-                    namelist.append(value)
-                else:
-                    namelist.append(key)
-                if not unit == '':
-                    unitlist.append(unit)
-                else:
-                    unitlist.append('')
-
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
-            for elem in shownkeylist:
-                exec('dlg.'+elem+'CheckBox.SetValue(True)')
-            if dlg.ShowModal() == wx.ID_OK:
-                shownkeylist = []
-                for elem in keylist:
-                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
-                    if boolval:
-                        shownkeylist.append(elem)
-                if len(shownkeylist) == 0:
-                    shownkeylist = self.shownkeylist
-                else:
-                    self.shownkeylist = shownkeylist
-                self.symbollist = [self.symbollist[0]]*len(shownkeylist)
-                self.plotopt['symbollist'] =  [self.symbollist[0]]*len(shownkeylist)
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar("Ready")
-        else:
-            self.changeStatusbar("Failure")
-
-
-    def onDropKeys(self,event):
-        """
-        DESCRIPTION
-            open dialog to select shown keys (check boxes)
-        """
-
-        self.changeStatusbar("Dropping keys ...")
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-        keylist = self.plotstream._get_key_headers(numerical=True)
-        self.keylist = keylist
-        shownkeylist = [el for el in self.shownkeylist if el in DataStream().NUMKEYLIST]
-
-        namelist = []
-        unitlist = []
-        for key in keylist:
-            if not len(self.plotstream.ndarray[DataStream().KEYLIST.index(key)]) == 0:
-                value = self.plotstream.header.get('col-'+key)
-                unit = self.plotstream.header.get('unit-col-'+key)
-                if not value == '':
-                    namelist.append(value)
-                else:
-                    namelist.append(key)
-                if not unit == '':
-                    unitlist.append(unit)
-                else:
-                    unitlist.append('')
-
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
-            #for elem in shownkeylist:
-            #    exec('dlg.'+elem+'CheckBox.SetValue(True)')
-            if dlg.ShowModal() == wx.ID_OK:
-                dropkeylist = []
-                for elem in keylist:
-                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
-                    if boolval:
-                        dropkeylist.append(elem)
-                        self.plotstream = self.plotstream._drop_column(elem)
-                if len(dropkeylist) == 0:
-                    self.changeStatusbar("Ready")
-                else:
-                    self.shownkeylist = [el for el in shownkeylist if not el in dropkeylist]
-                    self.symbollist = [self.symbollist[0]]*len(self.shownkeylist)
-                    self.plotopt['symbollist'] =  [self.symbollist[0]]*len(self.shownkeylist)
-                    self.ActivateControls(self.plotstream)
-                    self.OnPlot(self.plotstream,self.shownkeylist)
-                    self.changeStatusbar("Ready")
-        else:
-            self.changeStatusbar("Failure")
-
-
-    def onExtractData(self,event):
-        """
-        DESCRIPTION:
-            open dialog to choose extract parameter (paramater compare value)
-            up to three possibilities
-        """
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-        keylist = self.shownkeylist
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = StreamExtractValuesDialog(None, title='Extract:',keylst=keylist)
-            if dlg.ShowModal() == wx.ID_OK:
-                key1 = dlg.key1ComboBox.GetValue()
-                comp1 = dlg.compare1ComboBox.GetValue()
-                val1 = dlg.value1TextCtrl.GetValue()
-                logic2 = dlg.logic2ComboBox.GetValue()
-                logic3 = dlg.logic3ComboBox.GetValue()
-                extractedstream = self.plotstream.extract(key1,val1,comp1)
-                if len(extractedstream) < 2 and extractedstream.length()[0] < 2:
-                    # Empty stream returned -- looks complex because of old LineStruct rubbish
-                    self.menu_p.rep_page.logMsg('Extract: criteria would return an empty data stream - skipping')
-                    extractedstream = self.plotstream
-                val2 = dlg.value2TextCtrl.GetValue()
-                if not val2 == '':
-                    key2 = dlg.key2ComboBox.GetValue()
-                    comp2 = dlg.compare2ComboBox.GetValue()
-                    if logic2 == 'and':
-                        extractedstream = extractedstream.extract(key2,val2,comp2)
-                    else:
-                        extractedstream2 = self.plotstream.extract(key2,val2,comp2)
-                        extractedstream.extend(extractedstream2.container, extractedstream2.header,extractedstream2.ndarray)
-                        extractedstream = extractedstream.removeduplicates()
-                        extractedstream = extractedstream.sorting()
-                        extractedstream = extractedstream.get_gaps()
-                    val3 = dlg.value3TextCtrl.GetValue()
-                    if not val3 == '':
-                        key3 = dlg.key3ComboBox.GetValue()
-                        comp3 = dlg.compare3ComboBox.GetValue()
-                        if logic3 == 'and':
-                            extractedstream = extractedstream.extract(key3,val3,comp3)
-                        else:
-                            extractedstream3 = self.plotstream.extract(key3,val3,comp3)
-                            extractedstream.extend(extractedstream3.container, extractedstream3.header,extractedstream3.ndarray)
-                            extractedstream = extractedstream.removeduplicates()
-                            extractedstream = extractedstream.sorting()
-                            extractedstream = extractedstream.get_gaps()
-                self.plotstream = extractedstream
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar("Ready")
-        else:
-            self.menu_p.rep_page.logMsg("Extract: No data available so far")
-        # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
-
-
-    def onChangePlotOptions(self,event):
-        """
-        DESCRIPTION:
-            open dialog to modify plot options (general (e.g. bgcolor) and  key
-            specific (key: symbol color errorbar etc)
-        """
-
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = StreamPlotOptionsDialog(None, title='Plot Options:',optdict=self.plotopt)
-            if dlg.ShowModal() == wx.ID_OK:
-                for elem in self.plotopt:
-                    if not elem in ['function']:
-                        val = eval('dlg.'+elem+'TextCtrl.GetValue()')
-                        if val in ['False','True','None'] or val.startswith('[') or val.startswith('{'):
-                            val = eval(val)
-                        if elem in ['opacity','bartrange']:
-                            val = float(val)
-                        if not val == self.plotopt[elem]:
-                            self.plotopt[elem] = val
-
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-
-    def onRestoreData(self,event):
-        """
-        Restore originally loaded data
-        """
-        self.flaglist = []
-
-        if not len(self.stream.ndarray[0]) > 0:
-            self.DeactivateAllControls()
-            self.changeStatusbar("No data available")
-            return False
-        #print ("Restoring (works only for latest stream):", self.currentstreamindex, len(self.streamlist), self.stream.length()[0], self.streamlist[self.currentstreamindex].length()[0])
-        #print ("Header", self.headerlist)
-        self.plotstream = self.streamlist[self.currentstreamindex].copy()
-        #self.plotstream = self.stream.copy()
-        self.plotstream.header = self.headerlist[self.currentstreamindex]
-
-        self.menu_p.rep_page.logMsg('Original data restored...')
-        #self.InitPlotParameter()
-        #self.ActivateControls(self.stream)
-        self.OnInitialPlot(self.plotstream, restore=True)
-
-    def onDailyMeansButton(self,event):
-        """
-        Restore originally loaded data
-        """
-        if self.plotstream.header.get('DataFormat') == 'MagPyDI' or self.plotstream.header.get('DataType','').startswith('MagPyDI'):
-            keys=['dx','dy','dz']
-        else:
-            keys = False
-        self.plotstream = self.plotstream.dailymeans(keys)
-        self.shownkeylist = self.plotstream._get_key_headers(numerical=True)[:3]
-        self.symbollist = self.symbollist[0]*len(self.shownkeylist)
-
-        self.plotopt['symbollist'] = self.symbollist[0]*len(self.shownkeylist)
-        self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
-
-        self.ActivateControls(self.plotstream)
-        self.errorbars = True
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
-        self.menu_p.str_page.errorBarsCheckBox.Enable()
-        self.changeStatusbar("Ready")
-
-
-    def onApplyBCButton(self,event):
-        """
-        Apply baselinecorrection
-        """
-        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
-        #print ("BC - Ans info", self.plotstream.header.get('DataAbsInfo'))
-        self.changeStatusbar("Applying baseline ...")
-
-        self.plotstream = self.plotstream.bc()
-        # Eventually update delta F
-        if 'df' in self.plotstream._get_key_headers():
-            self.plotstream = self.plotstream.delta_f()
-        currentstreamindex = len(self.streamlist)
-        self.streamlist.append(self.plotstream)
-        self.streamkeylist.append(self.shownkeylist)
-        self.headerlist.append(self.plotstream.header)
-        self.currentstreamindex = currentstreamindex
-        self.plotoptlist.append(self.plotopt)
-
-        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-    def onGetGapsButton(self,event):
-        """
-        get gaps in timeseries (eventually missing data assuming periodic signals
-        and add this info (0,1) to var5 key
-        """
-        self.changeStatusbar("Identifying gaps ...")
-        self.plotstream = self.plotstream.get_gaps()
-        print (self.plotstream._get_key_headers())
-        """
-                    self.shownkeylist = [el for el in shownkeylist if not el in dropkeylist]
-                    self.symbollist = [self.symbollist[0]]*len(self.shownkeylist)
-                    self.plotopt['symbollist'] =  [self.symbollist[0]]*len(self.shownkeylist)
-                    self.ActivateControls(self.plotstream)
-                    self.OnPlot(self.plotstream,self.shownkeylist)
-                    self.changeStatusbar("Ready")
-        """
-        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-
-    def onAnnotateCheckBox(self,event):
-        """
-        Restore originally loaded data
-        """
-        #### get True or False
-        if not self.menu_p.str_page.annotateCheckBox.GetValue():
-            #self.annotate=False
-            self.plotopt['annotate'] = False
-            self.menu_p.str_page.annotateCheckBox.SetValue(False)
-        else:
-            #self.annotate=True
-            self.plotopt['annotate'] = True
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
-
-        #mp.plot(self.plotstream,annotate=True)
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-
-    def onChangeComp(self, event):
-        orgcomp = self.compselect
-        self.compselect = self.menu_p.str_page.comp[event.GetInt()]
-        coordinate = orgcomp+'2'+self.compselect
-        self.changeStatusbar("Transforming ... {}".format(coordinate))
-        print("Transforming ... {}".format(coordinate))
-        self.plotstream = self.plotstream._convertstream(coordinate)
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-
-    def on_change_symbol(self, event):
-        #orgsymbol = self.symbolselect
-        symbolselect = self.menu_p.str_page.symbol[event.GetInt()]
-        self.changeStatusbar("Transforming ...")
-        self._activate_controls(self.active_id)
-        plotcont = self.plotdict.get(self.active_id)
-        if symbolselect == 'line':
-            plotcont['symbols'] =  ['-' for elem in self.shownkeylist]
-        elif symbolselect == 'point':
-            plotcont['symbols'] =  ['.' for elem in self.shownkeylist]
-        self.plotdict[self.active_id] = plotcont
-        self._do_plot(self.active_id)
-
-        self.changeStatusbar("Ready")
-
-    def OnFlagClick(self, event):
-        """Mouse event for flagging with double click."""
-        if not event.inaxes or not event.dblclick:
-            return
-        else:
-            sensid = self.plotstream.header.get('SensorID','')
-            dataid = self.plotstream.header.get('DataID','')
-            if sensid == '' and not dataid == '':
-                sensid = dataid[:-5]
-            if sensid == '':
-                dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
-                                "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
-            else:
-                flaglist = []
-                xdata = self.plot_p.t
-                xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-                pickX = event.xdata
-                idx = (np.abs(xdata - pickX)).argmin()
-                time = self.plotstream.ndarray[DataStream().KEYLIST.index('time')][idx]
-                starttime = num2date(time - xtol)
-                endtime = num2date(time + xtol)
-                print ("Double click disabled because of freezing")
-                """
-                print ("Opening Dialog")
-                dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
-                print ("Waiting for OK ...")
-                if dlg.ShowModal() == wx.ID_OK:
-                    keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
-                    keys2flag = keys2flag.split(',')
-                    keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
-                    flagid = dlg.FlagIDComboBox.GetValue()
-                    flagid = int(flagid[0])
-                    comment = dlg.CommentTextCtrl.GetValue()
-                    if comment == '' and flagid != 0:
-                        comment = 'Point flagged with unspecified reason'
-                    flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
-                    self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
-                if len(flaglist) > 0:
-                    self.flaglist.extend(flaglist)
-                    self.plotstream = self.plotstream.flag(flaglist)
-                    self.ActivateControls(self.plotstream)
-                    self.plotopt['annotate'] = True
-                    self.menu_p.str_page.annotateCheckBox.SetValue(True)
-                    self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar("Ready")
-                """
-
-    def onFlagSelectionButton(self,event):
-        """
-        DESCRIPTION
-            Flag all data within the zoomed region
-        """
-
-        debug = False
-        flaglist = []
-        sensid = self.plotstream.header.get('SensorID','')
-        dataid = self.plotstream.header.get('DataID','')
-        if sensid == '' and not dataid == '':
-            sensid = dataid[:-5]
-
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        self.xlimits = self.plot_p.xlimits
-        self.ylimits = self.plot_p.ylimits
-        selplt = self.plot_p.selplt
-        selkey=[self.shownkeylist[selplt]] # Get the marked key here
-
-        if sensid == '':
-            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
-                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-        else:
-            self.changeStatusbar("Flagging selection ...")
-            dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
-            if dlg.ShowModal() == wx.ID_OK:
-                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
-                keys2flag = keys2flag.split(',')
-                keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
-                comment = dlg.CommentTextCtrl.GetValue()
-                flagid = dlg.FlagIDComboBox.GetValue()
-                flagid = int(flagid[0])
-
-                above = min(self.ylimits)
-                below = max(self.ylimits)
-                starttime =num2date(min(self.xlimits))
-                endtime = num2date(max(self.xlimits))
-
-                if debug:
-                    print ("GUI FlagID:", flagid, starttime, endtime)
-                flaglist = self.plotstream.flag_range(keys=selkey,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
-                self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(flaglist)))
-                if debug:
-                    print ("GUI Flaglist", flaglist)
-
-        if len(flaglist) > 0:
-            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
-            #print ("TEst", flaglist)
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-
-            #print (self.plotstream.ndarray)
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-    def onFlagClearButton(self, event):
-        """
-        DESCRIPTION
-            Clear current flaglist
-        """
-        self.changeStatusbar("Deleting flaglist ...")
-        self.flaglist = []
-        self.plotstream = self.plotstream._drop_column('flag')
-        self.plotstream = self.plotstream._drop_column('comment')
-        self.ActivateControls(self.plotstream)
-        self.plotopt['annotate'] = False
-        self.menu_p.str_page.annotateCheckBox.SetValue(False)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-
-    def onFlagOutlierButton(self, event):
-        """
-        DESCRIPTION
-            Method for Outlier
-        """
-        self.changeStatusbar("Flagging outliers ...")
-        sr = self.menu_p.met_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
-        keys = self.shownkeylist
-        timerange = float(sr)*600.
-        threshold=5.0
-        markall = False
-
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        # Open Dialog and return the parameters threshold, keys, timerange
-        dlg = StreamFlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange)
-        if dlg.ShowModal() == wx.ID_OK:
-            threshold = dlg.ThresholdTextCtrl.GetValue()
-            timerange = dlg.TimerangeTextCtrl.GetValue()
-            markall = dlg.MarkAllCheckBox.GetValue()
-            try:
-                threshold = float(threshold)
-                timerange = float(timerange)
-                timerange = timedelta(seconds=timerange)
-                flaglist = self.plotstream.flag_outlier(stdout=True,returnflaglist=True, keys=keys,threshold=threshold,timerange=timerange,markall=markall)
-                self.flaglist.extend(flaglist)
-                #self.plotstream = self.plotstream.flag_outlier(stdout=True, keys=keys,threshold=threshold,timerange=timerange)
-                self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(flaglist)))
-                if markall:
-                    self.menu_p.rep_page.logMsg('- flagged outliers: used option markall')
-            except:
-                print("flag outliers failed: check parameter")
-                self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
-
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.changeStatusbar("Ready")
-
-
-    def onFlagRangeButton(self,event):
-        """
-        DESCRIPTION
-            Opens a dialog which allows to select the range to be flagged
-        """
-        flaglist = []
-        sensid = self.plotstream.header.get('SensorID','')
-        dataid = self.plotstream.header.get('DataID','')
-        if sensid == '' and not dataid == '':
-            sensid = dataid[:-5]
-
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        self.xlimits = self.plot_p.xlimits
-
-        if sensid == '':
-            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
-                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-        else:
-            self.changeStatusbar("Flagging range ...")
-            dlg = StreamFlagRangeDialog(None, title='Stream: Flag range', stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
-            startdate=self.xlimits[0]
-            enddate=self.xlimits[1]
-            starttime = num2date(startdate).strftime('%X')
-            endtime = num2date(enddate).strftime('%X')
-            try:
-                dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
-                dlg.startFlagTimePicker.SetValue(starttime)
-            except:
-                pass
-            try:
-                dlg.endFlagDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
-                dlg.endFlagTimePicker.SetValue(endtime)
-            except:
-                pass
-            if dlg.ShowModal() == wx.ID_OK:
-                # get values from dlg
-                flagtype = dlg.rangeRadioBox.GetStringSelection()
-                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
-                keys2flag = keys2flag.split(',')
-                keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
-                comment = dlg.CommentTextCtrl.GetValue()
-                flagid = dlg.FlagIDComboBox.GetValue()
-                flagid = int(flagid[0])
-                if flagtype == 'value':
-                     keys = str(dlg.SelectKeyComboBox.GetValue())
-                     above = dlg.LowerLimitTextCtrl.GetValue()
-                     below = dlg.UpperLimitTextCtrl.GetValue()
-                     flagval = True
-                     if not below == '' and not above == '':
-                         above = float(above)
-                         below = float(below)
-                         #below = None
-                         self.menu_p.rep_page.logMsg('- flagging values between {} and {}'.format(above, below))
-                     elif not below == '':
-                         below = float(below)
-                         above = None
-                         self.menu_p.rep_page.logMsg('- flagging values below {}'.format(below))
-                     elif not above == '':
-                         above = float(above)
-                         below = None
-                         self.menu_p.rep_page.logMsg('- flagging values above {}'.format(above))
-                     else:
-                         flagval = False
-                     if flagval:
-                         #print ("Above , Below:", above, below)
-                         flaglist = self.plotstream.flag_range(keys=[keys],flagnum=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
-                         self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(flaglist)))
-                elif flagtype == 'time':
-                     if comment == '':
-                         comment = 'Time range flagged with unspecified reason'
-                     stday = dlg.startFlagDatePicker.GetValue()
-                     sttime = str(dlg.startFlagTimePicker.GetValue())
-                     if sttime.endswith('AM') or sttime.endswith('am'):
-                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-                     if sttime.endswith('pm') or sttime.endswith('PM'):
-                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-                     sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-                     starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-                     enday = dlg.endFlagDatePicker.GetValue()
-                     entime = str(dlg.endFlagTimePicker.GetValue())
-                     if entime.endswith('AM') or entime.endswith('am'):
-                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-                     if entime.endswith('pm') or entime.endswith('PM'):
-                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-                     ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
-                     endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-                     #print ("Range", starttime, endtime, keys2flag)
-                     flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
-                     self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
-                else:
-                     pass
-
-        if len(flaglist) > 0:
-            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
-            #print ("TEst", flaglist)
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.changeStatusbar("Ready")
-
-
-    def onFlagLoadButton(self,event):
-        """
-        DESCRIPTION
-            Opens a dialog which allows to load flags either from a DB or from file
-        """
-        # Check whether DB still available
-        self.checkDB('minimal')
-
-        sensorid = self.plotstream.header.get('SensorID','')
-        # Open Dialog and return the parameters threshold, keys, timerange
-        self.changeStatusbar("Loading flags ... please be patient")
-        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid, start=self.plotstream.start(),
-                                   end=self.plotstream.end(),last_dir = self.last_dir)
-        dlg.ShowModal()
-        if len(dlg.flaglist) > 0:
-            flaglist = dlg.flaglist
-            #print ("Loaded flags like", flaglist[0], self.flaglist[0])
-            self.flaglist.extend(flaglist)
-            #print ("extended flaglist looking like", self.flaglist)
-            self.changeStatusbar("Applying flags ... please be patient")
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))
-
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            #self.menu_p.str_page.annotateCheckBox.SetValue(False)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.changeStatusbar("Ready")
-
-
-    def onFlagSaveButton(self,event):
-        """
-        DESCRIPTION
-            Opens a dialog which allows to save flags either to DB or to file
-        """
-        # Check whether DB still available
-        self.checkDB('minimal')
-
-        currentlen = len(self.flaglist)
-
-        #print ("FlagSave", self.flaglist)
-
-        self.changeStatusbar("Saving flags ...")
-        dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist,
-                                   last_dir=self.last_dir)
-        if dlg.ShowModal() == wx.ID_OK:
-            #flaglist = dlg.flaglist
-            pass
-
-        #self.flaglist = []
-        self.changeStatusbar("Flaglist saved and reset - Ready")
-
-
-    def onFlagDropButton(self,event):
-        """
-        DESCRIPTION
-            Drops all flagged data
-        """
-        self.changeStatusbar("Dropping flagged data ...")
-
-        #dlg = wx.MessageDialog(self, "Please select:\n"
-        #       "Yes: drop data from all columns\nNo: drop only selected data\n","Drop", wx.YES_NO |wx.ICON_INFORMATION)
-        #if dlg.ShowModal() == wx.ID_YES:
-        #    self.plotstream = self.plotstream.flag(self.shownkeylist)
-        #else:
-        self.plotstream = self.plotstream.remove_flagged()
-        flagid = DataStream().KEYLIST.index('flag')
-        check = [el for el in self.plotstream.ndarray[flagid] if '0' in el or '2' in el or '4' in el]
-        if not len(check) > 0:
-           self.plotstream = self.plotstream._drop_column('flag')
-           self.plotstream = self.plotstream._drop_column('comment')
-           #self.plotopt['annotate'] = False
-        else:
-           pass
-           #self.plotopt['annotate'] = True
-
-        self.menu_p.rep_page.logMsg('- flagged data removed')
-
-        self.flaglist = []
-        self.ActivateControls(self.plotstream)
-
-        self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.changeStatusbar("Ready")
-
-    def onFlagMinButton(self,event):
-        """
-        DESCRIPTION
-            Flags minimum value in zoomed region
-        """
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        keys = self.shownkeylist
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-        xdata = self.plot_p.t
-        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-        mini = [teststream._get_min(key,returntime=True) for key in keys]
-        flaglist = []
-        comment = 'Flagged minimum'
-        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
-        flagid = int(flagid[0])
-        if flagid == 0:
-            comment = ''
-        for idx,me in enumerate(mini):
-            if not keys[idx] == 'df':
-                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
-                if checkbox.IsChecked():
-                    starttime = num2date(me[1] - xtol)
-                    endtime = num2date(me[1] + xtol)
-                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-        if len(flaglist) > 0:
-            self.menu_p.rep_page.logMsg('- flagged minimum: added {} flags'.format(len(flaglist)))
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.ActivateControls(self.plotstream)
-            self.plotopt['annotate'] = True
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-    def onFlagMaxButton(self,event):
-        """
-        DESCRIPTION
-            Flags maximum value in zoomed region
-        """
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        keys = self.shownkeylist
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-        xdata = self.plot_p.t
-        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-        maxi = [teststream._get_max(key,returntime=True) for key in keys]
-        flaglist = []
-        comment = 'Flagged maximum'
-        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
-        flagid = int(flagid[0])
-        if flagid == 0:
-            comment = ''
-        for idx,me in enumerate(maxi):
-            if not keys[idx] == 'df':
-                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
-                if checkbox.IsChecked():
-                    starttime = num2date(me[1] - xtol)
-                    endtime = num2date(me[1] + xtol)
-                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-        if len(flaglist) > 0:
-            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.ActivateControls(self.plotstream)
-            self.plotopt['annotate'] = True
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-    # ------------------------------------------------------------------------------------------
-    # ################
-    # Meta page functions
-    # ################
-    # ------------------------------------------------------------------------------------------
-
-
-    def onMetaGetDBButton(self,event):
-        # TODO Move to Meta page
-        """
-        DESCRIPTION
-            get Meta data for the current sensorid from database
-        """
-        # Test whether DB is still connected
-        self.checkDB('minimal')
-
-        # open dialog with all header info
-        dataid = self.plotstream.header.get('DataID','')
-        if dataid == '':
-            dlg = wx.MessageDialog(self, "No Data ID available!\n"
-                            "You need to specify a unique Data ID\nfor which meta information is obtained.\n","Undefined Data ID", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            self.menu_p.rep_page.logMsg(" - failed to add meta information from DB")
-        else:
-            self.plotstream.header = self.db.fields_to_dict(dataid)
-            self.menu_p.rep_page.logMsg(" - added meta information for {} from DB".format(dataid))
-            self.ActivateControls(self.plotstream)
-
-
-    def onMetaPutDBButton(self,event):
-        """
-        DESCRIPTION
-            write meta data to the database
-        """
-        # Check whether DB still available
-        self.checkDB('minimal')
-
-        # open dialog with all header info
-        dataid = self.plotstream.header.get('DataID','')
-        if dataid == '':
-            dlg = wx.MessageDialog(self, "No Data ID available!\n"
-                            "You need to specify a unique Data ID\nfor which meta information is stored.\n","Undefined Data ID", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            self.menu_p.rep_page.logMsg(" - failed to add meta information to DB")
-        else:
-            dlg = wx.MessageDialog(self, "Please confirm!\n"
-                            "I want to replace the Meta information\nfrom the DB with data provided.\n","Confirm", wx.YES_NO |wx.ICON_INFORMATION)
-            if dlg.ShowModal() == wx.ID_YES:
-                self.db.dict_to_fields(self.plotstream.header)
-                self.menu_p.rep_page.logMsg(" - added meta information for {} to DB".format(dataid))
-            self.ActivateControls(self.plotstream)
-
-    def onMetaDataButton(self,event):
-        """
-        DESCRIPTION
-            open dialog to modify plot options (general (e.g. bgcolor) and  key
-            specific (key: symbol color errorbar etc)
-        """
-        # open dialog with all header info
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='DATAINFO')
-            if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
-                for key in self.db.DATAINFODataStream().KEYLIST:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    try:
-                        if not d['value'] == dlg.header.get(key,''):
-                            self.plotstream.header[key] = d['value']
-                    except:
-                        # might fail for arrays
-                        pass
-                self.ActivateControls(self.plotstream)
-        else:
-            self.menu_p.rep_page.logMsg("Meta information: No data available")
-
-
-    def onMetaSensorButton(self,event):
-        # TODO Move to Meta page
-        """
-        DESCRIPTION
-        open dialog to modify plot options (general (e.g. bgcolor) and  key
-        specific (key: symbol color errorbar etc)
-        """
-        # open dialog with all header info
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='SENSORS')
-            if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
-                for key in self.db.SENSORSDataStream().KEYLIST:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not d['value'] == dlg.header.get(key,''):
-                        self.plotstream.header[key] = d['value']
-                self.ActivateControls(self.plotstream)
-
-        else:
-            self.menu_p.rep_page.logMsg("Meta information: No data available")
-
-
-    def onMetaStationButton(self,event):
-        # TODO Move to Meta page
-        """
-        DESCRIPTION
-        open dialog to modify plot options (general (e.g. bgcolor) and  key
-        specific (key: symbol color errorbar etc)
-        """
-        # open dialog with all header info
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='STATIONS')
-            if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
-                for key in self.db.STATIONSDataStream().KEYLIST:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not d['value'] == dlg.header.get(key,''):
-                        self.plotstream.header[key] = d['value']
-                self.ActivateControls(self.plotstream)
-        else:
-            self.menu_p.rep_page.logMsg("Meta information: No data available")
-
-    # ------------------------------------------------------------------------------------------
-    # ####################
-    # Stream Operations functions
-    # ####################
-    # ------------------------------------------------------------------------------------------
-
-    def OnStreamList(self,event):
-        """
-        DESCRIPTION
-        open dialog to select active stream
-        """
-        plotstreamlist = []
-        plotkeylist = []
-        self.changeStatusbar("Selecting streams ...")
-
-        dlg = MultiStreamDialog(None, title='Select stream(s):',streamlist=self.streamlist, idx=self.currentstreamindex, streamkeylist=self.streamkeylist)
-        if dlg.ShowModal() == wx.ID_OK:
-            namelst = dlg.panel.namelst
-            for idx, elem in enumerate(self.streamlist):
-                val = eval('dlg.panel.'+namelst[idx]+'CheckBox.GetValue()')
-                if val:
-                    plotstreamlist.append(elem)
-                    plotkeylist.append(dlg.panel.streamkeylist[idx])
-                    activeidx = idx
-            if len(plotstreamlist) > 1:
-                #  deactivate all Meta; Analysis methods
-                self.DeactivateAllControls()
-                self.OnMultiPlot(plotstreamlist,plotkeylist)
-            else:
-                self.currentstreamindex = activeidx
-                self.plotstream = plotstreamlist[0]
-                self.shownkeylist = [el for el in plotkeylist[0] if el in DataStream().NUMKEYLIST]
-                #self.shownkeylist = self.streamkeylist[activeidx]
-                self.plotopt = self.plotoptlist[activeidx]
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-        else:
-            mod = dlg.panel.modify
-            if mod == True:
-                self.streamlist.append(dlg.panel.result)
-                self.streamkeylist.append(dlg.panel.resultkeys)
-                self.currentstreamindex = len(self.streamlist)-1
-                self.plotstream = self.streamlist[-1]
-                self.headerlist.append(self.plotstream.header)
-                self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
-                self.ActivateControls(self.plotstream)
-                self.plotoptlist.append(self.plotopt)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-        dlg.Destroy()
-
-    def OnStreamAdd(self,event):
-        currentstreamindex = len(self.streamlist)
-        self.streamlist.append(self.plotstream)
-        self.streamkeylist.append(self.shownkeylist)
-        self.headerlist.append(self.plotstream.header)
-        self.currentstreamindex = currentstreamindex
-        self.plotoptlist.append(self.plotopt)
-        if self.plotstream.header.get('DataFormat','').startswith('MagPyDI'):
-            basename = self.plotstream.header.get('DataID','')
-            print ("Adding a new baselinestream", currentstreamindex, basename)
-            self.append_baseline(self.plotstream._get_min('time'),self.plotstream._get_max('time'),basename,currentstreamindex)
-
-
-    # ------------------------------------------------------------------------------------------
-    # ################
-    # Absolute functions
-    # ################
-    # ------------------------------------------------------------------------------------------
-
-
-    def onLoadDI(self,event):
-        """
-        open dialog to load DI data
-        """
-        """
-        if isinstance(self.dipathlist, str):
-            dipathlist = self.dipathlist
-        elif isinstance(self.dipathlist, dict):
-            dipathlist = "DB"
-        else:
-            dipathlist = self.dipathlist[0]
-        """
-        defaultpath = self.options.get('didictionary',{}).get('didatapath','')
-
-        if os.path.isfile(defaultpath):
-            defaultpath = os.path.split(defaultpath)[0]
-
-        services = self.options.get('webservices',{})
-        default = self.options.get('defaultservice','conrad')
-
-        dlg = LoadDIDialog(None, title='Get DI data', dirname=defaultpath, db=self.db, services=services, defaultservice=default)
-        dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.options.get('dbname','')))
-        dlg.ShowModal()
-        if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
-            self.menu_p.rep_page.logMsg("- loaded DI data")
-            self.dipathlist = dlg.pathlist
-            if isinstance(self.dipathlist,list):
-                self.menu_p.abs_page.diTextCtrl.SetValue(','.join(self.dipathlist))
-                if os.path.isfile(dlg.pathlist[0]):
-                    dlgpath = os.path.split(dlg.pathlist[0])[0]
-                else:
-                    dlgpath = dlg.pathlist[0]
-                self.options['dipathlist'] = [dlgpath]
-                self.menu_p.abs_page.diSourceLabel.SetLabel('Source: files')
-            elif isinstance(self.dipathlist,dict):
-                info = "{}: {} dataset(s)".format(self.dipathlist.get('station'),len(self.dipathlist.get('absdata')))
-                self.menu_p.abs_page.diTextCtrl.SetValue(info)
-                self.menu_p.abs_page.diSourceLabel.SetLabel("Source: {}".format(self.dipathlist.get('source')))
-            # Update di data path
-            didict = self.options.get('didictionary')
-            didict['didatapath'] = dlg.dirname
-            self.options['didictionary'] = didict
-            self.menu_p.abs_page.AnalyzeButton.Enable()
-        dlg.Destroy()
-
-        # Used for checking while switching to dictionary structure
-        #if isinstance(self.dipathlist,dict):
-        #    print ("onLoadDI: Obtained DI data in a dictionary")
-        #    print (self.dipathlist.get('absdata')[0])
-
-
-    def onDIParameter(self,event):
-        """
-        open dialog to modify analysis parameters for DI
-        """
-        saveoptions = False
-        ok = False
-        try:
-            stationid = self.dipathlist.get('station','')
-        except:
-            stationid = ''
-        dipara = self.options.get('diparameter',{})
-        #dipara = self.options.get('webservices',{})
-        tmppathlist = self.dipathlist
-
-        dlg = ParameterDictDialog(None, title="Modify DI analysis parameter", dictionary=dipara, preselect=[stationid])
-        if dlg.ShowModal() == wx.ID_OK:
-            ok = True
-            valuedict = {}
-            for el in dlg.panel.elementlist:
-                if not el[1].GetName() == 'Label':
-                    try:
-                        val = el[1].GetValue()
-                        valuedict[el[1].GetName()] = val
-                    except:
-                        try:
-                            val = el[1].GetStringSelection()
-                            if val == 'False':
-                                val = False
-                            if val == 'True':
-                                val = True
-                            valuedict[el[1].GetName()] = val
-                            #print ("Val:", el[1].GetName(), val)
-                        except:
-                            pass
-
-        dlg.Destroy()
-
-        # Test if modified
-
-        if ok:
-            #print ("Station", valuedict.get('stationid'))
-            stationid = valuedict.get('stationid')
-            exvals = dipara.get(valuedict.get('stationid'),{})
-            if not exvals == {} and not (valuedict == exvals):
-                exstationid =  dipara.get(valuedict.get('stationid')).get('stationid','')
-                #print ("StationID existing")
-                # Update
-                dipara[stationid] = valuedict
-                self.options['diparameter'] = dipara
-                # Modify data permanently?
-                updatedlg = wx.MessageDialog(self, "Update input\n"
-                        "Remember new settings?\n".format(time),
-                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
-
-                if updatedlg.ShowModal() == wx.ID_YES:
-                    saveoptions = True
-                    updatedlg.Destroy()
-
-            elif not (valuedict == exvals):
-                #print ("StationID not yet existing")
-                # add new station information?
-                updatedlg = wx.MessageDialog(self, "New Station ID\n"
-                        "Add new parameters for StationID {} ?\n".format(stationid),
-                        "Update DI parameter", wx.YES_NO|wx.ICON_INFORMATION)
-
-                if updatedlg.ShowModal() == wx.ID_YES:
-                    saveoptions = True
-                    updatedlg.Destroy()
-                if saveoptions:
-                    dipara[stationid] = valuedict
-                    self.options['diparameter'] = dipara
-
-            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('options')
-
-        if saveoptions:
-            saveini(self.options)
-            inipara, check = loadini()
-            self.initParameter(inipara)
-            self.dipathlist = tmppathlist
-
-    def onDefineVarioScalar(self,event):
-        """
-        open dialog to load DI data
-        """
-        if len(self.stream) > 0:
-            pass
-            # send a message box that this data will be erased
-
-        def getPathFromDict(typ, dictionary):
-            filepath = dictionary.get('di{}path'.format(typ),'')
-            selection = dictionary.get('di{}source'.format(typ),0)
-            url = dictionary.get('di{}url'.format(typ),'')
-            dbtable = dictionary.get('di{}DBinst'.format(typ),'')
-            if selection == 0:
-                return filepath
-            elif selection == 1:
-                return [self.db, dbtable]
-            elif selection == 2:
-                return url
-
-        def display(value):
-            if isinstance(value, list):
-                display = str(value[-1])
-            else:
-                display = str(value)
-            return display
-
-        saveoptions = False
-        tmppathlist = self.dipathlist
-        didict = self.options.get('didictionary',{})
-        discalarpath = didict.get('discalarpath','')
-        divariopath = didict.get('divariopath','')
-        discalarurl = didict.get('discalarurl','')
-        divariourl = didict.get('divariourl','')
-        vselection = didict.get('divariosource',0)
-        sselection = didict.get('discalarsource',0)
-        varioDB = didict.get('divarioDBinst','1')
-        scalarDB = didict.get('discalarDBinst','4')
-        sourcelist = ['file','database','webservice']
-
-        dialog = LoadVarioScalarDialog(None, title="Choose data source", vselection=vselection, sselection=sselection, defaultvariopath=divariopath, defaultscalarpath=discalarpath, db=self.db, defaultvariotable=varioDB, defaultscalartable=scalarDB, services=self.options.get('webservices',{}), defaultservice=self.options.get('defaultservice','conrad'))
-        if dialog.ShowModal() == wx.ID_OK:
-            # get selected options:
-            didict['divariosource'] = dialog.vchoice
-            didict['discalarsource'] = dialog.schoice
-            varioext = dialog.varioExtComboBox.GetValue()
-            scalarext = dialog.scalarExtComboBox.GetValue()
-            didict['discalarpath'] = os.path.join(dialog.defaultscalarpath,scalarext)
-            didict['divariopath'] = os.path.join(dialog.defaultvariopath,varioext)
-            didict['divarioDBinst'] = dialog.varioDBComboBox.GetValue()
-            didict['discalarDBinst'] = dialog.scalarDBComboBox.GetValue()
-            didict['divariourl'] = dialog.divariows
-            didict['discalarurl'] = dialog.discalarws
-            #print (dialog.vchoice, dialog.defaultvariopath, varioext)
-            self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[dialog.vchoice]))
-            self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[dialog.schoice]))
-            res_divariopath = getPathFromDict("vario",didict)
-            res_discalarpath = getPathFromDict("scalar",didict)
-
-            self.menu_p.abs_page.varioTextCtrl.SetValue("{}".format(display(res_divariopath)))
-            self.menu_p.abs_page.scalarTextCtrl.SetValue("{}".format(display(res_discalarpath)))
-            self.options['didictionary'] = didict
-            self.options['divariopath'] = res_divariopath
-            self.options['discalarpath'] = res_discalarpath
-            saveoptions=True
-
-        dialog.Destroy()
-
-        if saveoptions:
-            saveini(self.options)
-            inipara, check = loadini()
-            self.initParameter(inipara)
-            self.dipathlist = tmppathlist
-
-
-
-    def onDIAnalyze(self,event):
-        """
-        open dialog to load DI data
-        """
-
-        divariopath = self.options.get('divariopath','')
-        discalarpath = self.options.get('discalarpath','')
-
-        # Get parameters from options
-        didict = self.options.get('didictionary')
-        dipara = self.options.get('diparameter')
-
-        # Get didictionary variables directly obtained from file/DB/WS
-        #print (self.dipathlist)
-        f_azimuth = self.dipathlist.get('azimuth')
-        f_pier = self.dipathlist.get('selectedpier',None)
-        stationid= self.dipathlist.get('station','')
-
-        # Select appropriate diparameters for station from options
-        # if specified to use parameters
-        primaryparametersource = self.menu_p.abs_page.parameterRadioBox.GetStringSelection()
-
-        # Currently not all parameters are in use
-        # only expD, expI, alpha, beta and all delta values are considered
-        # (and azimuth)
-        # Please note: station and pier are always taken from the file (dipathlist dictionary)
-        expD=0.0
-        expI=0.0
-        alpha=0.0
-        beta=0.0
-        deltaF=0.0
-        deltaD=0.0
-        deltaI=0.0
-        abstype= 'manual'   # is tested in absoluteAnalysis and not necessary
-        azimuth = None
-        variometerorientation=None
-        residualsign = 1
-        db = None
-        magrotation = None
-        usedb = False
-        annualmeans=None
-
-        stationpara = dipara.get(stationid,{})
-        if primaryparametersource == 'options' and stationpara == {}:
-            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('file')
-
-        if primaryparametersource == 'options' and not (f_pier == stationpara.get('dipier') and not stationpara == {}):
-            print ("Careful: pier in options differs from pier in file -> using file")
-
-        for el in stationpara:
-            value = stationpara[el]
-            if DataStream()._is_number(value):
-                value = float(value)
-            elif value == 'False':
-                value = False
-            elif value == 'True':
-                value = True
-            elif value.startswith('['):
-                value = value.replace('[','').replace(']','').replace('"','').replace("'",'').split(',')
-                value = [float(el) for el in value]
-            elif value == '':
-                value = None
-
-            if primaryparametersource == 'options':
-                if not value == 0 or value == '':
-                    if el == 'diexpD':
-                        expD = value
-                    elif el == 'diexpI':
-                        expI = value
-                    elif el == 'dideltaD':
-                        deltaD = value
-                    elif el == 'dideltaI':
-                        deltaI = value
-                    elif el == 'dideltaF':
-                        deltaF = value
-                    elif el == 'dialpha':
-                        alpha = value
-                    elif el == 'dibeta':
-                        beta = value
-                    elif el == 'diid':
-                        diid = value
-                    elif el == 'blvoutput':
-                        if value.lower().startswith("xyz"):
-                            #print (" Selected Variometerorientation in xyz")
-                            variometerorientation = "XYZ"
-                    elif el == 'fluxgateorientation':
-                        if value.lower().startswith("opp"):
-                            print (" Selected opposite fluxgate orientation for DI flux")
-                            residualsign = -1
-                        else:
-                            residualsign = 1
-                    elif el == 'diannualmean':
-                        annualmeans = value
-                    elif el == 'diazimuth':
-                        azimuth = value
-                    elif el == 'diusedb':
-                        usedb = value
-                        if usedb and self.db:
-                            db = self.db
-                    elif el == 'divariocorr':
-                        magrotation = value
-                        # does only work with db? compensation data is path of the vario source
-            elif primaryparametersource == 'file':
-                pass
-
-        if len(self.dipathlist) > 0:
-            # Identify source -> Future version: use absolutClass which contains raw data
-            #                    and necessary variation,scalar data
-            activatereport = True
-            if activatereport:
-                prev_redir = sys.stdout
-                redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
-                sys.stdout=redir
-            absstream = DataStream()
-
-            if db:
-                print ("Database {} connected".format(self.options.get('dbname','')))
-            elif usedb and not db:
-                print ("No database connected")
-
-            if isinstance(self.dipathlist,dict):
-                # Dictionary is the new default - all processes will return a dictionary
-                self.changeStatusbar("Processing DI data ... please be patient")
-                stationid = self.dipathlist.get('station')
-                starttime = self.dipathlist.get('mindatetime')
-                endtime = self.dipathlist.get('maxdatetime')
-                pier = self.dipathlist.get('selectedpier')
-                abstable = "DIDATA_{}".format(stationid.upper())
-                absdata = self.dipathlist.get('absdata')
-                f_azimuth = self.dipathlist.get('azimuth')
-                if variometerorientation and variometerorientation.lower().startswith("xyz"):
-                    print(" Selected basevalue output in xyz components")
-                if azimuth:
-                    print ("Using aziumth from options menu: {}".format(azimuth))
-                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
-                    # abstream... aziumth =
-                elif not f_azimuth or np.isnan(f_azimuth) or f_azimuth == 'nan' or f_azimuth == None:
-                    print ("no aziumth so far - please define")
-                    # open dialog
-                    ok = False
-                    dlg = SetAzimuthDialog(None, title='Define azimuth', azimuth=0.0)
-                    if dlg.ShowModal() == wx.ID_OK:
-                        print (dlg.AzimuthTextCtrl.GetValue())
-                        azimuth = float(dlg.AzimuthTextCtrl.GetValue())
-                        ok = True
-                        #except:
-                        #    pass
-                    dlg.Destroy()
-                    if ok:
-                        print ("Using given aziumth: {}".format(azimuth))
-                        absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
-                else:
-                    # Please NOte: observer selection does not yet work #  db=self.db
-                    print ("Using aziumth values from data sources")
-                    absstream = absoluteAnalysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
-
-            elif isinstance(self.dipathlist,list):
-                self.changeStatusbar("Processing DI data from file(s) ... please be patient")
-                if azimuth and not azimuth == '':
-                    azimuth = float(azimuth)
-                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,abstype=abstype, azimuth=azimuth,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF,variometerorientation=variometerorientation,residualsign=residualsign)
-                else:
-                    absstream = absoluteAnalysis(self.dipathlist,divariopath,discalarpath, expD=expD,expI=expI,stationid=stationid,alpha=alpha,beta=beta,deltaD=deltaD,deltaI=deltaI,deltaF=deltaF,variometerorientation=variometerorientation,residualsign=residualsign)
-            else:
-                print ("Could not identify absolute data")
-                absstream = DataStream()
-
-            try:
-                if not divariopath == '' and not discalarpath == '':
-                    variid = absstream.header.get('SensorID').split('_')[1]
-                    scalid = absstream.header.get('SensorID').split('_')[2]
-                    msgtxt = ''
-                    if variid == 'None' or variid == 'Unkown':
-                        msgtxt = 'variometer'
-                        if scalid == 'None' or scalid == 'Unkown':
-                            msgtxt = 'variometer and scalar magnetometer'
-                    elif scalid == 'None' or scalid == 'Unkown':
-                        msgtxt = 'scalar magnetometer'
-                    if not msgtxt == '':
-                        fulltxt = "Could not identify {} data.\n Please check paths.".format(msgtxt)
-                        dlg = wx.MessageDialog(self, fulltxt, "Data paths", wx.OK|wx.ICON_INFORMATION)
-                        dlg.ShowModal()
-                        dlg.Destroy()
-            except:
-               pass
-
-            if activatereport:
-                sys.stdout=prev_redir
-
-            # only if more than one point is selected
-            self.changeStatusbar("Ready")
-            if absstream and len(absstream.length()) > 1 and absstream.length()[0] > 0:
-                # Convert absstream
-                array = [[] for el in DataStream().KEYLIST]
-                for idx,el in enumerate(absstream.ndarray):
-                    if DataStream().KEYLIST[idx] in DataStream().NUMKEYLIST or DataStream().KEYLIST[idx] == 'time':
-                        array[idx] = np.asarray(el).astype(float)
-                    else:
-                        array[idx] = np.asarray(el)
-                absstream.ndarray = np.asarray(array,dtype=object)
-                self.stream = absstream.copy()
-                self.plotstream = absstream.copy()
-                currentstreamindex = len(self.streamlist)
-                self.streamlist.append(self.stream)
-                # self.streamkeylist.append(absstream._get_key_headers()) -> This is done in OnInitialPlot
-                self.headerlist.append(self.stream.header)
-                self.currentstreamindex = currentstreamindex
-                #self.ActivateControls(self.plotstream)
-                self.OnInitialPlot(self.plotstream)
-                #self.plotoptlist.append(self.plotopt)
-                if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
-                    self.menu_p.abs_page.ClearLogButton.Enable()
-                    self.menu_p.abs_page.SaveLogButton.Enable()
-            else:
-                if absstream:
-                    self.ActivateControls(self.plotstream)
-                    if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
-                        self.menu_p.abs_page.ClearLogButton.Enable()
-                        self.menu_p.abs_page.SaveLogButton.Enable()
-                # set load di to something useful (seems to be empty now)
-
-
-    """
-    def onDISetParameter(self,event):
-        #""
-        open parameter box for DI analysis
-        #""
-
-        dlg = DISetParameterDialog(None, title='Set Parameter')
-        dlg.expDTextCtrl.SetValue(self.options.get('diexpD',''))
-        dlg.deltaFTextCtrl.SetValue(self.options.get('dideltaF',''))
-        dlg.azimuthTextCtrl.SetValue(self.options.get('diazimuth',''))
-        dlg.alphaTextCtrl.SetValue(self.options.get('dialpha',''))
-        dlg.pierTextCtrl.SetValue(self.options.get('dipier',''))
-        dlg.abstypeComboBox.SetStringSelection(self.options.get('ditype',''))
-
-        if dlg.ShowModal() == wx.ID_OK:
-            if not dlg.expDTextCtrl.GetValue() == '':
-                self.options['diexpD'] = dlg.expDTextCtrl.GetValue()
-            if not dlg.azimuthTextCtrl.GetValue() == '':
-                self.options['diazimuth'] = dlg.azimuthTextCtrl.GetValue()
-            if not dlg.pierTextCtrl.GetValue() == '':
-                self.options['dipier'] = dlg.pierTextCtrl.GetValue()
-            if not dlg.alphaTextCtrl.GetValue() == '':
-                self.options['dialpha'] = dlg.alphaTextCtrl.GetValue()
-            if not dlg.deltaFTextCtrl.GetValue() == '':
-                self.options['dideltaF'] = dlg.deltaFTextCtrl.GetValue()
-            self.options['ditype'] =  dlg.abstypeComboBox.GetValue()
-
-        dlg.Destroy()
-    """
-
-
-    def onInputSheet(self,event):
-        """
-        DESCRITPTION:
-            open dialog to input DI data
-        """
-
-        #print (self.dipathlist)
-        if isinstance(self.dipathlist, dict):
-            dipath = self.options.get('didictionary',{}).get('didatapath','')
-        elif isinstance(self.dipathlist, str):
-            dipath = self.dipathlist
-        else:
-            dipath = self.dipathlist[0]
-        dipath = self.last_dir # new: use last dir
-        if os.path.isfile(dipath):
-            dipath = os.path.split(dipath)[0]
-
-
-        self.dilayout = {}
-        self.dilayout['scalevalue'] = self.options['scalevalue']
-        self.dilayout['double'] = self.options['double']
-        self.dilayout['order'] = self.options['order'].split(',')
-        #self.dilayout = {'order':['MU','MD','EU','WU','ED','WD','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'True'}
-        #self.dilayout = {'order':['MU','MD','WU','EU','WD','ED','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'False'}
-        defaults = self.options
-        cdate = pydate2wxdate(datetime.utcnow())
-        dlg = InputSheetDialog(None, title='Add DI data',path=dipath,layout=self.dilayout, defaults=defaults, cdate=cdate, db = self.db, dipathdict=self.dipathlist)
-        if dlg.ShowModal() == wx.ID_OK:
-            pass
-        dlg.Destroy()
-
-
-    def onSaveDIData(self, event):
-        """
-        DESCRIPTION
-            Save data of the logger to file
-        """
-        # TODO When starting ANalysis -> stout is redirected .. switch back to normal afterwards
-        saveFileDialog = wx.FileDialog(self, "Save As", "", self.last_dir,
-                                       "DI analysis report (*.txt)|*.txt",
-                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
-        saveFileDialog.ShowModal()
-        savepath = saveFileDialog.GetPath()
-        text = self.menu_p.abs_page.dilogTextCtrl.GetValue()
-        saveFileDialog.Destroy()
-
-        difile = open(savepath, "w")
-        difile.write(text)
-        difile.close()
-
-        self.last_dir = savepath
-
-    def onClearDIData(self, event):
-        self.menu_p.abs_page.dilogTextCtrl.SetValue('')
-
-    # ------------------------------------------------------------------------------------------
-    # ################
-    # Report page functions
-    # ################
-    # ------------------------------------------------------------------------------------------
-
-
-    def onSaveLogButton(self, event):
-        saveFileDialog = wx.FileDialog(self, "Save As", "", self.last_dir,
-                                       "Log files (*.log)|*.log",
-                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
-        saveFileDialog.ShowModal()
-        savepath = saveFileDialog.GetPath()
-        text = self.menu_p.rep_page.logger.GetValue()
-        saveFileDialog.Destroy()
-
-        logfile = open(savepath, "w")
-        logfile.write(text)
-        logfile.close()
-
-
-    # ------------------------------------------------------------------------------------------
-    # ################
-    # Monitor page functions
-    # ################
-    # ------------------------------------------------------------------------------------------
-
-
-    def onConnectMARCOSButton(self, event):
-        # active if database is connected
-        # open dlg
-
-        # Check whether DB still available
-        self.checkDB('minimal')
-
-        def dataAvailabilityCheck(db, datainfoidlist):
-            existinglist = []
-            if not len(datainfoidlist) > 0:
-                return datainfoidlist
-            for dataid in datainfoidlist:
-                ar = db.select('time', dataid, expert="ORDER BY time DESC LIMIT 10")
-                if len(ar) > 0:
-                    existinglist.append(dataid)
-            return existinglist
-
-
-        self.menu_p.rep_page.logMsg('- Selecting MARCOS table for monitoring ...')
-        output = self.db.select('DataID,DataMinTime,DataMaxTime','DATAINFO')
-        datainfoidlist = [elem[0] for elem in output]
-        datainfoidlist = dataAvailabilityCheck(self.db, datainfoidlist)
-
-        if len(datainfoidlist) < 1:
-            dlg = wx.MessageDialog(self, "No data tables available!\n"
-                            "please check your database\n",
-                            "OpenDB", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-        # select table
-        sr = 1
-        dlg = AGetMARCOSDialog(None, title='Select table',datalst=datainfoidlist)
-        if dlg.ShowModal() == wx.ID_OK:
-            datainfoid = dlg.dataComboBox.GetValue()
-            vals = self.db.select('SensorID,DataSamplingRate,ColumnContents,ColumnUnits,StationID','DATAINFO', 'DataID = "'+datainfoid+'"')
-            vals = vals[0]
-            sensid= vals[0]
-            sr= float(vals[1].strip('sec'))
-            keys= vals[2].split(',')
-            units= vals[3].split(',')
-            stationid= vals[4]
-        else:
-            dlg.Destroy()
-            return
-        # get all parameters
-
-        pad = 5
-        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
-
-        # start monitoring parameters
-        period = float(self.menu_p.com_page.frequSlider.GetValue())
-        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
-        coverage = covval/sr
-        limit = period/sr
-        unitlist = []
-        for idx,key in enumerate(keys):
-           if not key == '':
-               unitlist.append([key, units[idx]])
-
-        parameter = ','.join([DataStream().KEYLIST[idx+1] for idx,key in enumerate(keys) if not key=='' and DataStream().KEYLIST[idx+1] in DataStream().NUMKEYLIST])
-
-        self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 15: stationid}
-        self.monitorSource='MARCOS'
-
-        success = True
-        if success:
-            self.menu_p.com_page.startMonitorButton.Enable()
-            self.menu_p.com_page.getMARTASButton.Disable()
-            #self.menu_p.com_page.getMQTTButton.Disable()
-            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
-            self.menu_p.com_page.logMsg('Begin monitoring...')
-            self.menu_p.com_page.logMsg(' - Selected MARCOS database')
-            self.menu_p.com_page.logMsg(' - Table: {}'.format(datainfoid))
-            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
-            self.menu_p.com_page.frequSlider.Enable()         # always
-
-
-    def onConnectMARTASButton(self, event):
-
-        success = False
-        oldopt = self.options.get('favoritemartas',[])
-        dlg = SelectMARTASDialog(None, title='Select MARTAS',options=self.options)
-        if dlg.ShowModal() == wx.ID_OK:
-            martasaddress = dlg.addressComboBox.GetValue()
-            martasport = dlg.portTextCtrl.GetValue()
-            #martasdelay = dlg.delayTextCtrl.GetValue()
-            martasstationid = dlg.stationidTextCtrl.GetValue()
-            martasuser = dlg.userTextCtrl.GetValue()
-            martaspasswd = dlg.pwdTextCtrl.GetValue()
-            self.options['favoritemartas'] = dlg.favoritemartas
-            martasdelay = 60
-            martasprotocol = 'mqtt' # dlg.pwdTextCtrl.GetValue()
-            success = True
-            #if not oldopt == self.options['favoritemartas']:
-            saveini(self.options)
-            inipara, check = loadini()
-            self.initParameter(inipara)
-            dlg.Destroy()
-        else:
-            self.options['favoritemartas'] = dlg.favoritemartas
-            if not oldopt == self.options['favoritemartas']:
-                saveini(self.options)
-                inipara, check = loadini()
-                self.initParameter(inipara)
-            dlg.Destroy()
-            return
-
-        #if not oldopt == self.options['favoritemartas']:
-        #    saveini(self.options)
-        #    inipara, check = loadini()
-        #    self.initParameter(inipara)
-        self.menu_p.rep_page.logMsg('- Selected MARTAS maschine ({},{}) for monitoring ...'.format(martasaddress,martasprotocol))
-
-        pad = 5
-        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
-        # start monitoring parameters
-        unitlist = []
-
-        # get header information from data stream
-        try:
-            import paho.mqtt.client as mqtt
-            #from magpy.collector import collectormethods as colsup
-            mqttimport = True
-        except:
-            mqttimport = False
-            dlg = wx.MessageDialog(self, "Could not import required packages!\n"
-                        "Make sure that the python package paho-mqtt is installed\n",
-                        "MARTAS monitor failed", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Using MQTT monitor failed ... Ready")
-            dlg.Destroy()
-        #print ("TEST", colsup.identifier)
-
-        if mqttimport:
-            client = mqtt.Client()
-
-            if not martasuser in ['',None,'None','-']:
-                #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
-                client.username_pw_set(martasuser, password=martaspasswd)  # defined on broker by mosquitto_passwd -c passwordfile user
-
-            #client.on_connect = colsup.on_connect
-            #client.on_message = colsup.on_message
-
-            #print (martasaddress)
-            #client.connect("192.168.178.84", 1883, 60)
-            try:
-                client.connect(martasaddress, int(martasport), int(martasdelay))
-            except:
-                dlg = wx.MessageDialog(self, "Connection to MQTT broker failed\n"
-                        "Check your internet connection or credentials\n",
-                        "Connection failed", wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
-                return
-            qos = 0
-            client.subscribe("{}/#".format(martasstationid), qos)
-
-            loopcnt = 0
-            success = True
-            try:
-                maxloop = int(self.options.get('martasscantime'))*10
-                #print ("Got data from init - remove this message ater 0.3.99", maxloop)
-            except:
-                print ("Could not get scantime from options - using approx 20 seconds")
-                maxloop = 200
-            self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))
-            try:
-                self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
-                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
-                    loopcnt += 1
-                    client.loop(.1) #blocks for 100ms
-                    self.progress.Update(loopcnt)
-                    if loopcnt > 600:
-                        success = False
-                        break
-                self.progress.Destroy()
-            except:  # test fallback for MacOS
-                proDlg = WaitDialog(None, "Scanning...", "Scanning for MQTT broadcasts.\nPlease wait....")
-                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
-                    loopcnt += 1
-                    client.loop(.1) #blocks for 100ms
-                    self.progress.Update(loopcnt)
-                    if loopcnt > 600:
-                        success = False
-                        break
-                proDlg.Destroy()
-
-            #print ("here", colsup.identifier)
-
-            if success: # and len(colsup.identifier) > 0:
-                self.changeStatusbar("Scanning for MQTT broadcasts ... found sensor(s)")
-                self.menu_p.com_page.startMonitorButton.Enable()
-                self.menu_p.com_page.getMARTASButton.Disable()
-                #self.menu_p.com_page.getMQTTButton.Disable()
-                self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
-                self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(martasaddress))
-                self.menu_p.com_page.logMsg('Begin monitoring...')
-                self.menu_p.com_page.logMsg(' - Selected MARTAS {} protocol'.format(martasprotocol))
-                self.menu_p.com_page.coverageTextCtrl.Enable()    # always
-                self.menu_p.com_page.frequSlider.Enable()         # always
-
-                sensorlist = []
-                for key in colsup.identifier:
-                    #print ("key", key)
-                    sensorid = key.split(':')[0]
-                    if not sensorid in sensorlist:
-                        sensorlist.append(sensorid)
-
-                dlg = SelectFromListDialog(None, title='Select sensor', selectlist=sensorlist, name='Sensor')
-                if dlg.ShowModal() == wx.ID_OK:
-                    sensorid = dlg.selectComboBox.GetValue()
-                else:
-                    self.menu_p.com_page.getMARTASButton.Enable()
-                    self.ActivateControls(self.plotstream)
-                    sensorid = sensorlist[0]
-
-                dlg.Destroy()
-
-                self.menu_p.com_page.logMsg(' - selected Sensor: {}'.format(sensorid))
-
-                pad = 5
-                currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
-                parameter = colsup.identifier.get(sensorid+':keylist')
-                parameter = ','.join(parameter)
-                unitlist = colsup.identifier.get(sensorid+':unitlist')
-                period = float(self.menu_p.com_page.frequSlider.GetValue())
-                covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
-                sr = 1
-                coverage = covval/sr
-                limit = period/sr
-                datainfoid = sensorid+'_0001'
-
-                self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol, 13: martasuser, 14: martaspasswd, 15: martasstationid, 16: qos}
-                self.monitorSource='MARTAS'
-            else:
-                self.changeStatusbar("Scanning for MQTT broadcasts ... no sensor found")
-                #self.menu_p.com_page.mqttLabel.SetValue('unable to connect to {}'.format(martasaddress))
-
-
-    def onStartMonitorButton(self, event):
-        self.DeactivateAllControls()
-        self.MainMenu.EnableTop(0, False)
-        self.MainMenu.EnableTop(1, False)
-        self.MainMenu.EnableTop(2, False)
-        self.MainMenu.EnableTop(3, False)
-        self.MainMenu.EnableTop(4, False)
-        self.MainMenu.EnableTop(5, False)
-        self.menu_p.com_page.getMARTASButton.Disable()
-        self.menu_p.com_page.getMARCOSButton.Disable()
-        #self.menu_p.com_page.getMQTTButton.Disable()
-        self.menu_p.com_page.stopMonitorButton.Enable()
-        if self.options.get('experimental'):
-            self.menu_p.com_page.saveMonitorButton.Enable()   # if experimental
-
-        # start monitoring parameters
-        period = float(self.menu_p.com_page.frequSlider.GetValue())
-        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
-        sr = self.plot_p.datavars[7]/self.plot_p.datavars[2]
-        coverage = covval/sr
-        limit = period/sr
-        self.plot_p.datavars[2] = limit
-        self.plot_p.datavars[6] = coverage
-        self.plot_p.datavars[7] = period
-
-        self.changeStatusbar("Running monitor ...")
-        # Obtain the last values from the data base with given dataid and limit
-        # A DB query for 10 min 10Hz data needs approx 0.3 sec
-        if  self.monitorSource=='MARCOS':
-            self.plot_p.t1_stop.clear()
-            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
-            self.plot_p.startMARCOSMonitor()
-            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
-        elif self.monitorSource=='MARTAS':
-            self.plot_p.t1_stop.clear()
-            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
-            self.plot_p.startMARTASMonitor(self.plot_p.datavars.get(12))
-            # MARTASmonitor calls subscribe2client  - output in temporary file (to start with) and access global array from storeData (move array to global)
-            self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(self.plot_p.datavars.get(9)))
-
-    def _monitor2stream(self,array, db=None, dataid=None,header = {}):
-        """
-        DESCRIPTION:
-            creates self.plotstream object from monitor data
-        """
-        #header = {}
-        if db:
-            header = db.fields_to_dict(dataid)
-        if len(array[0]) > 0:
-            if isinstance(array[0][-1], datetime):
-                array[0] = date2num(array[0])
-        stream = DataStream([LineStruct()],header,array)
-        stream = stream.sorting()
-        return stream
-
-    def onStopMonitorButton(self, event):
-        dataid = self.plot_p.datavars[0]
-        self.plot_p.t1_stop.set()
-        #self.plot_p.client.loop_stop()
-        self.menu_p.com_page.logMsg(' > Read cycle stopped')
-        self.menu_p.com_page.logMsg(' - {} disconnected'.format(self.monitorSource))
-        self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
-        # delete old array
-        self.plot_p.array = [[] for el in DataStream().KEYLIST]
-        self.stream.header['StationID'] = self.plot_p.datavars.get(15)
-        self.stream.header['SensorID'] = self.plot_p.datavars.get(0)[:-5]
-        self.stream.header['DataID'] = self.plot_p.datavars.get(0)
-        self.plotstream = self.stream.copy()
-        currentstreamindex = len(self.streamlist)
-        self.streamlist.append(self.plotstream)
-        self.streamkeylist.append(self.plotstream._get_key_headers())
-        self.headerlist.append(self.plotstream.header)
-        self.currentstreamindex = currentstreamindex
-
-        self.menu_p.com_page.stopMonitorButton.Disable()
-        self.menu_p.com_page.saveMonitorButton.Disable()
-        self.ActivateControls(self.plotstream)
-        self.shownkeylist = self.UpdatePlotCharacteristics(self.plotstream)
-        self.plotoptlist.append(self.plotopt)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.MainMenu.EnableTop(0, True)
-        self.MainMenu.EnableTop(1, True)
-        self.MainMenu.EnableTop(2, True)
-        self.MainMenu.EnableTop(3, True)
-        self.MainMenu.EnableTop(4, True)
-        self.MainMenu.EnableTop(5, True)
-
-        self.menu_p.com_page.getMARTASButton.Enable()
-        self.menu_p.com_page.getMARCOSButton.Enable()
-        #self.menu_p.com_page.getMQTTButton.Enable()
-        self.menu_p.com_page.marcosLabel.SetBackgroundColour((255,23,23))
-        self.menu_p.com_page.martasLabel.SetBackgroundColour((255,23,23))
-        #self.menu_p.com_page.mqttLabel.SetBackgroundColour((255,23,23))
-        self.menu_p.com_page.marcosLabel.SetValue('not connected')
-        self.menu_p.com_page.martasLabel.SetValue('not connected')
-        #self.menu_p.com_page.mqttLabel.SetValue('not connected')
-        self.changeStatusbar("Ready")
-
-
-    def onLogDataButton(self, event):
-        # open dialog with pathname
-        # then use data_2_file method for binary writing
-        pass
 
 class MagPyApp(wx.App):
     # wxWindows calls this method to initialize the application

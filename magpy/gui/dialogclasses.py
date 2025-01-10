@@ -7253,21 +7253,20 @@ class SelectFromListDialog(wx.Dialog):
 
 
 class MultiStreamDialog(wx.Dialog):
-    def __init__(self, parent, title, streamlist, idx, streamkeylist):
+    """
+    DESCRIPTION:
+        Main Dialog for showing data set memory
+    CALLS:
+        MultiStreamPanel, which is a scrolled panel
+    """
+    def __init__(self, parent, title, datadict, active, plotdict):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(MultiStreamDialog, self).__init__(parent=parent,
             title=title, style=style) #, size=(400, 700))
-        #self.modify = False
-        #self.result = DataStream()
-        #self.resultkeys = []
-        #self.streamlist = streamlist
-        #self.namelst = []
-        #self.streamkeylist = streamkeylist
-        #self.activeidx = idx
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add MultilistPanel
-        self.panel = MultiStreamPanel(self, title, streamlist, idx, streamkeylist)
+        self.panel = MultiStreamPanel(self, title, datadict, active, plotdict)
         self.panel.SetInitialSize((850, 400))
         self.mainSizer.Add(self.panel, 1, wx.EXPAND | wx.ALL, 10)
         self.SetSizerAndFit(self.mainSizer)
@@ -7276,38 +7275,31 @@ class MultiStreamDialog(wx.Dialog):
 class MultiStreamPanel(scrolledpanel.ScrolledPanel):
     """
     DESCRIPTION:
-    Subclass for Multiple stream selections
+        Subclass for Multiple stream selections
+        This class accesses the data dictionary for data specific information and plot dictionary for projected keys
+        Layout of the multiple stream page:
 
-    This class accesses the streamlist object which should contain the following info:
-    datastream and unique header, keylists
-    Layout of the multiple stream page:
-    stream1 uses dataid name (or sensorid) - if not available just stream x is written
+        checkbox    id                data-description               button-with-keys          method-buttons
+          [ ]     active_id    sensorid,startdate,enddate,sr           [x,y,z]                  plot vertically
+          [ ]       id         sensorid,startdate,enddate,sr           [x,y,z,f]                plot nested
 
-    [ ]  stream1     Dropdown with checkboxes [ ] key1
-         (type)                               [ ] key2
+        Further methods:
+        join, merge, subtract
 
-    [ ]  stream2     Dropdown with checkboxes [ ] key1
-         (type)                               [ ] key2
-
-    [ Select ]         [ Merge ]
-
-    [ Subtract ]       [ Combine ]
-
-    (All other single stream functions are deactivated as long as multiple streams are selected.
-     If merge is used a new stream is generated and all other methods are available again.)
+        Merge, join and subtract will generate a new stream_id
     """
 
-    def __init__(self, parent, title, streamlist, idx, streamkeylist):
+    def __init__(self, parent, title, datadict, active, plotdict):
         scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(-1, -1))  #size=(950, 750)
         self.parent = parent
         self.title = title
         self.modify = False
         self.result = DataStream()
         self.resultkeys = []
-        self.streamlist = streamlist
-        self.namelst = []
-        self.streamkeylist = streamkeylist
-        self.activeidx = idx
+        self.bindkeys = []
+        self.datadict = datadict
+        self.plotdict = plotdict
+        self.active = active
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         self.createWidgets()  ## adding controls to mainsizer
@@ -7316,70 +7308,80 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         self.SetupScrolling()
         self.bindControls()
 
-
     # Widgets
     def createWidgets(self):
-        self.head1Label = wx.StaticText(self, label="Available datastreams:")
-        self.head2Label = wx.StaticText(self, label="Applications:")
+        self.head1Label = wx.StaticText(self, label="Select data ID:")
+        self.head2Label = wx.StaticText(self, label="Data set contents:")
+        self.head3Label = wx.StaticText(self, label="Selected keys:")
+        self.head4Label = wx.StaticText(self, label="Operation:")
         # 1. Section
-        tmpnamelst = []
-        for idx, elem in enumerate(self.streamlist):
-            #print ("Multi - check this if DI analysis has been conducted before",idx, elem.length())
-            name = elem.header.get('DataID','stream'+str(idx)).strip()
-            if name == 'stream{}'.format(idx):
-                name = elem.header.get('SensorID','stream'+str(idx)).strip()
-            try:
-                name = "{}_{}".format(name,datetime.strftime(elem.start(),"%Y%m%d"))
-            except:
-                pass
-            name = name.replace('-','_')
-            keys = self.streamkeylist[idx]
-            oldname = name
-            if name in tmpnamelst:
-                num = len([el for el in tmpnamelst if name == el])
-                name = name+'_'+str(num)
-            tmpnamelst.append(oldname)
-            self.namelst.append(name)
-            exec('self.'+name+'CheckBox = wx.CheckBox(self, label="'+name+'")')
-            exec('self.'+name+'KeyButton = wx.Button(self,-1,"Keys: '+",".join(keys)+'", size=(160,30))')
-            if idx == self.activeidx:
-                exec('self.'+name+'CheckBox.SetValue(True)')
-
-        self.ApplyButton = wx.Button(self, wx.ID_OK,"Plot",size=(160,30))
-        self.MergeButton = wx.Button(self,-1,"Merge",size=(160,30))
-        self.SubtractButton = wx.Button(self,-1,"Subtract",size=(160,30))
-        self.CombineButton = wx.Button(self,-1,"Combine",size=(160,30))
-        self.AverageStackButton = wx.Button(self,-1,"Average",size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+        layoutcheckids = []
+        layouttextids = []
+        layoutbuttonids = []
+        count = 0
+        for selid in self.datadict:
+            keys = self.datadict.get(selid).get('keys')
+            shownkeys = self.plotdict.get(selid).get('shownkeys', keys)
+            label = "{},{},{},{}".format(self.datadict.get(selid).get('sensorid'), self.datadict.get(selid).get('start'),
+                                         self.datadict.get(selid).get('end'), self.datadict.get(selid).get('samplingrate'))
+            if not shownkeys:
+                shownkeys = keys
+            layoutcheckids.append('(self.id{}CheckBox, noOptions)'.format(selid))
+            layouttextids.append('(self.id{}TextCtrl, expandOption)'.format(selid))
+            layoutbuttonids.append('(self.id{}KeyButton, expandOption)'.format(selid))
+            self.bindkeys.append([selid,'self.id{}KeyButton.Bind(wx.EVT_BUTTON, partial( self.on_get_keys, activeid = selid ) )'.format(selid)])
+            exec('self.id{}CheckBox = wx.CheckBox(self, label="{}")'.format(selid,selid))
+            exec('self.id{}TextCtrl = wx.TextCtrl(self, value="{}", size=(320,-1))'.format(selid,label))
+            exec('self.id{}KeyButton = wx.Button(self,-1,"Keys: {}", size=(160,-1))'.format(selid, ",".join(shownkeys)))
+            if selid == self.active:
+                exec('self.id{}CheckBox.SetValue(True)'.format(selid))
+            count += 1
+        self.applyButton = wx.Button(self, wx.ID_OK,"Plot vertically",size=(160,-1))
+        self.plotButton = wx.Button(self, -1,"Plot nested",size=(160,-1))
+        self.mergeButton = wx.Button(self,-1,"Merge",size=(160,-1))
+        self.subtractButton = wx.Button(self,-1,"Subtract",size=(160,-1))
+        self.joinButton = wx.Button(self,-1,"Join",size=(160,-1))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,-1))
 
         # Prepare some reusable arguments for calling sizer.Add():
         expandOption = dict(flag=wx.EXPAND)
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
+        amount = len(layoutcheckids)
+        print ("Number of plots", amount)
+        if amount <= 7:
+            amount = 7
+        buttonlist = [(self.applyButton, dict(flag=wx.ALIGN_CENTER)),
+                      (self.plotButton, dict(flag=wx.ALIGN_CENTER)),
+                      (self.joinButton, dict(flag=wx.ALIGN_CENTER)),
+                      (self.mergeButton, dict(flag=wx.ALIGN_CENTER)),
+                      (self.subtractButton, dict(flag=wx.ALIGN_CENTER)),
+                      emptySpace,
+                      (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+        if amount > 8:
+            buttonlist = [buttonlist[idx] if idx < len(buttonlist) else emptySpace for idx in list(range(0,amount))]
+
         contlst = []
         contlst.append((self.head1Label, noOptions))
-        contlst.append(emptySpace)
-        for idx, elem in enumerate(self.streamlist):
-            name = self.namelst[idx]
-            contlst.append(eval('(self.'+name+'CheckBox, noOptions)'))
-            contlst.append(eval('(self.'+name+'KeyButton, dict(flag=wx.ALIGN_CENTER))'))
-        contlst.append(emptySpace)
-        contlst.append(emptySpace)
         contlst.append((self.head2Label, noOptions))
-        contlst.append(emptySpace)
-        contlst.append((self.ApplyButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.MergeButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.SubtractButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.CombineButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.AverageStackButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append(emptySpace)
-        contlst.append(emptySpace)
-        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.head3Label, noOptions))
+        contlst.append((self.head4Label, noOptions))
+        for idx in list(range(0,amount)):
+            if idx < len(layoutcheckids):
+                contlst.append(eval(layoutcheckids[idx]))
+                contlst.append(eval(layouttextids[idx]))
+                contlst.append(eval(layoutbuttonids[idx]))
+                contlst.append(buttonlist[idx])
+            else:
+                contlst.append(emptySpace)
+                contlst.append(emptySpace)
+                contlst.append(emptySpace)
+                contlst.append(buttonlist[idx])
 
         #self.mainSizer.Add(gridSizer, 0, wx.EXPAND)
         # A GridSizer will contain the other controls:
-        cols = 2
+        cols = 4
         rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
@@ -7391,43 +7393,45 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
 
     def bindControls(self):
         from functools import partial
-        self.MergeButton.Bind(wx.EVT_BUTTON, self.OnMergeButton)
-        self.SubtractButton.Bind(wx.EVT_BUTTON, self.OnSubtractButton)
-        self.AverageStackButton.Bind(wx.EVT_BUTTON, self.OnStackButton)
-        self.CombineButton.Bind(wx.EVT_BUTTON, self.OnCombineButton)
-        for idx, elem in enumerate(self.streamlist):
-            name = self.namelst[idx]
-            exec('self.'+name+'KeyButton.Bind(wx.EVT_BUTTON, partial( self.OnGetKeys, name = idx ) )')
+        self.mergeButton.Bind(wx.EVT_BUTTON, self.onMergeButton)
+        self.subtractButton.Bind(wx.EVT_BUTTON, self.onSubtractButton)
+        self.joinButton.Bind(wx.EVT_BUTTON, self.onJoinButton)
+        for elem in self.bindkeys:
+            selid = elem[0]
+            exec(elem[1])
 
-    def OnGetKeys(self, e, name):
-        shkeylst = self.streamkeylist[name]
-        keylst = self.streamlist[name]._get_key_headers()
+    def on_get_keys(self, e, activeid):
+        keys = self.datadict.get(activeid).get('keys')
+        dataset = self.datadict.get(activeid).get('dataset')
+        plotcont = self.plotdict.get(activeid)
+        shownkeys = plotcont.get('shownkeys', keys)
+
         namelist = []
-        for key in shkeylst:
-            colname = self.streamlist[name].header.get('col-'+key, '')
+        for key in shownkeys:
+            colname = dataset.header.get('col-'+key, '')
             if not colname == '':
                 namelist.append(colname)
             else:
                 namelist.append(key)
-        dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylst,shownkeys=shkeylst,namelist=namelist)
-        for elem in shkeylst:
+        dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keys,shownkeys=shownkeys,namelist=namelist)
+        for elem in shownkeys:
             exec('dlg.'+elem+'CheckBox.SetValue(True)')
         if dlg.ShowModal() == wx.ID_OK:
             shownkeylist = []
-            for elem in keylst:
+            for elem in keys:
                 boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
                 if boolval:
                     shownkeylist.append(elem)
             if len(shownkeylist) == 0:
-                shownkeylist = self.streamkeylist[name]
+                shownkeylist = shownkeys
             else:
-                self.streamkeylist[name] = shownkeylist
+                plotcont['shownkeys'] = shownkeylist
+                self.plotdict[activeid] = plotcont
 
             # update
-            buttonname = self.namelst[name]
-            exec('self.'+str(buttonname)+'KeyButton.SetLabel("Keys: '+",".join(shownkeylist)+'")')
+            exec('self.{}}KeyButton.SetLabel("Keys: {}")'.format(activeid, ",".join(shownkeylist)))
 
-    def OnMergeButton(self, event):
+    def onMergeButton(self, event):
         """
         DESCRIPTION
              Merges two streams
@@ -7467,7 +7471,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         #self.changeStatusbar("Ready")
 
 
-    def OnSubtractButton(self, event):
+    def onSubtractButton(self, event):
         """
         DESCRIPTION
              Subtracts two stream
@@ -7500,7 +7504,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         #self.parent.Destroy()
 
 
-    def OnStackButton(self, event):
+    def onPlotButton(self, event):
         """
         DESCRIPTION
              Stacking/Averaging streams
@@ -7524,7 +7528,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         self.parent.Close(True)
         #self.parent.Destroy()
 
-    def OnCombineButton(self, event):
+    def onJoinButton(self, event):
         """
         DESCRIPTION
              Joining streams
