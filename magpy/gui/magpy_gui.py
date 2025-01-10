@@ -711,13 +711,16 @@ class PlotPanel(scrolled.ScrolledPanel):
 
         self.canvas.draw()
 
-    def gui_plot(self,streamids, datadict, plotdict):
+    def gui_plot(self,streamids, datadict, plotdict, sharey=False):
         """
         DEFINITION:
             embbed matplotlib figure in canvas
 
         PARAMETERS:
             streamids : list of ids to be plotted
+            datadict : all data relevant information
+            plotdict : all visualization parameter
+            sharey : limit shownkeys to a single input to share y axis for multiple diagrams
         """
         debug = True
 
@@ -749,6 +752,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             keys.append(plotcont.get('shownkeys'))
             colors.append(plotcont.get('colors'))
             symbols.append(plotcont.get('symbols'))
+            padding.append(plotcont.get('padding'))
             timecolumn.append(plotcont.get('timecolumn'))
             yranges.append(plotcont.get('yranges'))
             fill.append(plotcont.get('fill'))
@@ -771,7 +775,9 @@ class PlotPanel(scrolled.ScrolledPanel):
             #force=False
             #width=10
             #height=4
-        print ("SYMBOLS in gui_plot", symbols)
+
+        if sharey and len(keys) > 0:
+            keys = [keys[0]]
 
         if debug:
             print (keys,colors,symbols,timecolumn,errorbars,yranges,fill,padding,showpatch,functions)
@@ -1027,9 +1033,11 @@ class MainFrame(wx.Frame):
                     anald[sub] = loaded_analysisdict[sub]
         self.analysisdict = anald
 
+        # create empty dictionaries for holding data is its visualization parameters
+        # ----------------------------
         self.datadict = {}
         self.baselinedict = {}
-
+        self.plotdict = {}
 
         # set some general (data independent) state variables to be changed
         # ----------------------------
@@ -1065,14 +1073,11 @@ class MainFrame(wx.Frame):
         self.baselinedictlst = [] # variable to hold info on loaded DI streams for baselinecorrection
         self.baselineidxlst = []
 
-        self.plotdict = self._set_plot_parameter()
-
         self.active_id = 0
 
         # Menu Bar
         # --------------
         self._create_menu_bar()
-
         self.__set_properties()
 
         # bind menu controls to methods
@@ -1080,12 +1085,11 @@ class MainFrame(wx.Frame):
         self._bind_controls()
 
         # Connect to database
-        #db, success = self._db_connect(self.guidict.get('dbhost',''), self.guidict.get('dbuser',''), base64.b64decode(self.guidict.get('dbpwd','')), self.guidict.get('dbname',''))
         db, success = self._db_connect(*self.magpystate.get('dbtuple'))
         self.magpystate['db'] = db
         self.magpystate['databaseconnected'] = success
 
-        # Disable yet unavailable buttons
+        # Disable yet unavailable buttons and items
         # --------------------------
         self._deactivate_controls()
 
@@ -1146,7 +1150,7 @@ class MainFrame(wx.Frame):
         analysisdict['martasscantime'] = '20'
         favoritemartas = {}
         favoritemartas['conrad'] = 'https://cobs.zamg.ac.at'
-        favoritemartas['example'] = 'www.example.com'
+        favoritemartas['example'] = 'https://www.example.com'
         analysisdict['favoritemartas'] = favoritemartas
         # DI analysis
         analysisdict['baselinedirect'] = False
@@ -1252,7 +1256,7 @@ class MainFrame(wx.Frame):
                              }
                 }
         webservices['conrad'] = cobsws
-        webservices['usgs'] = cobsws
+        webservices['usgs'] = usgsws
         webservices['imws'] = imws
         analysisdict['webservices'] = webservices
         analysisdict['defaultwebservice'] = 'conrad'
@@ -1322,18 +1326,15 @@ class MainFrame(wx.Frame):
         self.MainMenu.Append(self.DatabaseMenu, "Data&base")
         # ## DI Menu
         self.DIMenu = wx.Menu()
-        self.DIPath2DI = wx.MenuItem(self.DIMenu, 501, "&Load DI data...\tCtrl+L", "Load DI data...", wx.ITEM_NORMAL)
-        self.DIMenu.Append(self.DIPath2DI)
-        self.DIMenu.AppendSeparator()
-        self.DIInputSheet = wx.MenuItem(self.DIMenu, 504, "O&pen input sheet...\tCtrl+P", "Input sheet...", wx.ITEM_NORMAL)
+        self.DIInputSheet = wx.MenuItem(self.DIMenu, 501, "O&pen DI input sheet...\tCtrl+P", "Input sheet...", wx.ITEM_NORMAL)
         self.DIMenu.Append(self.DIInputSheet)
         self.MainMenu.Append(self.DIMenu, "D&I")
         # ## Stream Operations
         self.StreamOperationsMenu = wx.Menu()
-        self.StreamAddListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Add current &working state to memory...\tCtrl+W", "Add Stream", wx.ITEM_NORMAL)
+        self.StreamAddListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Store &working state...\tCtrl+W", "Add data set", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.Append(self.StreamAddListSelect)
         self.StreamOperationsMenu.AppendSeparator()
-        self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Access memory/&multiple data set operations...\tCtrl+M", "Select Stream", wx.ITEM_NORMAL)
+        self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Access data &memory...\tCtrl+M", "Select data set(s)", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.Append(self.StreamListSelect)
         self.MainMenu.Append(self.StreamOperationsMenu, "Memo&ry")
         # ## Data Checker
@@ -1434,10 +1435,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.db_on_init, self.DBInit)
         # Memory Menu
         self.Bind(wx.EVT_MENU, self.memory_select, self.StreamListSelect)
-        self.Bind(wx.EVT_MENU, self.memory_add, self.StreamAddListSelect)
+        self.Bind(wx.EVT_MENU, self.memory_add, self.StreamAddListSelect) # remove
         # DI Menu
-        self.Bind(wx.EVT_MENU, self.onLoadDI, self.DIPath2DI)
-        self.Bind(wx.EVT_MENU, self.onInputSheet, self.DIInputSheet)
+        self.Bind(wx.EVT_MENU, self.di_input_sheet, self.DIInputSheet)
         # Options Menu
         self.Bind(wx.EVT_MENU, self.options_init, self.OptionsInitItem)
         self.Bind(wx.EVT_MENU, self.options_di, self.OptionsDIItem)
@@ -1448,7 +1448,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.help_open_log, self.HelpLogFileSelect)
         # Specials menu
         self.Bind(wx.EVT_MENU, self.OnCheckDefinitiveData, self.CheckDefinitiveDataSelect)
-        # BindingControls on the notebooks
+        # BindingControls on the panels
         #       Stream Page
         # ------------------------
         #self.Bind(wx.EVT_BUTTON, self.onOpenStreamButton, self.menu_p.str_page.openStreamButton)
@@ -1606,6 +1606,7 @@ class MainFrame(wx.Frame):
         """
         pass
 
+    @deprecated("replaced by commands in _init_")
     def initParameter(self, dictionary):
         # Variable initializations
         pwd = dictionary.get('passwd')
@@ -2069,8 +2070,6 @@ class MainFrame(wx.Frame):
         # active_id = stream_id
 
         datacont={}
-        # remove emtpy columns
-        stream = stream._remove_nancolumns()
         amount = len(stream)
         start, end = stream.timerange()
         sr = stream.samplingrate()
@@ -2187,7 +2186,7 @@ class MainFrame(wx.Frame):
             plotcont['colors'] = colors[:lenshownkeys]
         pads = plotcont.get('padding')
         if not pads or not len(pads[0]) == lenshownkeys:
-            plotcont['padding']= None
+            plotcont['padding']= []
 
 
         # 4. Set title and eventually assign function and patch objects
@@ -2227,14 +2226,14 @@ class MainFrame(wx.Frame):
         return plotcont
 
 
-    def _do_plot(self, streamids):
+    def _do_plot(self, streamids, sharey=False):
         """
         DEFINITION:
             read stream and display
         """
         self.changeStatusbar("Plotting...")
 
-        self.plot_p.gui_plot(streamids, self.datadict, self.plotdict)
+        self.plot_p.gui_plot(streamids, self.datadict, self.plotdict, sharey=sharey)
 
         if len(streamids) == 1:
             streamid = streamids[0]
@@ -2391,6 +2390,9 @@ class MainFrame(wx.Frame):
             message = "Could not identify file!\nplease check and/or try OpenDirectory\n"
         loadDlg.Destroy()
 
+        if success:
+            stream = stream._remove_nancolumns()
+
         if not len(stream) > 0:
             message = "Obtained an empty file structure\nfile format supported?\n"
             success = False
@@ -2447,6 +2449,9 @@ class MainFrame(wx.Frame):
             stream = self._open_stream(path=self.magpystate.get('currentpath'), mintime=old, maxtime=new, extension='*')
             self.menu_p.rep_page.logMsg(
                 '{}: found {} data points'.format(self.magpystate.get('currentpath'), len(stream.ndarray[0])))
+
+            if success:
+                stream = stream._remove_nancolumns()
 
             if success:
                 self.magpystate['source'] = 'dir'
@@ -2512,6 +2517,9 @@ class MainFrame(wx.Frame):
                         success = False
         except:
                 pass
+
+        if success:
+            stream = stream._remove_nancolumns()
 
         if len(stream.length()) < 2 and stream.length()[0] < 2:
             message = "No data found"
@@ -2677,6 +2685,8 @@ class MainFrame(wx.Frame):
         except:
                 pass
 
+        if success:
+            stream = stream._remove_nancolumns()
         if len(stream.length()) < 2 and stream.length()[0] < 2:
             message = "No data found"
             success = False
@@ -2769,10 +2779,12 @@ class MainFrame(wx.Frame):
         if getdata:
             path = [db,datainfoid]
             stream = self._open_stream(path=path, mintime=pydate2wxdate(mintime), maxtime=pydate2wxdate(maxtime),extension='MySQL Database')
+            stream = stream._remove_nancolumns()
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(path[1],len(stream.ndarray[0])))
-            streamid = self._initial_read(stream)
-            if streamid: # will create a new input into datadict
-                self._initial_plot(streamid)
+            if len(stream) > 0:
+                streamid = self._initial_read(stream)
+                if streamid: # will create a new input into datadict
+                    self._initial_plot(streamid)
 
 
     def file_export_data(self, event):
@@ -3030,6 +3042,37 @@ class MainFrame(wx.Frame):
     # ####    DI Menu Bar                                      #########################################################
     # ##################################################################################################################
 
+    def di_input_sheet(self,event):
+        """
+        DESCRIPTION:
+            open dialog to input DI data
+        """
+
+        # get the di path from analysisdict
+        dstation = self.analysisdict.get('defaultstation')
+        print (dstation)
+        stationdict = self.analysisdict.get('stations')
+        print (stationdict)
+        diparameters = stationdict.get(dstation)
+        print (diparameters)
+        dipath = diparameters.get('didatapath')
+        print (dipath)
+
+        if os.path.isfile(dipath):
+            dipath = os.path.split(dipath)[0]
+
+        self.dilayout = {}
+        self.dilayout['scalevalue'] = diparameters.get('scalevalue')
+        self.dilayout['double'] = diparameters.get('double')
+        self.dilayout['order'] = diparameters.get('order').split(',')
+        cdate = pydate2wxdate(datetime.now(timezone.utc).replace(tzinfo=None))
+        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        # didict contains already loaded data sets for this observatory code
+        dlg = InputSheetDialog(None, title='Add DI data', path=dipath, diparameters=diparameters, cdate=cdate, db=db)
+        if dlg.ShowModal() == wx.ID_OK:
+            pass
+        dlg.Destroy()
+
 
     # ##################################################################################################################
     # ####    Memory Menu Bar                                  #########################################################
@@ -3055,7 +3098,7 @@ class MainFrame(wx.Frame):
         plotkeys = []
         activeid = self.active_id
 
-        debug =False
+        debug = False
         if debug:
             print ("Check contents of datadict and plotdict BEFORE memory select:")
             print (self.datadict)
@@ -3085,16 +3128,23 @@ class MainFrame(wx.Frame):
             self._do_plot(plotids)
         else:
             mod = dlg.panel.modify
+            selids = dlg.panel.selectedids
             if mod == True:
-                self.streamlist.append(dlg.panel.result)
-                self.streamkeylist.append(dlg.panel.resultkeys)
-                self.currentstreamindex = len(self.streamlist)-1
-                self.plotstream = self.streamlist[-1]
-                self.headerlist.append(self.plotstream.header)
-                self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
-                self.ActivateControls(self.plotstream)
-                self.plotoptlist.append(self.plotopt)
-                self.OnPlot(self.plotstream,self.shownkeylist)
+                result = dlg.panel.result
+                if len(result) > 0:
+                    newid = self._initial_read(result)
+                    if debug:
+                        print ("Created new id", newid)
+                    if newid:  # will create a new input into datadict
+                        self._initial_plot(newid)
+                elif len(selids) > 0:
+                    #if debug:
+                    print ("Nested plot has been choosen")
+                    for elem in selids:
+                         # create lists for plotdict
+                        plotids.append(elem)
+                    self._deactivate_controls()
+                    self._do_plot(plotids, sharey=True) #, single=True)
         dlg.Destroy()
 
         if debug:
@@ -3103,6 +3153,7 @@ class MainFrame(wx.Frame):
             print (self.plotdict)
 
 
+    @deprecated("Not used any more")
     def memory_add(self,event):
         """
         DESCRIPTION
@@ -5903,38 +5954,6 @@ class MainFrame(wx.Frame):
 
         dlg.Destroy()
     """
-
-
-    def onInputSheet(self,event):
-        """
-        DESCRITPTION:
-            open dialog to input DI data
-        """
-
-        #print (self.dipathlist)
-        if isinstance(self.dipathlist, dict):
-            dipath = self.options.get('didictionary',{}).get('didatapath','')
-        elif isinstance(self.dipathlist, str):
-            dipath = self.dipathlist
-        else:
-            dipath = self.dipathlist[0]
-        dipath = self.last_dir # new: use last dir
-        if os.path.isfile(dipath):
-            dipath = os.path.split(dipath)[0]
-
-
-        self.dilayout = {}
-        self.dilayout['scalevalue'] = self.options['scalevalue']
-        self.dilayout['double'] = self.options['double']
-        self.dilayout['order'] = self.options['order'].split(',')
-        #self.dilayout = {'order':['MU','MD','EU','WU','ED','WD','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'True'}
-        #self.dilayout = {'order':['MU','MD','WU','EU','WD','ED','NU','SD','ND','SU'], 'scalevalue':'True', 'double':'False'}
-        defaults = self.options
-        cdate = pydate2wxdate(datetime.utcnow())
-        dlg = InputSheetDialog(None, title='Add DI data',path=dipath,layout=self.dilayout, defaults=defaults, cdate=cdate, db = self.db, dipathdict=self.dipathlist)
-        if dlg.ShowModal() == wx.ID_OK:
-            pass
-        dlg.Destroy()
 
 
     def onSaveDIData(self, event):

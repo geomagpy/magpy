@@ -50,6 +50,9 @@ github directory given above in folder magpy/examples/.
 
 ## 2. Installation
 
+Use Conda: conda create -n xmagpy wxpython
+Will create a python 3.7.16 environment with working wxpython 4.0.4. 
+
 ## 3. Main window and its menu bar
 
 ### 3.1 Layout and default configuration
