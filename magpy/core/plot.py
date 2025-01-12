@@ -138,7 +138,7 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
     # This method requires the provision of data sets on which the get_gaps method has been applied
     def is_list_empty(testlist):
         # Replaces older testing method whether array like [[]] are empty
-        tester = min(np.array(testlist).shape)
+        tester = min(np.array(testlist, dtype=object).shape)
         if tester:
             return False
         else:
@@ -238,6 +238,7 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
             print("Given error bars do not fit in shape to keys - skipping")
             errorbars = False
     if not is_list_empty(functions):
+        print ("HERE", functions)
         if not isinstance(functions, (list, tuple)):
             functions = False
         elif not skey == list(np.array(functions, dtype=object).shape)[:2]:
@@ -434,6 +435,7 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                 # ------------------
                 if functions and not is_list_empty(functions):
                     function = functions[idx][i]
+                    print ("plotting function for ", function)
                     if function and isinstance(function, (list, tuple)):
                         if len(np.array(function,
                                         dtype=object).shape) > 1:  # allow multiple functions for each component

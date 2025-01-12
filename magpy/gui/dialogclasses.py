@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from magpy.stream import *
+from magpy.core import methods
 import magpy.absolutes as di
 from magpy.core import database
 
@@ -50,7 +51,16 @@ level 3 : level 2 also on Mac and Windows (level2w or level2m as temporary)
 * all tests are performed with the suggested configuration of the install recommendation
 """
 
-# Subclasses for Dialogs called by magpy gui
+# ##################################################################################################################
+# ##################################################################################################################
+# #############################    Subclasses for Dialogs called by magpy gui   ####################################
+# ##################################################################################################################
+# ##################################################################################################################
+
+
+# ##################################################################################################################
+# ####    Menu Bar                                         #########################################################
+# ##################################################################################################################
 
 class OpenWebAddressDialog(wx.Dialog):
     """
@@ -1003,6 +1013,7 @@ class ExportIYFVDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+
 class DatabaseConnectDialog(wx.Dialog):
     """
     Dialog for Database Menu - Connect MySQL
@@ -1056,63 +1067,6 @@ class DatabaseConnectDialog(wx.Dialog):
 
         # A GridSizer will contain the other controls:
         cols = 4
-        rows = int(np.ceil(len(elemlist)/float(cols)))
-        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
-
-        # Add the controls to the sizers:
-        for control, options in elemlist:
-            gridSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-
-        self.SetSizerAndFit(boxSizer)
-
-
-class DatabaseContentDialog(wx.Dialog):
-    """
-    Dialog for Database Menu - Connect MySQL
-    """
-
-    def __init__(self, parent, title, datalst):
-        super(DatabaseContentDialog, self).__init__(parent=parent,
-            title=title, size=(400, 600))
-        #self.datalst = ['test','jgg']
-        self.datalst = datalst
-        self.createControls()
-        self.doLayout()
-
-    # Widgets
-    def createControls(self):
-        self.dataLabel = wx.StaticText(self, label="Data tables:",size=(160,30))
-        self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
-            style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
-
-
-    def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-        # A GridSizer will contain the other controls:
-        #gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        elemlist=[(self.dataLabel, noOptions),
-                 (self.dataComboBox, expandOption),
-                  emptySpace,
-                  emptySpace,
-                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
-
-        # A GridSizer will contain the other controls:
-        cols = 2
         rows = int(np.ceil(len(elemlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
@@ -1330,9 +1284,87 @@ class OptionsDIDialog(wx.Dialog):
         self.sheetscaleCheckBox.SetValue(self.dicontent.get('scalevalue',False))
 
 
-# ###################################################
-#    Stream page
-# ###################################################
+# ##################################################################################################################
+# ####    Meta Panel                                       #########################################################
+# ##################################################################################################################
+
+
+class DatabaseContentDialog(wx.Dialog):
+    """
+    Dialog for Database Menu - Connect MySQL
+    """
+
+    def __init__(self, parent, title, datalst):
+        super(DatabaseContentDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        #self.datalst = ['test','jgg']
+        self.datalst = datalst
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        self.dataLabel = wx.StaticText(self, label="Data tables:",size=(160,30))
+        self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
+            style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # A GridSizer will contain the other controls:
+        #gridSizer = wx.FlexGridSizer(rows=7, cols=2, vgap=10, hgap=10)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        elemlist=[(self.dataLabel, noOptions),
+                 (self.dataComboBox, expandOption),
+                  emptySpace,
+                  emptySpace,
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(elemlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in elemlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+
+# ##################################################################################################################
+# ####    Analysis Panel                                   #########################################################
+# ##################################################################################################################
+
+
+
+
+
+
+# ##################################################################################################################
+# ####    Monitor  Panel                                   #########################################################
+# ##################################################################################################################
+
+
+
+
+# ##################################################################################################################
+# ####    Data Panel                                       #########################################################
+# ##################################################################################################################
 
 class StreamExtractValuesDialog(wx.Dialog):
     """
@@ -1552,6 +1584,10 @@ class StreamPlotOptionsDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+
+# ##################################################################################################################
+# ####    Flagging Panel                                   #########################################################
+# ##################################################################################################################
 
 class StreamFlagOutlierDialog(wx.Dialog):
     """
@@ -2251,30 +2287,31 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
 
 class AnalysisFitDialog(wx.Dialog):
     """
-    Dialog for Stream panel
-    Select shown keys
+    DESCRIPTION
+        Dialog for analysis panels fit button
     """
 
-    def __init__(self, parent, title, options, stream, shownkeylist, keylist, plotopt, hide_file,last_dir : string = ''):
+    def __init__(self, parent, title, datacont, plotcont, analysisdict, hide_file, last_dir : string = ''):
         super(AnalysisFitDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
 
-        self.shownkeys=shownkeylist
-        self.selectedkey = shownkeylist[0]
-        self.keys2flag = ",".join(shownkeylist)
-        self.keys=keylist
-        self.stream = stream
-        self.options = options
-        self.plotopt = plotopt
+        self.plotcont = plotcont
+        self.datacont = datacont
+        self.analysisdict = analysisdict
+        self.shownkeys = plotcont.get('shownkeys')
+        self.selectedkey = self.shownkeys[0]
+        self.keys2flag = ",".join(self.shownkeys)
+        self.keys = datacont.get('keys')
         self.last_dir = last_dir
-        self.fitparameter = {}
-        self.fitfunc = self.options.get('fitfunction','spline')
+        self.mintime = datacont.get('start')
+        self.maxtime = datacont.get('end')
+        self.fitfunc = self.analysisdict.get('fitfunction','spline')
         self.funclist = ['spline','polynomial', 'linear least-squares', 'mean', 'none']
-        self.fitknots = self.options.get('fitknotstep','0.3')
-        self.fitdegree = self.options.get('fitdegree','5')
+        self.fitknots = self.analysisdict.get('fitknotstep','0.3')
+        self.fitdegree = self.analysisdict.get('fitdegree','5')
+
+        self.fitparameter = {}
         self.hide_file = hide_file
-        self.mintime = num2date(stream.ndarray[0][0])
-        self.maxtime = num2date(stream.ndarray[0][-1])
         self.createControls()
         self.doLayout()
         self.modifyWindows(self.fitfunc)
@@ -2365,7 +2402,7 @@ class AnalysisFitDialog(wx.Dialog):
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         openFileDialog.ShowModal()
         fitname = openFileDialog.GetPath()
-        self.fitparameter = DataStream().func_from_file(fitname,debug=False)
+        self.fitparameter = methods.func_from_file(fitname,debug=False)
         openFileDialog.Destroy()
         self.Close(True)
         self.Destroy()
@@ -2383,8 +2420,8 @@ class AnalysisFitDialog(wx.Dialog):
             savename = savename+extensions[extind]
 
         saveFileDialog.Destroy()
-        if self.plotopt.get('function',False):
-            DataStream().func_to_file(self.plotopt.get('function'),savename,debug=False)
+        if self.plotdict.get('functions',False):
+            methods.func_to_file(self.plotdict.get('functions'),savename,debug=False)
         self.Close(True)
         self.Destroy()
 
@@ -2417,25 +2454,25 @@ class AnalysisFitDialog(wx.Dialog):
         stday = self.startFitDatePicker.GetValue()
         sttime = str(self.startFitTimePicker.GetValue())
         if sttime.endswith('AM') or sttime.endswith('am'):
-            sttime = datetime.strftime(datetime.strptime(sttime,
-                    "%I:%M:%S %p"), "%H:%M:%S")
+            sttime_tmp = datetime.strptime(sttime,"%I:%M:%S %p")
+            sttime = sttime_tmp.strftime("%H:%M:%S")
         if sttime.endswith('pm') or sttime.endswith('PM'):
-            sttime = datetime.strftime(datetime.strptime(sttime,
-                    "%I:%M:%S %p"), "%H:%M:%S")
-        sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()),
-                "%Y-%m-%d")
+            sttime_tmp = datetime.strptime(sttime,"%I:%M:%S %p")
+            sttime = sttime_tmp.strftime("%H:%M:%S")
+        sd_tmp = datetime.fromtimestamp(stday.GetTicks())
+        sd = sd_tmp.strftime("%Y-%m-%d")
         starttime = datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
         # Get end time
         enday = self.endFitDatePicker.GetValue()
         entime = str(self.endFitTimePicker.GetValue())
         if entime.endswith('AM') or entime.endswith('am'):
-            entime = datetime.strftime(datetime.strptime(entime,
-                    "%I:%M:%S %p"), "%H:%M:%S")
+            entime_tmp = datetime.strptime(entime, "%I:%M:%S %p")
+            entime = entime_tmp.strftime("%H:%M:%S")
         if entime.endswith('pm') or entime.endswith('PM'):
-            entime = datetime.strftime(datetime.strptime(entime,
-                    "%I:%M:%S %p"), "%H:%M:%S")
-        ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()),
-                "%Y-%m-%d")
+            entime_tmp = datetime.strptime(entime, "%I:%M:%S %p")
+            entime = entime_tmp.strftime("%H:%M:%S")
+        ed_tmp = datetime.fromtimestamp(enday.GetTicks())
+        ed = ed_tmp.strftime("%Y-%m-%d")
         endtime = datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
         return starttime, endtime
 
@@ -2467,6 +2504,7 @@ class AnalysisFitDialog(wx.Dialog):
     def onUpdate(self, event):
         select = self.funcComboBox.GetStringSelection()
         self.modifyWindows(select)
+
 
 class AnalysisFilterDialog(wx.Dialog):
     """
@@ -2916,7 +2954,7 @@ class AnalysisRotationDialog(wx.Dialog):
     """
     DESCRIPTION
         Dialog for providing rotation values
-        Will take data from header as orgalpha and orgbeta
+        Will take data from header as orgalpha, orgbeta and orggamma
     """
     def __init__(self, parent, title, orgalpha, orgbeta, orggamma):
         super(AnalysisRotationDialog, self).__init__(parent=parent,

@@ -1503,7 +1503,7 @@ class MainFrame(wx.Frame):
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.a_onDerivativeButton, self.menu_p.ana_page.derivativeButton)
         self.Bind(wx.EVT_BUTTON, self.a_onRotationButton, self.menu_p.ana_page.rotationButton)
-        self.Bind(wx.EVT_BUTTON, self.onFitButton, self.menu_p.ana_page.fitButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onFitButton, self.menu_p.ana_page.fitButton)
         self.Bind(wx.EVT_BUTTON, self.onMeanButton, self.menu_p.ana_page.meanButton)
         self.Bind(wx.EVT_BUTTON, self.onMaxButton, self.menu_p.ana_page.maxButton)
         self.Bind(wx.EVT_BUTTON, self.onMinButton, self.menu_p.ana_page.minButton)
@@ -2107,7 +2107,7 @@ class MainFrame(wx.Frame):
         return stream_id
 
 
-    def _initial_plot(self, streamid, restore=False, debug=False):
+    def _initial_plot(self, streamid, keepplotdict=False, restore=False, debug=False):
         """
         DEFINITION:
             read stream, extract columns with values and display up to three of them by default
@@ -2118,7 +2118,8 @@ class MainFrame(wx.Frame):
             # Get current plot parameters
             if debug:
                 print ("plotdict BEFORE _set_plot_parameters", self.plotdict)
-            self.plotdict[streamid] = self._set_plot_parameter()
+            if not keepplotdict:
+                self.plotdict[streamid] = self._set_plot_parameter()
             if debug:
                 print ("plotdict AFTER _set_plot_parameters", self.plotdict)
             # Init Controls
@@ -2189,8 +2190,8 @@ class MainFrame(wx.Frame):
         if plotcont.get('colors') and not len(plotcont.get('colors',[])) == len(shownkeys):
             colors = plotcont['colors']
             plotcont['colors'] = colors[:lenshownkeys]
-        pads = plotcont.get('padding')
-        if not pads or not len(pads[0]) == lenshownkeys:
+        pads = plotcont.get('padding',[])
+        if not pads or not len(pads) == lenshownkeys:
             plotcont['padding']= []
 
 
@@ -3654,64 +3655,72 @@ class MainFrame(wx.Frame):
 
 
 
-    def onFitButton(self, event):
+    def a_onFitButton(self, event):
         """
         Method for fitting
         """
         self.changeStatusbar("Fitting ...")
-        keys = self.shownkeylist
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-        self.xlimits = self.plot_p.xlimits
-        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter',
-                options=self.options,last_dir = self.last_dir, stream = self.plotstream,
-                shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotopt, hide_file=False)
-        startdate=self.xlimits[0]
-        enddate=self.xlimits[1]
-        dlg.setTimeRange(startdate, enddate)
-        if dlg.ShowModal() == wx.ID_OK:
-            params = dlg.getFitParameters()
-            self.options['fitfunction'] = params['fitfuncname']
-            self.options['fitknotstep'] = str(params['knotstep'])
-            self.options['fitdegree'] = str(params['fitdegree'])
-            self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
-                    params['fitfuncname'], params['knotstep'], params['fitdegree']))
-            if len(self.plotstream.ndarray[0]) > 0:
-                func = self.plotstream.fit(keys=keys,
-                        fitfunc=params['fitfunc'],
-                        fitdegree=params['fitdegree'], knotstep=params['knotstep'],
-                        starttime=params['starttime'],
-                        endtime=params['endtime'])
-                if params['fitfunc'] == 'none':
-                    self.plotopt['function'] = []
-                elif isinstance(self.plotopt['function'], list) and len(self.plotopt['function']) > 0:
-                    self.plotopt['function'].append(func)
-                else:
-                    self.plotopt['function'] = [func]
-                #self.function = func
-                #self.plotopt['function'] = func
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-            else:
-                # Msgbox to load data first
-                pass
-        else:
-            parameter = dlg.fitparameter
-            if parameter:
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        dir = self.guidict.get('dirname')
+        if len(stream) > 0:
+            plotstream = stream.copy()
+            # get the currently zoomed time range
+            xlimits = self.plot_p.xlimits
+            dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter',
+                                    datacont=datacont, plotcont=plotcont, analysisdict=self.analysisdict,
+                                    hide_file=False, last_dir=dir)
+            startdate=xlimits[0]
+            enddate=xlimits[1]
+            dlg.setTimeRange(startdate, enddate)
+            if dlg.ShowModal() == wx.ID_OK:
+                params = dlg.getFitParameters()
+                fitfunc = params['fitfuncname']
+                knotstep = str(params['knotstep'])
+                fitdegree = str(params['fitdegree'])
+                # Update defaults
+                self.analysisdict['fitfunction'] = fitfunc
+                self.analysisdict['fitknotstep'] = knotstep
+                self.analysisdict['fitdegree'] = fitdegree
+                self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
+                        params['fitfuncname'], params['knotstep'], params['fitdegree']))
+                func = plotstream.fit(keys=keys,
+                            fitfunc=params['fitfunc'],
+                            fitdegree=params['fitdegree'], knotstep=params['knotstep'],
+                            starttime=params['starttime'],
+                            endtime=params['endtime'])
                 funclist = []
-                for key in parameter:
-                    params=parameter[key]
-                    funclist.append(self.plotstream.fit(keys=keys,
-                        fitfunc=params['fitfunc'],
-                        fitdegree=params['fitdegree'], knotstep=params['knotstep'],
-                        starttime=params['starttime'],
-                        endtime=params['endtime']))
-                self.plotopt['function'] = funclist
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
+                for key in keys:
+                    funclist.append(func)
+                if params['fitfunc'] == 'none':
+                    plotcont['functions'] = []
+                elif isinstance(plotcont.get('functions'), list) and len(plotcont.get('functions')) > 0:
+                    plotcont['functions'].extend(funclist)
+                else:
+                    plotcont['functions'] = funclist
 
-        dlg.Destroy()
-        self.menu_p.rep_page.logMsg('- data fitted')
+                self.plotdict[self.active_id] = plotcont
+                print (self.plotdict)
+                self._initial_plot(self.active_id, keepplotdict=True)
+            else:
+                parameter = dlg.fitparameter
+                if parameter:
+                    funclist = []
+                    for key in parameter:
+                        params=parameter[key]
+                        funclist.append(self.plotstream.fit(keys=keys,
+                            fitfunc=params['fitfunc'],
+                            fitdegree=params['fitdegree'], knotstep=params['knotstep'],
+                            starttime=params['starttime'],
+                            endtime=params['endtime']))
+                    plotcont['functions'] = funclist
+                    self.plotdict[self.active_id] = plotcont
+                    self._initial_plot(self.active_id, keepplotdict=True)
+
+            dlg.Destroy()
+            self.menu_p.rep_page.logMsg('- data fitted')
         self.changeStatusbar("Ready")
 
 
