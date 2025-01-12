@@ -238,7 +238,6 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
             print("Given error bars do not fit in shape to keys - skipping")
             errorbars = False
     if not is_list_empty(functions):
-        print ("HERE", functions)
         if not isinstance(functions, (list, tuple)):
             functions = False
         elif not skey == list(np.array(functions, dtype=object).shape)[:2]:
@@ -437,6 +436,7 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                     function = functions[idx][i]
                     print ("plotting function for ", function)
                     if function and isinstance(function, (list, tuple)):
+                        print ("LENGTH", len(np.array(function, dtype=object).shape))
                         if len(np.array(function,
                                         dtype=object).shape) > 1:  # allow multiple functions for each component
                             for functio in function:

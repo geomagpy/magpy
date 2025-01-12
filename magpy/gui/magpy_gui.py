@@ -3697,12 +3697,13 @@ class MainFrame(wx.Frame):
                 if params['fitfunc'] == 'none':
                     plotcont['functions'] = []
                 elif isinstance(plotcont.get('functions'), list) and len(plotcont.get('functions')) > 0:
+                    oldfunclist = plotcont['functions']
+                    for of in oldfunclist:
                     plotcont['functions'].extend(funclist)
                 else:
                     plotcont['functions'] = funclist
 
                 self.plotdict[self.active_id] = plotcont
-                print (self.plotdict)
                 self._initial_plot(self.active_id, keepplotdict=True)
             else:
                 parameter = dlg.fitparameter
