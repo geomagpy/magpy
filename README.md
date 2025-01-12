@@ -1102,13 +1102,19 @@ method
         xyzdata.header['col-z'] = 'Z'
         mp.tsplot(xyzdata, height=2)
 
-Vectorial data can be rotated using the `rotation` method by keeping F constant. Such rotations require just two angles 
-which are referred to as *alpha* for rotations in the declination plane and *beta* for rotations in the inclination 
-plane. Assume a simple vector x=4, y=0 and z=4. Rotation by alpha=45° will lead to x=2,y=2,z=4, a clockwise rotation.
-Rotating by beta=45° will rotate F into the X-Y plane with x=4, y=4, z=0. Please note: you need to supply xyz data when 
-applying the `rotation` method.
+Vectorial data can be rotated using the `rotation` method. This method makes use of an Euler rotation which supports
+3D rotations. This differs from the rotation method of MagPY 1.x, which used a vectorial rotation by yaw and pitch. 
+Please note, that if your XY plane is horizontal, then *alpha* of old and new method are identical. The new method
+allows rotations around the z axis (*alpha*), the y axis (*beta*) and the x axis (*gamma*). Default Euler rotation
+uses a ZYX *order*. Assume a simple vector x=4, y=0 and z=4. Rotation by alpha=45° will lead to x=2,y=2,z=4.
+Please note: you need to supply xyz data when applying the `rotation` method.
 
-        rotdata = data.rotation(alpha=45,beta=45)
+        rotated_data = data.rotation(alpha=45, beta=45, gamma=45)
+
+Inverting a rotation is possible by the *invert* option.  
+
+        original_data = rotated_data.rotation(alpha=45, beta=45, gamma=45, invert=True)
+
 
 #### 5.2.2 Transforming coordinate systems
 

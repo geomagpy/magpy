@@ -50,8 +50,17 @@ github directory given above in folder magpy/examples/.
 
 ## 2. Installation
 
-Use Conda: conda create -n xmagpy wxpython
-Will create a python 3.7.16 environment with working wxpython 4.0.4. 
+Linux and MacOs: 
+1. install anaconda or miniconda
+2. conda create -n xmagpy wxpython
+    Will create a python 3.7.16 environment with working wxpython 4.0.4. 
+3. go to this environment
+    conda activate xmagpy
+4. install required conda packages
+    conda install numpy, scipy, matplotlib, pymysql
+5. install required pip packages
+    pip install cdflib, pyproj, emd, pypupsub
+
 
 ## 3. Main window and its menu bar
 

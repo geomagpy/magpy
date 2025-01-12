@@ -34,9 +34,11 @@ import dateutil.parser
 | OptionsInitDialog |       2.0.0  |                 |  level 1       |          | options_init |
 | OptionsDIDialog |         2.0.0  |                 |  level 2       |          | options_di |
 | MultiStreamPanel |        2.0.0  |                 |  level 2       |          | memory_select |
-| xx |  2.0.0   |                 |               |          | xx |
-| xx |  2.0.0   |                 |               |          | xx |
-| xx |  2.0.0   |                 |               |          | xx |
+| InputSheetDialog |       2.0.0   |                 |  level 1       |          | di_input_sheet |
+| SettingsPanel |          2.0.0   |                 |  level 1       |          | InputSheetDialog |
+| AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
+| AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
+| AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
 
 runtime test:
 - : not tested
@@ -2912,21 +2914,38 @@ class StreamFlagSelectionDialog(wx.Dialog):
 
 class AnalysisRotationDialog(wx.Dialog):
     """
-    Dialog for Stream panel
-    Select shown keys
+    DESCRIPTION
+        Dialog for providing rotation values
+        Will take data from header as orgalpha and orgbeta
     """
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, orgalpha, orgbeta, orggamma):
         super(AnalysisRotationDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
+        if orgalpha:
+            self.orgalpha = str(orgalpha)
+        else:
+            self.orgalpha = ''
+        if orgbeta:
+            self.orgbeta = str(orgbeta)
+        else:
+            self.orgbeta = ''
+        if orggamma:
+            self.orggamma = str(orggamma)
+        else:
+            self.orggamma = ''
         self.createControls()
         self.doLayout()
 
     # Widgets
     def createControls(self):
-        self.alphaLabel = wx.StaticText(self,label="Alpha")
-        self.alphaTextCtrl = wx.TextCtrl(self,value="")
-        self.betaLabel = wx.StaticText(self,label="Beta")
-        self.betaTextCtrl = wx.TextCtrl(self,value="")
+        self.alphaLabel = wx.StaticText(self,label="z-axix rotation: alpha in degree")
+        self.alphaTextCtrl = wx.TextCtrl(self,value=self.orgalpha)
+        self.betaLabel = wx.StaticText(self,label="y-axix rotation: beta in degree")
+        self.betaTextCtrl = wx.TextCtrl(self,value=self.orgbeta)
+        self.gammaLabel = wx.StaticText(self,label="x-axix rotation: gamma in degree")
+        self.gammaTextCtrl = wx.TextCtrl(self,value=self.orggamma)
+        self.invertLabel = wx.StaticText(self,label="Invert Euler rotation:")
+        self.invertCheckBox = wx.CheckBox(self, label='', size=(160, -1))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
 
@@ -2947,6 +2966,10 @@ class AnalysisRotationDialog(wx.Dialog):
         contlst.append((self.alphaTextCtrl, expandOption))
         contlst.append((self.betaLabel, noOptions))
         contlst.append((self.betaTextCtrl, expandOption))
+        contlst.append((self.gammaLabel, noOptions))
+        contlst.append((self.gammaTextCtrl, expandOption))
+        contlst.append((self.invertLabel, noOptions))
+        contlst.append((self.invertCheckBox, expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
 
@@ -4830,7 +4853,7 @@ class InputSheetDialog(wx.Dialog):
         InputDialog for DI data
     """
 
-    def __init__(self, parent, title, path, diparameters, cdate, db):
+    def __init__(self, parent, title, path, distation, diparameters, cdate, datapath):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(InputSheetDialog, self).__init__(parent=parent,
             title=title, style=style) #size=(1000, 800),
@@ -4842,7 +4865,7 @@ class InputSheetDialog(wx.Dialog):
         layout['double'] = diparameters.get('double')
         layout['order'] = diparameters.get('order').split(',')
         # diparameters contains a list of all opened/available DI files for this stationID
-        dimemory = diparameters.get('dipathlist',[])
+        distruct = diparameters.get('dipathlist', {})
 
         self.cdate = cdate
         self.units = ['degree','gon']
@@ -4853,7 +4876,7 @@ class InputSheetDialog(wx.Dialog):
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add Settings Panel
-        self.panel = SettingsPanel(self, cdate, path, diparameters, layout, db, dimemory)
+        self.panel = SettingsPanel(self, cdate, path, distation, diparameters, layout, datapath, distruct )
         self.panel.SetInitialSize((850, 400))
         self.mainSizer.Add(self.panel, 1, wx.EXPAND | wx.ALL, 10)
         # Add Save/Cancel Buttons
@@ -4988,7 +5011,8 @@ class InputSheetDialog(wx.Dialog):
                      checkdlg.ShowModal()
                 return "2233-12-12_13:21:23", 1
 
-            return datetime.strftime(datetime.strptime(time, "%Y-%m-%d_%H:%M:%S"),"%Y-%m-%d_%H:%M:%S"), 0
+            resultt = datetime.strptime(time, "%Y-%m-%d_%H:%M:%S")
+            return resultt.strftime("%Y-%m-%d_%H:%M:%S"), 0
             #return time
 
         # Get header
@@ -5037,7 +5061,8 @@ class InputSheetDialog(wx.Dialog):
         opstring.append("# Abs-AzimuthMark: {}".format(azi))
         opstring.append("# Abs-Pillar: {}".format(pillar))
         opstring.append("# Abs-Scalar: {}".format(finst))
-        opstring.append("# Abs-InputDate: {}".format(datetime.strftime(datetime.now(timezone.utc),"%Y-%m-%d")))
+        now = datetime.now(timezone.utc)
+        opstring.append("# Abs-InputDate: {}".format(now.strftime("%Y-%m-%d")))
         opstring.append("# Abs-Temperature: {}".format(temp))
         opstring.append("# Abs-Notes: {}".format(comm.replace('\n',' ')))
 
@@ -5316,19 +5341,42 @@ class InputSheetDialog(wx.Dialog):
             self.Close(True)
 
 class SettingsPanel(scrolledpanel.ScrolledPanel):
-    def __init__(self, parent, cdate, path, diparameters, layout, db, dimemory):
+    """
+    DESCRIPTION
+        contains the layout and structure of the input sheet within a scrolled panel
+    VARIABLES
+        cdate
+        path
+        diparameters
+        layout
+        datapath : default datapath from self.guidict
+        distruct
+    INCLUDED METHODS
+        OnLoadF : method to load scalar data connected to the DI meaurement
+        OnCalc : method to calculate the mean declination value
+        OnFlip
+        OnLoad
+        _degminsec2deg : transform between deg:min:sec und decimal deg
+        mean_angle
+        dataline2wx
+    """
+    def __init__(self, parent, cdate, path, distation, diparameters, layout, datapath, distruct):
         scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(-1, -1))  #size=(950, 750)
         #self.ShowFullScreen(True)
         self.cdate = cdate
         self.path = path
-        self.db = db
         self.layout = layout
         self.diparameters = diparameters
+        self.station = distation
+
         self.units = ['degree','gon']
         self.choices = ['decimal', 'dms']
         self.ressign = ['inline','opposite']
+
         self.dichoices = []
         self.didatalists = []
+        self.distruct = distruct
+        self.datapath = datapath
 
         # TODO Chech this code
         #self.didict = didict
@@ -5347,7 +5395,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         # - Load line
         self.memdataComboBox = wx.ComboBox(self, choices=self.dichoices,
                      style=wx.CB_DROPDOWN,size=(160,-1))
-        self.loadButton = wx.Button(self,-1,"Open DI data",size=(160,30))
+        self.loadButton = wx.Button(self,-1,"Open DI data",size=(160,-1))
         self.angleRadioBox = wx.RadioBox(self, label="Display angle as:",
                      choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS)
 
@@ -5358,7 +5406,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.ObserverLabel = wx.StaticText(self, label="Observer:",size=(160,-1))
         self.ObserverTextCtrl = wx.TextCtrl(self, value="Max",size=(160,-1))
         self.CodeLabel = wx.StaticText(self, label="IAGA code:",size=(160,-1))
-        self.CodeTextCtrl = wx.TextCtrl(self, value="",size=(160,-1))
+        self.CodeTextCtrl = wx.TextCtrl(self, value=self.station,size=(160,-1))
         self.TheoLabel = wx.StaticText(self, label="Theodolite:",size=(160,-1))
         self.TheoTextCtrl = wx.TextCtrl(self, value="type_serial_version",size=(160,-1))
         self.FluxLabel = wx.StaticText(self, label="Fluxgate:",size=(160,-1))
@@ -5859,8 +5907,9 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.memdataComboBox.Bind(wx.EVT_COMBOBOX, self.OnUpdateCombo)
 
     def OnLoadF(self, e):
-        self.dirname = os.path.expanduser('~')
-        dlg = wx.FileDialog(self, "Choose a data file with", self.dirname, "", "*.*")
+
+        stream = DataStream()
+        dlg = wx.FileDialog(self, "Choose a data file with", self.datapath, "", "*.*")
         path = ''
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
@@ -5875,21 +5924,11 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             else:
                 return None
 
-        import time
         datet = wxdate2pydate(self.DatePicker.GetValue())
-        try:
-            mintime = wx.DateTime.FromDMY(datet.day,datet.month-1,datet.year)
-            #mintime  = wx.DateTime.FromTimeT(time.mktime(datet.timetuple()))
-        except:
-            mintime = wx.DateTimeFromDMY(datet.day,datet.month-1,datet.year)
-            #mintime  = wx.DateTimeFromTimeT(time.mktime(datet.timetuple()))
         maxdate = datet+timedelta(days=1)
-        try:
-            maxtime = wx.DateTime.FromDMY(maxdate.day,maxdate.month-1,maxdate.year)
-            #maxtime  = wx.DateTime.FromTimeT(time.mktime(maxdate.timetuple()))
-        except:
-            maxtime = wx.DateTime.FromDMY(maxdate.day,maxdate.month-1,maxdate.year)
-            #maxtime  = wx.DateTimeFromTimeT(time.mktime(maxdate.timetuple()))
+        mintime = wx.DateTime.FromDMY(datet.day, datet.month - 1, datet.year)
+        maxtime = wx.DateTime.FromDMY(maxdate.day, maxdate.month - 1, maxdate.year)
+
         extension = '*.*'
         dlg = LoadDataDialog(None, title='Select timerange:',mintime=mintime,maxtime=maxtime, extension=extension)
         if dlg.ShowModal() == wx.ID_OK:
@@ -5901,31 +5940,29 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
             sd = datetime.fromtimestamp(stday.GetTicks())
             ed = datetime.fromtimestamp(enday.GetTicks())
-            st = datetime.strftime(sd, "%Y-%m-%d") + " " + sttime
+            st = sd.strftime("%Y-%m-%d") + " " + sttime
             start = datetime.strptime(st, "%Y-%m-%d %H:%M:%S")
-            et = datetime.strftime(ed, "%Y-%m-%d") + " " + entime
+            et = ed.strftime("%Y-%m-%d") + " " + entime
             end = datetime.strptime(et, "%Y-%m-%d %H:%M:%S")
 
             if isinstance(path, basestring):
                 if not path=='':
-                    #self.changeStatusbar("Loading data ... please be patient")
                     try:
                         stream = read(path_or_url=path, starttime=start, endtime=end)
                     except:
                         stream = DataStream()
+            """ no database option here
             else:
                 # assume Database
                 try:
-                    #self.changeStatusbar("Loading data ... please be patient")
-                    stream = readDB(path[0],path[1], starttime=start, endtime=end)
+                    stream = db.read(path[1], starttime=start, endtime=end)
                 except:
                     pass
-                    #logger.info ("Reading failed")
-        else:
-            stream = DataStream()
+            """
+        dlg.Destroy()
 
         #self.changeStatusbar("Ready")
-        if stream.length()[0] > 0:
+        if len(stream) > 0:
             dataid = stream.header.get('DataID')
             if not dataid:
                 dataid = stream.header.get('SensorID')
@@ -5937,7 +5974,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             posf = KEYLIST.index('f')
             ftext = ''
             for idx, elem in enumerate(stream.ndarray[0]):
-                time = datetime.strftime(num2date(elem).replace(tzinfo=None), "%H:%M:%S")
+                time = elem.strftime("%H:%M:%S")
                 ftext += "{},{:.2f}\n".format(time,stream.ndarray[posf][idx])
             self.FValsTextCtrl.SetValue(ftext)
 
@@ -5949,6 +5986,15 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             string (string):   a deg:min:sec of deg.decimal value
             back   (float) :   either decimal or dms
         """
+        def _decdeg2dms(dd):
+            is_positive = dd >= 0
+            dd = abs(dd)
+            minutes,seconds = divmod(dd*3600,60)
+            degrees,minutes = divmod(minutes,60)
+            degrees = degrees if is_positive else -degrees
+            return [int(np.round(degrees,0)),int(np.round(minutes,0)),np.round(seconds,2)]
+
+
         string = str(string)
         if string in ['','0.0000 or 00:00:00.0']:
             return string
@@ -5969,14 +6015,6 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
         if not val >= -180 and not val <= 360:
             return 999.
-
-        def _decdeg2dms(dd):
-            is_positive = dd >= 0
-            dd = abs(dd)
-            minutes,seconds = divmod(dd*3600,60)
-            degrees,minutes = divmod(minutes,60)
-            degrees = degrees if is_positive else -degrees
-            return [int(np.round(degrees,0)),int(np.round(minutes,0)),seconds]
 
         if back == 'dms':
             return ":".join(map(str,_decdeg2dms(val)))
@@ -6051,14 +6089,13 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             return datalist
 
         datalist = []
-        self.dirname = os.path.expanduser('~')
         iagacode = 'undefined'
 
         # If Open DI data then loadfile=True
         loadfile = True
 
         if loadfile:
-            dlg = wx.FileDialog(self, "Choose a DI raw data file", self.dirname, "", "*.*")
+            dlg = wx.FileDialog(self, "Choose a DI raw data file", self.path, "", "*.*")
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
                 try:
@@ -6066,13 +6103,15 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
                 except:
                     iagacode = 'undefined'
                 datalist = _readDI(path)
-        elif loadDB:
-            datalist = _getDI()
+        #elif loadDB:
+        #    datalist = _getDI()
+
+        if not len(iagacode) == 3:
+            iagacode = self.station
+
         if len(datalist) > 0:
             self.angleRadioBox.SetStringSelection("decimal")
-            #print ("Datalist", datalist)
             self.datalist2wx(datalist, iagacode)
-            #_datalist2wx(datalist, iagacode)
 
 
     def datalist2wx(self,datalist,iagacode):
@@ -6080,6 +6119,8 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
             # string list with lines:
             #['# MagPy Absolutes\n', '# Abs-Observer: Leichter\n', '# Abs-Theodolite: T10B_0619H154167_07-2011\n', '# Abs-TheoUnit: deg\n', '# Abs-FGSensor: MAG01H_SerialSensor_SerialElectronic_07-2011\n', '# Abs-AzimuthMark: 180.1044444\n', '# Abs-Pillar: A4\n', '# Abs-Scalar: /\n', '# Abs-Temperature: 6.7C\n', '# Abs-InputDate: 2016-01-26\n', 'Miren:\n', '0.099166666666667  0.098055555555556  180.09916666667  180.09916666667  0.098055555555556  0.096666666666667  180.09805555556  180.09805555556\n', 'Positions:\n', '2016-01-21_13:22:00  93.870555555556  90  1.1\n', '2016-01-21_13:22:30  93.870555555556  90  1.8\n', '2016-01-21_13:27:00  273.85666666667  90  0.1\n', '2016-01-21_13:27:30  273.85666666667  90  0.2\n', '2016-01-21_13:25:30  273.85666666667  270  0.3\n', '2016-01-21_13:26:00  273.85666666667  270  -0.6\n', '2016-01-21_13:24:00  93.845555555556  270  -0.2\n', '2016-01-21_13:24:30  93.845555555556  270  0.4\n', '2016-01-21_13:39:30  0  64.340555555556  -0.3\n', '2016-01-21_13:40:00  0  64.340555555556  0.1\n', '2016-01-21_13:38:00  0  244.34055555556  0\n', '2016-01-21_13:38:30  0  244.34055555556  -0.4\n', '2016-01-21_13:36:00  180  295.67055555556  1.1\n', '2016-01-21_13:36:30  180  295.67055555556  1.2\n', '2016-01-21_13:34:30  180  115.66916666667  0.3\n', '2016-01-21_13:35:00  180  115.66916666667  0.9\n', '2016-01-21_13:34:30  180  115.66916666667  0\n', 'PPM:\n', 'Result:\n']
 
+            mdate = None
+            na = ''
             poscnt = 0
             poslst = ['EU','EU','WU','WU','ED','ED','WD','WD','NU','NU','SD','SD','ND','ND','SU','SU']
             posord = ['1','2','1','2','1','2','1','2','1','2','1','2','1','2','1','2']
@@ -6148,7 +6189,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
                         if col == 'Time':
                             try:
                                 mdate = datetime.strptime(el,"%Y-%m-%d_%H:%M:%S")
-                                el = datetime.strftime(mdate,"%H:%M:%S")
+                                el = mdate.strftime("%H:%M:%S")
                             except:
                                 el = '00:00:00'
                         eval('self.'+na+col+'TextCtrl.SetValue(el)')
@@ -6157,7 +6198,8 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
                     # Intensity mesurements
                     fstr = line.split()
                     try:
-                        el = datetime.strftime(datetime.strptime(fstr[0],"%Y-%m-%d_%H:%M:%S"),"%H:%M:%S")
+                        tmmm = datetime.strptime(fstr[0], "%Y-%m-%d_%H:%M:%S")
+                        el = tmmm.strftime("%H:%M:%S")
                     except:
                         el = '00:00:00'
                     try:
@@ -6171,10 +6213,8 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
                     pass
             try:
                 new = wx.DateTime.FromDMY(day=mdate.day,month=mdate.month-1,year=mdate.year)
-                #self.DatePicker.SetValue(wx.DateTime.FromTimeT(time.mktime(mdate.timetuple())))
                 self.DatePicker.SetValue(wx.DateTime.FromDMY(day=mdate.day,month=mdate.month-1,year=mdate.year))
             except:
-                #self.DatePicker.SetValue(wx.DateTimeFromTimeT(time.mktime(mdate.timetuple())))
                 self.DatePicker.SetValue(wx.DateTimeFromDMY(day=mdate.day,month=mdate.month-1,year=mdate.year))
 
             if len(ffield) > 0:
@@ -7147,7 +7187,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             if selid == self.active:
                 exec('self.id{}CheckBox.SetValue(True)'.format(selid))
             count += 1
-        self.applyButton = wx.Button(self, wx.ID_OK,"Plot vertically",size=(160,-1))
+        self.applyButton = wx.Button(self, wx.ID_OK,"Plot",size=(160,-1))
         self.plotButton = wx.Button(self, -1,"Plot nested",size=(160,-1))
         self.mergeButton = wx.Button(self,-1,"Merge",size=(160,-1))
         self.subtractButton = wx.Button(self,-1,"Subtract",size=(160,-1))
@@ -7232,11 +7272,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 namelist.append(key)
         dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keys,shownkeys=shownkeys,namelist=namelist)
         for elem in shownkeys:
-            exec('dlg.'+elem+'CheckBox.SetValue(True)')
+            exec('dlg.{}CheckBox.SetValue(True)'.format(elem))
         if dlg.ShowModal() == wx.ID_OK:
             shownkeylist = []
             for elem in keys:
-                boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
+                boolval = eval('dlg.{}CheckBox.GetValue()'.format(elem))
                 if boolval:
                     shownkeylist.append(elem)
             if len(shownkeylist) == 0:
@@ -7246,7 +7286,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 self.plotdict[activeid] = plotcont
 
             # update
-            exec('self.{}KeyButton.SetLabel("Keys: {}")'.format(activeid, ",".join(shownkeylist)))
+            exec('self.id{}KeyButton.SetLabel("Keys: {}")'.format(activeid, ",".join(shownkeylist)))
 
     def onMergeButton(self, event):
         """

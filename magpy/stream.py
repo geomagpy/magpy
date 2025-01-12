@@ -95,6 +95,7 @@ import shutil
 from glob import glob, iglob, has_magic
 from urllib.request import urlopen, ProxyHandler, install_opener, build_opener
 from scipy import signal, fftpack, interpolate, integrate
+from scipy.spatial.transform import Rotation
 import math
 
 # not yet verified
@@ -2954,14 +2955,17 @@ CALLED BY:
         """
         content = self.header.get(element)
         # content = self.header.get(key)
-        contlist = content.split(',')
-        vals = [el.split('_') for el in contlist]
-        l = np.asarray(vals).T.astype(float64)
-        if year:
-            ind = np.argwhere(l == year)
+        if content:
+            contlist = content.split(',')
+            vals = [el.split('_') for el in contlist]
+            l = np.asarray(vals).T.astype(float64)
+            if year:
+                ind = np.argwhere(l == year)
+            else:
+                ind = np.argmax(l)
+            return l[parameter][ind]
         else:
-            ind = np.argmax(l)
-        return l[parameter][ind]
+            return 0
 
     def extrapolate(self, starttime, endtime, method='old', force=False, debug=False):
         """
@@ -4176,8 +4180,125 @@ CALLED BY:
         return stream.sorting()
 
 
-    def determine_rotationangles(self, referenceD=0.0, referenceI=None, keys = None, debug=False):
+    def determine_rotationangles(data, referenceD=0.0, referenceI=None, keys=None, debug=False):
         """
+        DESCRIPTION:
+            "Estimating" the rotation angles alpha, beta and gamma relative to a magnetic
+            coordinate system defined by expected Declination, expected Inclination
+            and Intensity F, assuming F is identical. Please note: You need to provide a
+            field vector with similar intensity as the reference field.
+        VARIABLES:
+            datastream : MagPy Datastream containing the vector data
+            expectedD  : expected Declination of the reference field
+            expectedI  : expected Inclination of the reference field, if Null/None than 0.0 will be returned
+            keys       : the three keys in which the vector is stored
+        RETURNS:
+            alpha, beta : (float) The estimated rotation angles in degree
+        """
+
+        def unit_vector(vector):
+            """ Returns the unit vector of the vector."""
+            return vector / np.linalg.norm(vector)
+
+        def reference_vector(D, I, F=1):
+            # H = F cos(I) , X = H cos(D) , Y = H sin(D) , Z = F sin(I)
+            return [np.cos(D) * np.cos(I), np.cos(I) * np.sin(D), sin(I)]
+
+        def find_vertical_vector(vector):
+            ez = np.array([0, 0, 1])
+            search_vector = unit_vector(vector)
+            per_vector = unit_vector(ez - np.dot(search_vector, ez) * search_vector)
+            return per_vector
+
+        def calc_rotation_matrix(v1start, v2start, v1target, v2target):
+            """
+            DESCRIPTION
+               calculating the rotation matrix
+            """
+
+            def get_base_matrices():
+                u1start = unit_vector(v1start)
+                u2start = unit_vector(v2start)
+                u3start = unit_vector(np.cross(u1start, u2start))
+                u1target = unit_vector(v1target)
+                u2target = unit_vector(v2target)
+                u3target = unit_vector(np.cross(u1target, u2target))
+                U = np.hstack([u1start.reshape(3, 1), u2start.reshape(3, 1), u3start.reshape(3, 1)])
+                V = np.hstack([u1target.reshape(3, 1), u2target.reshape(3, 1), u3target.reshape(3, 1)])
+                return U, V
+
+            def calc_base_transition_matrix():
+                return np.dot(V, np.linalg.inv(U))
+
+            U, V = get_base_matrices()
+            return calc_base_transition_matrix()
+
+        def get_euler_rotation_angles(start_vector, target_vector, start_up_vector=None, target_up_vector=None,
+                                      debug=False):
+            if start_up_vector is None:
+                start_up_vector = find_vertical_vector(start_vector)
+            if target_up_vector is None:
+                target_up_vector = find_vertical_vector(target_vector)
+
+            rot_mat = calc_rotation_matrix(start_vector, start_up_vector, target_vector, target_up_vector)
+            is_equal = np.allclose(rot_mat @ start_vector, target_vector, atol=1e-03)
+            if debug:
+                print(f"rot_mat @ start_look_at_vector1 == target_look_at_vector1 is {is_equal}")
+            rotation = Rotation.from_matrix(rot_mat)
+            return rotation.as_euler(seq="zyx", degrees=True)
+
+        alpha = 0.0
+        beta = 0.0
+        if not keys:
+            keys = ['x', 'y', 'z']
+
+        if not len(keys) == 3:
+            logger.error('get_rotation: provided keylist need to have three components.')
+            return 0.0, 0.0
+
+        refD = referenceD * np.pi / 180.
+        if referenceI:
+            refI = referenceI * np.pi / 180.
+
+        logger.info(
+            'get_rotation: Determining rotation angle towards a magnetic coordinate system assuming z to be vertical down.')
+
+        ind1 = data.KEYLIST.index(keys[0])
+        ind2 = data.KEYLIST.index(keys[1])
+        ind3 = data.KEYLIST.index(keys[2])
+
+        if len(data.ndarray[0]) > 0:
+            if len(data.ndarray[ind1]) > 0 and len(data.ndarray[ind2]) > 0 and len(data.ndarray[ind3]) > 0:
+                # get mean disregarding nans
+                xl = [el for el in data.ndarray[ind1] if not np.isnan(el)]
+                yl = [el for el in data.ndarray[ind2] if not np.isnan(el)]
+                zl = [el for el in data.ndarray[ind3] if not np.isnan(el)]
+                meanx = np.mean(xl)
+                meany = np.mean(yl)
+                meanz = np.mean(zl)
+                meanh = np.sqrt(meanx * meanx + meany * meany)
+                meanf = np.sqrt(meanx * meanx + meany * meany + meanz * meanz)
+                meaninc = np.arcsin(meanz / meanf)
+                if not referenceI:
+                    refI = 0
+                    meanz = 0
+                meanvec = [meanx, meany, meanz]
+                refvec = reference_vector(refD, refI)
+
+                alpha, beta, gamma = get_euler_rotation_angles(np.array(meanvec), np.array(refvec))
+
+                if debug:
+                    print("get_rotation debug: means of x={}, y={}, z={} and h={}".format(meanx, meany, meanz, meanh))
+
+        logger.info(
+            'getrotation: Rotation angles determined: alpha={}deg, beta={}deg, gamma={}deg'.format(alpha, beta, gamma))
+
+        return alpha, beta, gamma
+
+
+    """
+    def determine_rotationangles(self, referenceD=0.0, referenceI=None, keys = None, debug=False):
+        #""
         DESCRIPTION:
             "Estimating" the rotation angle alpha and beta relative to a magnetic
             coordinate system defined by expected Declination, expected Inclination
@@ -4191,7 +4312,7 @@ CALLED BY:
             keys       : the three keys in which the vector is stored
         RETURNS:
             alpha, beta : (float) The estimated rotation angles in degree
-        """
+        #""
         alpha = 0.0
         beta = 0.0
         if not keys:
@@ -4233,7 +4354,7 @@ CALLED BY:
         logger.info('getrotation: Rotation angles determined: alpha={}deg, beta={}deg'.format(alpha,beta))
 
         return alpha, beta
-
+    """
 
     @deprecated("Replaced by determine_rotationangles")
     def get_rotation(self, referenceD=0.0, referenceI=None, keys=None, debug=False):
@@ -5259,44 +5380,46 @@ CALLED BY:
         return DataStream(header=stwithnan.header,ndarray=np.asarray(array,dtype=object))
 
 
-    def rotation(self,**kwargs):
+    def rotation(self, alpha=0, beta=0, gamma=0, invert=False, order='ZYX', debug=False, **kwargs):
         """
     DEFINITION:
-        Rotation matrix for rotating x,y,z to new coordinate system xs,ys,zs using angles alpha and beta
-
+        Rotation matrix for rotating x,y,z to a new coordinate system xs,ys,zs using angles alpha (rotation within the
+        horizontal plane around the z axis), beta rotation around y-axis and gamma for rotations around the x-axis.
+        Please note: this function was changed in comparison to MagPy 1.x from a vector "yaw" and "pitch" rotation
+        to a full 3D rotation. The new version is based on the SciPy Rotation module and uses Euler rotation
+        ('zyx' by default).
     PARAMETERS:
     Variables:
+        - alpha:        (float) z-axis rotation angle in degree The horizontal rotation in degrees (0,360)
+        - beta:         (float) y-axis rotation in degrees (0,360)
+        - gamma:        (float) x-axis rotation in degrees (0,360)
+        - invert:       (BOOL) invert the rotation i.e. rotate back with the same angles
+        - order:        default is 'ZYX'
     Kwargs:
-        - alpha:        (float) The horizontal rotation in degrees
-        - beta:         (float) The vertical rotation in degrees
+        . unit:
         - keys:         (list) provide an alternative vector to rotate - default is ['x','y','z']
                                keys are only supported from 1.0 onwards (ndarray)
-
     RETURNS:
         - self:         (DataStream) The rotated stream
-
     EXAMPLE:
+        # Most widely used case - rotation in the horizontal (xy) plane
         data = data.rotation(alpha=2.74)
-
+        # Complex 3D rotation
+        rotdata = data.rotation(alpha=45,beta=45,gamma=45)
+        # Rotate back
+        orgdata = data.rotation(alpha=45,beta=45,gamma=45, invert=True)
     APPLICATION:
 
         """
 
         unit = kwargs.get('unit')
-        alpha = kwargs.get('alpha')
-        beta = kwargs.get('beta')
         keys =  kwargs.get('keys')
 
+        ang_fac = 1.
         if unit == 'gon':
-            ang_fac = 400./360.
+            ang_fac = 360./400.
         elif unit == 'rad':
-            ang_fac = np.pi/180.
-        else:
-            ang_fac = 1.
-        if not alpha:
-            alpha = 0.
-        if not beta:
-            beta = 0.
+            ang_fac = 180./np.pi
         if not keys:
             keys = ['x','y','z']
 
@@ -5306,40 +5429,42 @@ CALLED BY:
 
         logger.info('rotation: Applying rotation matrix.')
         data = self.copy()
+        # contruct vector
+        x = data._get_column(keys[0]).astype(float)
+        y = data._get_column(keys[1]).astype(float)
+        z = data._get_column(keys[2]).astype(float)
+        column_vector = np.array([x, y, z])
+        # Transpose the column vector
+        v = column_vector.T
+        # converts angles
+        alpha = alpha * ang_fac
+        beta = beta * ang_fac
+        gamma = gamma * ang_fac
 
-        """
-        a[0][0] = cos(p)*cos(b);
-        a[0][1] = -sin(b);
-        a[0][2] = sin(p)*cos(b);
-        a[1][0] = cos(p)*sin(b);
-        a[1][1] = cos(b);
-        a[1][2] = sin(p)*sin(b);
-        a[2][0] = -sin(p);
-        a[2][1] = 0.0;
-        a[2][2] = cos(p);
+        # construct the rotation matrix
+        r = Rotation.from_euler(order, [alpha, beta, gamma], degrees=True)
+        if invert:
+            r = r.inv()
+        if debug:
+            print("stream.rotation: rotation matrix looks like:", r.as_matrix())
 
-        xyz.l = ortho.l*a[0][0]+ortho.m*a[0][1]+ortho.n*a[0][2];
-        xyz.m = ortho.l*a[1][0]+ortho.m*a[1][1]+ortho.n*a[1][2];
-        xyz.n = ortho.l*a[2][0]+ortho.m*a[2][1]+ortho.n*a[2][2];
-        """
-        ind1 = self.KEYLIST.index(keys[0])
-        ind2 = self.KEYLIST.index(keys[1])
-        ind3 = self.KEYLIST.index(keys[2])
+        result_vector = r.apply(v)
+        # Transpose to column representation
+        result_columns = result_vector.T
 
-        if len(data.ndarray[0]) > 0:
-            if len(data.ndarray[ind1]) > 0 and len(data.ndarray[ind2]) > 0 and len(data.ndarray[ind3]) > 0:
-                ra = np.pi*alpha/(180.*ang_fac)
-                rb = np.pi*beta/(180.*ang_fac)
-                xar = data.ndarray[ind1].astype(float)*np.cos(rb)*np.cos(ra)-data.ndarray[ind2].astype(float)*np.sin(ra)+data.ndarray[ind3].astype(float)*np.sin(rb)*np.cos(ra)
+        # add rotated vector back into data set
+        data._put_column(result_columns[0],keys[0])
+        data._put_column(result_columns[1],keys[1])
+        data._put_column(result_columns[2],keys[2])
 
-                yar = data.ndarray[ind1].astype(float)*np.cos(rb)*np.sin(ra)+data.ndarray[ind2].astype(float)*np.cos(ra)+data.ndarray[ind3].astype(float)*np.sin(rb)*np.sin(ra)
-
-                zar = -data.ndarray[ind1].astype(float)*np.sin(rb)+data.ndarray[ind3].astype(float)*np.cos(rb)
-
-                data.ndarray[ind1] = xar
-                data.ndarray[ind2] = yar
-                data.ndarray[ind3] = zar
-
+        # Add a note to DataComments
+        datacomm = data.header.get('DataComments','')
+        fill = ''
+        if datacomm:
+            fill = ", "
+        rotation_input = "rotation (alpha:{} beta:{} gamma:{}) applied in rotation_order {}".format(alpha,beta,gamma,order)
+        datacomm = "{}{}{}".format(datacomm,fill,rotation_input)
+        data.header['DataComments'] = datacomm
         logger.info('rotation: Finished reorientation.')
 
         return data
@@ -8264,7 +8389,7 @@ if __name__ == '__main__':
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _select_keys")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
-                alpha, beta = trimstream.determine_rotationangles()
+                alpha, beta, gamma = trimstream.determine_rotationangles()
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['determine_rotationangles'] = (
                     "Version: {}, determine_rotationangles: {}".format(magpyversion, (te - ts).total_seconds()))

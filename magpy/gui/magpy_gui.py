@@ -114,12 +114,17 @@ Major methods:              major_method
 |  MainFrame     | file_on_quit  |     2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | db_on_connect  |    2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | db_on_init  |       2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | memory_select |     2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | options_init |      2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | options_di   |      2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_about  |       2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
 |  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | a_onDerivativeButton | 2.0.0  |          | level 2    |               |        |   |
+|  MainFrame     | a_onDeltaFButton  | 2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | a_onRotationButton | 2.0.0  |            | level 2    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
@@ -130,7 +135,6 @@ Major methods:              major_method
 |             |    |  2.0.0  |               |            |               |        |   |
 |             |    |  2.0.0  |               |            |               |        |   |
 
-db_on_init
 
 runtime test:
 - : not tested
@@ -1155,7 +1159,7 @@ class MainFrame(wx.Frame):
         # DI analysis
         analysisdict['baselinedirect'] = False
         content = {}
-        content['dipathlist'] = [basepath]
+        content['dipathlist'] = {}
         content['divariopath'] = os.path.join(basepath, '*')
         content['discalarpath'] = os.path.join(basepath, '*')
         content['diexpD'] = 0.0
@@ -1259,7 +1263,7 @@ class MainFrame(wx.Frame):
         webservices['usgs'] = usgsws
         webservices['imws'] = imws
         analysisdict['webservices'] = webservices
-        analysisdict['defaultwebservice'] = 'conrad'
+        analysisdict['defaultwebservice'] = 'imws'
 
         return guidict, analysisdict
 
@@ -1497,8 +1501,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onMetaStationButton, self.menu_p.met_page.MetaStationButton)
         #        Analysis Page
         # --------------------------
-        self.Bind(wx.EVT_BUTTON, self.onDerivativeButton, self.menu_p.ana_page.derivativeButton)
-        self.Bind(wx.EVT_BUTTON, self.onRotationButton, self.menu_p.ana_page.rotationButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onDerivativeButton, self.menu_p.ana_page.derivativeButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onRotationButton, self.menu_p.ana_page.rotationButton)
         self.Bind(wx.EVT_BUTTON, self.onFitButton, self.menu_p.ana_page.fitButton)
         self.Bind(wx.EVT_BUTTON, self.onMeanButton, self.menu_p.ana_page.meanButton)
         self.Bind(wx.EVT_BUTTON, self.onMaxButton, self.menu_p.ana_page.maxButton)
@@ -1510,7 +1514,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onResampleButton, self.menu_p.ana_page.resampleButton)
         self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
-        self.Bind(wx.EVT_BUTTON, self.onDeltafButton, self.menu_p.ana_page.deltafButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onDeltafButton, self.menu_p.ana_page.deltafButton)
         self.Bind(wx.EVT_BUTTON, self.onCalcfButton, self.menu_p.ana_page.calcfButton)
         self.Bind(wx.EVT_BUTTON, self.onPowerButton, self.menu_p.ana_page.powerButton)
         self.Bind(wx.EVT_BUTTON, self.onSpectrumButton, self.menu_p.ana_page.spectrumButton)
@@ -2109,27 +2113,28 @@ class MainFrame(wx.Frame):
             read stream, extract columns with values and display up to three of them by default
             executes guiPlot then
         """
-        debug = True
-        # Get current plot parameters
-        if debug:
-            print ("plotdict BEFORE _set_plot_parameters", self.plotdict)
-        self.plotdict[streamid] = self._set_plot_parameter()
-        if debug:
-            print ("plotdict AFTER _set_plot_parameters", self.plotdict)
-        # Init Controls
-        self._activate_controls(streamid)
+        debug = False
+        if streamid:
+            # Get current plot parameters
+            if debug:
+                print ("plotdict BEFORE _set_plot_parameters", self.plotdict)
+            self.plotdict[streamid] = self._set_plot_parameter()
+            if debug:
+                print ("plotdict AFTER _set_plot_parameters", self.plotdict)
+            # Init Controls
+            self._activate_controls(streamid)
 
-        # Override initial controls: Set setting (like keylist, basic plot options and basevalue selection)
-        self.plotdict[streamid] = self._update_plot(streamid)
+            # Override initial controls: Set setting (like keylist, basic plot options and basevalue selection)
+            self.plotdict[streamid] = self._update_plot(streamid)
 
-        self.menu_p.rep_page.logMsg('- keys: %s' % (', '.join(self.plotdict.get(streamid).get('shownkeys'))))
+            self.menu_p.rep_page.logMsg('- keys: %s' % (', '.join(self.plotdict.get(streamid).get('shownkeys'))))
 
-        if debug:
-            print ("plotdict AFTER _update_plot", self.plotdict)
-        #if not restore:
-        #    self.streamkeylist.append(keylist)
-        #    self.plotoptlist.append(self.plotopt)
-        self._do_plot([streamid])
+            if debug:
+                print ("plotdict AFTER _update_plot", self.plotdict)
+            #if not restore:
+            #    self.streamkeylist.append(keylist)
+            #    self.plotoptlist.append(self.plotopt)
+            self._do_plot([streamid])
 
 
 
@@ -3050,13 +3055,10 @@ class MainFrame(wx.Frame):
 
         # get the di path from analysisdict
         dstation = self.analysisdict.get('defaultstation')
-        print (dstation)
         stationdict = self.analysisdict.get('stations')
-        print (stationdict)
         diparameters = stationdict.get(dstation)
-        print (diparameters)
         dipath = diparameters.get('didatapath')
-        print (dipath)
+        dirname = self.guidict.get('dirname')
 
         if os.path.isfile(dipath):
             dipath = os.path.split(dipath)[0]
@@ -3066,9 +3068,8 @@ class MainFrame(wx.Frame):
         self.dilayout['double'] = diparameters.get('double')
         self.dilayout['order'] = diparameters.get('order').split(',')
         cdate = pydate2wxdate(datetime.now(timezone.utc).replace(tzinfo=None))
-        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
         # didict contains already loaded data sets for this observatory code
-        dlg = InputSheetDialog(None, title='Add DI data', path=dipath, diparameters=diparameters, cdate=cdate, db=db)
+        dlg = InputSheetDialog(None, title='Add DI data', path=dipath, distation=dstation, diparameters=diparameters, cdate=cdate, datapath=dirname)
         if dlg.ShowModal() == wx.ID_OK:
             pass
         dlg.Destroy()
@@ -3212,14 +3213,19 @@ class MainFrame(wx.Frame):
             self.analysisdict['baselinedirect'] = dlg.baselinedirectCheckBox.GetValue()
 
             # get stationlist - if defaultstation is not in stationlist then create station content
-            stationdict = self.analysisdict.get('stations')
+            stationid = self.analysisdict.get('defaultstation','')
+            if stationid:
+                stationid = stationid.upper()
+                self.analysisdict['defaultstation'] = stationid
+
+            stationdict = self.analysisdict.get('stations',{})
             stationlist = [el for el in stationdict]
             newstationdict = {}
-            if not self.analysisdict['defaultstation'] in stationlist:
+            if not stationid in stationlist:
                 oldstationdict = stationdict.get(stationlist[0])
                 for el in oldstationdict:
                     newstationdict[el] = oldstationdict[el]
-                stationdict[self.analysisdict.get('defaultstation').upper()] = newstationdict
+                stationdict[stationid] = newstationdict
 
             save_dict(self.guidict, path=self.guicfg)            # stored as config
             save_dict(self.analysisdict, path=self.analysiscfg) # stored as config
@@ -3402,110 +3408,26 @@ class MainFrame(wx.Frame):
         pass
 
 
-    @deprecated("Apperently not used any more")
-    def onWebServiceParameter(self,event):
+    @deprecated("Restore is not used any more as any significant change will create a new memory input")
+    def onRestoreData(self,event):
         """
         DESCRIPTION
-            open dialog to modify webservices
+            Restore originally loaded data.
         """
-        saveoptions = False
-        ok = False
-        ws = self.analysisdict.get('webservices',{})
-
-        dlg = ParameterDictDialog(None, title="Review Webserive analysis parameter", dictionary=ws, preselect=['conrad'])
-        if dlg.ShowModal() == wx.ID_OK:
-            ok = True
-
-        dlg.Destroy()
-
-    @deprecated("To be removed - _update_plot")
-    def UpdatePlotCharacteristics(self, stream):
         """
-        DESCRIPTION
-            Checks and activates plot options, checks for correct lengths of all list options
-
-            very similar to _initial_plot
+        self.flaglist = []
+        if not len(self.stream.ndarray[0]) > 0:
+            self.DeactivateAllControls()
+            self.changeStatusbar("No data available")
+            return False
+        self.plotstream = self.streamlist[self.currentstreamindex].copy()
+        self.plotstream.header = self.headerlist[self.currentstreamindex]
+        self.menu_p.rep_page.logMsg('Original data restored...')
+        self.OnInitialPlot(self.plotstream, restore=True)
         """
+        pass
 
-        # Some general Checks on Stream
-        # ##############################
-        # 1. Preslect first nine keys and set up default options
-        keylist = []
-        keylist = stream._get_key_headers(limit=9)
-        # TODO: eventually remove keys with high percentage of nans
-        #for key in keylist:
-        #    ar = [eval('elem.'+key) for elem in stream if not isnan(eval('elem.'+key))]
-        #    div = float(len(ar))/float(len(stream))*100.0
-        #    if div <= 5.:
-        #        keylist.remove(key)
-        keylist = [elem for elem in keylist if elem in DataStream().NUMKEYLIST]
 
-        # The following will be overwritten by ActivateControls
-        self.symbols = ['-'] * len(keylist)
-        self.plotopt['symbols'] =  [['-'] * len(keylist)]
-        self.plotopt['colors'] = [self.colors[:len(keylist)]]
-        self.plotopt['title'] = stream.header.get('StationID')
-
-        try:
-            tmin,tmax = stream._find_t_limits()
-            diff = (tmax.date()-tmin.date()).days
-            if diff < 5 and not diff == 0:
-                self.plotopt['title'] = "{}: {} to {}".format(stream.header.get('StationID'),tmin.date(),tmax.date())
-            elif diff == 0:
-                self.plotopt['title'] = "{}: {}".format(stream.header.get('StationID'),tmin.date())
-        except:
-            pass
-
-        self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
-        self.menu_p.str_page.dailyMeansButton.Disable()
-
-        # 2. If stream too long then don't allow scatter plots -- too slowly
-        if stream.length()[0] < 2000:
-            self.menu_p.str_page.symbolRadioBox.Enable()
-        else:
-            self.menu_p.str_page.symbolRadioBox.Disable()
-
-        # 3. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
-        if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
-            self.menu_p.str_page.symbolRadioBox.Enable()
-            self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
-            self.shownkeylist = keylist
-            if len(stream.ndarray[DataStream().KEYLIST.index('x')]) > 0:
-                keylist = ['x','y','z','dx','dy','dz']
-                self.plotopt['padding'] = [[0,0,0,5,0.05,5]]
-                #keylist = ['x','y','z','dx','dy','dz','df']
-                #self.plotopt['padding'] = [[0,0,0,5,0.05,5,1]]
-            else:
-                keylist = ['dx','dy','dz']
-                self.plotopt['padding'] = [[5,0.05,5]]
-            self.symbols = ['o'] * len(keylist)
-            self.plotopt['symbols'] =  [['o'] * len(keylist)]
-            self.plotopt['colors'] = [self.colorlist[:len(keylist)]]
-            # enable daily average button
-            self.menu_p.str_page.dailyMeansButton.Enable()
-
-        # 4. If K values are shown: preselect bar chart
-        if stream.header.get('DataFormat') == 'MagPyK' or stream.header.get('DataType','').startswith('MagPyK') or ('var1' in keylist and stream.header.get('col-var1','').startswith('K')):
-            #print ("Found K values - apply self.plotopt")
-            self.plotopt['specialdict']=[{'var1':[0,9]}]
-            pos = keylist.index('var1')
-            self.plotopt['symbols'][pos] = 'z'
-            self.plotopt['bartrange'] = 0.06
-            self.plotopt['opacity'] = 1.0
-
-        self.shownkeylist = keylist
-
-        # 5. Baseline correction if Object contained in stream
-        #if stream.header.get('DataAbsFunctionObject'):
-        #    self.menu_p.str_page.applyBCButton.Enable()
-        #else:
-        #    self.menu_p.str_page.applyBCButton.Disable()
-
-        pads = self.plotopt.get('padding',None)
-        if not pads or not len(pads[0]) == len(keylist):
-            self.plotopt['padding']= [[0] * len(keylist)]
-
-        return keylist
 
 
     def default_file_dialog_options(self):
@@ -3521,135 +3443,6 @@ class MainFrame(wx.Frame):
         default_dir = self.magpystate.get('currentpath')
         return dict(message='Choose a file', defaultDir=default_dir,
                     wildcard='*.*')
-
-    @deprecated("Aux file not used any more")
-    def askUserForFilename(self, **dialogOptions):
-        dialog = wx.FileDialog(self, **dialogOptions)
-        if dialog.ShowModal() == wx.ID_OK:
-            user_provided_filename = True
-            self.filename = dialog.GetFilename()
-            self.guidict['dirname'] = dialog.GetDirectory()
-        else:
-            user_provided_filename = False
-        dialog.Destroy()
-        return user_provided_filename
-
-
-    @deprecated("To be replaced")
-    def OnInitialPlot(self, stream, restore = False):
-        """
-        DEFINITION:
-            read stream, extract columns with values and display up to three of them by default
-            executes guiPlot then
-        """
-        self.changeStatusbar("Plotting...")
-
-        self._set_plot_parameter()
-        # Init Controls
-        self.ActivateControls(self.plotstream)
-
-        if self.plotstream.header.get('DataFunctionObject',False):
-            #print ("HERE - found functions:", self.plotstream.header.get('DataFunctionObject') )
-            self.plotopt['function'] = self.plotstream.header.get('DataFunctionObject')
-
-        # Override initial controls: Set setting (like keylist, basic plot options and basevalue selection)
-        keylist = self.UpdatePlotCharacteristics(self.plotstream)
-
-        self.menu_p.rep_page.logMsg('- keys: %s' % (', '.join(keylist)))
-        #if len(stream) > self.resolution:
-        #    self.menu_p.rep_page.logMsg('- warning: resolution of plot reduced by a factor of %i' % (int(len(stream)/self.resolution)))
-        # Eventually change symbol as matplotlib reports errors for line plot with many points
-        if stream.length()[0] > 200000:
-            self.plotopt['symbols']= ['.'] * len(keylist)
-
-        if not restore:
-            self.streamkeylist.append(keylist)
-            self.plotoptlist.append(self.plotopt)
-
-        self.plot_p.guiPlot([self.plotstream],[keylist], plotopt=self.plotopt)
-        boxes = ['x','y','z','f']
-        for box in boxes:
-            checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
-            if box in self.shownkeylist:
-                checkbox.Enable()
-                colname = self.plotstream.header.get('col-'+box, '')
-                if not colname == '':
-                    checkbox.SetLabel(colname)
-            else:
-                checkbox.SetValue(False)
-        # Connect callback to the initial plot
-        for idx, ax in enumerate(self.plot_p.axlist):
-            ax.callbacks.connect('xlim_changed', self._update_statistics)
-            ax.callbacks.connect('ylim_changed', self._update_statistics)
-        self._update_statistics()
-        self.changeStatusbar("Ready")
-
-
-    @deprecated("Replaced by _do_plot")
-    def OnPlot(self, stream, keylist, **kwargs):
-        """
-        DEFINITION:
-            read stream and display
-        """
-        #self.plotopt = {'bgcolor':'green'}
-
-        self.changeStatusbar("Plotting...")
-        if stream.length()[0] > 200000:
-            self.plotopt['symbollist']= ['.'] * len(keylist)
-
-        # Update Delta F if plotted  -- this should move to BC corr
-        # or any other method it is necessary
-        #if 'df' in keylist:
-        #    stream = stream.delta_f()
-
-        self.plot_p.guiPlot([stream],[keylist],plotopt=self.plotopt)
-        #self.plot_p.guiPlot(stream,keylist,**kwargs)
-        if stream.length()[0] > 1 and len(keylist) > 0:
-            self.ExportData.Enable(True)
-        boxes = ['x','y','z','f']
-        for box in boxes:
-            checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
-            if box in self.shownkeylist:
-                checkbox.Enable()
-                colname = self.plotstream.header.get('col-'+box, '')
-                if not colname == '':
-                    checkbox.SetLabel(colname)
-            else:
-                checkbox.SetValue(False)
-        # Connect callback to the new plot
-        for idx, ax in enumerate(self.plot_p.axlist):
-            ax.callbacks.connect('xlim_changed', self._update_statistics)
-            ax.callbacks.connect('ylim_changed', self._update_statistics)
-        self._update_statistics()
-        self.changeStatusbar("Ready")
-
-
-    @deprecated("To be replaced")
-    def OnMultiPlot(self, streamlst, keylst, padding=None, specialdict={},errorbars=None,
-        colorlist=None,symbollist=None,annotate=None,stormphases=None,
-        t_stormphases={},includeid=False,function=None,plottype='discontinuous',
-        labels=False,resolution=None, confinex=False, plotopt=None):
-        """
-        DEFINITION:
-            read stream and display
-        """
-        self.changeStatusbar("Plotting...")
-
-        """
-        - labels:       [ (str) ] List of labels for each stream and variable, e.g.:
-                        [ ['FGE'], ['POS-1'], ['ENV-T1', 'ENV-T2'] ]
-        - padding:      (float/list(list)) List of lists containing paddings for each
-                        respective variable, e.g:
-                        [ [5], [5], [0.1, 0.2] ]
-                        (Enter padding = 5 for all plots to use 5 as padding.)
-        - specialdict:  (list(dict)) Same as plot variable, e.g:
-                        [ {'z': [100,150]}, {}, {'t1':[7,8]} ]
-        """
-        #print ("ConfineX:", confinex, symbollist)
-        self.plot_p.guiPlot(streamlst,keylst)
-        #if stream.length()[0] > 1 and len(keylist) > 0:
-        #    self.ExportData.Enable(True)
-        self.changeStatusbar("Ready")
 
     # ################
     # Top menu methods:
@@ -3692,81 +3485,124 @@ class MainFrame(wx.Frame):
         return dm, meanh, meanf
 
 
-    @deprecated("replaced by db_on_connect")
-    def OnDBConnect(self, event):
+    # ##################################################################################################################
+    # ####    Meta data Panel                                  #########################################################
+    # ##################################################################################################################
+
+
+
+
+    # ##################################################################################################################
+    # ####    Analysis Panel                                   #########################################################
+    # ##################################################################################################################
+
+
+    def a_onDerivativeButton(self, event):
         """
-        Provide access for local network:
-        Open your /etc/mysql/my.cnf file in your editor.
-        scroll down to the entry:
-        bind-address = 127.0.0.1
-        and you can either hash that so it binds to all ip addresses assigned
-        #bind-address = 127.0.0.1
-        or you can specify an ipaddress to bind to. If your server is using dhcp then just hash it out.
-        Then you'll need to create a user that is allowed to connect to your database of choice from the host/ip your connecting from.
-        Login to your mysql console:
-        milkchunk@milkchunk-desktop:~$ mysql -uroot -p
-        GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass' WITH GRANT OPTION;
-        You change out the 'user' to whatever user your wanting to use and the '%' is a hostname wildcard. Meaning that you can connect from any hostname with it. You can change it to either specify a hostname or just use the wildcard.
-        Then issue the following:
-        FLUSH PRIVILEGES;
-        Be sure to restart your mysql (because of the config file editing):
-        /etc/init.d/mysql restart
+        DESCRIPTION
+            Calculate and display the derivative
         """
-        dlg = DatabaseConnectDialog(None, title='MySQL Database: Connect to')
-        dlg.hostTextCtrl.SetValue(self.options.get('host',''))
-        dlg.userTextCtrl.SetValue(self.options.get('user',''))
-        dlg.passwdTextCtrl.SetValue(self.options.get('passwd',''))
-        if self.db == None or self.db == 'None' or not self.db:
-            dlg.dbTextCtrl.SetValue('None')
-        else:
-            dlg.dbTextCtrl.SetValue(self.options.get('dbname',''))
-        if dlg.ShowModal() == wx.ID_OK:
-            self.options['host'] = dlg.hostTextCtrl.GetValue()
-            self.options['user'] = dlg.userTextCtrl.GetValue()
-            self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
-            self.options['dbname'] = dlg.dbTextCtrl.GetValue()
-            self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
-        dlg.Destroy()
+        self.changeStatusbar("Calculating derivative ...")
+        stream = self.datadict.get(self.active_id).get('dataset')
+        keys = self.plotdict.get(self.active_id).get('shownkeys')
+
+        if len(stream) > 0:
+            plotstream = stream.copy()
+            self.menu_p.rep_page.logMsg("- calculating derivative")
+            plotstream = plotstream.derivative(keys=keys,put2keys=keys)
+            # change streamid/sensorid to express derivative calculation
+            plotstream.header['SensorID'] = "{}-{}".format("derivative",plotstream.header.get('SensorID'))
+            self.menu_p.rep_page.logMsg('- derivative calculated')
+            # Create a new stream id after calculating derivative and plot it
+            streamid = self._initial_read(plotstream)
+            self._initial_plot(streamid)
+
+        self.changeStatusbar("Ready")
 
 
+    def a_onRotationButton(self, event):
+        """
+        DESCRIPTION
+            Method for offset correction
+            Will take header alpha and beta as presets for dialog
+            If a rotation is applied then the data header "DataComments" will contain
+            some information about is
+        CALLS
+            stream.extract_headerlist
+        """
+        apply = True
+        stream = self.datadict.get(self.active_id).get('dataset')
+        headalpha = stream.extract_headerlist('DataRotationAlpha')
+        headbeta = stream.extract_headerlist('DataRotationBeta')
+        headgamma = stream.extract_headerlist('DataRotationGamma')
+        print ("Existing alpha,beta,gamma", headalpha,headbeta,headgamma )
+        comment = stream.header.get('DataComments','')
+        print ("Existing comment", comment)
+        count = comment.count("rotation")
+        if count > 0:
+            # some rotation has already been applied to this data set
+            message = "Some rotation has been applied already"
+            mes = [el for el in comment.split(",") if el.find("rotation") >= 0]
+            if len(mes) > 0:
+                message = mes[-1]
+            message = "{}.\nApply an additional rotation?".format(message)
+            mdlg = wx.MessageDialog(None, message, "Found previous rotation...", wx.YES_NO | wx.NO_DEFAULT)
+            result = mdlg.ShowModal()
+            if result == wx.ID_YES:
+                pass
+            else:
+                apply = False
+            mdlg.Destroy()
+
+        self.changeStatusbar("Rotating data ...")
+        if len(stream) > 0 and apply:
+            plotstream = stream.copy()
+            alphat, betat, gammat = 0.0, 0.0, 0.0
+            alpha, beta, gamma = 0.0, 0.0, 0.0
+            invert = False
+            dlg = AnalysisRotationDialog(None, title='Analysis: rotate data',orgalpha=headalpha, orgbeta=headbeta, orggamma=headgamma)
+            if dlg.ShowModal() == wx.ID_OK:
+                alphat = dlg.alphaTextCtrl.GetValue()
+                betat = dlg.betaTextCtrl.GetValue()
+                gammat = dlg.gammaTextCtrl.GetValue()
+                invert = dlg.invertCheckBox.GetValue()
+            dlg.Destroy()
+            if alphat and methods.is_number(alphat):
+                alpha = float(alphat)
+            if betat and methods.is_number(betat):
+                beta = float(betat)
+            if gammat and methods.is_number(gammat):
+                gamma = float(gammat)
+
+            # applying rotation
+            plotstream = plotstream.rotation(alpha=alpha, beta=beta, gamma=gamma, invert=invert)
+            plotstream.header['SensorID'] = "{}{}-{}".format("rotation", count, plotstream.header.get('SensorID'))
+            inverttext = ''
+            if invert:
+                inverttext = 'inverted '
+            self.menu_p.rep_page.logMsg('- {}stream rotation by alpha={}, beta={} and gamma={}'.format(inverttext,alphat,betat,gammat))
+            # Create a new stream id after calculating derivative and plot it
+            streamid = self._initial_read(plotstream)
+            self._initial_plot(streamid)
+        self.changeStatusbar("Ready")
 
 
-    """
-    TODO UNUSED?
-    def on_save(self, event):
-        cdir = self.magpystate.get('currentpath')
-        cfile = self.magpystate.get('filename')
-        textfile = open(os.path.join(cdir, cfile), 'w')
-        textfile.write(self.control.GetValue())
-        textfile.close()
+    def a_onDeltafButton(self, event):
+        """
+        DESCRIPTION
+             Calculates delta F values
+        """
+        self.changeStatusbar("Delta F ...")
+        stream = self.datadict.get(self.active_id).get('dataset')
 
-    def on_save_as(self, event):
-        if self.askUserForFilename(defaultFile=self.filename, style=wx.SAVE,
-                                   **self.default_file_dialog_options()):
-            self.on_save(event)
-    """
+        if len(stream) > 0:
+            plotstream = stream.copy()
+            plotstream = plotstream.delta_f()
+            self.menu_p.rep_page.logMsg('- determined delta F between x,y,z and f')
+            streamid = self._initial_read(plotstream)
+            self._initial_plot(streamid)
+        self.changeStatusbar("Ready")
 
-    @deprecated("Not used any more")
-    def onOpenAuxButton(self, event):
-        if self.askUserForFilename(style=wx.OPEN,
-                                   **self.default_file_dialog_options()):
-            textfile = open(os.path.join(self.last_dir, self.filename), 'r')
-            self.menu_p.gen_page.AuxDataTextCtrl.SetValue(textfile.read())
-            textfile.close()
-
-
-    # ################
-    # page methods:
-
-    # pages: stream (plot, coordinate), analysis (smooth, filter, fit, baseline etc),
-    #          specials(spectrum, power), absolutes (), report (log), monitor (access web socket)
-
-
-    # ------------------------------------------------------------------------------------------
-    # ################
-    # Analysis functions
-    # ################
-    # ------------------------------------------------------------------------------------------
 
     def onFilterButton(self, event):
         """
@@ -3775,8 +3611,6 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Filtering...")
 
         # open dialog to modify filter parameters
-        #keystr = self.menu_p.met_page.keysTextCtrl.GetValue().encode('ascii','ignore')
-        #keys = keystr.split(',')
         sr = self.plotstream.samplingrate()
 
         filter_type = 'gaussian'
@@ -3819,23 +3653,6 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def onDerivativeButton(self, event):
-        """
-        Method for derivative
-        """
-        self.changeStatusbar("Calculating derivative ...")
-        keys = self.shownkeylist
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-
-        self.menu_p.rep_page.logMsg("- calculating derivative")
-        self.plotstream = self.plotstream.differentiate(keys=keys,put2keys=keys)
-
-        self.menu_p.rep_page.logMsg('- derivative calculated')
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
 
     def onFitButton(self, event):
         """
@@ -4015,34 +3832,6 @@ class MainFrame(wx.Frame):
 
         self.changeStatusbar("Ready")
 
-    def onRotationButton(self, event):
-        """
-        Method for offset correction
-        """
-        self.changeStatusbar("Rotating data ...")
-
-        if len(self.plotstream.ndarray[0]) > 0:
-            # XXX Eventually SetValues from init
-            dlg = AnalysisRotationDialog(None, title='Analysis: rotate data')
-            if dlg.ShowModal() == wx.ID_OK:
-                alphat = dlg.alphaTextCtrl.GetValue()
-                betat = dlg.betaTextCtrl.GetValue()
-                try:
-                    alpha = float(alphat)
-                except:
-                    alpha = 0.0
-                try:
-                    beta = float(betat)
-                except:
-                    beta = 0.0
-
-                self.plotstream = self.plotstream.rotation(alpha=alpha, beta=beta)
-                self.menu_p.rep_page.logMsg('- rotated stream by alpha = %s and beta = %s' % (alphat,betat))
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
 
     def onMeanButton(self, event):
         """
@@ -4303,23 +4092,6 @@ class MainFrame(wx.Frame):
         else:
             self.changeStatusbar("Ready")
 
-    def onDeltafButton(self, event):
-        """
-        DESCRIPTION
-             Calculates delta F values
-        """
-        self.changeStatusbar("Delta F ...")
-
-        self.plotstream = self.plotstream.delta_f()
-        #self.streamlist[self.currentstreamindex].delta_f()
-        #print (self.plotstream._get_key_headers())
-        if 'df' in self.plotstream._get_key_headers() and not 'df' in self.shownkeylist:
-            self.shownkeylist.append('df')
-        self.menu_p.rep_page.logMsg('- determined delta F between x,y,z and f')
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
 
     def onCalcfButton(self, event):
         """
@@ -4354,6 +4126,7 @@ class MainFrame(wx.Frame):
             self.ActivateControls(self.plotstream)
             self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
+
 
     def onPowerButton(self, event):
         """
@@ -4750,26 +4523,7 @@ class MainFrame(wx.Frame):
                 self.ActivateControls(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist)
 
-    def onRestoreData(self,event):
-        """
-        Restore originally loaded data
-        """
-        self.flaglist = []
 
-        if not len(self.stream.ndarray[0]) > 0:
-            self.DeactivateAllControls()
-            self.changeStatusbar("No data available")
-            return False
-        #print ("Restoring (works only for latest stream):", self.currentstreamindex, len(self.streamlist), self.stream.length()[0], self.streamlist[self.currentstreamindex].length()[0])
-        #print ("Header", self.headerlist)
-        self.plotstream = self.streamlist[self.currentstreamindex].copy()
-        #self.plotstream = self.stream.copy()
-        self.plotstream.header = self.headerlist[self.currentstreamindex]
-
-        self.menu_p.rep_page.logMsg('Original data restored...')
-        #self.InitPlotParameter()
-        #self.ActivateControls(self.stream)
-        self.OnInitialPlot(self.plotstream, restore=True)
 
     def onDailyMeansButton(self,event):
         """
@@ -7658,6 +7412,304 @@ class MainFrame(wx.Frame):
         #locale.setlocale(locale.LC_TIME, old_loc)
         self.changeStatusbar("Check data finished - Ready")
 
+
+
+    @deprecated("Apperently not used any more")
+    def onWebServiceParameter(self,event):
+        """
+        DESCRIPTION
+            open dialog to modify webservices
+        """
+        saveoptions = False
+        ok = False
+        ws = self.analysisdict.get('webservices',{})
+
+        dlg = ParameterDictDialog(None, title="Review Webserive analysis parameter", dictionary=ws, preselect=['conrad'])
+        if dlg.ShowModal() == wx.ID_OK:
+            ok = True
+
+        dlg.Destroy()
+
+    @deprecated("To be removed - _update_plot")
+    def UpdatePlotCharacteristics(self, stream):
+        """
+        DESCRIPTION
+            Checks and activates plot options, checks for correct lengths of all list options
+
+            very similar to _initial_plot
+        """
+
+        # Some general Checks on Stream
+        # ##############################
+        # 1. Preslect first nine keys and set up default options
+        keylist = []
+        keylist = stream._get_key_headers(limit=9)
+        # TODO: eventually remove keys with high percentage of nans
+        #for key in keylist:
+        #    ar = [eval('elem.'+key) for elem in stream if not isnan(eval('elem.'+key))]
+        #    div = float(len(ar))/float(len(stream))*100.0
+        #    if div <= 5.:
+        #        keylist.remove(key)
+        keylist = [elem for elem in keylist if elem in DataStream().NUMKEYLIST]
+
+        # The following will be overwritten by ActivateControls
+        self.symbols = ['-'] * len(keylist)
+        self.plotopt['symbols'] =  [['-'] * len(keylist)]
+        self.plotopt['colors'] = [self.colors[:len(keylist)]]
+        self.plotopt['title'] = stream.header.get('StationID')
+
+        try:
+            tmin,tmax = stream._find_t_limits()
+            diff = (tmax.date()-tmin.date()).days
+            if diff < 5 and not diff == 0:
+                self.plotopt['title'] = "{}: {} to {}".format(stream.header.get('StationID'),tmin.date(),tmax.date())
+            elif diff == 0:
+                self.plotopt['title'] = "{}: {}".format(stream.header.get('StationID'),tmin.date())
+        except:
+            pass
+
+        self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
+        self.menu_p.str_page.dailyMeansButton.Disable()
+
+        # 2. If stream too long then don't allow scatter plots -- too slowly
+        if stream.length()[0] < 2000:
+            self.menu_p.str_page.symbolRadioBox.Enable()
+        else:
+            self.menu_p.str_page.symbolRadioBox.Disable()
+
+        # 3. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
+        if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
+            self.menu_p.str_page.symbolRadioBox.Enable()
+            self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
+            self.shownkeylist = keylist
+            if len(stream.ndarray[DataStream().KEYLIST.index('x')]) > 0:
+                keylist = ['x','y','z','dx','dy','dz']
+                self.plotopt['padding'] = [[0,0,0,5,0.05,5]]
+                #keylist = ['x','y','z','dx','dy','dz','df']
+                #self.plotopt['padding'] = [[0,0,0,5,0.05,5,1]]
+            else:
+                keylist = ['dx','dy','dz']
+                self.plotopt['padding'] = [[5,0.05,5]]
+            self.symbols = ['o'] * len(keylist)
+            self.plotopt['symbols'] =  [['o'] * len(keylist)]
+            self.plotopt['colors'] = [self.colorlist[:len(keylist)]]
+            # enable daily average button
+            self.menu_p.str_page.dailyMeansButton.Enable()
+
+        # 4. If K values are shown: preselect bar chart
+        if stream.header.get('DataFormat') == 'MagPyK' or stream.header.get('DataType','').startswith('MagPyK') or ('var1' in keylist and stream.header.get('col-var1','').startswith('K')):
+            #print ("Found K values - apply self.plotopt")
+            self.plotopt['specialdict']=[{'var1':[0,9]}]
+            pos = keylist.index('var1')
+            self.plotopt['symbols'][pos] = 'z'
+            self.plotopt['bartrange'] = 0.06
+            self.plotopt['opacity'] = 1.0
+
+        self.shownkeylist = keylist
+
+        # 5. Baseline correction if Object contained in stream
+        #if stream.header.get('DataAbsFunctionObject'):
+        #    self.menu_p.str_page.applyBCButton.Enable()
+        #else:
+        #    self.menu_p.str_page.applyBCButton.Disable()
+
+        pads = self.plotopt.get('padding',None)
+        if not pads or not len(pads[0]) == len(keylist):
+            self.plotopt['padding']= [[0] * len(keylist)]
+
+        return keylist
+
+    @deprecated("Aux file not used any more")
+    def askUserForFilename(self, **dialogOptions):
+        dialog = wx.FileDialog(self, **dialogOptions)
+        if dialog.ShowModal() == wx.ID_OK:
+            user_provided_filename = True
+            self.filename = dialog.GetFilename()
+            self.guidict['dirname'] = dialog.GetDirectory()
+        else:
+            user_provided_filename = False
+        dialog.Destroy()
+        return user_provided_filename
+
+
+    @deprecated("To be replaced")
+    def OnInitialPlot(self, stream, restore = False):
+        """
+        DEFINITION:
+            read stream, extract columns with values and display up to three of them by default
+            executes guiPlot then
+        """
+        self.changeStatusbar("Plotting...")
+
+        self._set_plot_parameter()
+        # Init Controls
+        self.ActivateControls(self.plotstream)
+
+        if self.plotstream.header.get('DataFunctionObject',False):
+            #print ("HERE - found functions:", self.plotstream.header.get('DataFunctionObject') )
+            self.plotopt['function'] = self.plotstream.header.get('DataFunctionObject')
+
+        # Override initial controls: Set setting (like keylist, basic plot options and basevalue selection)
+        keylist = self.UpdatePlotCharacteristics(self.plotstream)
+
+        self.menu_p.rep_page.logMsg('- keys: %s' % (', '.join(keylist)))
+        #if len(stream) > self.resolution:
+        #    self.menu_p.rep_page.logMsg('- warning: resolution of plot reduced by a factor of %i' % (int(len(stream)/self.resolution)))
+        # Eventually change symbol as matplotlib reports errors for line plot with many points
+        if stream.length()[0] > 200000:
+            self.plotopt['symbols']= ['.'] * len(keylist)
+
+        if not restore:
+            self.streamkeylist.append(keylist)
+            self.plotoptlist.append(self.plotopt)
+
+        self.plot_p.guiPlot([self.plotstream],[keylist], plotopt=self.plotopt)
+        boxes = ['x','y','z','f']
+        for box in boxes:
+            checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
+            if box in self.shownkeylist:
+                checkbox.Enable()
+                colname = self.plotstream.header.get('col-'+box, '')
+                if not colname == '':
+                    checkbox.SetLabel(colname)
+            else:
+                checkbox.SetValue(False)
+        # Connect callback to the initial plot
+        for idx, ax in enumerate(self.plot_p.axlist):
+            ax.callbacks.connect('xlim_changed', self._update_statistics)
+            ax.callbacks.connect('ylim_changed', self._update_statistics)
+        self._update_statistics()
+        self.changeStatusbar("Ready")
+
+
+    @deprecated("Replaced by _do_plot")
+    def OnPlot(self, stream, keylist, **kwargs):
+        """
+        DEFINITION:
+            read stream and display
+        """
+        #self.plotopt = {'bgcolor':'green'}
+
+        self.changeStatusbar("Plotting...")
+        if stream.length()[0] > 200000:
+            self.plotopt['symbollist']= ['.'] * len(keylist)
+
+        # Update Delta F if plotted  -- this should move to BC corr
+        # or any other method it is necessary
+        #if 'df' in keylist:
+        #    stream = stream.delta_f()
+
+        self.plot_p.guiPlot([stream],[keylist],plotopt=self.plotopt)
+        #self.plot_p.guiPlot(stream,keylist,**kwargs)
+        if stream.length()[0] > 1 and len(keylist) > 0:
+            self.ExportData.Enable(True)
+        boxes = ['x','y','z','f']
+        for box in boxes:
+            checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
+            if box in self.shownkeylist:
+                checkbox.Enable()
+                colname = self.plotstream.header.get('col-'+box, '')
+                if not colname == '':
+                    checkbox.SetLabel(colname)
+            else:
+                checkbox.SetValue(False)
+        # Connect callback to the new plot
+        for idx, ax in enumerate(self.plot_p.axlist):
+            ax.callbacks.connect('xlim_changed', self._update_statistics)
+            ax.callbacks.connect('ylim_changed', self._update_statistics)
+        self._update_statistics()
+        self.changeStatusbar("Ready")
+
+
+    @deprecated("To be replaced")
+    def OnMultiPlot(self, streamlst, keylst, padding=None, specialdict={},errorbars=None,
+        colorlist=None,symbollist=None,annotate=None,stormphases=None,
+        t_stormphases={},includeid=False,function=None,plottype='discontinuous',
+        labels=False,resolution=None, confinex=False, plotopt=None):
+        """
+        DEFINITION:
+            read stream and display
+        """
+        self.changeStatusbar("Plotting...")
+
+        """
+        - labels:       [ (str) ] List of labels for each stream and variable, e.g.:
+                        [ ['FGE'], ['POS-1'], ['ENV-T1', 'ENV-T2'] ]
+        - padding:      (float/list(list)) List of lists containing paddings for each
+                        respective variable, e.g:
+                        [ [5], [5], [0.1, 0.2] ]
+                        (Enter padding = 5 for all plots to use 5 as padding.)
+        - specialdict:  (list(dict)) Same as plot variable, e.g:
+                        [ {'z': [100,150]}, {}, {'t1':[7,8]} ]
+        """
+        #print ("ConfineX:", confinex, symbollist)
+        self.plot_p.guiPlot(streamlst,keylst)
+        #if stream.length()[0] > 1 and len(keylist) > 0:
+        #    self.ExportData.Enable(True)
+        self.changeStatusbar("Ready")
+
+
+    @deprecated("replaced by db_on_connect")
+    def OnDBConnect(self, event):
+        """
+        Provide access for local network:
+        Open your /etc/mysql/my.cnf file in your editor.
+        scroll down to the entry:
+        bind-address = 127.0.0.1
+        and you can either hash that so it binds to all ip addresses assigned
+        #bind-address = 127.0.0.1
+        or you can specify an ipaddress to bind to. If your server is using dhcp then just hash it out.
+        Then you'll need to create a user that is allowed to connect to your database of choice from the host/ip your connecting from.
+        Login to your mysql console:
+        milkchunk@milkchunk-desktop:~$ mysql -uroot -p
+        GRANT ALL PRIVILEGES ON *.* TO 'user'@'%' IDENTIFIED BY 'some_pass' WITH GRANT OPTION;
+        You change out the 'user' to whatever user your wanting to use and the '%' is a hostname wildcard. Meaning that you can connect from any hostname with it. You can change it to either specify a hostname or just use the wildcard.
+        Then issue the following:
+        FLUSH PRIVILEGES;
+        Be sure to restart your mysql (because of the config file editing):
+        /etc/init.d/mysql restart
+        """
+        dlg = DatabaseConnectDialog(None, title='MySQL Database: Connect to')
+        dlg.hostTextCtrl.SetValue(self.options.get('host',''))
+        dlg.userTextCtrl.SetValue(self.options.get('user',''))
+        dlg.passwdTextCtrl.SetValue(self.options.get('passwd',''))
+        if self.db == None or self.db == 'None' or not self.db:
+            dlg.dbTextCtrl.SetValue('None')
+        else:
+            dlg.dbTextCtrl.SetValue(self.options.get('dbname',''))
+        if dlg.ShowModal() == wx.ID_OK:
+            self.options['host'] = dlg.hostTextCtrl.GetValue()
+            self.options['user'] = dlg.userTextCtrl.GetValue()
+            self.options['passwd'] = dlg.passwdTextCtrl.GetValue()
+            self.options['dbname'] = dlg.dbTextCtrl.GetValue()
+            self._db_connect(self.options.get('host',''), self.options.get('user',''), self.options.get('passwd',''), self.options.get('dbname',''))
+        dlg.Destroy()
+
+
+
+
+    """
+    TODO UNUSED?
+    def on_save(self, event):
+        cdir = self.magpystate.get('currentpath')
+        cfile = self.magpystate.get('filename')
+        textfile = open(os.path.join(cdir, cfile), 'w')
+        textfile.write(self.control.GetValue())
+        textfile.close()
+
+    def on_save_as(self, event):
+        if self.askUserForFilename(defaultFile=self.filename, style=wx.SAVE,
+                                   **self.default_file_dialog_options()):
+            self.on_save(event)
+    """
+
+    @deprecated("Not used any more")
+    def onOpenAuxButton(self, event):
+        if self.askUserForFilename(style=wx.OPEN,
+                                   **self.default_file_dialog_options()):
+            textfile = open(os.path.join(self.last_dir, self.filename), 'r')
+            self.menu_p.gen_page.AuxDataTextCtrl.SetValue(textfile.read())
+            textfile.close()
 
 
 

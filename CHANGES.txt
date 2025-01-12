@@ -24,6 +24,8 @@ Installation instructions can be found on the main download page.
       corrections i.e. treatment of multiple time columns, assignment of correct time columns,
       ESPG coordinate transformation, and a significant speed boost particularly when dealing with different time
       columns.
+    - rotation method: the new method makes use of an Euler rotation. This differs from earlier "yaw" and "pitch"
+      technique, if you used angles other than alpha.
 
 
 2.0.0 new packages:
