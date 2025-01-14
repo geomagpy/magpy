@@ -565,6 +565,123 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
     return fig, plt.gca()
 
 
+def psplot(data = None, keys = None, symbols = None, colors = None, title = None, legend = None, grid = None,
+           patch = None, annotate = False, fill = None, showpatch = None, functions = None, functionfmt = "r-",
+           ylabelposition = None, yscale = None, dateformatter = None, width = 10, height = 4, alpha = 0.5,
+           variables = None, figure = None, separate=True, debug=False):
+    """
+    DESCRIPTION
+        TODO including variables for PSD plot
+    """
+
+    if not keys:
+        keys = ['x']
+    if variables and not keys:
+        keys = variables
+    if not colors:
+        colors = ['gray'] *len(keys)
+    if not yscale:
+        yscale = ['log']
+    if not fill:
+        fill = []
+    if not functions:
+        functions = []
+    if not showpatch:
+        showpatch = False
+    if not legend:
+        legend = {}
+    if not grid:
+        grid = {}
+    if not patch:
+        patch = {}
+
+    titledone = False
+    amount = len(data)
+    # check for available keys - do that only for the primary dataset if not provided
+    if separate:
+        hght = int(height) * len(keys)
+    else:
+        hght = int(height)
+    if not title:
+        title = None
+    if not functionfmt:
+        functionfmt = 'r-'
+    if not figure:
+        fig = plt.figure(figsize=(width, hght))
+    else:
+        fig = figure
+
+    # parameter for separate plots
+    total_pos = 0
+    total_keys = len(keys)
+    annocount = 0
+    yoff = -10
+    axs=[]
+
+    t1 = datetime.now()
+    T = data._get_column('time')
+    t = np.linspace(0,len(T),len(T))
+    sr = data.samplingrate() # in seconds
+    for i, component in enumerate(keys):
+        cdata = data.copy()
+        cdata = cdata._drop_nans(component)
+        comp = cdata._get_column(component)
+        if len(comp) > 0:
+            if not separate:
+                subplot = int("{}1{}".format(1, total_pos + 1))
+            else:
+                subplot = int("{}1{}".format(len(keys), i + 1))
+            ax = plt.subplot(subplot)
+            axs.append(ax)
+            power,freqs = ax.psd(comp, NFFT=len(t), pad_to=len(t), Fs=1./sr,
+                                    detrend='mean', scale_by_freq=True, color=colors[i])
+            plt.xscale("log")
+
+            # Legends
+            # ------------------
+            if legend:
+                    legenddummy = []
+                    if separate:
+                        legenddummy = [dat.header.get('SensorID', '')]
+                    if not isinstance(legend, dict):
+                        legend = {}
+                        if separate:
+                            legend["plotnumber"] = i
+                        else:
+                            legenddummy = [tmpdat.header.get('SensorID', '') for tmpdat in data]
+                            legend["plotnumber"] = len(keys[idx]) - 1
+                    shadow = False
+                    legendtext = legend.get("legendtext", legenddummy)
+                    legendposition = legend.get("legendposition", "best")
+                    legendstyle = legend.get("legendstyle", "shadow")
+                    if legendstyle == 'shadow':
+                        shadow = True
+                    if legend.get("plotnumber", i) == i:
+                        plt.legend(legendtext, loc=legendposition, shadow=shadow)
+            # Plot grid
+            # ------------------
+            if grid:
+                    mygrid = grid
+                    if not isinstance(mygrid, dict):
+                        mygrid = {}
+                    gridvisible = mygrid.get("visible", True)
+                    gridwhich = mygrid.get("which", "major")
+                    gridaxis = mygrid.get("axis", "both")
+                    gridcolor = mygrid.get("color", [0.9, 0.9, 0.9])
+                    plt.grid(visible=gridvisible, which=gridwhich, axis=gridaxis, color=gridcolor)
+
+            # set visibility of x-axis as False
+            if i < len(keys)-1 and separate:
+                plt.xticks(color='w')
+            if i > 0:
+                ax.sharex(axs[0])
+
+    if debug:
+        t4 = datetime.now()
+        print ("TIMING total:", (t4-t1).total_seconds())
+
+    return fig, plt.gca()
+
 
 #####################################################################
 #                                                                   #

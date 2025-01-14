@@ -137,6 +137,8 @@ Major methods:              major_method
 |  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | a_onActivityButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onStatusButton |  2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | r_onSaveLogButton |  2.0.0  |            | level 2    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
@@ -727,6 +729,7 @@ class PlotPanel(scrolled.ScrolledPanel):
 
         self.canvas.draw()
 
+
     def gui_plot(self,streamids, datadict, plotdict, sharey=False):
         """
         DEFINITION:
@@ -838,6 +841,94 @@ class PlotPanel(scrolled.ScrolledPanel):
         flag = stream.ndarray[flagpos]
         self.k = stream.ndarray[firstcol]
 
+        self.canvas.draw()
+
+
+    def power_plot(self, streamid, datadict, plotdict, sharey=False):
+        """
+        DEFINITION:
+            embbed matplotlib figure in canvas
+
+        PARAMETERS:
+            streamids : list of ids to be plotted
+            datadict : all data relevant information
+            plotdict : all visualization parameter
+            sharey : limit shownkeys to a single input to share y axis for multiple diagrams
+        """
+        debug = True
+
+        colors = []
+        symbols = []
+        timecolumn = []
+        errorbars = []
+        yranges = []
+        fill = []
+        padding = []
+        showpatch = []
+        functions = []
+        title = ''
+        legend = {}
+        grid = False
+        patch = {}
+        annotate = False
+        alpha = 0.5
+        ylabelposition = None
+        yscale = None
+        functionfmt = "r-"
+        separate = True
+
+        datacont = datadict.get(streamid)
+        stream = datacont.get('dataset')
+        plotcont = plotdict.get(streamid)
+        keys = plotcont.get('shownkeys')
+        colors = plotcont.get('colors')
+        fill = plotcont.get('fill')
+        title=plotcont.get('title')
+        legend=plotcont.get('legend')
+        grid=plotcont.get('grid')
+        alpha=plotcont.get('alpha')
+        yscale=None
+
+        if sharey and len(keys) > 0:
+            separate = False
+
+        # Declare and register callbacks
+        def on_xlims_change(axes):
+            self.xlimits = axes.get_xlim()
+
+        def on_ylims_change(axes):
+            #print ("updated ylims: ", axes.get_ylim())
+            self.ylimits = axes.get_ylim()
+            self.selplt = self.axlist.index(axes)
+
+        self.figure.clear()
+        try:
+            self.axes.clear()
+        except:
+            pass
+
+        self.figure, self.axes = mp.psplot(data=stream, keys=keys, colors=colors, title=title, legend=legend, grid=grid,
+              fill=fill, ylabelposition=ylabelposition, yscale=yscale, alpha=alpha, figure=self.figure, separate=separate)
+
+        self.axlist = self.figure.axes
+
+        #get current xlimits:
+        for idx, ax in enumerate(self.axlist):
+            self.xlimits = ax.get_xlim()
+            self.ylimits = ax.get_ylim()
+            ax.callbacks.connect('xlim_changed', on_xlims_change)
+            ax.callbacks.connect('ylim_changed', on_ylims_change)
+
+        """
+        stream = streams[-1]
+        key = keys[-1]
+
+        self.t = stream.ndarray[0]
+        flagpos = DataStream().KEYLIST.index('flag')
+        firstcol = DataStream().KEYLIST.index(key[0])
+        flag = stream.ndarray[flagpos]
+        self.k = stream.ndarray[firstcol]
+        """
         self.canvas.draw()
 
 
@@ -1513,24 +1604,24 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onMetaStationButton, self.menu_p.met_page.MetaStationButton)
         #        Analysis Page
         # --------------------------
-        self.Bind(wx.EVT_BUTTON, self.a_onDerivativeButton, self.menu_p.ana_page.derivativeButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onRotationButton, self.menu_p.ana_page.rotationButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onFitButton, self.menu_p.ana_page.fitButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onMeanButton, self.menu_p.ana_page.meanButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onMaxButton, self.menu_p.ana_page.maxButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onMinButton, self.menu_p.ana_page.minButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onDerivativeButton, self.menu_p.ana_page.derivativeButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onRotationButton, self.menu_p.ana_page.rotationButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onFitButton, self.menu_p.ana_page.fitButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onMeanButton, self.menu_p.ana_page.meanButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onMaxButton, self.menu_p.ana_page.maxButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onMinButton, self.menu_p.ana_page.minButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagmodButton, self.menu_p.ana_page.flagmodButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onOffsetButton, self.menu_p.ana_page.offsetButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onFilterButton, self.menu_p.ana_page.filterButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onSmoothButton, self.menu_p.ana_page.smoothButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onResampleButton, self.menu_p.ana_page.resampleButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onActivityButton, self.menu_p.ana_page.activityButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onOffsetButton, self.menu_p.ana_page.offsetButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onFilterButton, self.menu_p.ana_page.filterButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onSmoothButton, self.menu_p.ana_page.smoothButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onResampleButton, self.menu_p.ana_page.resampleButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onDeltafButton, self.menu_p.ana_page.deltafButton)
-        self.Bind(wx.EVT_BUTTON, self.a_onCalcfButton, self.menu_p.ana_page.calcfButton)
-        self.Bind(wx.EVT_BUTTON, self.onPowerButton, self.menu_p.ana_page.powerButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onDeltafButton, self.menu_p.ana_page.deltafButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onCalcfButton, self.menu_p.ana_page.calcfButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onPowerButton, self.menu_p.ana_page.powerButton)
         self.Bind(wx.EVT_BUTTON, self.onSpectrumButton, self.menu_p.ana_page.spectrumButton)
-        self.Bind(wx.EVT_BUTTON, self.onStatsButton, self.menu_p.ana_page.statsButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onStatsButton, self.menu_p.ana_page.statsButton)
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
@@ -1544,7 +1635,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onClearDIData, self.menu_p.abs_page.ClearLogButton)
         #        Report Page
         # --------------------------
-        self.Bind(wx.EVT_BUTTON, self.onSaveLogButton, self.menu_p.rep_page.saveLoggerButton)
+        self.Bind(wx.EVT_BUTTON, self.report_onSaveLogButton, self.menu_p.rep_page.saveLoggerButton)
         self.menu_p.rep_page.logMsg('Begin logging...')
         # Eventually kill this redirection because it might cause problems from other classes
         #redir=RedirectText(self.menu_p.rep_page.logMsg) # Start redirecting stdout to log window
@@ -1620,7 +1711,7 @@ class MainFrame(wx.Frame):
         :param decimal:
         :return:
         """
-        return np.nan if decimal == 0 else -floor(np.log10(np.abs(decimal))) - 1
+        return 0.0 if decimal == 0 else -floor(np.log10(np.abs(decimal))) - 1
 
 
     def _update_dictionary(self, dictionary, type='analysis'):
@@ -1984,8 +2075,8 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.resampleButton.Enable()        # always
         self.menu_p.ana_page.filterButton.Enable()        # always
         self.menu_p.ana_page.smoothButton.Enable()        # always
-        if self.options.get('experimental'):
-            self.menu_p.ana_page.powerButton.Enable()         # if experimental
+        if self.guidict.get('experimental'):
+            self.menu_p.ana_page.powerButton.Enable()  # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
 
 
@@ -3521,7 +3612,7 @@ class MainFrame(wx.Frame):
     # ##################################################################################################################
 
 
-    def a_onDerivativeButton(self, event):
+    def analysis_onDerivativeButton(self, event):
         """
         DESCRIPTION
             Calculate and display the derivative
@@ -3544,7 +3635,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onRotationButton(self, event):
+    def analysis_onRotationButton(self, event):
         """
         DESCRIPTION
             Method for offset correction
@@ -3611,7 +3702,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onDeltafButton(self, event):
+    def analysis_onDeltafButton(self, event):
         """
         DESCRIPTION
              Calculates delta F values
@@ -3628,7 +3719,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onFilterButton(self, event):
+    def analysis_onFilterButton(self, event):
         """
         Method for filtering
         """
@@ -3682,7 +3773,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onFitButton(self, event):
+    def analysis_onFitButton(self, event):
         """
         Method for fitting
         """
@@ -3758,7 +3849,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onOffsetButton(self, event):
+    def analysis_onOffsetButton(self, event):
         """
         Method for offset correction
         """
@@ -3833,7 +3924,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onResampleButton(self, event):
+    def analysis_onResampleButton(self, event):
         """
         DESCRIPTION
             Resampling the data set with a certain frequency using the linearly interpolated data set
@@ -3859,7 +3950,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onActivityButton(self, event):
+    def analysis_onActivityButton(self, event):
         """
         DESCRIPTION
             Determines K values using the FMI method.
@@ -3882,7 +3973,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onMeanButton(self, event):
+    def analysis_onMeanButton(self, event):
         """
         DESCRIPTION
              Calculates means values for all keys of shownkeylist
@@ -3912,7 +4003,7 @@ class MainFrame(wx.Frame):
                 column = stream.header.get('col-{}'.format(keys[idx],''))
                 unit = stream.header.get('unit-col-{}'.format(keys[idx],''))
                 me = list(me)
-                decimals = self._determine_decimals(me[0])
+                decimals = int(self._determine_decimals(me[0]))
                 if decimals < 3:
                     # use a minimum of three decimals (I know, it is arbitary but should fit the needs for most
                     # applications. If you need it correctly use the backend)
@@ -3931,7 +4022,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onMaxButton(self, event):
+    def analysis_onMaxButton(self, event):
         """
         DESCRIPTION
              Calculates max values for all keys of shownkeylist
@@ -3961,7 +4052,7 @@ class MainFrame(wx.Frame):
                 column = stream.header.get('col-{}'.format(keys[idx],''))
                 unit = stream.header.get('unit-col-{}'.format(keys[idx],''))
                 me = list(me)
-                decimals = self._determine_decimals(me[0])
+                decimals = int(self._determine_decimals(me[0]))
                 if decimals < 3:
                     # use a minimum of three decimals (I know, it is arbitary but should fit the needs for most
                     # applications. If you need it correctly use the backend)
@@ -3979,7 +4070,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onMinButton(self, event):
+    def analysis_onMinButton(self, event):
         """
         DESCRIPTION
              Calculates minimum values for all keys of shownkeylist
@@ -4009,7 +4100,7 @@ class MainFrame(wx.Frame):
                 column = stream.header.get('col-{}'.format(keys[idx],''))
                 unit = stream.header.get('unit-col-{}'.format(keys[idx],''))
                 me = list(me)
-                decimals = self._determine_decimals(me[0])
+                decimals = int(self._determine_decimals(me[0]))
                 if decimals < 3:
                     # use a minimum of three decimals (I know, it is arbitary but should fit the needs for most
                     # applications. If you need it correctly use the backend)
@@ -4069,7 +4160,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def a_onSmoothButton(self, event):
+    def analysis_onSmoothButton(self, event):
         """
         DESCRIPTION
              Calculates smoothed curve based on the filter method without resampling (and not smooth)
@@ -4206,7 +4297,7 @@ class MainFrame(wx.Frame):
             self.changeStatusbar("Ready")
 
 
-    def a_onCalcfButton(self, event):
+    def analysis_onCalcfButton(self, event):
         """
         DESCRIPTION
              Calculates delta F values
@@ -4215,7 +4306,6 @@ class MainFrame(wx.Frame):
         stream = datacont.get('dataset')
         plotcont = self.plotdict.get(self.active_id)
         keys = plotcont.get('shownkeys')
-        sr = datacont.get("samplingrate")
 
         if len(stream) > 0:
             plotstream = stream.copy()
@@ -4246,20 +4336,16 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def onPowerButton(self, event):
+    def analysis_onPowerButton(self, event):
         """
         DESCRIPTION
              Calculates Power spectrum of one component
         """
         self.changeStatusbar("Power spectrum ...")
-        comp = self.getComponent()
-        if comp is not None:
-            fig = mp.plotPS(self.plotstream, comp, noshow=True)
-            # TODO works fine in linux but not on windows
-            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig, xsize=650,ysize=600)
-            dlg.ShowModal()
-            dlg.Destroy()
-            fig.clear()
+
+        sharey = False
+        self.plot_p.power_plot(self.active_id, self.datadict, self.plotdict, sharey=sharey)
+
 
     def onSpectrumButton(self, event):
         """
@@ -4277,50 +4363,59 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
             fig.clear()
 
-    def onStatsButton(self, event):
+
+    def analysis_onStatsButton(self, event):
         """
         DESCRIPTION
              Creates/Destroys the statistics element below main window
              and sets the statistics
         """
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        sr = datacont.get("samplingrate")
 
         status = self.menu_p.ana_page.statsButton.GetLabel()
         if status == 'Show Statistics':
             self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
-            self.stats_p.stats_page.setStatistics(keys=self.shownkeylist,
-                    stream=self.plotstream.copy(),
+            self.stats_p.stats_page.setStatistics(keys=keys,
+                    stream=stream.copy(),
                     xlimits=self.plot_p.xlimits)
             self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
         if status == 'Hide Statistics':
             self.sp.Unsplit(self.stats_p)
             self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
 
+
+
+    # ##################################################################################################################
+    # ####    Report Panel                                     #########################################################
+    # ##################################################################################################################
+
+
+    def report_onSaveLogButton(self, event):
         """
-        status = self.menu_p.ana_page.statsButton.GetLabel()
-        if status == 'Show Statistics':
-            # Remove last pages
-            self.menu_p.nb.RemovePage(4)
-            self.menu_p.abs_page.Hide()
-            self.menu_p.nb.RemovePage(4)
-            self.menu_p.rep_page.Hide()
-            self.menu_p.nb.RemovePage(4)
-            self.menu_p.com_page.Hide()
-            # Add new page next to the Analysis page
-            self.menu_p.nb.AddPage(self.menu_p.stats_page, "Statistics",
-                    True)
-            # Add back the last pages
-            self.menu_p.nb.AddPage(self.menu_p.abs_page, "DI")
-            self.menu_p.nb.AddPage(self.menu_p.rep_page, "Report")
-            self.menu_p.nb.AddPage(self.menu_p.com_page, "Monitor")
-            self.menu_p.stats_page.setStatistics(keys=self.shownkeylist,
-                    stream=self.plotstream.copy(),
-                    xlimits=self.plot_p.xlimits)
-            self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
-        if status == 'Hide Statistics':
-            self.menu_p.nb.RemovePage(4)
-            self.menu_p.stats_page.Hide()
-            self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
+        DESCRIPTION
+            Save a report to file
+        :param event:
+        :return:
         """
+        dir = self.guidict.get('dirname')
+
+        saveFileDialog = wx.FileDialog(self, "Save As", "", dir,
+                                       "Log files (*.log)|*.log",
+                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        saveFileDialog.ShowModal()
+        savepath = saveFileDialog.GetPath()
+        text = self.menu_p.rep_page.logger.GetValue()
+        saveFileDialog.Destroy()
+
+        logfile = open(savepath, "w")
+        logfile.write(text)
+        logfile.close()
+
+
 
     def getComponent(self):
         """
@@ -4337,6 +4432,7 @@ class MainFrame(wx.Frame):
                 return None
         finally:
             dlg.Destroy()
+
 
 
     # ------------------------------------------------------------------------------------------
@@ -5856,20 +5952,6 @@ class MainFrame(wx.Frame):
     # Report page functions
     # ################
     # ------------------------------------------------------------------------------------------
-
-
-    def onSaveLogButton(self, event):
-        saveFileDialog = wx.FileDialog(self, "Save As", "", self.last_dir,
-                                       "Log files (*.log)|*.log",
-                                       wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
-        saveFileDialog.ShowModal()
-        savepath = saveFileDialog.GetPath()
-        text = self.menu_p.rep_page.logger.GetValue()
-        saveFileDialog.Destroy()
-
-        logfile = open(savepath, "w")
-        logfile.write(text)
-        logfile.close()
 
 
     # ------------------------------------------------------------------------------------------
