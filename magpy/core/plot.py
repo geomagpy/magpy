@@ -49,6 +49,33 @@ import matplotlib.patches as patches
 
 edgecolor = [0.8, 0.8, 0.8]
 
+
+class AutoScaleY():
+    # Used to rescale all y axes in a multicomponent plot to optimal range
+    # https://stackoverflow.com/questions/53326158/interactive-zoom-with-y-axis-autoscale
+    def  __init__(self, line, margin=0.05):
+        self.margin = margin
+        self.line = line
+        self.ax = line.axes
+        self.ax.callbacks.connect('xlim_changed', self.rescale_y)
+
+    def rescale_y(self,evt=None):
+        xmin, xmax = self.ax.get_xlim()
+        x, y = self.line.get_data()
+        cond = (x >= xmin) & (x <= xmax)
+        yrest = y[cond]
+        margin = (yrest.max()-yrest.min())*self.margin
+        self.ybounds = [yrest.min()-margin, yrest.max()+margin]
+        self.timer = self.ax.figure.canvas.new_timer(interval=10)
+        self.timer.single_shot = True
+        self.timer.add_callback(self.change_y)
+        self.timer.start()
+
+    def change_y(self):
+        self.ax.set_ylim(self.ybounds)
+        self.ax.figure.canvas.draw()
+
+
 def testtimestep(variable):
     try:
         if isinstance(variable, (datetime, datetime64)):
@@ -70,12 +97,20 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
     variables = None, figure = None, debug=False):
     """
     DESCRIPTION:
-        tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a shared x axis based on the first plot.
+        tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a
+        shared x axis based on the first plot.
 
         This method replaces plotStreams, ploteasy and plot of magpy1.x
 
+    SPEED:
+        matplotlib has some speed issues when plotting dates for large datasets as they are internally converted.
+        - tsplot uses the following way: time column (datetime or np.datetime64) is converted to matplotlib.dates date2num
+              before: this technique is a bot more than twice faster then just plotting dates and rely on internal conversion
+        - tsplot needs slightly more then 1 second to display 1 month of 1sec 6 channel data in the backend on my machine
+
     OPTIONS:
-        keys (list)         :    default are the first three av[]ailable keys of the first data set. If only keys for the first data set are given, then an overlay plot is activated
+        keys (list)         :    default are the first three av[]ailable keys of the first data set. If only keys for
+                                 the first data set are given, then an overlay plot is activated
                                  If all keys are provided then all plots are plotted separately.
         symbols (list)      :    default "-" : define plot symbols - accpeted are "-",".","o" and "k"
         colors (list)       :    default is light grey : defines the color of all individual plots of each datastream
@@ -84,22 +119,29 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                                  EXAMPLE: keys=[['x','y'],['f']], yranges=[[[20000,22000],[-1000,1000]],[[44000,54000]]]
         padding (list)      :    default None : define scalar paddings to minimal and maximal data value for y range
                                  EXAMPLE: keys=[['x','y'],['f']], padding=[[100,50],[10]]
-        fill (dict)         :    provide a list with specific fill information (dicts) for each key i.e. [{"boundary":400,"fillcolor":"red"},{"boundary":400,"fillcolor":"blue","fillrange":"smaller"}]
+        fill (dict)         :    provide a list with specific fill information (dicts) for each key i.e.
+                                 [{"boundary":400,"fillcolor":"red"},{"boundary":400,"fillcolor":"blue","fillrange":"smaller"}]
                                  to fill everything above 400 read and everything below 400 blue for key y
-                                 EXAMPLE: keys=[['x','y','z']], fill=[[[],[{"boundary":400,"fillcolor":"red"},{"boundary":400,"fillcolor":"blue","fillrange":"smaller"}],[{"boundary":0,"fillcolor":"red"}]]]
+                                 EXAMPLE: keys=[['x','y','z']], fill=[[[],[{"boundary":400,"fillcolor":"red"},
+                                 {"boundary":400,"fillcolor":"blue","fillrange":"smaller"}],[{"boundary":0,"fillcolor":"red"}]]]
         legend (dict)       :    default None
-                                 EXAMPLE: legend={"legendtext":('Primary-LEMI036_2', 'Primary-FGE_S0252'),"legendposition":"upper right","legendstyle":"shadow","plotnumber":2}
+                                 EXAMPLE: legend={"legendtext":('Primary-LEMI036_2', 'Primary-FGE_S0252'),
+                                 "legendposition":"upper right","legendstyle":"shadow","plotnumber":2}
                                  or legend=True for default with SensorID
         grid (dict)         :    default None
                                  EXAMPLE: grid={"visible":True,"which":"major","axis":"both","color":"k"}
                                  or grid=True  for default values
-        patch (list/dict)   :    default none - patch contain colored regions covering the full vertical space in each plot - used for flagging info
-                                 {"patch1":{"start":datetime,"end":datetime,"color":color,"alpha":0.2},"patch2":{"start":datetime,"end":datetime,"color":color,"alpha":0.2}]
+        patch (list/dict)   :    default none - patch contain colored regions covering the full vertical space in each
+                                 plot - used for flagging info
+                                 {"patch1":{"start":datetime,"end":datetime,"color":color,"alpha":0.2},"patch2":
+                                 {"start":datetime,"end":datetime,"color":color,"alpha":0.2}]
         annotate (Bool/dict) :   default False - if True, then annotations are set to start time of patches
         showpatch (list)    :    default True for all streams -
                                  EXAMPLE: data=[stream1,stream2,stream3],showpatches=[True,False,True]
-        errorbars (list/dict) :  a list of dicts containing definitions for each plot as follows: i.e. two data stream with keys=[['x','y'],['var1']]
-                                 plot error bars for 'x' and 'var1', errorbars for 'x' are stored in key 'dx', errorbars for 'var1' are stored in 'var5'
+        errorbars (list/dict) :  a list of dicts containing definitions for each plot as follows: i.e. two data stream
+                                 with keys=[['x','y'],['var1']]
+                                 plot error bars for 'x' and 'var1', errorbars for 'x' are stored in key 'dx',
+                                 errorbars for 'var1' are stored in 'var5'
                                  errorbars=[[ex,{}],[evar1]] with:
                                  ex = {'key':'dx','color':'red','marker':'o', 'linestype':'-'}, evar1={'key':'var5'}
                                  if errorbars are selected then general symbols and linestyles will be replaced
@@ -256,21 +298,29 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
     total_keys = np.concatenate(keys).size
     annocount = 0
     yoff = -10
+    axs=[]
 
-    allaxes = []
+    if debug:
+        t1 = datetime.now()
     for idx, dat in enumerate(data):
         # x column
+        if debug:
+            t2 = datetime.now()
         x = dat._get_column(timecolumn[idx])
         if len(x) > 0 and testtimestep(x[0]):
-            t = x
-            # 0. date directly (~0 sec)
+            # Testdata set: if datetime is converted here total plotting needs 0.25 sec
+            # Testdata set: if datetime is used here as is total plotting needs 0.60 sec
+            t = date2num(x)  # for sharex numerical dates are apparently necessary
+            # 0. date directly (~0 sec), but in later stage much longer (remove ax.axis_date when testing)
         else:
-            t = num2date(x)
+            t = x
         if not xinds[idx]:
             # plot only selected indicies
             xinds[idx] = list(range(0, len(x), 1))
         # drop nan columns
         dat = dat._remove_nancolumns()
+        if debug:
+            t3 = datetime.now()
         for i, component in enumerate(keys[idx]):
             comp = dat._get_column(component)
             if len(comp) > 0 or force:
@@ -278,13 +328,10 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                     subplot = int("{}1{}".format(total_keys, total_pos + 1))
                 else:
                     subplot = int("{}1{}".format(len(keys[idx]), i + 1))
-                #if i == 0:  # Eventually do these changes
-                #    ax[i] = plt.subplot(subplot, sharex=True)
-                #ax[i] = plt.subplot(subplot)
                 ax = plt.subplot(subplot)
-                #allaxes.append(ax)
-                #if len(allaxes) > 0:
-                #    ax.sharex(allaxes[0])
+                axs.append(ax)
+                if testtimestep(x[0]):
+                    ax.xaxis.axis_date()
                 # Symbols and color
                 # ------------------
                 symbol = symbols[idx][i]
@@ -343,11 +390,13 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                 # ------------------
                 if force and not len(comp) > 0 and patch and not is_list_empty(patch):
                     # need the time range covered by patches
-                    plt.plot(t, [0.5] * len(t), 'w-', alpha=0.0)
+                    line, = ax.plot(t, [0.5] * len(t), 'w-', alpha=0.0)
+                    r = AutoScaleY(line)
                     mincomp = 0
                     maxcomp = 1
                 else:
-                    plt.plot(t, comp, symbol, color=color)
+                    line, = ax.plot(t, comp, symbol, color=color)
+                    r = AutoScaleY(line)
                     mincomp = np.nanmin(comp)
                     maxcomp = np.nanmax(comp)
                 # plt.hlines(0,t[0],t[-1])
@@ -434,18 +483,18 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                 # ------------------
                 if functions and not is_list_empty(functions):
                     function = functions[idx][i]
-                    print ("plotting function for ", function)
                     if function and isinstance(function, (list, tuple)):
-                        print ("LENGTH", len(np.array(function, dtype=object).shape))
                         if len(np.array(function,
                                         dtype=object).shape) > 1:  # allow multiple functions for each component
                             for functio in function:
+                                print (functio)
                                 # function should contain the fitted time range and the projected timerange
                                 fres = evaluate_function(component, functio, dat.samplingrate(), starttime=None,
                                                          endtime=None, debug=False)
                                 if fres and len(fres) == 2:
                                     ax.plot(fres[0], fres[1], functionfmt, alpha=0.5)
                         else:
+                            print (function)
                             # function should contain the fitted time range and the projected timerange
                             fres = evaluate_function(component, function, dat.samplingrate(), starttime=None,
                                                      endtime=None, debug=False)
@@ -501,12 +550,20 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                     plt.ticklabel_format(useOffset=False, style='plain', axis='y')
                 except:
                     pass
+                if i > 0:
+                    ax.sharex(axs[0])
+                #plt.tight_layout()
 
                 total_pos += 1
             else:
                 print(" tsplot: warning component {} of stream {} is empty".format(component, idx))
+    if debug:
+        t4 = datetime.now()
+        print ("TIMING total:", (t4-t1).total_seconds())
+        print ("TIMING time conversion:", (t3-t2).total_seconds())
 
     return fig, plt.gca()
+
 
 
 #####################################################################

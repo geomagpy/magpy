@@ -1410,7 +1410,20 @@ harmonic fitting functions. *fitdegree*=1 corresponds to a linear fit. Default v
 need to specify an average spacing for knots. The *knotstep* parameter will define at which percental distance a knot 
 should be located. i.e. *knotstep*=0.33 would place altogether 2 knots at 33% within the timeseries. Smaller values 
 will increase the number of knots and thus the complexity of the fit. Thus, *knotstep* need to contain a positive 
-number below 0.5.
+number below 0.5. 
+
+It is possible to calculate and display many different functions for a single data set. In the next examples we will 
+have two adjacent but different fit functions for x and y and a different function covering a different timerange for z. 
+
+       func1 = sstream.fit(keys=['x','y'], fitfunc='spline',starttime="2022-11-21", endtime="2022-11-22")
+       func2 = sstream.fit(keys=['x','y'], fitfunc='mean',starttime="2022-11-22", endtime="2022-11-23")
+       func3 = sstream.fit(keys=['z'], fitfunc='poly',starttime="2022-11-21", endtime="2022-11-24")
+
+A possible plot looks a follows. For x will plot the two fitting functions 1 and 2, for y we only plot function 2. For
+the z component selected functions 1 and 3. As func1 does not contain any fit for z, this function will be ignored.
+
+       mp.tsplot([sstream],[['x','y','z']], symbols=[['-','-','-']], padding=[[2,2,2]], functions=[[[func1,func2],func2,[func1,func3]]], height=2)
+
 
 #### 5.9.2 Interpolation
 

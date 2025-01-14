@@ -31,9 +31,10 @@ Installation instructions can be found on the main download page.
 2.0.0 new packages:
     plotting:
         - the original plotting methods were replaced by completely new methods
-        - more memory efficient and much faster
+        - more memory efficient and faster
         - more flexibility with layout by configuration dictionaries
         - modern look
+        - auto-zoom function for all axes
     flagging of signals and annotations:
         - all flagging and labelling functions are reorganized in an own class
         - flagging dictionary structure allows more input and definitions

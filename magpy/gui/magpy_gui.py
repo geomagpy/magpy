@@ -95,6 +95,7 @@ Major methods:              major_method
 |  MainFrame     | _create_menu_bar |  2.0.0  |             | level 1    |               |        | init   |
 |  MainFrame     | _bind_controls  |   2.0.0  |             | level 1    |               |        | init   |
 |  MainFrame     | _db_connect  |      2.0.0  |             | level 1    |               |        | init, db_, file_db |
+|  MainFrame     | _determine_decimals  | 2.0.0  |          | level 2    |               |        | onMean, onMax, onMin |
 |  MainFrame     | _deactivate_controls |  2.0.0  |         | level 1    |               |        | init, file_on_open |
 |  MainFrame     | _activate_controls |  2.0.0  |           | level 1    |               |        | init, file_on_open |
 |  MainFrame     | _initial_read  |    2.0.0  |             | level 1    |               |        | file_on_open  |
@@ -125,6 +126,12 @@ Major methods:              major_method
 |  MainFrame     | a_onDerivativeButton | 2.0.0  |          | level 2    |               |        |   |
 |  MainFrame     | a_onDeltaFButton  | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | a_onRotationButton | 2.0.0  |            | level 2    |               |        |   |
+|  MainFrame     | a_onMeanButton   |  2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | a_onMaxButton |     2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | a_onMinButton |     2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | a_onFitButton    |  2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | a_onFilterButton |  2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 1    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
@@ -1504,13 +1511,13 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.a_onDerivativeButton, self.menu_p.ana_page.derivativeButton)
         self.Bind(wx.EVT_BUTTON, self.a_onRotationButton, self.menu_p.ana_page.rotationButton)
         self.Bind(wx.EVT_BUTTON, self.a_onFitButton, self.menu_p.ana_page.fitButton)
-        self.Bind(wx.EVT_BUTTON, self.onMeanButton, self.menu_p.ana_page.meanButton)
-        self.Bind(wx.EVT_BUTTON, self.onMaxButton, self.menu_p.ana_page.maxButton)
-        self.Bind(wx.EVT_BUTTON, self.onMinButton, self.menu_p.ana_page.minButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onMeanButton, self.menu_p.ana_page.meanButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onMaxButton, self.menu_p.ana_page.maxButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onMinButton, self.menu_p.ana_page.minButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagmodButton, self.menu_p.ana_page.flagmodButton)
         self.Bind(wx.EVT_BUTTON, self.onOffsetButton, self.menu_p.ana_page.offsetButton)
-        self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.ana_page.filterButton)
-        self.Bind(wx.EVT_BUTTON, self.onSmoothButton, self.menu_p.ana_page.smoothButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onFilterButton, self.menu_p.ana_page.filterButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onSmoothButton, self.menu_p.ana_page.smoothButton)
         self.Bind(wx.EVT_BUTTON, self.onResampleButton, self.menu_p.ana_page.resampleButton)
         self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
@@ -1598,6 +1605,17 @@ class MainFrame(wx.Frame):
             # disable MARCOS button
             self.menu_p.com_page.getMARCOSButton.Disable()
         return db, databaseconnected
+
+    def _determine_decimals(self, decimal):
+        """
+        DESCRIPTION
+            mini method to get some decimal number for rounding
+        APPLICATION
+            decimaldet(0.002) will return 2
+        :param decimal:
+        :return:
+        """
+        return np.nan if decimal == 0 else -floor(np.log10(np.abs(decimal))) - 1
 
 
     def _update_dictionary(self, dictionary, type='analysis'):
@@ -3605,17 +3623,22 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def onFilterButton(self, event):
+    def a_onFilterButton(self, event):
         """
         Method for filtering
         """
         self.changeStatusbar("Filtering...")
 
         # open dialog to modify filter parameters
-        sr = self.plotstream.samplingrate()
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        sr = datacont.get("samplingrate")
+        filter_type = self.analysisdict.get('basefilter')
 
-        filter_type = 'gaussian'
         resample_offset = 0.0
+        plotstream = stream.copy()
 
         if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
                 filter_width = timedelta(seconds=3.33333333)
@@ -3646,13 +3669,12 @@ class MainFrame(wx.Frame):
             elif missingdata == 'interpolate':
                 miss = 'interpolate'
 
-            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),resample_period=resampleinterval,resampleoffset=timedelta(seconds=resampleoffset),missingdata=miss,resample=True)
+            plotstream = plotstream.filter(keys=keys,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),resample_period=resampleinterval,resampleoffset=timedelta(seconds=resampleoffset),missingdata=miss,resample=True)
             self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
 
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+            streamid = self._initial_read(plotstream)
+            self._initial_plot(streamid)
         self.changeStatusbar("Ready")
-
 
 
     def a_onFitButton(self, event):
@@ -3693,13 +3715,19 @@ class MainFrame(wx.Frame):
                             endtime=params['endtime'])
                 funclist = []
                 for key in keys:
-                    funclist.append(func)
+                    funclist.append([func])
                 if params['fitfunc'] == 'none':
                     plotcont['functions'] = []
                 elif isinstance(plotcont.get('functions'), list) and len(plotcont.get('functions')) > 0:
+                    #[[x,y,z]] -> [[[func1],[func1,func2],[func1]]]
+                    # Here: [x,y,z] -> [[func1],[func1,func2],[func1]]
                     oldfunclist = plotcont['functions']
+                    newfunclist = []
                     for of in oldfunclist:
-                    plotcont['functions'].extend(funclist)
+                        # of = [func1]
+                        of.append(func)
+                        newfunclist.append(of)
+                    plotcont['functions'] = newfunclist
                 else:
                     plotcont['functions'] = funclist
 
@@ -3812,6 +3840,7 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
         self.changeStatusbar("Ready")
 
+
     def onActivityButton(self, event):
         """
         Method for offset correction
@@ -3843,100 +3872,150 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def onMeanButton(self, event):
+    def a_onMeanButton(self, event):
         """
         DESCRIPTION
              Calculates means values for all keys of shownkeylist
         """
         self.changeStatusbar("Calculating means ...")
-        keys = self.shownkeylist
-        meanfunc = 'mean'
 
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        if len(stream) > 0:
+            teststream = stream.copy()
+            meanfunc = 'mean'
+            # limits
+            xlimits = self.plot_p.xlimits
 
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+            if not xlimits == [stream.ndarray[0],stream.ndarray[-1]]:
+                testarray = stream._select_timerange(starttime=xlimits[0],endtime=xlimits[1])
+                teststream = DataStream([LineStruct()],stream.header,testarray)
 
-        mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys]
-        t_limits = teststream._find_t_limits()
-        trange = '- mean - timerange: {} to {}'.format(t_limits[0],t_limits[1])
-        self.menu_p.rep_page.logMsg(trange)
-        for idx,me in enumerate(mean):
-            meanline = '- mean - key: {} = {} +/- {}'.format(keys[idx],me[0],me[1])
-            self.menu_p.rep_page.logMsg(meanline)
-            trange = trange + '\n' + meanline
-        # open message dialog
-        dlg = wx.MessageDialog(self, "Means:\n"+
-                        str(trange),
-                        "Analysis: Mean values", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
+            mean = [teststream.mean(key,meanfunction='mean',std=True,percentage=10) for key in keys]
+            t_limits = teststream.timerange()
+            self.menu_p.rep_page.logMsg("MEAN:")
+            trange = 'for timerange: {} to {}\n'.format(t_limits[0],t_limits[1])
+            self.menu_p.rep_page.logMsg(trange)
+            for idx,me in enumerate(mean):
+                column = stream.header.get('col-{}'.format(keys[idx],''))
+                unit = stream.header.get('unit-col-{}'.format(keys[idx],''))
+                me = list(me)
+                decimals = self._determine_decimals(me[0])
+                if decimals < 3:
+                    # use a minimum of three decimals (I know, it is arbitary but should fit the needs for most
+                    # applications. If you need it correctly use the backend)
+                    decimals = 3
+                me[0] = np.round(me[0],decimals)
+                me[1] = np.round(me[1],decimals)
+                meanline = 'Key - {} -  {:>10}[{}]:  {} +/- {}'.format(keys[idx], column, unit, me[0],me[1])
+                self.menu_p.rep_page.logMsg(meanline)
+                trange = trange + '\n' + meanline
+            # open message dialog
+            dlg = wx.MessageDialog(self,
+                            str(trange),
+                            "Analysis: Mean values", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
         self.changeStatusbar("Ready")
 
-    def onMaxButton(self, event):
+
+    def a_onMaxButton(self, event):
         """
         DESCRIPTION
              Calculates max values for all keys of shownkeylist
         """
         self.changeStatusbar("Calculating maxima ...")
-        keys = self.shownkeylist
 
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        if len(stream) > 0:
+            teststream = stream.copy()
+            meanfunc = 'mean'
+            # limits
+            xlimits = self.plot_p.xlimits
 
-        maxi = [teststream._get_max(key,returntime=True) for key in keys]
-        t_limits = teststream._find_t_limits()
-        trange = '- maxima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
-        self.menu_p.rep_page.logMsg(trange)
-        for idx,me in enumerate(maxi):
-            meanline = '- maxima - key: {} = {} at {}'.format(keys[idx],me[0],num2date(me[1]))
-            self.menu_p.rep_page.logMsg(meanline)
-            trange = trange + '\n' + meanline
-        # open message dialog
-        dlg = wx.MessageDialog(self, "Maxima:\n"+
-                        str(trange),
-                        "Analysis: Maximum values", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
+            if not xlimits == [stream.ndarray[0],stream.ndarray[-1]]:
+                testarray = stream._select_timerange(starttime=xlimits[0],endtime=xlimits[1])
+                teststream = DataStream([LineStruct()],stream.header,testarray)
+
+            maxi = [teststream._get_max(key, returntime=True) for key in keys]
+            t_limits = teststream.timerange()
+            self.menu_p.rep_page.logMsg("MAXIMA:")
+            trange = 'in timerange: {} to {}\n'.format(t_limits[0],t_limits[1])
+            self.menu_p.rep_page.logMsg(trange)
+            for idx,me in enumerate(maxi):
+                column = stream.header.get('col-{}'.format(keys[idx],''))
+                unit = stream.header.get('unit-col-{}'.format(keys[idx],''))
+                me = list(me)
+                decimals = self._determine_decimals(me[0])
+                if decimals < 3:
+                    # use a minimum of three decimals (I know, it is arbitary but should fit the needs for most
+                    # applications. If you need it correctly use the backend)
+                    decimals = 3
+                me[0] = np.round(me[0],decimals)
+                meanline = 'Key - {} -  {:>10}[{}]:  {:<15} at {}'.format(keys[idx], column, unit, me[0], me[1])
+                self.menu_p.rep_page.logMsg(meanline)
+                trange = trange + '\n' + meanline
+            # open message dialog
+            dlg = wx.MessageDialog(self,
+                            str(trange),
+                            "Analysis: Maximum values", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
         self.changeStatusbar("Ready")
 
-    def onMinButton(self, event):
+
+    def a_onMinButton(self, event):
         """
         DESCRIPTION
-             Calculates means values for all keys of shownkeylist
+             Calculates minimum values for all keys of shownkeylist
         """
         self.changeStatusbar("Calculating minima ...")
-        keys = self.shownkeylist
 
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        if len(stream) > 0:
+            teststream = stream.copy()
+            meanfunc = 'mean'
+            # limits
+            xlimits = self.plot_p.xlimits
 
-        mini = [teststream._get_min(key,returntime=True) for key in keys]
-        t_limits = teststream._find_t_limits()
-        trange = '- minima - timerange: {} to {}'.format(t_limits[0],t_limits[1])
-        self.menu_p.rep_page.logMsg(trange)
-        for idx,me in enumerate(mini):
-            meanline = '- minima - key: {} = {} at {}'.format(keys[idx],me[0],num2date(me[1]))
-            self.menu_p.rep_page.logMsg(meanline)
-            trange = trange + '\n' + meanline
-        # open message dialog
-        dlg = wx.MessageDialog(self, "Minima:\n"+
-                        str(trange),
-                        "Analysis: Minimum values", wx.OK|wx.ICON_INFORMATION)
-        dlg.ShowModal()
-        dlg.Destroy()
+            if not xlimits == [stream.ndarray[0],stream.ndarray[-1]]:
+                testarray = stream._select_timerange(starttime=xlimits[0],endtime=xlimits[1])
+                teststream = DataStream([LineStruct()],stream.header,testarray)
+
+            mini = [teststream._get_min(key, returntime=True) for key in keys]
+            t_limits = teststream.timerange()
+            self.menu_p.rep_page.logMsg("MINIMA:")
+            trange = 'in timerange: {} to {}\n'.format(t_limits[0],t_limits[1])
+            self.menu_p.rep_page.logMsg(trange)
+            for idx,me in enumerate(mini):
+                column = stream.header.get('col-{}'.format(keys[idx],''))
+                unit = stream.header.get('unit-col-{}'.format(keys[idx],''))
+                me = list(me)
+                decimals = self._determine_decimals(me[0])
+                if decimals < 3:
+                    # use a minimum of three decimals (I know, it is arbitary but should fit the needs for most
+                    # applications. If you need it correctly use the backend)
+                    decimals = 3
+                me[0] = np.round(me[0],decimals)
+                meanline = 'Key - {} -  {:>10}[{}]:  {:<15} at {}'.format(keys[idx], column, unit, me[0],me[1])
+                self.menu_p.rep_page.logMsg(meanline)
+                trange = trange + '\n' + meanline
+            # open message dialog
+            dlg = wx.MessageDialog(self,
+                            str(trange),
+                            "Analysis: Minimum values", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
         self.changeStatusbar("Ready")
+
 
 
     def onFlagmodButton(self, event):
@@ -3980,17 +4059,25 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def onSmoothButton(self, event):
+    def a_onSmoothButton(self, event):
         """
         DESCRIPTION
-             Calculates smoothed curve
+             Calculates smoothed curve based on the filter method without resampling (and not smooth)
         """
         self.changeStatusbar("Smoothing ... be patient")
-        sr = self.plotstream.samplingrate()
 
-        filter_type = 'gaussian'
+        # open dialog to modify filter parameters
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        sr = datacont.get("samplingrate")
+        filter_type = self.analysisdict.get('basefilter')
+
         resample_offset = 0.0
-        if sr < 0.2: # use 1 second filter with 0.3 Hz cut off as default
+        plotstream = stream.copy()
+
+        if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
                 filter_width = timedelta(seconds=3.33333333)
                 resample_period = 1.0
         elif sr < 50: # use 1 minute filter with 0.008 Hz cut off as default
@@ -4003,7 +4090,10 @@ class MainFrame(wx.Frame):
                 filter_type = 'flat'
         miss = 'conservative'
 
-        dlg = AnalysisFilterDialog(None, title='Analysis: Filter', samplingrate=sr, resample=False, winlen=filter_width.seconds, resint=resample_period, resoff= resample_offset, filtertype=filter_type)
+        dlg = AnalysisFilterDialog(None, title='Analysis: Filter',  samplingrate=sr, resample=False, winlen=filter_width.seconds, resint=resample_period, resoff= resample_offset, filtertype=filter_type)
+        if sr < 0.5: # use 1 second filter with 0.3 Hz cut off as default
+            dlg.methodRadioBox.SetStringSelection('conservative')
+
         if dlg.ShowModal() == wx.ID_OK:
             filtertype = dlg.filtertypeComboBox.GetValue()
             filterlength = float(dlg.lengthTextCtrl.GetValue())
@@ -4013,12 +4103,15 @@ class MainFrame(wx.Frame):
             elif missingdata == 'interpolate':
                 miss = 'interpolate'
 
-            self.plotstream = self.plotstream.filter(keys=self.shownkeylist,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),missingdata=miss,resample=False,noresample=True)
-            self.menu_p.rep_page.logMsg('- data filtered: {} window, {} Hz passband'.format(filtertype,1./filterlength))
+            plotstream = plotstream.filter(keys=keys,filter_type=filtertype,filter_width=timedelta(seconds=filterlength),missingdata=miss,resample=False,noresample=True)
+            plotstream.header["SensorID"] = "smoothed-{}".format(plotstream.header.get("SensorID"))
+            self.menu_p.rep_page.logMsg('- data smoothed: {} window, {} Hz passband'.format(filtertype,1./filterlength))
 
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+            streamid = self._initial_read(plotstream)
+            self._initial_plot(streamid)
+
         self.changeStatusbar("Ready")
+
 
     def onBaselineButton(self, event):
         """
