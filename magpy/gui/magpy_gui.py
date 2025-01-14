@@ -136,7 +136,7 @@ Major methods:              major_method
 |  MainFrame     | a_onOffsetButton |  2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | a_onActivityButton |  2.0.0  |           | level 1    |               |        |   |
-|  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 1    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
