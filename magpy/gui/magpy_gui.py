@@ -27,6 +27,7 @@ import magpy.core.plot as mp
 from magpy.absolutes import *
 from magpy.core import methods
 from magpy.core import database
+from magpy.core import activity
 from magpy.version import __version__
 from magpy.gui.streampage import *
 from magpy.gui.flagpage import *
@@ -131,6 +132,10 @@ Major methods:              major_method
 |  MainFrame     | a_onMinButton |     2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | a_onFitButton    |  2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | a_onFilterButton |  2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onOffsetButton |  2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               |        |   |
+|  MainFrame     | a_onActivityButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 1    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
@@ -1515,14 +1520,14 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.a_onMaxButton, self.menu_p.ana_page.maxButton)
         self.Bind(wx.EVT_BUTTON, self.a_onMinButton, self.menu_p.ana_page.minButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagmodButton, self.menu_p.ana_page.flagmodButton)
-        self.Bind(wx.EVT_BUTTON, self.onOffsetButton, self.menu_p.ana_page.offsetButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onOffsetButton, self.menu_p.ana_page.offsetButton)
         self.Bind(wx.EVT_BUTTON, self.a_onFilterButton, self.menu_p.ana_page.filterButton)
         self.Bind(wx.EVT_BUTTON, self.a_onSmoothButton, self.menu_p.ana_page.smoothButton)
-        self.Bind(wx.EVT_BUTTON, self.onResampleButton, self.menu_p.ana_page.resampleButton)
-        self.Bind(wx.EVT_BUTTON, self.onActivityButton, self.menu_p.ana_page.activityButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onResampleButton, self.menu_p.ana_page.resampleButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
         self.Bind(wx.EVT_BUTTON, self.a_onDeltafButton, self.menu_p.ana_page.deltafButton)
-        self.Bind(wx.EVT_BUTTON, self.onCalcfButton, self.menu_p.ana_page.calcfButton)
+        self.Bind(wx.EVT_BUTTON, self.a_onCalcfButton, self.menu_p.ana_page.calcfButton)
         self.Bind(wx.EVT_BUTTON, self.onPowerButton, self.menu_p.ana_page.powerButton)
         self.Bind(wx.EVT_BUTTON, self.onSpectrumButton, self.menu_p.ana_page.spectrumButton)
         self.Bind(wx.EVT_BUTTON, self.onStatsButton, self.menu_p.ana_page.statsButton)
@@ -3753,7 +3758,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def onOffsetButton(self, event):
+    def a_onOffsetButton(self, event):
         """
         Method for offset correction
         """
@@ -3761,113 +3766,118 @@ class MainFrame(wx.Frame):
         self._check_db('minimal')
 
         self.changeStatusbar("Adding offsets ...")
-        keys = self.shownkeylist
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
         offsetdict = {}
 
-        # get currently zoomed time limits and use as timerange
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits:
-            self.xlimits = [num2date(self.plotstream.ndarray[0][0]),num2date(self.plotstream.ndarray[0][-1])]
-        else:
-            self.xlimits = [num2date(self.xlimits[0]),num2date(self.xlimits[-1])]
+        if len(stream) > 0:
+            plotstream = stream.copy()
 
-        # get existing deltas from database
-        deltas = self.plotstream.header.get('DataDeltaValues','')
-
-        if deltas == '':
-            # Check data compensation values
-            try:
-                xcorr = float(self.plotstream.header.get('DataCompensationX',''))
-                ycorr = float(self.plotstream.header.get('DataCompensationY',''))
-                zcorr = float(self.plotstream.header.get('DataCompensationZ',''))
-                if not xcorr=='' and not ycorr=='' and not zcorr=='':
-                    deltas = 'x_{},y_{},z_{}'.format(-1*xcorr*1000.,-1*ycorr*1000.,-1*zcorr*1000.)
-            except:
-                pass
-        #print ("Delta", deltas)
-
-        dlg = AnalysisOffsetDialog(None, title='Analysis: define offsets', keylst=keys, xlimits=self.xlimits, deltas=deltas)
-        if dlg.ShowModal() == wx.ID_OK:
-            for key in keys:
-                offset = eval('dlg.'+key+'TextCtrl.GetValue()')
-                if not offset in ['','0']:
-                    if not float(offset) == 0:
-                        offsetdict[key] = float(offset)
-            val = dlg.offsetRadioBox.GetStringSelection()
-            #print ("Offset", val)
-            if str(val) == 'all':
-                toffset = dlg.timeshiftTextCtrl.GetValue()
-                if not self.plotstream._is_number(toffset):
-                    toffset = 0
-                if not float(toffset) == 0:
-                    offsetdict['time'] = timedelta(seconds=float(toffset))
-                self.plotstream = self.plotstream.offset(offsetdict)
+            # get currently zoomed time limits and use as timerange
+            xlimits = self.plot_p.xlimits
+            if not xlimits:
+                xlimits = [datacont.get('start'),datacont.get('end')]
             else:
-                stday = dlg.StartDatePicker.GetValue()
-                sttime = str(dlg.StartTimeTextCtrl.GetValue())
-                sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-                st= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-                edday = dlg.EndDatePicker.GetValue()
-                edtime = str(dlg.EndTimeTextCtrl.GetValue())
-                ed = datetime.strftime(datetime.fromtimestamp(edday.GetTicks()), "%Y-%m-%d")
-                et= datetime.strptime(str(ed)+'_'+edtime, "%Y-%m-%d_%H:%M:%S")
-                self.plotstream = self.plotstream.offset(offsetdict, starttime=st, endtime=et)
+                xlimits = [num2date(xlimits[0]),num2date(xlimits[-1])]
 
-            self.plotstream.header['DataDeltaValuesApplied'] = 1
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+            # get existing deltas from database
+            deltas = plotstream.header.get('DataDeltaValues','')
 
-        dlg.Destroy()
+            if deltas == '':
+                # Check data compensation values
+                try:
+                    xcorr = float(plotstream.header.get('DataCompensationX',''))
+                    ycorr = float(plotstream.header.get('DataCompensationY',''))
+                    zcorr = float(plotstream.header.get('DataCompensationZ',''))
+                    if not xcorr=='' and not ycorr=='' and not zcorr=='':
+                        deltas = 'x_{},y_{},z_{}'.format(-1*xcorr*1000.,-1*ycorr*1000.,-1*zcorr*1000.)
+                except:
+                    pass
+
+            dlg = AnalysisOffsetDialog(None, title='Analysis: define offsets', keylst=keys, xlimits=xlimits, deltas=deltas)
+            if dlg.ShowModal() == wx.ID_OK:
+                for key in keys:
+                    offset = eval('dlg.'+key+'TextCtrl.GetValue()')
+                    if not offset in ['','0']:
+                        if not float(offset) == 0:
+                            offsetdict[key] = float(offset)
+                val = dlg.offsetRadioBox.GetStringSelection()
+                if str(val) == 'all':
+                    toffset = dlg.timeshiftTextCtrl.GetValue()
+                    if not plotstream._is_number(toffset):
+                        toffset = 0
+                    if not float(toffset) == 0:
+                        offsetdict['time'] = timedelta(seconds=float(toffset))
+                    plotstream = plotstream.offset(offsetdict)
+                else:
+                    stday = dlg.StartDatePicker.GetValue()
+                    sttime = str(dlg.StartTimeTextCtrl.GetValue())
+                    sd_tmp = datetime.fromtimestamp(stday.GetTicks())
+                    sd = sd_tmp.strftime("%Y-%m-%d")
+                    st= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+                    edday = dlg.EndDatePicker.GetValue()
+                    edtime = str(dlg.EndTimeTextCtrl.GetValue())
+                    ed_tmp = datetime.fromtimestamp(edday.GetTicks())
+                    ed = ed_tmp.strftime("%Y-%m-%d")
+                    et= datetime.strptime(str(ed)+'_'+edtime, "%Y-%m-%d_%H:%M:%S")
+                    plotstream = plotstream.offset(offsetdict, starttime=st, endtime=et)
+                self.menu_p.rep_page.logMsg(" - offsets applied")
+
+                plotstream.header['DataDeltaValuesApplied'] = 1
+                streamid = self._initial_read(plotstream)
+                self._initial_plot(streamid)
+            dlg.Destroy()
+
         self.changeStatusbar("Ready")
 
 
-    def onResampleButton(self, event):
+    def a_onResampleButton(self, event):
         """
-        Method for offset correction
+        DESCRIPTION
+            Resampling the data set with a certain frequency using the linearly interpolated data set
         """
         self.changeStatusbar("Resampling ...")
-        keys = self.shownkeylist
-        sr = self.plotstream.samplingrate()
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        sr = datacont.get("samplingrate")
 
-        dlg = AnalysisResampleDialog(None, title='Analysis: resampling parameters', keylst=keys, period=sr)
-        if dlg.ShowModal() == wx.ID_OK:
-            newperiod = dlg.periodTextCtrl.GetValue()
-            self.plotstream = self.plotstream.resample(keys, period=float(newperiod), debugmode=False)
-            self.menu_p.rep_page.logMsg('- resampled stream at period {} second'.format(newperiod))
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+        if len(stream) > 0:
+            plotstream = stream.copy()
+            dlg = AnalysisResampleDialog(None, title='Analysis: resampling parameters', keylst=keys, period=sr)
+            if dlg.ShowModal() == wx.ID_OK:
+                newperiod = dlg.periodTextCtrl.GetValue()
+                plotstream = plotstream.resample(keys, period=float(newperiod), debugmode=False)
+                self.menu_p.rep_page.logMsg('- resampled stream at period {} second'.format(newperiod))
+                streamid = self._initial_read(plotstream)
+                self._initial_plot(streamid)
 
-        dlg.Destroy()
+            dlg.Destroy()
         self.changeStatusbar("Ready")
 
 
-    def onActivityButton(self, event):
+    def a_onActivityButton(self, event):
         """
-        Method for offset correction
+        DESCRIPTION
+            Determines K values using the FMI method.
+            K9 limit and longitude need to be provided within the header
         """
         self.changeStatusbar("Getting activity (FMI method)...")
 
-        keys = self.shownkeylist
-        offsetdict = {}
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
 
-        #dlg = AnalysisActivityDialog(None, title='Analysis: get k values (FMI)')
-        #if dlg.ShowModal() == wx.ID_OK:
-        backup = self.plotstream.copy()
-        stream = self.plotstream.k_fmi()
-        self.streamlist.append(stream)
-        self.streamkeylist.append(stream._get_key_headers())
-        self.currentstreamindex = len(self.streamlist)-1
-        self.plotstream = self.streamlist[-1]
-        #self.headerlist.append(self.plotstream.header)
-        self.headerlist.append(stream.header)
-        self.shownkeylist = self.plotstream._get_key_headers(numerical=True)
-        if self.plotstream and len(self.plotstream.ndarray[0]) > 0:
-            self.ActivateControls(self.plotstream)
-            keylist = self.UpdatePlotCharacteristics(self.plotstream)
-            self.plotoptlist.append(self.plotopt)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-        else:
-            self.plotstream = backup.copy()
+        if len(stream) > 0:
+            plotstream = stream.copy()
+            k9_limit = plotstream.header.get("StationK9", 500)
+            long = plotstream.header.get("DataAcquisitionLongitude", 15.0)
+            self.menu_p.rep_page.logMsg(" - determining K with K9 limit {} at lonitude {:.2f}".format(k9_limit, long))
+            k = activity.K_fmi(plotstream, K9_limit=k9_limit, longitude=long, debug=False)
+            streamid = self._initial_read(k)
+            self._initial_plot(streamid)
 
         self.changeStatusbar("Ready")
 
@@ -4196,38 +4206,43 @@ class MainFrame(wx.Frame):
             self.changeStatusbar("Ready")
 
 
-    def onCalcfButton(self, event):
+    def a_onCalcfButton(self, event):
         """
         DESCRIPTION
              Calculates delta F values
         """
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        sr = datacont.get("samplingrate")
 
-        cont = True
-        if 'f' in self.plotstream._get_key_headers():
-            existdlg = wx.MessageDialog(self, "F data already existing\n"
-                        "Replace with vector sum?\n".format(time),
-                        "F data existing", wx.YES_NO|wx.ICON_INFORMATION)
-            if existdlg.ShowModal() == wx.ID_YES:
-                existdlg.Destroy()
-                #self.Close(True)
-            else:
-                existdlg.Destroy()
-                #self.Close(True)
-                cont = False
+        if len(stream) > 0:
+            plotstream = stream.copy()
+            cont = True
+            if 'f' in plotstream.variables():
+                existdlg = wx.MessageDialog(self, "F data already existing\n"
+                            "Replace with vector sum?\n",
+                            "F data existing", wx.YES_NO|wx.ICON_INFORMATION)
+                if existdlg.ShowModal() == wx.ID_YES:
+                    existdlg.Destroy()
+                else:
+                    existdlg.Destroy()
+                    cont = False
 
-        if cont:
-            self.changeStatusbar("Calculating F from components ...")
+            if cont:
+                self.changeStatusbar("Calculating F from components ...")
 
-            self.plotstream = self.plotstream.calc_f(skipdelta=True)
-            #self.streamlist[self.currentstreamindex].calc_f()
-            #print (self.plotstream._get_key_headers())
-            if 'f' in self.plotstream._get_key_headers() and not 'f' in self.shownkeylist:
-                self.shownkeylist.append('f')
-            if 'df' in self.plotstream._get_key_headers():
-                self.plotstream = self.plotstream.delta_f()
-            self.menu_p.rep_page.logMsg('- determined f from x,y,z')
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+                plotstream = plotstream.calc_f(skipdelta=True)
+                if 'f' in plotstream.variables() and not 'f' in keys:
+                    keys.append('f')
+                    plotcont['shownkeys'] = keys
+                    self.plotdict[self.active_id] = plotcont
+                if 'df' in plotstream.variables():
+                    plotstream = plotstream.delta_f()
+                self.menu_p.rep_page.logMsg(' - determined f from x,y,z')
+                streamid = self._initial_read(plotstream)
+                self._initial_plot(streamid)
         self.changeStatusbar("Ready")
 
 

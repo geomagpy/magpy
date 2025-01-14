@@ -11,7 +11,7 @@ Installation instructions can be found on the main download page.
     - changed many methods with main focus on speed and memory efficiency
     - completely new plotting routines
     - database methods updated and speeded up (i.e. read is 15times faster than in MagPy1.x)
-    - README completely reorganized, updated and rewritten
+    - README completely reorganized, updated and mostly rewritten
     - jupyter-notebook examples for backend functionality
 
     Please note: despite the removal of py2.x support, MagPy2.x is fully
@@ -27,12 +27,11 @@ Installation instructions can be found on the main download page.
     - rotation method: the new method makes use of an Euler rotation. This differs from earlier "yaw" and "pitch"
       technique, if you used angles other than alpha.
 
-
 2.0.0 new packages:
     plotting:
         - the original plotting methods were replaced by completely new methods
         - more memory efficient and faster
-        - more flexibility with layout by configuration dictionaries
+        - more flexibility with layout defined in configuration dictionaries
         - modern look
         - auto-zoom function for all axes
     flagging of signals and annotations:
@@ -65,7 +64,7 @@ Installation instructions can be found on the main download page.
      - opt.emd replaced by official python emd package
      - opt.stormdet is now part of the activity package
      - mpplot removed and replaced by core.plot
-     - transfer and database moved to core
+     - transfer removed and database moved to core
      - deleted old MARTAS related items (collector, acquisition)
 
 2.0.0 XMagPy - graphical user interface:
