@@ -341,11 +341,13 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                     color = [0.8, 0.8, 0.8]
                 if symbol == "k":
                     # special symbol for K values
-                    diffs = (np.asarray(t[1:].astype(datetime64) - t[:-1].astype(datetime64)) / 1000000.).astype(
-                        float64)  # in seconds
+                    #diffs = (np.asarray(t[1:].astype(datetime64) - t[:-1].astype(datetime64)) / 1000000.).astype(
+                    #    float64)  # in seconds
+                    diffs = np.asarray(t[1:] - t[:-1]).astype(float64)  # in days
                     diffs = diffs[~np.isnan(diffs)]
                     me = np.median(diffs)
-                    bartrange = timedelta(seconds=(me / 2.) * 0.95)  # use 99% of the half distance for bartrange
+                    #bartrange = timedelta(seconds=(me / 2.) * 0.95)  # use 99% of the half distance for bartrange
+                    bartrange = ((me / 2.) * 0.95) # use 99% of the half distance for bartrange
                     xy = range(9)
                     for num in range(len(t)):
                         # if bartrange < t[num] < np.max(t)-bartrange:

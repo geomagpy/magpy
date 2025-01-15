@@ -422,6 +422,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
         header['DataSamplingRate'] = 10800
         header['StationK9'] = K9_limit
         header['DataSamplingFilter'] = 'FMI K determination'
+        header['DataType'] = 'MagPyK 2.0'
         header['col-var1'] = 'K'
     else:
         array[0] = np.asarray(sq_k_t)
@@ -433,6 +434,7 @@ def K_fmi(datastream, step_size=60, K9_limit=750, longitude=15.0, missing_data=9
         header['DataSamplingRate'] = 3600
         header['StationK9'] = K9_limit
         header['DataSamplingFilter'] = 'Harmonic Fit - FMI K determination'
+        header['DataType'] = 'Sq FMI'
         header['col-x'] = 'X'
         header['col-y'] = 'Y'
         header['unit-col-x'] = 'nT'

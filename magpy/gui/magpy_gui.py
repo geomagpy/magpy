@@ -2338,10 +2338,11 @@ class MainFrame(wx.Frame):
 
         # 5. If K values are shown: preselect bar chart
         # ------------------------------
+        print (stream.header)
         if stream.header.get('DataFormat') == 'MagPyK' or stream.header.get('DataType','').startswith('MagPyK') or ('var1' in shownkeys and stream.header.get('col-var1','').startswith('K')):
-            if 'var' in shownkeys:
+            if 'var1' in shownkeys:
                 pos = shownkeys.index('var1')
-                plotcont['symbols'][pos] = 'z'
+                plotcont['symbols'][pos] = 'k'
 
         return plotcont
 
