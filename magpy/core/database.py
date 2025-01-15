@@ -2043,13 +2043,11 @@ REMOVED:
             Perform a select search and return floats
         PARAMETERS:
         Variables:
-            - db:           (mysql database) defined by mysql.connect().
             - tablename:    name of the table
             - sensorid:     sensor to match
             - columnid:     column in which search is performed
         APPLICATION:
-            deltaf =  dbgetfloat(db, 'DATAINFO', Sensor, 'DataDeltaF')
-            returns deltaF from the DATAINFO table which matches the Sensor
+            sr =  db.get_float('DATAINFO', teststream1.header.get('SensorID'), 'DataSamplingRate')
         """
         sql = 'SELECT ' + columnid + ' FROM ' + tablename + ' WHERE SensorID = "' + sensorid + '"'
         try:

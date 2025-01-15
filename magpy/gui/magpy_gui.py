@@ -124,6 +124,11 @@ Major methods:              major_method
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
 |  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | m_onGetDBButton |      2.0.0  |          | level 1    |               |        |   |
+|  MainFrame     | m_onPutDBButton |      2.0.0  |          | level 1    |               |        |   |
+|  MainFrame     | m_onDataButton |       2.0.0  |          | level 1    |               |        |   |
+|  MainFrame     | m_onSensorButton |     2.0.0  |          | level 1    |               |        |   |
+|  MainFrame     | m_onStationButton |    2.0.0  |          | level 1    |               |        |   |
 |  MainFrame     | a_onDerivativeButton | 2.0.0  |          | level 2    |               |        |   |
 |  MainFrame     | a_onDeltaFButton  | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | a_onRotationButton | 2.0.0  |            | level 2    |               |        |   |
@@ -1597,11 +1602,11 @@ class MainFrame(wx.Frame):
         #     Edit/Review Sensor related meta data
         #     ....
         #     .... and so on
-        self.Bind(wx.EVT_BUTTON, self.onMetaGetDBButton, self.menu_p.met_page.getDBButton)
-        self.Bind(wx.EVT_BUTTON, self.onMetaPutDBButton, self.menu_p.met_page.putDBButton)
-        self.Bind(wx.EVT_BUTTON, self.onMetaDataButton, self.menu_p.met_page.MetaDataButton)
-        self.Bind(wx.EVT_BUTTON, self.onMetaSensorButton, self.menu_p.met_page.MetaSensorButton)
-        self.Bind(wx.EVT_BUTTON, self.onMetaStationButton, self.menu_p.met_page.MetaStationButton)
+        self.Bind(wx.EVT_BUTTON, self.meta_onGetDBButton, self.menu_p.met_page.getDBButton)
+        self.Bind(wx.EVT_BUTTON, self.meta_onPutDBButton, self.menu_p.met_page.putDBButton)
+        self.Bind(wx.EVT_BUTTON, self.meta_onDataButton, self.menu_p.met_page.MetaDataButton)
+        self.Bind(wx.EVT_BUTTON, self.meta_onSensorButton, self.menu_p.met_page.MetaSensorButton)
+        self.Bind(wx.EVT_BUTTON, self.meta_onStationButton, self.menu_p.met_page.MetaStationButton)
         #        Analysis Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.analysis_onDerivativeButton, self.menu_p.ana_page.derivativeButton)
@@ -2338,7 +2343,6 @@ class MainFrame(wx.Frame):
 
         # 5. If K values are shown: preselect bar chart
         # ------------------------------
-        print (stream.header)
         if stream.header.get('DataFormat') == 'MagPyK' or stream.header.get('DataType','').startswith('MagPyK') or ('var1' in shownkeys and stream.header.get('col-var1','').startswith('K')):
             if 'var1' in shownkeys:
                 pos = shownkeys.index('var1')
@@ -3606,6 +3610,129 @@ class MainFrame(wx.Frame):
     # ##################################################################################################################
 
 
+    def meta_onGetDBButton(self,event):
+        """
+        DESCRIPTION
+            get Meta data for the current sensorid from database
+        """
+        # Test whether DB is still connected
+        self._check_db('minimal')
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        dataid = stream.header.get('DataID','')
+
+        # open dialog with all header info
+        if dataid == '':
+            dlg = wx.MessageDialog(self, "No Data ID available!\n"
+                            "You need to specify a unique Data ID\nfor which meta information is obtained.\n","Undefined Data ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.menu_p.rep_page.logMsg(" - failed to add meta information from DB")
+        else:
+            db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+            stream.header = db.fields_to_dict(dataid)
+            self.menu_p.rep_page.logMsg(" - added meta information for {} from DB".format(dataid))
+            self._activate_controls(self.active_id)
+
+
+    def meta_onPutDBButton(self,event):
+        """
+        DESCRIPTION
+            write meta data to the database
+        """
+        # Check whether DB still available
+        self._check_db('minimal')
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        dataid = stream.header.get('DataID','')
+
+        if dataid == '':
+            dlg = wx.MessageDialog(self, "No Data ID available!\n"
+                            "You need to specify a unique Data ID\nfor which meta information is stored.\n","Undefined Data ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            self.menu_p.rep_page.logMsg(" - failed to add meta information to DB")
+        else:
+            dlg = wx.MessageDialog(self, "Please confirm!\n"
+                            "I want to replace the Meta information\nfrom the DB with data provided.\n","Confirm", wx.YES_NO |wx.ICON_INFORMATION)
+            if dlg.ShowModal() == wx.ID_YES:
+                db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+                db.dict_to_fields(stream.header)
+                self.menu_p.rep_page.logMsg(" - added meta information for {} to DB".format(dataid))
+            self._activate_controls(self.active_id)
+
+
+    def meta_onDataButton(self,event):
+        """
+        DESCRIPTION
+            open dialog to modify plot options (general (e.g. bgcolor) and  key
+            specific (key: symbol color errorbar etc)
+        """
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        # open dialog with all header info
+        if len(stream) > 0:
+            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,layer='DATAINFO')
+            if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
+                db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+                for key in db.DATAINFOKEYLIST:
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
+                    try:
+                        if not d['value'] == dlg.header.get(key,''):
+                            stream.header[key] = d['value']
+                    except:
+                        # might fail for arrays
+                        pass
+                self._activate_controls(self.active_id)
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
+
+
+    def meta_onSensorButton(self,event):
+        """
+        DESCRIPTION
+            open dialog to modify plot options (general (e.g. bgcolor) and  key
+            specific (key: symbol color errorbar etc)
+        """
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        # open dialog with all header info
+        if len(stream) > 0:
+            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,layer='SENSORS')
+            if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
+                db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+                for key in db.SENSORSKEYLIST:
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
+                    if not d['value'] == dlg.header.get(key,''):
+                        stream.header[key] = d['value']
+                self._activate_controls(self.active_id)
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
+
+
+    def meta_onStationButton(self,event):
+        """
+        DESCRIPTION
+            open dialog to modify plot options (general (e.g. bgcolor) and  key
+            specific (key: symbol color errorbar etc)
+        """
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        # open dialog with all header info
+        if len(stream) > 0:
+            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,layer='STATIONS')
+            if dlg.ShowModal() == wx.ID_OK:
+                d = locals()
+                db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+                for key in db.STATIONSKEYLIST:
+                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
+                    if not d['value'] == dlg.header.get(key,''):
+                        stream.header[key] = d['value']
+                self._activate_controls(self.active_id)
+        else:
+            self.menu_p.rep_page.logMsg("Meta information: No data available")
 
 
     # ##################################################################################################################
@@ -5337,119 +5464,6 @@ class MainFrame(wx.Frame):
     # ################
     # ------------------------------------------------------------------------------------------
 
-
-    def onMetaGetDBButton(self,event):
-        # TODO Move to Meta page
-        """
-        DESCRIPTION
-            get Meta data for the current sensorid from database
-        """
-        # Test whether DB is still connected
-        self._check_db('minimal')
-
-        # open dialog with all header info
-        dataid = self.plotstream.header.get('DataID','')
-        if dataid == '':
-            dlg = wx.MessageDialog(self, "No Data ID available!\n"
-                            "You need to specify a unique Data ID\nfor which meta information is obtained.\n","Undefined Data ID", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            self.menu_p.rep_page.logMsg(" - failed to add meta information from DB")
-        else:
-            self.plotstream.header = self.db.fields_to_dict(dataid)
-            self.menu_p.rep_page.logMsg(" - added meta information for {} from DB".format(dataid))
-            self.ActivateControls(self.plotstream)
-
-
-    def onMetaPutDBButton(self,event):
-        """
-        DESCRIPTION
-            write meta data to the database
-        """
-        # Check whether DB still available
-        self._check_db('minimal')
-
-        # open dialog with all header info
-        dataid = self.plotstream.header.get('DataID','')
-        if dataid == '':
-            dlg = wx.MessageDialog(self, "No Data ID available!\n"
-                            "You need to specify a unique Data ID\nfor which meta information is stored.\n","Undefined Data ID", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            self.menu_p.rep_page.logMsg(" - failed to add meta information to DB")
-        else:
-            dlg = wx.MessageDialog(self, "Please confirm!\n"
-                            "I want to replace the Meta information\nfrom the DB with data provided.\n","Confirm", wx.YES_NO |wx.ICON_INFORMATION)
-            if dlg.ShowModal() == wx.ID_YES:
-                self.db.dict_to_fields(self.plotstream.header)
-                self.menu_p.rep_page.logMsg(" - added meta information for {} to DB".format(dataid))
-            self.ActivateControls(self.plotstream)
-
-    def onMetaDataButton(self,event):
-        """
-        DESCRIPTION
-            open dialog to modify plot options (general (e.g. bgcolor) and  key
-            specific (key: symbol color errorbar etc)
-        """
-        # open dialog with all header info
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='DATAINFO')
-            if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
-                for key in self.db.DATAINFODataStream().KEYLIST:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    try:
-                        if not d['value'] == dlg.header.get(key,''):
-                            self.plotstream.header[key] = d['value']
-                    except:
-                        # might fail for arrays
-                        pass
-                self.ActivateControls(self.plotstream)
-        else:
-            self.menu_p.rep_page.logMsg("Meta information: No data available")
-
-
-    def onMetaSensorButton(self,event):
-        # TODO Move to Meta page
-        """
-        DESCRIPTION
-        open dialog to modify plot options (general (e.g. bgcolor) and  key
-        specific (key: symbol color errorbar etc)
-        """
-        # open dialog with all header info
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='SENSORS')
-            if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
-                for key in self.db.SENSORSDataStream().KEYLIST:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not d['value'] == dlg.header.get(key,''):
-                        self.plotstream.header[key] = d['value']
-                self.ActivateControls(self.plotstream)
-
-        else:
-            self.menu_p.rep_page.logMsg("Meta information: No data available")
-
-
-    def onMetaStationButton(self,event):
-        # TODO Move to Meta page
-        """
-        DESCRIPTION
-        open dialog to modify plot options (general (e.g. bgcolor) and  key
-        specific (key: symbol color errorbar etc)
-        """
-        # open dialog with all header info
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=self.plotstream.header,layer='STATIONS')
-            if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
-                for key in self.db.STATIONSDataStream().KEYLIST:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not d['value'] == dlg.header.get(key,''):
-                        self.plotstream.header[key] = d['value']
-                self.ActivateControls(self.plotstream)
-        else:
-            self.menu_p.rep_page.logMsg("Meta information: No data available")
 
     # ------------------------------------------------------------------------------------------
     # ####################
