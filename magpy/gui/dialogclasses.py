@@ -20,6 +20,7 @@ from matplotlib.figure import Figure
 import wx.lib.scrolledpanel as scrolledpanel
 from io import open
 import dateutil.parser
+import platform
 
 
 """
@@ -2114,18 +2115,18 @@ class MetaDataDialog(wx.Dialog):
         InputDialog for DI data
     """
 
-    def __init__(self, parent, title, header, layer):
+    def __init__(self, parent, title, header, fields):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(MetaDataDialog, self).__init__(parent=parent,
             title=title, style=style) #, size=(600, 600))
         self.header = header
         self.list = []
-        self.layer=layer
+        self.fields=fields
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add Settings Panel
-        self.panel = MetaDataPanel(self, header, layer)
-        self.panel.SetInitialSize((400, 500))
+        self.panel = MetaDataPanel(self, header, fields)
+        self.panel.SetInitialSize((900, 500))
         self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
         # Add Save/Cancel Buttons
         self.createWidgets()
@@ -2156,12 +2157,11 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
     """
     Dialog for MetaData panel
     """
-    def __init__(self, parent, header, layer):
+    def __init__(self, parent, header, fields):
         scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(1000, 800))
 
         self.header = header
-        self.list = []
-        self.layer=layer
+        self.fields=fields
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
 
         self.createControls()
@@ -2176,9 +2176,15 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
     def createControls(self):
         # countvariables for specific header blocks
         cnt,colcnt = 0,0
-        self.list = eval(self.layer.upper() + 'KEYLIST')
 
-        for key in self.list:
+        # DYNAMICSIZE
+        plat_form = platform.platform()
+        if plat_form.startswith('linux') or plat_form.startswith('Linux'):
+            dynsize = '30'
+        else:
+            dynsize = '50'
+
+        for key in self.fields:
             if key.find('-') > 0:
                 # Column contents:
                 tmplst = key.split('-')
@@ -2203,20 +2209,12 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
                      except:
                          value = 'object with complex data'
                 cnt += 1
-
                 label = self.AppendLabel(key,label)
-                # DYNAMICSIZE
-                if PLATFORM.startswith('linux'):
-                    dynsize = '30'
-                else:
-                    dynsize = '50'
-
                 exec('self.'+key+'Text = wx.StaticText(self,label="'+label+'")')
                 exec('self.'+key+'TextCtrl = wx.TextCtrl(self, value="'+value+'",size=(160,'+dynsize+'),style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)')
                 if value.startswith('object with complex'):
                     exec('self.'+key+'TextCtrl.Disable()')
         self.cnts = [colcnt, cnt]
-
         self.legendText = wx.StaticText(self,label="(1: IAF, 2: IAGA, 3: IMAGCDF)")
 
     def doLayout(self):
@@ -2232,25 +2230,15 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
         # Add the controls to the sizers:
         # transform headerlist to an array with lines like cnts
         headarray = [[],[],[],[],[]]
-        for key in self.list:
-            #if key.startswith(self.layer):
+        for key in self.fields:
             contlst.append(eval('(self.'+key+'Text, noOptions)'))
             contlst.append(eval('(self.'+key+'TextCtrl, expandOption)'))
-                #headline.append(key)
-                #elif elem == 'col' and key.find('-'):
-                #    headline.append(key)
-        #headarray[idx] = headline
-
-        #for elem in self.header:
-        #    if elem.find('-') > 0:
-        #        elem=elem.replace('-','')
-        #    contlst.append(eval('(self.'+elem+'Text, expandOption)'))
 
         contlst.append(emptySpace)
         contlst.append((self.legendText, noOptions))
 
         # A GridSizer will contain the other controls:
-        cols = 6
+        cols = 4
         rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 

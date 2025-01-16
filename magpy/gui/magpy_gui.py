@@ -124,11 +124,11 @@ Major methods:              major_method
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
 |  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | m_onGetDBButton |      2.0.0  |          | level 1    |               |        |   |
-|  MainFrame     | m_onPutDBButton |      2.0.0  |          | level 1    |               |        |   |
-|  MainFrame     | m_onDataButton |       2.0.0  |          | level 1    |               |        |   |
-|  MainFrame     | m_onSensorButton |     2.0.0  |          | level 1    |               |        |   |
-|  MainFrame     | m_onStationButton |    2.0.0  |          | level 1    |               |        |   |
+|  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | m_onDataButton |    2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | m_onSensorButton |  2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | m_onStationButton | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | a_onDerivativeButton | 2.0.0  |          | level 2    |               |        |   |
 |  MainFrame     | a_onDeltaFButton  | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | a_onRotationButton | 2.0.0  |            | level 2    |               |        |   |
@@ -1679,7 +1679,7 @@ class MainFrame(wx.Frame):
             pass
         # check whether host can be pinged (faster)
         plat_form = platform.platform()
-        if plat_form.startswith('linux'):
+        if plat_form.startswith('linux') or plat_form.startswith('Linux'):
             response = os.system("ping -c 1 -w2 {} > /dev/null 2>&1".format(host))
         else:
             response = 0
@@ -3670,13 +3670,14 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
+        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        fields = db.DATAINFOKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,layer='DATAINFO')
+            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
             if dlg.ShowModal() == wx.ID_OK:
                 d = locals()
-                db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-                for key in db.DATAINFOKEYLIST:
+                for key in fields:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     try:
                         if not d['value'] == dlg.header.get(key,''):
@@ -3697,13 +3698,14 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
+        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        fields = db.SENSORSKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,layer='SENSORS')
+            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
             if dlg.ShowModal() == wx.ID_OK:
                 d = locals()
-                db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-                for key in db.SENSORSKEYLIST:
+                for key in fields:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     if not d['value'] == dlg.header.get(key,''):
                         stream.header[key] = d['value']
@@ -3720,13 +3722,14 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
+        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        fields = db.STATIONSKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
-            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,layer='STATIONS')
+            dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
             if dlg.ShowModal() == wx.ID_OK:
                 d = locals()
-                db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-                for key in db.STATIONSKEYLIST:
+                for key in fields:
                     exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
                     if not d['value'] == dlg.header.get(key,''):
                         stream.header[key] = d['value']
