@@ -119,11 +119,17 @@ Major methods:              major_method
 |  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | memory_select |     2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | options_init |      2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | options_plot   |    2.0.0  |             | level 0    |               |        |   |
 |  MainFrame     | options_di   |      2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_about  |       2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
 |  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | d_onTrimButton |    2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | d_onSelectButton |  2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | d_onDropButton |    2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | d_onExtrcatButton | 2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | d_onGetGapsButton | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | m_onDataButton |    2.0.0  |             | level 1    |               |        |   |
@@ -1459,7 +1465,10 @@ class MainFrame(wx.Frame):
         self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
         self.OptionsMenu.Append(self.OptionsInitItem)
         self.OptionsMenu.AppendSeparator()
-        self.OptionsDIItem = wx.MenuItem(self.OptionsMenu, 402, "D&I parameter\tCtrl+I", "Modify DI related parameters (e.g. thresholds, paths, input sheet layout)", wx.ITEM_NORMAL)
+        self.OptionsPlotItem = wx.MenuItem(self.OptionsMenu, 402, "Plotting parameter\tCtrl+I", "Modify plotting parameters", wx.ITEM_NORMAL)
+        self.OptionsMenu.Append(self.OptionsPlotItem)
+        self.OptionsMenu.AppendSeparator()
+        self.OptionsDIItem = wx.MenuItem(self.OptionsMenu, 403, "D&I parameter\tCtrl+I", "Modify DI related parameters (e.g. thresholds, paths, input sheet layout)", wx.ITEM_NORMAL)
         self.OptionsMenu.Append(self.OptionsDIItem)
         self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.HelpMenu = wx.Menu()
@@ -1552,6 +1561,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.di_input_sheet, self.DIInputSheet)
         # Options Menu
         self.Bind(wx.EVT_MENU, self.options_init, self.OptionsInitItem)
+        self.Bind(wx.EVT_MENU, self.options_plot, self.OptionsPlotItem)
         self.Bind(wx.EVT_MENU, self.options_di, self.OptionsDIItem)
         # Help Menu
         self.Bind(wx.EVT_MENU, self.help_about, self.HelpAboutItem)
@@ -1564,20 +1574,18 @@ class MainFrame(wx.Frame):
         #       Stream Page
         # ------------------------
         #self.Bind(wx.EVT_BUTTON, self.onOpenStreamButton, self.menu_p.str_page.openStreamButton)
-        self.Bind(wx.EVT_BUTTON, self.onTrimStreamButton, self.menu_p.str_page.trimStreamButton)
-        self.Bind(wx.EVT_BUTTON, self.onSelectKeys, self.menu_p.str_page.selectKeysButton)
-        self.Bind(wx.EVT_BUTTON, self.onDropKeys, self.menu_p.str_page.dropKeysButton)
-        self.Bind(wx.EVT_BUTTON, self.onExtractData, self.menu_p.str_page.extractValuesButton)
-        self.Bind(wx.EVT_BUTTON, self.onChangePlotOptions, self.menu_p.str_page.changePlotButton)
-        self.Bind(wx.EVT_BUTTON, self.onRestoreData, self.menu_p.str_page.restoreButton)
+        self.Bind(wx.EVT_BUTTON, self.data_onTrimButton, self.menu_p.str_page.trimStreamButton)
+        self.Bind(wx.EVT_BUTTON, self.data_onSelectKeys, self.menu_p.str_page.selectKeysButton)
+        self.Bind(wx.EVT_BUTTON, self.data_onDropKeys, self.menu_p.str_page.dropKeysButton)
+        self.Bind(wx.EVT_BUTTON, self.data_onExtractData, self.menu_p.str_page.extractValuesButton)
         self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.str_page.annotateCheckBox)
         self.Bind(wx.EVT_CHECKBOX, self.onErrorBarCheckBox, self.menu_p.str_page.errorBarsCheckBox)
         self.Bind(wx.EVT_CHECKBOX, self.onConfinexCheckBox, self.menu_p.str_page.confinexCheckBox)
         self.Bind(wx.EVT_BUTTON, self.onDailyMeansButton, self.menu_p.str_page.dailyMeansButton)
         self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.str_page.applyBCButton)
-        self.Bind(wx.EVT_BUTTON, self.onGetGapsButton, self.menu_p.str_page.getGapsButton)
-        self.Bind(wx.EVT_RADIOBOX, self.onChangeComp, self.menu_p.str_page.compRadioBox)
-        self.Bind(wx.EVT_RADIOBOX, self.on_change_symbol, self.menu_p.str_page.symbolRadioBox)
+        self.Bind(wx.EVT_BUTTON, self.data_onGetGapsButton, self.menu_p.str_page.getGapsButton)
+        self.Bind(wx.EVT_RADIOBOX, self.data_onChangeComp, self.menu_p.str_page.compRadioBox)
+        self.Bind(wx.EVT_RADIOBOX, self.data_onChangeSymbol, self.menu_p.str_page.symbolRadioBox)
         #        Flags Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onFlagOutlierButton, self.menu_p.fla_page.flagOutlierButton)
@@ -1811,6 +1819,8 @@ class MainFrame(wx.Frame):
         self.exportData.Enable(False)
         # Stream
         # ---------------------------------
+        self.menu_p.str_page.previousButton.Disable()      # always
+        self.menu_p.str_page.nextButton.Disable()          # always
         self.menu_p.str_page.pathTextCtrl.Disable()        # remain disabled
         self.menu_p.str_page.fileTextCtrl.Disable()        # remain disabled
         self.menu_p.str_page.startDatePicker.Disable()     # always
@@ -1818,11 +1828,9 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.endDatePicker.Disable()       # always
         self.menu_p.str_page.endTimePicker.Disable()       # always
         self.menu_p.str_page.trimStreamButton.Disable()    # always
-        self.menu_p.str_page.restoreButton.Disable()       # always
         self.menu_p.str_page.selectKeysButton.Disable()    # always
         self.menu_p.str_page.dropKeysButton.Disable()    # always
         self.menu_p.str_page.extractValuesButton.Disable() # always
-        self.menu_p.str_page.changePlotButton.Disable()    # always
         self.menu_p.fla_page.flagOutlierButton.Disable()   # always
         self.menu_p.fla_page.flagSelectionButton.Disable() # always
         self.menu_p.fla_page.flagRangeButton.Disable()     # always
@@ -1965,15 +1973,6 @@ class MainFrame(wx.Frame):
             return
 
         self.menu_p.str_page.symbolRadioBox.Enable()
-        #self.menu_p.str_page.symbolRadioBox.SetStringSelection('line') # will be modified later
-        #self.menu_p.str_page.dailyMeansButton.Disable()
-        # Test without this limitation
-        # Reset line/point selection
-        #if n < 2000:
-        #    self.menu_p.str_page.symbolRadioBox.Enable()
-        #else:
-        #    self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
-        #    self.menu_p.str_page.symbolRadioBox.Disable()
 
         """
         # Coverage
@@ -2009,7 +2008,6 @@ class MainFrame(wx.Frame):
             if key.startswith('Station'):
                  metastationtext += "{}: \t{}\n".format(key.replace('Station',''),stream.header.get(key,'')) #key.replace('Station','')+': \t'+stream.header.get(key,'')+'\n'
 
-
         # Append baselineinfo to baselinedictlist
         if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
             if not sensorid and not dataid:
@@ -2044,11 +2042,9 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.endDatePicker.Enable()       # always
         self.menu_p.str_page.endTimePicker.Enable()       # always
         self.menu_p.str_page.trimStreamButton.Enable()    # always
-        self.menu_p.str_page.restoreButton.Enable()       # always
         self.menu_p.str_page.selectKeysButton.Enable()    # always
         self.menu_p.str_page.dropKeysButton.Enable()      # always
         self.menu_p.str_page.extractValuesButton.Enable() # always
-        self.menu_p.str_page.changePlotButton.Enable()    # always
         self.menu_p.str_page.confinexCheckBox.Enable()    # always
 
         # ----------------------------------------
@@ -2092,7 +2088,7 @@ class MainFrame(wx.Frame):
 
         # Selective fields
         # ----------------------------------------
-        #print ("COMPONENTS", comps)
+        print ("COMPONENTS", comps)
         if comps in ['xyz','XYZ','hdz','HDZ','idf','IDF','hez','HEZ','DIF','dif']:
             self.menu_p.str_page.compRadioBox.Enable()
             if comps in ['hdz','HDZ']:
@@ -2307,8 +2303,12 @@ class MainFrame(wx.Frame):
         else:
             plotcont['symbols'] =  ['.'] * lenshownkeys
         if plotcont.get('colors') and not len(plotcont.get('colors',[])) == len(shownkeys):
-            colors = plotcont['colors']
-            plotcont['colors'] = colors[:lenshownkeys]
+            print ("COLORS")
+            colors = plotcont.get('colors')
+            if len(colors) > lenshownkeys:
+                plotcont['colors'] = colors[:lenshownkeys]
+            else:
+                plotcont['colors'] = [colors[0]] * lenshownkeys
         pads = plotcont.get('padding',[])
         if not pads or not len(pads) == lenshownkeys:
             plotcont['padding']= []
@@ -3383,6 +3383,29 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
 
 
+    def options_plot(self, event):
+        """
+        DEFINITION
+            Change options
+        """
+        if len(stream) > 0:
+            dlg = StreamPlotOptionsDialog(None, title='Plot Options:',optdict=self.plotopt)
+            if dlg.ShowModal() == wx.ID_OK:
+                for elem in self.plotopt:
+                    if not elem in ['function']:
+                        val = eval('dlg.'+elem+'TextCtrl.GetValue()')
+                        if val in ['False','True','None'] or val.startswith('[') or val.startswith('{'):
+                            val = eval(val)
+                        if elem in ['opacity','bartrange']:
+                            val = float(val)
+                        if not val == self.plotopt[elem]:
+                            self.plotopt[elem] = val
+            dlg.Destroy()
+
+            self.ActivateControls(self.plotstream)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+
     # ##################################################################################################################
     # ####    Help Menu Bar                                    #########################################################
     # ##################################################################################################################
@@ -3548,6 +3571,306 @@ class MainFrame(wx.Frame):
         pass
 
 
+    def data_onTrimButton(self,event):
+        """
+        DESCRIPTION
+            Trim the data stream to the selected timerange. This will modify the data set and create a new stream input.
+            Use the zoom methods if you don't want that.
+        CALLS
+            stream._select_timerange
+        """
+
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+
+        stday = self.menu_p.str_page.startDatePicker.GetValue()
+        sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
+        stdate = (datetime.fromtimestamp(stday.GetTicks())).date()
+        start = dparser.parse("{} {}".format(stdate,sttime))
+        """
+        try:
+            sttimetmp = datetime.strptime(sttime, "%I:%M:%S %p")
+            print ("TEST", sttimetmp)
+            if sttime.endswith('AM') or sttime.endswith('am'):
+                sttime = sttimetmp.strftime("%H:%M:%S")
+            if sttime.endswith('pm') or sttime.endswith('PM'):
+                sttime = sttimetmp.strftime("%H:%M:%S")
+            print ("HHHHHERE")
+            sdtmp = datetime.fromtimestamp(stday.GetTicks())
+            sd = sdtmp.strftime("%Y-%m-%d")
+        except:
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered startdate is not valid.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
+        start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+        """
+
+        enday = self.menu_p.str_page.endDatePicker.GetValue()
+        entime = str(self.menu_p.str_page.endTimePicker.GetValue())
+        endate = (datetime.fromtimestamp(stday.GetTicks())).date()
+        end = dparser.parse("{} {}".format(endate,entime))
+        """
+        try:
+            entimetmp = datetime.strptime(entime,"%I:%M:%S %p")
+            if entime.endswith('AM') or entime.endswith('am'):
+                entime = entimetmp.strftime("%H:%M:%S")
+            if entime.endswith('pm') or entime.endswith('PM'):
+                entime = entimetmp.strftime("%H:%M:%S")
+            edtmp = datetime.fromtimestamp(enday.GetTicks())
+            ed = edtmp.strftime("%Y-%m-%d")
+        except:
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered enddate is not valid.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
+        end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+        """
+
+        if end > start:
+            plotstream = stream.copy()
+            try:
+                self.changeStatusbar("Trimming stream ...")
+                plotstream = plotstream.trim(starttime=start, endtime=end)
+                #self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
+                self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
+            except:
+                self.menu_p.rep_page.logMsg('- Trimming failed')
+
+            if len(plotstream) > 0:
+                streamid = self._initial_read(plotstream)
+                self._initial_plot(streamid)
+                self.changeStatusbar("Ready")
+            else:
+                self.changeStatusbar("Failure")
+        else:
+            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
+                        "Entered dates are out of order.\n",
+                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            self.changeStatusbar("Trimming timerange failed ... Ready")
+            dlg.Destroy()
+
+
+    def data_onSelectKeys(self,event):
+        """
+        DESCRIPTION
+            open dialog to select shown keys (check boxes)
+            Will NOT create a new data ID.
+
+        """
+
+        self.changeStatusbar("Selecting keys ...")
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        keys = datacont.get('keys')
+        plotcont = self.plotdict.get(self.active_id)
+        shownkeys = plotcont.get('shownkeys')
+
+        namelist = []
+        unitlist = []
+        for key in keys:
+            col = stream._get_column(key)
+            if len(col) > 0:
+                value = stream.header.get('col-'+key)
+                unit = stream.header.get('unit-col-'+key)
+                if not value == '':
+                    namelist.append(value)
+                else:
+                    namelist.append(key)
+                if not unit == '':
+                    unitlist.append(unit)
+                else:
+                    unitlist.append('')
+
+        if len(stream) > 0:
+            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keys,shownkeys=shownkeys,namelist=namelist)
+            for elem in shownkeys:
+                exec('dlg.'+elem+'CheckBox.SetValue(True)')
+            if dlg.ShowModal() == wx.ID_OK:
+                newshownkeys = []
+                for elem in keys:
+                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
+                    if boolval:
+                        newshownkeys.append(elem)
+                if len(newshownkeys) == 0:
+                    print ("Deselecting all elements is not possible")
+                else:
+                    shownkeys = newshownkeys
+                plotcont['shownkeys'] = shownkeys
+                self.plotdict[self.active_id] = plotcont
+                self._initial_plot(self.active_id, keepplotdict=True)
+        else:
+            self.changeStatusbar("Failure")
+
+
+    def data_onDropKeys(self,event):
+        """
+        DESCRIPTION
+            open dialog to select drop keys (check boxes).
+            Will create a new data ID.
+        """
+
+        self.changeStatusbar("Dropping keys ...")
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        keys = datacont.get('keys')
+        plotcont = self.plotdict.get(self.active_id)
+        shownkeys = plotcont.get('shownkeys')
+
+        namelist = []
+        unitlist = []
+        for key in keys:
+            col = stream._get_column(key)
+            if len(col) > 0:
+                value = stream.header.get('col-'+key)
+                unit = stream.header.get('unit-col-'+key)
+                if not value == '':
+                    namelist.append(value)
+                else:
+                    namelist.append(key)
+                if not unit == '':
+                    unitlist.append(unit)
+                else:
+                    unitlist.append('')
+
+        if len(stream) > 0:
+            plotstream = stream.copy()
+            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keys,shownkeys=shownkeys,namelist=namelist)
+            if dlg.ShowModal() == wx.ID_OK:
+                dropkeylist = []
+                for elem in keys:
+                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
+                    if boolval:
+                        dropkeylist.append(elem)
+                        plotstream = plotstream._drop_column(elem)
+                if len(dropkeylist) == 0:
+                    self.changeStatusbar("Ready")
+                else:
+                    shownkeys = [el for el in shownkeys if not el in dropkeylist]
+                    self.plotdict[self.active_id] = plotcont # this line is useless
+                    streamid = self._initial_read(plotstream)
+                    self._initial_plot(streamid)
+        else:
+            self.changeStatusbar("Failure")
+
+
+    def data_onExtractData(self,event):
+        """
+        DESCRIPTION:
+            open dialog to choose extract parameter (paramater compare value)
+            up to three possibilities
+        """
+
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        keys = datacont.get('keys')
+        plotcont = self.plotdict.get(self.active_id)
+        shownkeys = plotcont.get('shownkeys')
+
+        if len(stream.ndarray[0]) > 0:
+            dlg = StreamExtractValuesDialog(None, title='Extract:',keylst=shownkeys)
+            if dlg.ShowModal() == wx.ID_OK:
+                key1 = dlg.key1ComboBox.GetValue()
+                comp1 = dlg.compare1ComboBox.GetValue()
+                val1 = dlg.value1TextCtrl.GetValue()
+                logic2 = dlg.logic2ComboBox.GetValue()
+                logic3 = dlg.logic3ComboBox.GetValue()
+                extractedstream = stream.extract(key1,val1,comp1)
+                if len(extractedstream) < 2 and extractedstream.length()[0] < 2:
+                    # Empty stream returned -- looks complex because of old LineStruct rubbish
+                    self.menu_p.rep_page.logMsg('Extract: criteria would return an empty data stream - skipping')
+                    extractedstream = stream
+                val2 = dlg.value2TextCtrl.GetValue()
+                if not val2 == '':
+                    key2 = dlg.key2ComboBox.GetValue()
+                    comp2 = dlg.compare2ComboBox.GetValue()
+                    if logic2 == 'and':
+                        extractedstream = extractedstream.extract(key2,val2,comp2)
+                    else:
+                        extractedstream2 = stream.extract(key2,val2,comp2)
+                        extractedstream.extend(extractedstream2.container, extractedstream2.header,extractedstream2.ndarray)
+                        extractedstream = extractedstream.removeduplicates()
+                        extractedstream = extractedstream.sorting()
+                        extractedstream = extractedstream.get_gaps()
+                    val3 = dlg.value3TextCtrl.GetValue()
+                    if not val3 == '':
+                        key3 = dlg.key3ComboBox.GetValue()
+                        comp3 = dlg.compare3ComboBox.GetValue()
+                        if logic3 == 'and':
+                            extractedstream = extractedstream.extract(key3,val3,comp3)
+                        else:
+                            extractedstream3 = stream.extract(key3,val3,comp3)
+                            extractedstream.extend(extractedstream3.container, extractedstream3.header,extractedstream3.ndarray)
+                            extractedstream = extractedstream.removeduplicates()
+                            extractedstream = extractedstream.sorting()
+                            extractedstream = extractedstream.get_gaps()
+                extractedstream.header["SensorID"] = "extracted-{}".format(extractedstream.header.get("SensorID"))
+                streamid = self._initial_read(extractedstream)
+                self._initial_plot(streamid)
+                self.changeStatusbar("Ready")
+        else:
+            self.menu_p.rep_page.logMsg("Extract: No data available so far")
+        # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
+
+
+    def data_onGetGapsButton(self,event):
+        """
+        get gaps in timeseries (eventually missing data assuming periodic signals
+        and add this info (0,1) to var5 key
+        """
+        self.changeStatusbar("Identifying gaps ...")
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        print (len(stream))
+        stream = stream.get_gaps()
+        print (len(stream))
+        streamid = self._initial_read(stream)
+        self._initial_plot(streamid)
+        self.changeStatusbar("Ready")
+
+
+    def data_onChangeComp(self, event):
+        """
+        DESCRIPTION
+            Coordinate transformation between orthogonal, cylindrical and spherical coordinates
+        :param event:
+        :return:
+        """
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        orgcomp = datacont.get('components').lower()
+        if orgcomp in ['xyz','hez']:  # orthogonal
+            orgcomp = 'xyz'
+        #orgcomp = self.compselect
+        compselect = self.menu_p.str_page.comp[event.GetInt()]
+        coordinate = "{}2{}".format(orgcomp,compselect)
+        self.changeStatusbar("Transforming ... {}".format(coordinate))
+        print("Transforming ... {}".format(coordinate))
+        stream = stream._convertstream(coordinate)
+        datacont['dataset'] = stream
+        datacont['components'] = compselect
+        self.datadict[self.active_id] = datacont
+        self._initial_plot(self.active_id, keepplotdict=True)
+
+
+    def data_onChangeSymbol(self, event):
+        #orgsymbol = self.symbolselect
+        symbolselect = self.menu_p.str_page.symbol[event.GetInt()]
+        self.changeStatusbar("Transforming ...")
+        plotcont = self.plotdict.get(self.active_id)
+        if symbolselect == 'line':
+            plotcont['symbols'] =  ['-' for elem in plotcont.get('shownkeys')]
+        elif symbolselect == 'point':
+            plotcont['symbols'] =  ['.' for elem in plotcont.get('shownkeys')]
+        self.plotdict[self.active_id] = plotcont
+        self._initial_plot(self.active_id, keepplotdict=True)
+
+        self.changeStatusbar("Ready")
 
 
     def default_file_dialog_options(self):
@@ -4547,7 +4870,7 @@ class MainFrame(wx.Frame):
         logfile.close()
 
 
-
+    @deprecated("currently only used by spectrogram - remove when replacing this method")
     def getComponent(self):
         """
         DESCRIPTION
@@ -4596,6 +4919,7 @@ class MainFrame(wx.Frame):
             self.changeStatusbar("Failure")
 
 
+    @deprecated("use dateformatter for optimzing x labels")
     def onConfinexCheckBox(self,event):
         """
         DESCRIPTION
@@ -4603,9 +4927,9 @@ class MainFrame(wx.Frame):
         RETURNS
             kwarg for OnPlot method
         """
+        plotcont = self.plotdict.get(self.active_id)
         if not self.menu_p.str_page.confinexCheckBox.GetValue():
-            self.confinex=False
-            self.plotopt['confinex'] = False
+            plotcont['confinex'] = False
             self.menu_p.str_page.confinexCheckBox.SetValue(False)
         else:
             self.confinex=True
@@ -4619,232 +4943,7 @@ class MainFrame(wx.Frame):
             self.changeStatusbar("Failure")
 
 
-    def onTrimStreamButton(self,event):
-        """
-        DESCRIPTION
-        """
-        stday = self.menu_p.str_page.startDatePicker.GetValue()
-        sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
-        try:
-            if sttime.endswith('AM') or sttime.endswith('am'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            if sttime.endswith('pm') or sttime.endswith('PM'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-        except:
-            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
-                        "Entered startdate is not valid.\n",
-                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Trimming timerange failed ... Ready")
-            dlg.Destroy()
-
-        start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-        enday = self.menu_p.str_page.endDatePicker.GetValue()
-        entime = str(self.menu_p.str_page.endTimePicker.GetValue())
-        try:
-            if entime.endswith('AM') or entime.endswith('am'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            if entime.endswith('pm') or entime.endswith('PM'):
-                #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
-        except:
-            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
-                        "Entered enddate is not valid.\n",
-                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Trimming timerange failed ... Ready")
-            dlg.Destroy()
-
-        end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-        #print ("Range", start, end)
-
-        if end > start:
-            try:
-                self.changeStatusbar("Trimming stream ...")
-                newarray = self.plotstream._select_timerange(starttime=start, endtime=end)
-                self.plotstream=DataStream([LineStruct()],self.plotstream.header,newarray)
-                self.menu_p.rep_page.logMsg('- Stream trimmed: {} to {}'.format(start,end))
-            except:
-                self.menu_p.rep_page.logMsg('- Trimming failed')
-
-            self.ActivateControls(self.plotstream)
-            if self.plotstream.length()[0] > 0:
-                self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar("Ready")
-            else:
-                self.changeStatusbar("Failure")
-        else:
-            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
-                        "Entered dates are out of order.\n",
-                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Trimming timerange failed ... Ready")
-            dlg.Destroy()
-
-
-    def onSelectKeys(self,event):
-        """
-        DESCRIPTION
-            open dialog to select shown keys (check boxes)
-        """
-
-        self.changeStatusbar("Selecting keys ...")
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-        keylist = self.plotstream._get_key_headers(numerical=True)
-        self.keylist = keylist
-        shownkeylist = [el for el in self.shownkeylist if el in DataStream().NUMKEYLIST]
-
-        namelist = []
-        unitlist = []
-        for key in keylist:
-            if not len(self.plotstream.ndarray[DataStream().KEYLIST.index(key)]) == 0:
-                value = self.plotstream.header.get('col-'+key)
-                unit = self.plotstream.header.get('unit-col-'+key)
-                if not value == '':
-                    namelist.append(value)
-                else:
-                    namelist.append(key)
-                if not unit == '':
-                    unitlist.append(unit)
-                else:
-                    unitlist.append('')
-
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
-            for elem in shownkeylist:
-                exec('dlg.'+elem+'CheckBox.SetValue(True)')
-            if dlg.ShowModal() == wx.ID_OK:
-                shownkeylist = []
-                for elem in keylist:
-                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
-                    if boolval:
-                        shownkeylist.append(elem)
-                if len(shownkeylist) == 0:
-                    shownkeylist = self.shownkeylist
-                else:
-                    self.shownkeylist = shownkeylist
-                self.symbollist = [self.symbollist[0]]*len(shownkeylist)
-                self.plotopt['symbollist'] =  [self.symbollist[0]]*len(shownkeylist)
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar("Ready")
-        else:
-            self.changeStatusbar("Failure")
-
-
-    def onDropKeys(self,event):
-        """
-        DESCRIPTION
-            open dialog to select shown keys (check boxes)
-        """
-
-        self.changeStatusbar("Dropping keys ...")
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-        keylist = self.plotstream._get_key_headers(numerical=True)
-        self.keylist = keylist
-        shownkeylist = [el for el in self.shownkeylist if el in DataStream().NUMKEYLIST]
-
-        namelist = []
-        unitlist = []
-        for key in keylist:
-            if not len(self.plotstream.ndarray[DataStream().KEYLIST.index(key)]) == 0:
-                value = self.plotstream.header.get('col-'+key)
-                unit = self.plotstream.header.get('unit-col-'+key)
-                if not value == '':
-                    namelist.append(value)
-                else:
-                    namelist.append(key)
-                if not unit == '':
-                    unitlist.append(unit)
-                else:
-                    unitlist.append('')
-
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = StreamSelectKeysDialog(None, title='Select keys:',keylst=keylist,shownkeys=self.shownkeylist,namelist=namelist)
-            #for elem in shownkeylist:
-            #    exec('dlg.'+elem+'CheckBox.SetValue(True)')
-            if dlg.ShowModal() == wx.ID_OK:
-                dropkeylist = []
-                for elem in keylist:
-                    boolval = eval('dlg.'+elem+'CheckBox.GetValue()')
-                    if boolval:
-                        dropkeylist.append(elem)
-                        self.plotstream = self.plotstream._drop_column(elem)
-                if len(dropkeylist) == 0:
-                    self.changeStatusbar("Ready")
-                else:
-                    self.shownkeylist = [el for el in shownkeylist if not el in dropkeylist]
-                    self.symbollist = [self.symbollist[0]]*len(self.shownkeylist)
-                    self.plotopt['symbollist'] =  [self.symbollist[0]]*len(self.shownkeylist)
-                    self.ActivateControls(self.plotstream)
-                    self.OnPlot(self.plotstream,self.shownkeylist)
-                    self.changeStatusbar("Ready")
-        else:
-            self.changeStatusbar("Failure")
-
-
-    def onExtractData(self,event):
-        """
-        DESCRIPTION:
-            open dialog to choose extract parameter (paramater compare value)
-            up to three possibilities
-        """
-
-        if len(self.plotstream.ndarray[0]) == 0:
-            self.plotstream = self.stream.copy()
-        keylist = self.shownkeylist
-        if len(self.plotstream.ndarray[0]) > 0:
-            dlg = StreamExtractValuesDialog(None, title='Extract:',keylst=keylist)
-            if dlg.ShowModal() == wx.ID_OK:
-                key1 = dlg.key1ComboBox.GetValue()
-                comp1 = dlg.compare1ComboBox.GetValue()
-                val1 = dlg.value1TextCtrl.GetValue()
-                logic2 = dlg.logic2ComboBox.GetValue()
-                logic3 = dlg.logic3ComboBox.GetValue()
-                extractedstream = self.plotstream.extract(key1,val1,comp1)
-                if len(extractedstream) < 2 and extractedstream.length()[0] < 2:
-                    # Empty stream returned -- looks complex because of old LineStruct rubbish
-                    self.menu_p.rep_page.logMsg('Extract: criteria would return an empty data stream - skipping')
-                    extractedstream = self.plotstream
-                val2 = dlg.value2TextCtrl.GetValue()
-                if not val2 == '':
-                    key2 = dlg.key2ComboBox.GetValue()
-                    comp2 = dlg.compare2ComboBox.GetValue()
-                    if logic2 == 'and':
-                        extractedstream = extractedstream.extract(key2,val2,comp2)
-                    else:
-                        extractedstream2 = self.plotstream.extract(key2,val2,comp2)
-                        extractedstream.extend(extractedstream2.container, extractedstream2.header,extractedstream2.ndarray)
-                        extractedstream = extractedstream.removeduplicates()
-                        extractedstream = extractedstream.sorting()
-                        extractedstream = extractedstream.get_gaps()
-                    val3 = dlg.value3TextCtrl.GetValue()
-                    if not val3 == '':
-                        key3 = dlg.key3ComboBox.GetValue()
-                        comp3 = dlg.compare3ComboBox.GetValue()
-                        if logic3 == 'and':
-                            extractedstream = extractedstream.extract(key3,val3,comp3)
-                        else:
-                            extractedstream3 = self.plotstream.extract(key3,val3,comp3)
-                            extractedstream.extend(extractedstream3.container, extractedstream3.header,extractedstream3.ndarray)
-                            extractedstream = extractedstream.removeduplicates()
-                            extractedstream = extractedstream.sorting()
-                            extractedstream = extractedstream.get_gaps()
-                self.plotstream = extractedstream
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar("Ready")
-        else:
-            self.menu_p.rep_page.logMsg("Extract: No data available so far")
-        # specify filters -> allow to define filters Combo with key - Combo with selector (>,<,=) - TextBox with Filter
-
-
+    @deprecated("Remove this and add to options menu")
     def onChangePlotOptions(self,event):
         """
         DESCRIPTION:
@@ -4917,27 +5016,6 @@ class MainFrame(wx.Frame):
         self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
-    def onGetGapsButton(self,event):
-        """
-        get gaps in timeseries (eventually missing data assuming periodic signals
-        and add this info (0,1) to var5 key
-        """
-        self.changeStatusbar("Identifying gaps ...")
-        self.plotstream = self.plotstream.get_gaps()
-        print (self.plotstream._get_key_headers())
-        """
-                    self.shownkeylist = [el for el in shownkeylist if not el in dropkeylist]
-                    self.symbollist = [self.symbollist[0]]*len(self.shownkeylist)
-                    self.plotopt['symbollist'] =  [self.symbollist[0]]*len(self.shownkeylist)
-                    self.ActivateControls(self.plotstream)
-                    self.OnPlot(self.plotstream,self.shownkeylist)
-                    self.changeStatusbar("Ready")
-        """
-        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
 
     def onAnnotateCheckBox(self,event):
         """
@@ -4957,30 +5035,6 @@ class MainFrame(wx.Frame):
         self.ActivateControls(self.plotstream)
         self.OnPlot(self.plotstream,self.shownkeylist)
 
-    def onChangeComp(self, event):
-        orgcomp = self.compselect
-        self.compselect = self.menu_p.str_page.comp[event.GetInt()]
-        coordinate = orgcomp+'2'+self.compselect
-        self.changeStatusbar("Transforming ... {}".format(coordinate))
-        print("Transforming ... {}".format(coordinate))
-        self.plotstream = self.plotstream._convertstream(coordinate)
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-
-    def on_change_symbol(self, event):
-        #orgsymbol = self.symbolselect
-        symbolselect = self.menu_p.str_page.symbol[event.GetInt()]
-        self.changeStatusbar("Transforming ...")
-        self._activate_controls(self.active_id)
-        plotcont = self.plotdict.get(self.active_id)
-        if symbolselect == 'line':
-            plotcont['symbols'] =  ['-' for elem in plotcont.get('shownkeys')]
-        elif symbolselect == 'point':
-            plotcont['symbols'] =  ['.' for elem in plotcont.get('shownkeys')]
-        self.plotdict[self.active_id] = plotcont
-        self._do_plot(self.active_id)
-
-        self.changeStatusbar("Ready")
 
     def OnFlagClick(self, event):
         """Mouse event for flagging with double click."""
