@@ -30,17 +30,19 @@ class AnalysisPage(wx.Panel):
 
         self.head1Label = wx.StaticText(self, label="Basic methods:")
         # derivative, fit, rotation
-        self.head2Label = wx.StaticText(self, label="Get values:")
+        self.head2Label = wx.StaticText(self, label="Characteristic values:")
         # mean, max, min
         self.head3Label = wx.StaticText(self, label="Manipulation:")
         # filter, smooth, offset
         self.head4Label = wx.StaticText(self, label="Geomagnetic methods:")
+        # adopted baseline
+        self.head5Label = wx.StaticText(self, label="Baseline adoption:")
         # frequency range
-        self.head5Label = wx.StaticText(self, label="Frequency range:")
+        self.head6Label = wx.StaticText(self, label="Frequency range:")
         #self.head5Label = wx.StaticText(self, label="Multiple streams:")
         # merge, subtract, stack
         # display continuous statistics
-        self.head6Label = wx.StaticText(self, label="Continuous statistics:")
+        #self.head6Label = wx.StaticText(self, label="Continuous statistics:")
 
         # 1 Line
         self.derivativeButton = wx.Button(self,-1,"Derivative",size=(160,30))
@@ -50,7 +52,6 @@ class AnalysisPage(wx.Panel):
         self.meanButton = wx.Button(self,-1,"Mean",size=(160,30))
         self.maxButton = wx.Button(self,-1,"Maxima",size=(160,30))
         self.minButton = wx.Button(self,-1,"Minima",size=(160,30))
-        self.flagmodButton = wx.Button(self,-1,"Flags",size=(160,30))
 
         # 3 Line
         self.offsetButton = wx.Button(self,-1,"Offsets",size=(160,30))
@@ -58,30 +59,23 @@ class AnalysisPage(wx.Panel):
         self.smoothButton = wx.Button(self,-1,"Smooth",size=(160,30))
         self.resampleButton = wx.Button(self,-1,"Resample",size=(160,30))
 
-        # 4 Line
+        # 4 Line - geomagentism
         self.activityButton = wx.Button(self,-1,"Activity",size=(160,30))
         self.deltafButton = wx.Button(self,-1,"Delta F",size=(160,30))
-        self.baselineButton = wx.Button(self,-1,"Baseline",size=(160,30))
         self.calcfButton = wx.Button(self,-1,"Calculate F",size=(160,30))
 
-        # 5 Line
+        # 5 Line - adopted baseline
+        self.baselineButton = wx.Button(self,-1,"Baseline",size=(160,30))
+        self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(160,30))
+        self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(160,30))
+
+        # 6 Line - frequency range
         self.powerButton = wx.Button(self,-1,"Power",size=(160,30))
         self.spectrumButton = wx.Button(self,-1,"Spectrum",size=(160,30))
+
         # 6 Line
-        self.statsButton = wx.Button(self,-1,"Show Statistics",size=(160,30))
+        #self.statsButton = wx.Button(self,-1,"Show Statistics",size=(160,30))
 
-        # 5 Line
-        #self.mergeButton = wx.Button(self,-1,"Merge",size=(160,30))
-        #self.subtractButton = wx.Button(self,-1,"Subtract",size=(160,30))
-        #self.stackButton = wx.Button(self,-1,"Stack/Average",size=(160,30))
-
-        # 3. Section
-        #self.selectfilterLabel = wx.StaticText(self, label="Select type:")
-        #self.selectfilterComboBox = wx.ComboBox(self, choices=self.filterlist,
-        #    style=wx.CB_DROPDOWN, value=self.filterlist[14])
-        #self.selectlengthLabel = wx.StaticText(self, label="Select length:")
-        #self.selectlengthComboBox = wx.ComboBox(self, choices=self.filterlength,
-        #    style=wx.CB_DROPDOWN, value=self.filterlength[0])
 
 
     def doLayout(self):
@@ -96,18 +90,6 @@ class AnalysisPage(wx.Panel):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        """
-                 # section 3
-                 (self.selectfilterLabel, noOptions),
-                 (self.selectfilterComboBox, expandOption),
-                 (self.selectlengthLabel, noOptions),
-                 (self.selectlengthComboBox, expandOption),
-                  emptySpace,
-                 (self.filterButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                  emptySpace,
-                 # end
-        """
         # Add the controls to the sizers:
         for control, options in \
                 [(self.head1Label, noOptions),
@@ -121,7 +103,7 @@ class AnalysisPage(wx.Panel):
                  (self.maxButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.minButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.meanButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.flagmodButton, dict(flag=wx.ALIGN_CENTER)),
+                 emptySpace,
                  (self.head3Label, noOptions),
                   emptySpace,
                  (self.filterButton, dict(flag=wx.ALIGN_CENTER)),
@@ -131,19 +113,20 @@ class AnalysisPage(wx.Panel):
                  (self.head4Label, noOptions),
                   emptySpace,
                  (self.deltafButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.baselineButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.calcfButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.activityButton, dict(flag=wx.ALIGN_CENTER)),
+                 emptySpace,
                  (self.head5Label, noOptions),
                   emptySpace,
-                 (self.powerButton, dict(flag=wx.ALIGN_CENTER)),
-                 (self.spectrumButton, dict(flag=wx.ALIGN_CENTER)),
-                 emptySpace,
+                 (self.baselineButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.applyBCButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.dailyMeansButton, dict(flag=wx.ALIGN_CENTER)),
                  emptySpace,
                  (self.head6Label, noOptions),
                  emptySpace,
-                 (self.statsButton, dict(flag=wx.ALIGN_CENTER)),
-                 emptySpace]:
+                 (self.powerButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.spectrumButton, dict(flag=wx.ALIGN_CENTER))
+                 ]:
             gridSizer.Add(control, **options)
 
         for control, options in \

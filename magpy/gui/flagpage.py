@@ -44,6 +44,9 @@ class FlagPage(wx.Panel):
         self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
         self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,30))
         self.flagClearButton = wx.Button(self,-1,"Clear flags",size=(160,30))
+        self.flagmodButton = wx.Button(self,-1,"Flags",size=(160,30))
+        self.annotateCheckBox = wx.CheckBox(self,label="annotate")
+
 
 
     def doLayout(self):
@@ -69,6 +72,10 @@ class FlagPage(wx.Panel):
                  'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagClearButton, dict(flag=wx.ALIGN_CENTER)',
+                 '(0,0), noOptions',
+                    'self.flagmodButton, dict(flag=wx.ALIGN_CENTER)',
+                    '(0,0), noOptions',
+                    'self.annotateCheckBox, noOptions',
                  '(0,0), noOptions']
 
         # A horizontal BoxSizer will contain the GridSizer (on the left)

@@ -1494,9 +1494,7 @@ class MainFrame(wx.Frame):
         USED BY
             MainFrame.__init__
         """
-        self.menu_p.str_page.annotateCheckBox.SetValue(True)
-        self.menu_p.str_page.errorBarsCheckBox.SetValue(False)
-        self.menu_p.str_page.confinexCheckBox.SetValue(False)
+        self.menu_p.fla_page.annotateCheckBox.SetValue(True)
 
         shownkeys = []
         colors = ['gray']*15
@@ -1578,14 +1576,10 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.data_onSelectKeys, self.menu_p.str_page.selectKeysButton)
         self.Bind(wx.EVT_BUTTON, self.data_onDropKeys, self.menu_p.str_page.dropKeysButton)
         self.Bind(wx.EVT_BUTTON, self.data_onExtractData, self.menu_p.str_page.extractValuesButton)
-        self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.str_page.annotateCheckBox)
-        self.Bind(wx.EVT_CHECKBOX, self.onErrorBarCheckBox, self.menu_p.str_page.errorBarsCheckBox)
-        self.Bind(wx.EVT_CHECKBOX, self.onConfinexCheckBox, self.menu_p.str_page.confinexCheckBox)
-        self.Bind(wx.EVT_BUTTON, self.onDailyMeansButton, self.menu_p.str_page.dailyMeansButton)
-        self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.str_page.applyBCButton)
         self.Bind(wx.EVT_BUTTON, self.data_onGetGapsButton, self.menu_p.str_page.getGapsButton)
         self.Bind(wx.EVT_RADIOBOX, self.data_onChangeComp, self.menu_p.str_page.compRadioBox)
         self.Bind(wx.EVT_RADIOBOX, self.data_onChangeSymbol, self.menu_p.str_page.symbolRadioBox)
+        self.Bind(wx.EVT_CHECKBOX, self.data_onStatsCheckBox, self.menu_p.str_page.activateStatsCheckBox)
         #        Flags Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onFlagOutlierButton, self.menu_p.fla_page.flagOutlierButton)
@@ -1597,6 +1591,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.fla_page.flagMinButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.fla_page.flagMaxButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagClearButton, self.menu_p.fla_page.flagClearButton)
+        self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.fla_page.annotateCheckBox)
+        self.Bind(wx.EVT_BUTTON, self.onFlagmodButton, self.menu_p.fla_page.flagmodButton)
         #        Meta Page
         # --------------------------
         #self.Bind(wx.EVT_BUTTON, self.onFilterButton, self.menu_p.met_page.filterButton)
@@ -1623,18 +1619,18 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.analysis_onMeanButton, self.menu_p.ana_page.meanButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onMaxButton, self.menu_p.ana_page.maxButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onMinButton, self.menu_p.ana_page.minButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagmodButton, self.menu_p.ana_page.flagmodButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onOffsetButton, self.menu_p.ana_page.offsetButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onFilterButton, self.menu_p.ana_page.filterButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onSmoothButton, self.menu_p.ana_page.smoothButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onResampleButton, self.menu_p.ana_page.resampleButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onActivityButton, self.menu_p.ana_page.activityButton)
-        self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onDeltafButton, self.menu_p.ana_page.deltafButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onCalcfButton, self.menu_p.ana_page.calcfButton)
+        self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
+        self.Bind(wx.EVT_BUTTON, self.onDailyMeansButton, self.menu_p.ana_page.dailyMeansButton)
+        self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.ana_page.applyBCButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onPowerButton, self.menu_p.ana_page.powerButton)
         self.Bind(wx.EVT_BUTTON, self.onSpectrumButton, self.menu_p.ana_page.spectrumButton)
-        self.Bind(wx.EVT_BUTTON, self.analysis_onStatsButton, self.menu_p.ana_page.statsButton)
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
@@ -1831,6 +1827,12 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.selectKeysButton.Disable()    # always
         self.menu_p.str_page.dropKeysButton.Disable()    # always
         self.menu_p.str_page.extractValuesButton.Disable() # always
+        self.menu_p.str_page.getGapsButton.Disable()       # activated if not MagPyDI
+        self.menu_p.str_page.compRadioBox.Disable()        # activated if xyz,hdz or idf
+        self.menu_p.str_page.symbolRadioBox.Disable()      # activated if less then 2000 points, active if DI data
+        self.menu_p.str_page.activateStatsCheckBox.Disable()         # always
+
+
         self.menu_p.fla_page.flagOutlierButton.Disable()   # always
         self.menu_p.fla_page.flagSelectionButton.Disable() # always
         self.menu_p.fla_page.flagRangeButton.Disable()     # always
@@ -1845,14 +1847,9 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.FlagIDComboBox.Disable()      # always
         self.menu_p.fla_page.flagDropButton.Disable()      # activated if annotation are present
         self.menu_p.fla_page.flagSaveButton.Disable()      # activated if annotation are present
-        self.menu_p.str_page.dailyMeansButton.Disable()    # activated for DI data
-        self.menu_p.str_page.getGapsButton.Disable()       # activated if not MagPyDI
-        self.menu_p.str_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
-        self.menu_p.str_page.annotateCheckBox.Disable()    # activated if annotation are present
-        self.menu_p.str_page.errorBarsCheckBox.Disable()   # activated delta columns are present and not DI file
-        self.menu_p.str_page.confinexCheckBox.Disable()    # always
-        self.menu_p.str_page.compRadioBox.Disable()        # activated if xyz,hdz or idf
-        self.menu_p.str_page.symbolRadioBox.Disable()      # activated if less then 2000 points, active if DI data
+        self.menu_p.fla_page.annotateCheckBox.Disable()    # activated if annotation are present
+        self.menu_p.fla_page.flagmodButton.Disable()       # always
+
 
         # Meta
         self.menu_p.met_page.getDBButton.Disable()         # activated when DB is connected
@@ -1884,7 +1881,6 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.meanButton.Disable()          # always
         self.menu_p.ana_page.maxButton.Disable()           # always
         self.menu_p.ana_page.minButton.Disable()           # always
-        self.menu_p.ana_page.flagmodButton.Disable()       # always
         self.menu_p.ana_page.offsetButton.Disable()        # always
         self.menu_p.ana_page.resampleButton.Disable()        # always
         self.menu_p.ana_page.filterButton.Disable()        # always
@@ -1895,7 +1891,8 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.calcfButton.Disable()        # if xyz available
         self.menu_p.ana_page.powerButton.Disable()         # always
         self.menu_p.ana_page.spectrumButton.Disable()      # always
-        self.menu_p.ana_page.statsButton.Disable()         # always
+        self.menu_p.ana_page.dailyMeansButton.Disable()    # activated for DI data
+        self.menu_p.ana_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
 
         # Monitor
         self.menu_p.com_page.startMonitorButton.Disable()  # always
@@ -2045,7 +2042,7 @@ class MainFrame(wx.Frame):
         self.menu_p.str_page.selectKeysButton.Enable()    # always
         self.menu_p.str_page.dropKeysButton.Enable()      # always
         self.menu_p.str_page.extractValuesButton.Enable() # always
-        self.menu_p.str_page.confinexCheckBox.Enable()    # always
+        self.menu_p.str_page.activateStatsCheckBox.Enable()      # always
 
         # ----------------------------------------
         # flag page
@@ -2057,6 +2054,7 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.flagMaxButton.Enable()       # always
         self.menu_p.fla_page.flagClearButton.Enable()       # always
         self.menu_p.fla_page.FlagIDComboBox.Enable()      # always
+        self.menu_p.fla_page.flagmodButton.Enable()       # always
 
         # ----------------------------------------
         # meta page
@@ -2071,7 +2069,6 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.meanButton.Enable()          # always
         self.menu_p.ana_page.maxButton.Enable()           # always
         self.menu_p.ana_page.minButton.Enable()           # always
-        self.menu_p.ana_page.flagmodButton.Enable()       # always
         self.menu_p.ana_page.offsetButton.Enable()        # always
         self.menu_p.ana_page.resampleButton.Enable()        # always
         self.menu_p.ana_page.filterButton.Enable()        # always
@@ -2080,8 +2077,6 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.powerButton.Enable()  # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
 
-
-        self.menu_p.ana_page.statsButton.Enable()      # always
         # ----------------------------------------
         # absolutes page
         #self.menu_p.abs_page.loadUSGSButton.Enable()      # always
@@ -2107,19 +2102,17 @@ class MainFrame(wx.Frame):
         if datacont.get('flags'):
             self.menu_p.fla_page.flagDropButton.Enable()     # activated if annotation are present
             self.menu_p.fla_page.flagSaveButton.Enable()      # activated if annotation are present
-            self.menu_p.str_page.annotateCheckBox.Enable()    # activated if annotation are present
-            if self.menu_p.str_page.annotateCheckBox.GetValue():
-                self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.menu_p.fla_page.annotateCheckBox.Enable()    # activated if annotation are present
+            if self.menu_p.fla_page.annotateCheckBox.GetValue():
+                self.menu_p.fla_page.annotateCheckBox.SetValue(True)
         if not formattype == 'MagPyDI' and not contenttype.startswith('MagPyDI'):
             self.menu_p.str_page.getGapsButton.Enable()    # activated if not DI data
         if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
-            self.menu_p.str_page.dailyMeansButton.Enable()    # activated for DI data
+            self.menu_p.ana_page.dailyMeansButton.Enable()    # activated for DI data
             self.menu_p.str_page.symbolRadioBox.Enable()      # activated for DI data
             self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
-        if deltas and not formattype == 'MagPyDI' and not sensorid.startswith('GP20S3') and not contenttype.startswith('MagPyDI'):
-            self.menu_p.str_page.errorBarsCheckBox.Enable()   # activated if delta columns are present and not DI file
         if not absinfo == None:
-            self.menu_p.str_page.applyBCButton.Enable()       # activated if DataAbsInfo is present
+            self.menu_p.ana_page.applyBCButton.Enable()       # activated if DataAbsInfo is present
         #if n < 2000:
         #    self.menu_p.str_page.symbolRadioBox.Enable()      # activated if less then 2000 points, active if DI data
         if not dataid == '' and self.magpystate.get('db'):
@@ -2449,7 +2442,7 @@ class MainFrame(wx.Frame):
              Updates and sets the statistics if the statistics page
              is displayed
         """
-        if self.menu_p.ana_page.statsButton.GetLabel() == 'Hide Statistics':
+        if self.menu_p.str_page.activateStatsCheckBox.GetValue():
             datacont = self.datadict.get(self.active_id)
             plotcont = self.plotdict.get(self.active_id)
             self.stats_p.stats_page.setStatistics(keys=plotcont.get('shownkeys'),
@@ -4818,7 +4811,7 @@ class MainFrame(wx.Frame):
             fig.clear()
 
 
-    def analysis_onStatsButton(self, event):
+    def data_onStatsCheckBox(self, event):
         """
         DESCRIPTION
              Creates/Destroys the statistics element below main window
@@ -4828,18 +4821,17 @@ class MainFrame(wx.Frame):
         stream = datacont.get('dataset')
         plotcont = self.plotdict.get(self.active_id)
         keys = plotcont.get('shownkeys')
-        sr = datacont.get("samplingrate")
 
-        status = self.menu_p.ana_page.statsButton.GetLabel()
-        if status == 'Show Statistics':
+        status = self.menu_p.str_page.activateStatsCheckBox.GetValue()
+        if status:
             self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
             self.stats_p.stats_page.setStatistics(keys=keys,
                     stream=stream.copy(),
                     xlimits=self.plot_p.xlimits)
-            self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
-        if status == 'Hide Statistics':
+            #self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
+        else:
             self.sp.Unsplit(self.stats_p)
-            self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
+            #self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
 
 
 
@@ -4895,6 +4887,7 @@ class MainFrame(wx.Frame):
     # ################
     # ------------------------------------------------------------------------------------------
 
+    @deprecated("Error bars are selected in the plot options menu")
     def onErrorBarCheckBox(self,event):
         """
         DESCRIPTION
@@ -4987,8 +4980,8 @@ class MainFrame(wx.Frame):
         self.ActivateControls(self.plotstream)
         self.errorbars = True
         self.OnPlot(self.plotstream,self.shownkeylist)
-        self.menu_p.str_page.errorBarsCheckBox.SetValue(True)
-        self.menu_p.str_page.errorBarsCheckBox.Enable()
+        #self.menu_p.str_page.errorBarsCheckBox.SetValue(True) -> activate plot options
+        #self.menu_p.str_page.errorBarsCheckBox.Enable()
         self.changeStatusbar("Ready")
 
 
@@ -5022,14 +5015,14 @@ class MainFrame(wx.Frame):
         Restore originally loaded data
         """
         #### get True or False
-        if not self.menu_p.str_page.annotateCheckBox.GetValue():
+        if not self.menu_p.fla_page.annotateCheckBox.GetValue():
             #self.annotate=False
             self.plotopt['annotate'] = False
-            self.menu_p.str_page.annotateCheckBox.SetValue(False)
+            self.menu_p.fla_page.annotateCheckBox.SetValue(False)
         else:
             #self.annotate=True
             self.plotopt['annotate'] = True
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
 
         #mp.plot(self.plotstream,annotate=True)
         self.ActivateControls(self.plotstream)
@@ -5150,7 +5143,7 @@ class MainFrame(wx.Frame):
             #self.annotate = True
             self.plotopt['annotate'] = True
 
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
             self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
@@ -5165,7 +5158,7 @@ class MainFrame(wx.Frame):
         self.plotstream = self.plotstream._drop_column('comment')
         self.ActivateControls(self.plotstream)
         self.plotopt['annotate'] = False
-        self.menu_p.str_page.annotateCheckBox.SetValue(False)
+        self.menu_p.fla_page.annotateCheckBox.SetValue(False)
         self.OnPlot(self.plotstream,self.shownkeylist)
         self.changeStatusbar("Ready")
 
@@ -5214,7 +5207,7 @@ class MainFrame(wx.Frame):
             #self.annotate = True
             self.plotopt['annotate'] = True
 
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
             self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")
@@ -5331,7 +5324,7 @@ class MainFrame(wx.Frame):
             #self.annotate = True
             self.plotopt['annotate'] = True
 
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
             self.OnPlot(self.plotstream,self.shownkeylist)
 
         self.changeStatusbar("Ready")
@@ -5467,7 +5460,7 @@ class MainFrame(wx.Frame):
             self.plotstream = self.plotstream.flag(flaglist)
             self.ActivateControls(self.plotstream)
             self.plotopt['annotate'] = True
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
             self.OnPlot(self.plotstream,self.shownkeylist)
 
     def onFlagMaxButton(self,event):
@@ -5512,7 +5505,7 @@ class MainFrame(wx.Frame):
             self.plotstream = self.plotstream.flag(flaglist)
             self.ActivateControls(self.plotstream)
             self.plotopt['annotate'] = True
-            self.menu_p.str_page.annotateCheckBox.SetValue(True)
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
             self.OnPlot(self.plotstream,self.shownkeylist)
 
     # ------------------------------------------------------------------------------------------
@@ -7741,7 +7734,7 @@ class MainFrame(wx.Frame):
             pass
 
         self.menu_p.str_page.symbolRadioBox.SetStringSelection('line')
-        self.menu_p.str_page.dailyMeansButton.Disable()
+        self.menu_p.ana_page.dailyMeansButton.Disable()
 
         # 2. If stream too long then don't allow scatter plots -- too slowly
         if stream.length()[0] < 2000:
@@ -7766,7 +7759,7 @@ class MainFrame(wx.Frame):
             self.plotopt['symbols'] =  [['o'] * len(keylist)]
             self.plotopt['colors'] = [self.colorlist[:len(keylist)]]
             # enable daily average button
-            self.menu_p.str_page.dailyMeansButton.Enable()
+            self.menu_p.ana_page.dailyMeansButton.Enable()
 
         # 4. If K values are shown: preselect bar chart
         if stream.header.get('DataFormat') == 'MagPyK' or stream.header.get('DataType','').startswith('MagPyK') or ('var1' in keylist and stream.header.get('col-var1','').startswith('K')):
@@ -7778,12 +7771,6 @@ class MainFrame(wx.Frame):
             self.plotopt['opacity'] = 1.0
 
         self.shownkeylist = keylist
-
-        # 5. Baseline correction if Object contained in stream
-        #if stream.header.get('DataAbsFunctionObject'):
-        #    self.menu_p.str_page.applyBCButton.Enable()
-        #else:
-        #    self.menu_p.str_page.applyBCButton.Disable()
 
         pads = self.plotopt.get('padding',None)
         if not pads or not len(pads[0]) == len(keylist):

@@ -35,10 +35,15 @@ class StreamPage(wx.Panel):
     def createControls(self):
         self.nextButton = wx.Button(self,-1,"next >>",size=(160,30))
         self.previousButton = wx.Button(self,-1,"<< previous",size=(160,30))
+        self.infoLabel = wx.StaticText(self, label="Data information:")
         self.lineLabel1 = wx.StaticText(self, label="  ")
         self.lineLabel2 = wx.StaticText(self, label="  ")
         self.lineLabel3 = wx.StaticText(self, label="  ")
         self.lineLabel4 = wx.StaticText(self, label="  ")
+        self.lineLabel5 = wx.StaticText(self, label="  ")
+        self.lineLabel6 = wx.StaticText(self, label="  ")
+        self.lineLabel7 = wx.StaticText(self, label="  ")
+        self.lineLabel8 = wx.StaticText(self, label="  ")
         self.pathLabel = wx.StaticText(self, label="Path/Source:")
         self.pathTextCtrl = wx.TextCtrl(self, value="")
         self.fileLabel = wx.StaticText(self, label="File/Table:")
@@ -56,8 +61,6 @@ class StreamPage(wx.Panel):
         self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(160,30))
         self.dropKeysButton = wx.Button(self,-1,"Drop Columns",size=(160,30))
         self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(160,30))
-        self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(160,30))
-        self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(160,30))
         self.getGapsButton = wx.Button(self,-1,"Get gaps",size=(160,30))
         self.compRadioBox = wx.RadioBox(self,
             label="Coordinate system",
@@ -65,10 +68,8 @@ class StreamPage(wx.Panel):
         self.symbolRadioBox = wx.RadioBox(self,
             label="Select symbols",
             choices=self.symbol, majorDimension=2, style=wx.RA_SPECIFY_COLS)
-        self.annotateCheckBox = wx.CheckBox(self,label="annotate")
-        self.errorBarsCheckBox = wx.CheckBox(self,label="error bars")
-        self.confinexCheckBox = wx.CheckBox(self,
-            label="confine time")
+        self.statsLabel = wx.StaticText(self, label="Continuous statistics:")
+        self.activateStatsCheckBox = wx.CheckBox(self,label="activate")
         self.compRadioBox.Disable()
         self.symbolRadioBox.Disable()
 
@@ -81,9 +82,13 @@ class StreamPage(wx.Panel):
         noOptions = dict()
         emptySpace = '(0,0), noOptions'
 
-        elemlist = ['self.previousButton, dict(flag=wx.ALIGN_CENTER)',
+        elemlist = ['self.lineLabel7, noOptions',
+                    'self.lineLabel8, noOptions',
+                    'self.previousButton, dict(flag=wx.ALIGN_CENTER)',
                     'self.nextButton, dict(flag=wx.ALIGN_CENTER)',
-                    '(0,0), noOptions',
+                    'self.lineLabel1, noOptions',
+                    'self.lineLabel2, noOptions',
+                    'self.infoLabel, noOptions',
                     '(0,0), noOptions',
                     'self.pathLabel, noOptions',
                  'self.pathTextCtrl, expandOption',
@@ -99,8 +104,8 @@ class StreamPage(wx.Panel):
                  'self.endTimePicker, expandOption',
                  'self.trimStreamButton, dict(flag=wx.ALIGN_CENTER)',
                  '(0,0), noOptions',
-                 'self.lineLabel1, noOptions',
-                 'self.lineLabel2, noOptions',
+                 'self.lineLabel3, noOptions',
+                 'self.lineLabel4, noOptions',
                  'self.plotOptionsLabel, noOptions',
                  '(0,0), noOptions',
                  'self.selectKeysButton, dict(flag=wx.ALIGN_CENTER)',
@@ -109,14 +114,12 @@ class StreamPage(wx.Panel):
                  'self.getGapsButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.compRadioBox, noOptions',
                  'self.symbolRadioBox, noOptions',
-                 'self.annotateCheckBox, noOptions',
-                 'self.applyBCButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.confinexCheckBox, noOptions',
-                 'self.dailyMeansButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.errorBarsCheckBox, noOptions',
-                 '(0,0), noOptions',
-                 'self.lineLabel3, noOptions',
-                 'self.lineLabel4, noOptions']
+                 'self.lineLabel5, noOptions',
+                 'self.lineLabel6, noOptions',
+                    'self.statsLabel, noOptions',
+                    '(0,0), noOptions',
+                    'self.activateStatsCheckBox, noOptions',
+                    '(0,0), noOptions']
 
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
