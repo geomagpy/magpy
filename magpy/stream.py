@@ -2571,7 +2571,7 @@ CALLED BY:
         for day in tmpdatelst:
             sel = data._select_timerange(starttime=day,endtime=day+1)
             sttmp = DataStream(header={},ndarray=sel)
-            array[0].append(num2date(day)+offset)
+            array[0].append(num2date(day).replace(tzinfo=None)+offset)
             for idx, pos in enumerate(poslst):
                 if not keepposition:
                     array[idx+1].append(sttmp.mean(self.KEYLIST[pos],percentage=percentage))

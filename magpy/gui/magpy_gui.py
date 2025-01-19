@@ -130,6 +130,7 @@ Major methods:              major_method
 |  MainFrame     | d_onDropButton |    2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | d_onExtrcatButton | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | d_onGetGapsButton | 2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | d_onStatusButton |  2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | m_onDataButton |    2.0.0  |             | level 1    |               |        |   |
@@ -148,7 +149,6 @@ Major methods:              major_method
 |  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | a_onActivityButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | a_onStatusButton |  2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | r_onSaveLogButton |  2.0.0  |            | level 2    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
@@ -943,6 +943,63 @@ class PlotPanel(scrolled.ScrolledPanel):
         self.canvas.draw()
 
 
+    def spec_plot(self, streamid, datadict, plotdict, sharey=False):
+        """
+        DEFINITION:
+            embbed matplotlib spectrogram in canvas
+            TODO: add the additional specgram parameters to plotdict
+
+        PARAMETERS:
+            streamids : list of ids to be plotted
+            datadict : all data relevant information
+            plotdict : all visualization parameter
+        """
+        yrange = []
+        title = ''
+        grid = False
+        ylabelposition = None
+        yscale = ['log']
+
+        datacont = datadict.get(streamid)
+        stream = datacont.get('dataset')
+        plotcont = plotdict.get(streamid)
+        keys = plotcont.get('shownkeys')
+
+        title=plotcont.get('title')
+        grid=plotcont.get('grid')
+
+        # Declare and register callbacks
+        def on_xlims_change(axes):
+            self.xlimits = axes.get_xlim()
+
+        def on_ylims_change(axes):
+            #print ("updated ylims: ", axes.get_ylim())
+            self.ylimits = axes.get_ylim()
+            self.selplt = self.axlist.index(axes)
+
+        self.figure.clear()
+        try:
+            self.axes.clear()
+        except:
+            pass
+
+        print ("NOT YET WORKING:", stream, keys, grid, ylabelposition, yscale)
+        self.figure, self.axes = mp.spplot(data=stream, keys=keys, title=title, grid=grid,
+              ylabelposition=ylabelposition, yscale=yscale, figure=self.figure)
+        print ("HERE")
+
+        self.axlist = self.figure.axes
+
+        #get current xlimits:
+        for idx, ax in enumerate(self.axlist):
+            self.xlimits = ax.get_xlim()
+            self.ylimits = ax.get_ylim()
+            ax.callbacks.connect('xlim_changed', on_xlims_change)
+            ax.callbacks.connect('ylim_changed', on_ylims_change)
+
+        self.canvas.draw()
+
+
     def initial_plot(self):
         """
         DEFINITION:
@@ -1506,6 +1563,7 @@ class MainFrame(wx.Frame):
         self.monitorSource=None
 
         # please note: symbol and colorlists are defined in ActivateControls
+        # TODO:  add options for psd and specgram
         plotopt = {'yranges' : [],
                         'padding' : [],
                         'shownkeys' : shownkeys,
@@ -1627,10 +1685,10 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.analysis_onDeltafButton, self.menu_p.ana_page.deltafButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onCalcfButton, self.menu_p.ana_page.calcfButton)
         self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
-        self.Bind(wx.EVT_BUTTON, self.onDailyMeansButton, self.menu_p.ana_page.dailyMeansButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onDailyMeansButton, self.menu_p.ana_page.dailyMeansButton)
         self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.ana_page.applyBCButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onPowerButton, self.menu_p.ana_page.powerButton)
-        self.Bind(wx.EVT_BUTTON, self.onSpectrumButton, self.menu_p.ana_page.spectrumButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onSpectrumButton, self.menu_p.ana_page.spectrumButton)
         #        DI Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.onLoadDI, self.menu_p.abs_page.loadDIButton)
@@ -2026,6 +2084,25 @@ class MainFrame(wx.Frame):
             m.update(basestr.encode('utf-8'))
             baseid = str(int(m.hexdigest(), 16))[0:12]
             self.baselinedict[baseid] = basedict
+
+        # Check data path/filename for dates
+        # ----------------------------------------
+        # if the path/filename combination contains a vaild date and/or the current source is a databse
+        # then activate the next/previous file path
+        source = self.magpystate.get('source')
+        sourcepath = self.magpystate.get('currentpath')
+        sourcename = self.magpystate.get('filename')
+        if source == 'db':
+            date = [self.datadict.get(self.active_id).get('end')]
+        elif source == 'file':
+            date = methods.extract_date_from_string(sourcename)
+        elif source == 'url':
+            date = methods.extract_date_from_string(sourcepath)
+        if date and len(date) > 0 and not date[0] == False:
+            if date[-1] < datetime.now().date():
+                self.menu_p.str_page.nextButton.Enable()  # always
+            self.menu_p.str_page.previousButton.Enable()  # always
+
 
         # Activate "always" fields
         # ----------------------------------------
@@ -2573,6 +2650,7 @@ class MainFrame(wx.Frame):
 
             if success:
                 self.magpystate['source'] = 'dir'
+                self.magpystate['filename'] = ''
                 streamid = self._initial_read(stream)
                 if streamid:  # will create a new input into datadict
                     self._initial_plot(streamid)
@@ -2647,6 +2725,7 @@ class MainFrame(wx.Frame):
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream)))
             self.magpystate['source'] = 'url'
             self.magpystate['currentpath'] = url
+            self.magpystate['filename'] = ''
             streamid = self._initial_read(stream)
             if streamid: # will create a new input into datadict
                 self._initial_plot(streamid)
@@ -2813,6 +2892,7 @@ class MainFrame(wx.Frame):
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(url,len(stream.ndarray[0])))
             self.magpystate['source'] = 'url'
             self.magpystate['currentpath'] = url
+            self.magpystate['filename'] = ''
             streamid = self._initial_read(stream)
             if streamid: # will create a new input into datadict
                 self._initial_plot(streamid)
@@ -2896,6 +2976,7 @@ class MainFrame(wx.Frame):
 
         if getdata:
             path = [db,datainfoid]
+            self.magpystate['filename'] = datainfoid
             stream = self._open_stream(path=path, mintime=pydate2wxdate(mintime), maxtime=pydate2wxdate(maxtime),extension='MySQL Database')
             stream = stream._remove_nancolumns()
             self.menu_p.rep_page.logMsg('{}: found {} data points'.format(path[1],len(stream.ndarray[0])))
@@ -3515,6 +3596,28 @@ class MainFrame(wx.Frame):
     # ####    Data Panel                                       #########################################################
     # ##################################################################################################################
 
+    def data_onPreviousButton(self,event):
+        """
+        DESCRIPTION
+            Open an adjacent data set before the currently opened
+        CALLS
+            get_adjacent_stream
+        """
+
+        get_adjacent_stream(mode='previous')
+
+
+    def data_onNextButton(self,event):
+        """
+        DESCRIPTION
+            Open an adjacent data set after the currently opened
+        CALLS
+            get_adjacent_stream
+        """
+
+        get_adjacent_stream(mode='next')
+
+
     def get_adjacent_stream(self, mode='next'):
         """
         DESCRIPTION
@@ -3529,6 +3632,50 @@ class MainFrame(wx.Frame):
         # 3. identify dates in path and increase or decrease the range
         # 4. Load the new data set (eventually check if a corresponding streamid is already existing.
         # 5.
+
+        source = self.magpystate.get('source')
+        sourcepath = self.magpystate.get('currentpath')
+        sourcename = self.magpystate.get('filename')
+        newstart = None
+        newend = None
+        if source == 'db':
+            start = self.datadict.get(self.active_id).get('start')
+            end = self.datadict.get(self.active_id).get('end')
+            if mode=='next':
+                newstart = end
+                newend = end + (end-start)
+            if mode=='previous':
+                newstart = start - (end-start)
+                newend = start
+            db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+            stream = db.read(sourcename, starttime=newstart, endtime=newend)
+        elif source == 'file':
+            date = methods.extract_date_from_string(sourcename)
+        elif source == 'url':
+            date = methods.extract_date_from_string(sourcepath)
+
+        if date and len(date) > 0 and not date[0] == False:
+            if date[-1] < datetime.now().date():
+                self.menu_p.str_page.nextButton.Enable()  # always
+            self.menu_p.str_page.previousButton.Enable()  # always
+
+        if len(stream) > 0:
+            streamid = self._initial_read(stream)
+            self._initial_plot(streamid)
+
+        # finaldate=date[-1]
+        # if finaldate < datetime.now().date():
+        # enddate = self.datadict.get(self.active_id).get('end')
+        # fullpath = os.path.join(sourcepath,sourcename)
+        # import re
+        # result = re.sub('\s(\d*\s\w*\s\d*)\s', ' DATE ', fullpath)
+        # date = dparser.parse(fullpath, fuzzy=True)
+        # print ("HERE", date)
+        # check for date(s) in path/filename combination
+        # if date(s), activate - eventually check for multiple files in dir
+        # self.menu_p.str_page.nextButton.Enable()  # always
+        # self.menu_p.str_page.previousButton.Enable()  # always
+
         """
         if success:
             streamid = self._initial_read(stream)
@@ -3866,6 +4013,28 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
+    def data_onStatsCheckBox(self, event):
+        """
+        DESCRIPTION
+             Creates/Destroys the statistics element below main window
+             and sets the statistics
+        """
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+
+        status = self.menu_p.str_page.activateStatsCheckBox.GetValue()
+        if status:
+            self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
+            self.stats_p.stats_page.setStatistics(keys=keys,
+                    stream=stream.copy(),
+                    xlimits=self.plot_p.xlimits)
+        else:
+            self.sp.Unsplit(self.stats_p)
+
+
+
     def default_file_dialog_options(self):
         """
         DESCRIPTION
@@ -3919,6 +4088,52 @@ class MainFrame(wx.Frame):
         if debug:
             print ("Done",dm.ndarray)
         return dm, meanh, meanf
+
+
+    # ##################################################################################################################
+    # ####    Flagging Panel                                   #########################################################
+    # ##################################################################################################################
+
+
+    def onFlagmodButton(self, event):
+        """
+        DESCRIPTION
+             Shows Flagilist statistics and allows to change flag contents
+        """
+        self.changeStatusbar("Flaglist contents ...")
+        keys = self.shownkeylist
+
+        if not self.flaglist or not len(self.flaglist) > 0:
+            self.changeStatusbar("no flags available ... Ready")
+            return
+
+        stats = self.plotstream.flagliststats(self.flaglist, intensive=True, output='string')
+
+        self.menu_p.rep_page.logMsg(stats)
+        """
+        for idx,me in enumerate(mean):
+            meanline = '- mean - key: {} = {} +/- {}'.format(keys[idx],me[0],me[1])
+            self.menu_p.rep_page.logMsg(meanline)
+            trange = trange + '\n' + meanline
+        """
+        # open message dialog
+        dlg = AnalysisFlagsDialog(None, title='Analysis: Flags', stats=stats, flaglist=self.flaglist, stream=self.plotstream)
+        if dlg.ShowModal() == wx.ID_OK:
+            if dlg.mod:
+                self.changeStatusbar("Applying new flags ...")
+                self.menu_p.rep_page.logMsg('Flags have been modified: ')
+                self.flaglist = dlg.newfllist
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+                self.plotstream = self.plotstream.flag(self.flaglist)
+                self.menu_p.rep_page.logMsg('- applied {} modified flags'.format(len(self.flaglist)))
+                self.ActivateControls(self.plotstream)
+                self.OnPlot(self.plotstream,self.shownkeylist)
+            else:
+                pass
+            pass
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
 
 
     # ##################################################################################################################
@@ -4565,48 +4780,6 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-
-    def onFlagmodButton(self, event):
-        """
-        DESCRIPTION
-             Shows Flagilist statistics and allows to change flag contents
-        """
-        self.changeStatusbar("Flaglist contents ...")
-        keys = self.shownkeylist
-
-        if not self.flaglist or not len(self.flaglist) > 0:
-            self.changeStatusbar("no flags available ... Ready")
-            return
-
-        stats = self.plotstream.flagliststats(self.flaglist, intensive=True, output='string')
-
-        self.menu_p.rep_page.logMsg(stats)
-        """
-        for idx,me in enumerate(mean):
-            meanline = '- mean - key: {} = {} +/- {}'.format(keys[idx],me[0],me[1])
-            self.menu_p.rep_page.logMsg(meanline)
-            trange = trange + '\n' + meanline
-        """
-        # open message dialog
-        dlg = AnalysisFlagsDialog(None, title='Analysis: Flags', stats=stats, flaglist=self.flaglist, stream=self.plotstream)
-        if dlg.ShowModal() == wx.ID_OK:
-            if dlg.mod:
-                self.changeStatusbar("Applying new flags ...")
-                self.menu_p.rep_page.logMsg('Flags have been modified: ')
-                self.flaglist = dlg.newfllist
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-                self.plotstream = self.plotstream.flag(self.flaglist)
-                self.menu_p.rep_page.logMsg('- applied {} modified flags'.format(len(self.flaglist)))
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
-            else:
-                pass
-            pass
-        dlg.Destroy()
-        self.changeStatusbar("Ready")
-
-
     def analysis_onSmoothButton(self, event):
         """
         DESCRIPTION
@@ -4769,13 +4942,12 @@ class MainFrame(wx.Frame):
 
             if cont:
                 self.changeStatusbar("Calculating F from components ...")
-
                 plotstream = plotstream.calc_f(skipdelta=True)
-                if 'f' in plotstream.variables() and not 'f' in keys:
-                    keys.append('f')
-                    plotcont['shownkeys'] = keys
-                    self.plotdict[self.active_id] = plotcont
-                if 'df' in plotstream.variables():
+                #if 'f' in plotstream.variables() and not 'f' in keys:
+                #    keys.append('f')
+                #    plotcont['shownkeys'] = keys
+                #    self.plotdict[self.active_id] = plotcont
+                if 'df' in plotstream.variables(): # why?
                     plotstream = plotstream.delta_f()
                 self.menu_p.rep_page.logMsg(' - determined f from x,y,z')
                 streamid = self._initial_read(plotstream)
@@ -4794,44 +4966,38 @@ class MainFrame(wx.Frame):
         self.plot_p.power_plot(self.active_id, self.datadict, self.plotdict, sharey=sharey)
 
 
-    def onSpectrumButton(self, event):
+    def analysis_onSpectrumButton(self, event):
         """
         DESCRIPTION
              Calculates Power spectrum of one component
         """
         self.changeStatusbar("Spectral plot ...")
-        comp = self.getComponent()
-        if comp is not None:
-            #mp.plotSpectrogram(self.plotstream, comp, gui=True)
-            fig = mp.plotSpectrogram(self.plotstream, comp, figure=True)
-            # TODO works fine in linux but not on windows
-            dlg = AnalysisPlotDialog(None, title='Analysis: powerspectrum', fig=fig,xsize=700,ysize=600)
-            dlg.ShowModal()
-            dlg.Destroy()
-            fig.clear()
+        self.plot_p.spec_plot(self.active_id, self.datadict, self.plotdict)
 
 
-    def data_onStatsCheckBox(self, event):
+    def analysis_onDailyMeansButton(self,event):
         """
         DESCRIPTION
-             Creates/Destroys the statistics element below main window
-             and sets the statistics
+            Calculate daily mean values by default from x,y,z columns and put uncertainty data into dx,dy,dz
+            This method is used for adopted BLV file creation (INTERMAGNET).
+            If basevalue data files are provided then means are calculated from the basevalue data in dx,dy,dz
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
         plotcont = self.plotdict.get(self.active_id)
         keys = plotcont.get('shownkeys')
-
-        status = self.menu_p.str_page.activateStatsCheckBox.GetValue()
-        if status:
-            self.sp.SplitHorizontally(self.sp2, self.stats_p, 800)
-            self.stats_p.stats_page.setStatistics(keys=keys,
-                    stream=stream.copy(),
-                    xlimits=self.plot_p.xlimits)
-            #self.menu_p.ana_page.statsButton.SetLabel("Hide Statistics")
+        if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
+            keys=['dx','dy','dz']
         else:
-            self.sp.Unsplit(self.stats_p)
-            #self.menu_p.ana_page.statsButton.SetLabel("Show Statistics")
+            keys = False
+        plotstream = stream.copy()
+        plotstream = plotstream.dailymeans(keys)
+
+        streamid = self._initial_read(plotstream)
+        # activate errobars
+        self._initial_plot(streamid)
+
+        self.changeStatusbar("Ready")
 
 
 
@@ -4962,27 +5128,6 @@ class MainFrame(wx.Frame):
 
 
 
-    def onDailyMeansButton(self,event):
-        """
-        Restore originally loaded data
-        """
-        if self.plotstream.header.get('DataFormat') == 'MagPyDI' or self.plotstream.header.get('DataType','').startswith('MagPyDI'):
-            keys=['dx','dy','dz']
-        else:
-            keys = False
-        self.plotstream = self.plotstream.dailymeans(keys)
-        self.shownkeylist = self.plotstream._get_key_headers(numerical=True)[:3]
-        self.symbollist = self.symbollist[0]*len(self.shownkeylist)
-
-        self.plotopt['symbollist'] = self.symbollist[0]*len(self.shownkeylist)
-        self.plotopt['errorbars'] = [[True]*len(self.shownkeylist)]
-
-        self.ActivateControls(self.plotstream)
-        self.errorbars = True
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        #self.menu_p.str_page.errorBarsCheckBox.SetValue(True) -> activate plot options
-        #self.menu_p.str_page.errorBarsCheckBox.Enable()
-        self.changeStatusbar("Ready")
 
 
     def onApplyBCButton(self,event):

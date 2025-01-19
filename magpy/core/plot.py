@@ -685,6 +685,190 @@ def psplot(data = None, keys = None, symbols = None, colors = None, title = None
     return fig, plt.gca()
 
 
+def spplot(data=None, keys=None, colormap=None, title=None, legend=None, grid=None,
+           yscale=None, yrange=None, ylabelposition=None, dateformatter=None, width=10, height=4,
+           alpha=0.5, variables=None, figure=None, debug=False, NFFT=1024, noverlap=512, pad_to=None, detrend='none',
+           scale_by_freq=True, cmap='viridis', mode='psd'):
+    """
+    DESCRIPTION
+        plot a spectrogram based on pythons specgram method. Like plot.psplot this method only supports a single data set.
+
+    OPTIONS:
+        keys (list)         :    Provide a list of columns keys. Default is the first available key of the data set.
+        yrange (list)       :    Y axis contains the frequency. Default range: from 1/fulltimerange *2 to 1/samplingperiod *2
+                                 (Nyquist), or (0,nyquist) if a linear scale is used. You can change as follows:
+                                 keys=['x','y'], yranges=[[0.00001,0.5],[0.01,0.5]]
+        grid (dict)         :    default None
+                                 EXAMPLE: grid={"visible":True,"which":"major","axis":"both","color":"k"}
+                                 or grid=True  for default values
+                                 EXAMPLE: ylabelposition=-0.1
+        ysacle (list)       :    'log' (default), 'linear'
+        dateformatter (string) : if provided then autoformat x is activated and the choosen format is used for the datecolumn
+                                 i.e. dateformatter="%Y-%m-%d %H"
+        title (list)        :    'log' (default), 'linear'
+        height (float)      :    default 4 - default height of each individual plot
+                                 EXAMPLE: height=2
+        width (float)       :    default 10 - default width of all plots
+                                 EXAMPLE: width=12
+        figure (object)     :    provide a figure object for the plot - used by magpy_gui
+                                 EXAMPLE: width=12
+
+        matplotlib - specgram parameters (capital defaults are different from standard defaults):
+        --------------------------------------
+        NFFT (int)          :    DEFAULT 1024: The number of data points used in each block for the FFT. A power 2 is most efficient.
+                                 This should NOT be used to get zero padding, or the scaling of the result will be incorrect;
+                                 use pad_to for this instead.
+        noverlap (int)      :    DEFAULT 512: The number of points of overlap between blocks.
+        pad_to (int)        :    The number of points to which the data segment is padded when performing the FFT.
+                                 This can be different from NFFT, which specifies the number of data points used. While not
+                                 increasing the actual resolution of the spectrum (the minimum distance between resolvable
+                                 peaks), this can give more points in the plot, allowing for more detail. This corresponds
+                                 to the n parameter in the call to fft. The default is None, which sets pad_to equal to NFFT
+        detrend (str)       :    {'none', 'mean', 'linear'} default: 'none'; The function applied to each segment before
+                                 fft-ing, designed to remove the mean or linear trend. Unlike in MATLAB, where the detrend
+                                 parameter is a vector, in Matplotlib it is a function. The mlab module defines detrend_none,
+                                 detrend_mean, and detrend_linear, but you can use a custom function as well. You can also
+                                 use a string to choose one of the functions: 'none' calls detrend_none. 'mean' calls
+                                 detrend_mean. 'linear' calls detrend_linear.
+        scale_by_freq (bool) :   default: True; Whether the resulting density values should be scaled by the scaling
+                                 frequency, which gives density in units of 1/Hz. This allows for integration over the
+                                 returned frequency values. The default is True for MATLAB compatibility.
+        mode                 :   {'default', 'psd', 'magnitude', 'angle', 'phase'} What sort of spectrum to use. Default
+                                 is 'psd', which takes the power spectral density. 'magnitude' returns the magnitude
+                                 spectrum. 'angle' returns the phase spectrum without unwrapping. 'phase' returns the
+                                 phase spectrum with unwrapping.
+        cmap                 :   Colormap, default: rcParams["image.cmap"] (default: 'viridis')
+
+
+
+    EXAMPLE:
+        spplot(data, keys=['x','y','z'], yscale = ['log','linear','log'], title="Testplot",
+                            yrange=[[0.0001,0.5],[0.00002,0.5],[0.01,0.5]], grid = True,
+                            dateformatter = "%d %b %y %H:%M", cmap='inferno')
+    """
+
+    if isinstance(data, (list, tuple)):
+        print("plot.spplot only supports a single data set")
+        return
+    if not keys:
+        keys = ['x']
+    if variables and not keys:
+        keys = variables
+    if not yscale:
+        yscale = []
+    if not yrange:
+        yrange = []
+    if not legend:
+        legend = {}
+    if not grid:
+        grid = {}
+    if not title:
+        title = None
+
+    data = data._remove_nancolumns()  # just make sure that no empty/nan-filled columns are provided
+    T = data._get_column('time')
+    t = np.linspace(0, len(T), len(T))
+    sr = data.samplingrate()  # in seconds
+    coverage = (data.end() - data.start()).total_seconds()
+
+    titledone = False
+    hght = int(height) * len(keys)
+    axs = []
+
+    if not figure:
+        fig = plt.figure(figsize=(width, hght))
+    else:
+        fig = figure
+
+    t1 = datetime.now()  # for debugging and speed optimization
+    for i, component in enumerate(keys):
+        #cdata = data.copy()
+        #cdata = cdata._drop_nans(component)
+        comp = data._get_column(component)
+        if len(comp) > 0:
+            subplot = int("{}1{}".format(len(keys), i + 1))
+            ax = plt.subplot(subplot)
+            axs.append(ax)
+            Pxx, freqs, bins, im = ax.specgram(comp, NFFT=1024, Fs=1. / sr, noverlap=512, pad_to=pad_to, detrend=detrend,
+                                               scale_by_freq=scale_by_freq, mode=mode, cmap=cmap, xextent=(T[0], T[-1]))
+            #fig.colorbar(im, ax=ax)
+            # Labels
+            # ------------------
+            if i == len(keys) - 1:
+                ax.set_xlabel('Time')
+            ax.set_ylabel('Frequency')
+            colname = data.header.get('col-{}'.format(component), '')
+            colunit = data.header.get('unit-col-{}'.format(component), '')
+            if colunit:
+                colunit = " [{}]".format(colunit)
+            ax.set_ylabel('Frequency[Hz] ({}{})'.format(colname, colunit))
+            if ylabelposition:
+                ylabelposition = ylabelposition  # axes coords
+                ax.yaxis.set_label_coords(ylabelposition, 0.5)
+
+            # Frequnecy axis
+            # ------------------
+            ys = ''
+            ax.set_yscale('log')  # use this as default if input is wrong
+            if yscale:
+                if len(yscale) == len(keys):
+                    ys = yscale[i]
+                elif len(yscale) < len(keys):
+                    ys = yscale[0]
+                if ys in ['linear', 'log']:
+                    ax.set_yscale(ys)
+            miny = 1. / coverage * 2.
+            maxy = 1. / sr / 2.
+            if ys == 'linear':
+                miny = 0
+            yr = [miny, maxy]
+            if yrange:
+                if len(yrange) == len(keys):
+                    yr = yrange[i]
+                elif len(yrange) < len(keys):
+                    yr = yrange[0]
+                ax.set_ylim(yr)
+
+            # Time axis
+            # ------------------
+            if dateformatter:
+                plt.gca().xaxis.set_major_formatter(DateFormatter(dateformatter))
+                plt.gcf().autofmt_xdate()
+
+            # Plottitle
+            # ------------------
+            if isinstance(title, (list, tuple)) and len(title) == len(keys):
+                plt.title(title[i])
+            elif title and not titledone:
+                plt.title(title)
+                titledone = True
+
+            # Plot grid
+            # ------------------
+            if grid:
+                mygrid = grid
+                if not isinstance(mygrid, dict):
+                    mygrid = {}
+                gridvisible = mygrid.get("visible", True)
+                gridwhich = mygrid.get("which", "major")
+                gridaxis = mygrid.get("axis", "both")
+                gridcolor = mygrid.get("color", [0.9, 0.9, 0.9])
+                plt.grid(visible=gridvisible, which=gridwhich, axis=gridaxis, color=gridcolor)
+
+            # set visibility of x-axis as False
+            mid = np.round(len(keys) / 2, 0) - 1
+            if i < len(keys) - 1 and (len(keys) > 3 or isinstance(title, (list, tuple))):
+                plt.xticks(color='w')
+            if i > 0:
+                ax.sharex(axs[0])
+
+    if debug:
+        t4 = datetime.now()
+        print("TIMING total:", (t4 - t1).total_seconds())
+
+    return fig, plt.gca()
+
+
 #####################################################################
 #                                                                   #
 #       TESTING                                                     #
