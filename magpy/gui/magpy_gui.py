@@ -108,7 +108,7 @@ Major methods:              major_method
 |  MainFrame     | _update_statistics | 2.0.0  |            | level 0    |               |        | _do_plot  |
 |  MainFrame     | changeStatusbar  |  2.0.0  |             | level 2    |               |        | everywhere  |
 |  MainFrame     | file_on_open_file  | 2.0.0  |            | level 1    |               |        |   |
-|  MainFrame     | file_on_open_dir  | 2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | file_on_open_dir  | 1.0.0  |  removed    | level 1    |               |        |   |
 |  MainFrame     | file_on_open_url  | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 1    |               |        |   |
 |  MainFrame     | file_on_open_db  |  2.0.0  |             |            |               |        |   |
@@ -125,6 +125,9 @@ Major methods:              major_method
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
 |  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | d_get_adjacent_stream | 2.0.0  |         | level 1    |               |        |   |
+|  MainFrame     | d_onNextButton |    2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | d_onPreviousButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | d_onTrimButton |    2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | d_onSelectButton |  2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | d_onDropButton |    2.0.0  |             | level 1    |               |        |   |
@@ -1629,7 +1632,8 @@ class MainFrame(wx.Frame):
         # BindingControls on the panels
         #       Stream Page
         # ------------------------
-        #self.Bind(wx.EVT_BUTTON, self.onOpenStreamButton, self.menu_p.str_page.openStreamButton)
+        self.Bind(wx.EVT_BUTTON, self.data_onPreviousButton, self.menu_p.str_page.previousButton)
+        self.Bind(wx.EVT_BUTTON, self.data_onNextButton, self.menu_p.str_page.nextButton)
         self.Bind(wx.EVT_BUTTON, self.data_onTrimButton, self.menu_p.str_page.trimStreamButton)
         self.Bind(wx.EVT_BUTTON, self.data_onSelectKeys, self.menu_p.str_page.selectKeysButton)
         self.Bind(wx.EVT_BUTTON, self.data_onDropKeys, self.menu_p.str_page.dropKeysButton)
@@ -2585,12 +2589,12 @@ class MainFrame(wx.Frame):
             message = "Could not identify file!\nplease check and/or try OpenDirectory\n"
         loadDlg.Destroy()
 
-        if success:
-            stream = stream._remove_nancolumns()
-
         if not len(stream) > 0:
             message = "Obtained an empty file structure\nfile format supported?\n"
             success = False
+
+        if success:
+            stream = stream._remove_nancolumns()
 
         # plot data
         if success:
@@ -3604,7 +3608,7 @@ class MainFrame(wx.Frame):
             get_adjacent_stream
         """
 
-        get_adjacent_stream(mode='previous')
+        self.get_adjacent_stream(mode='previous')
 
 
     def data_onNextButton(self,event):
@@ -3615,10 +3619,10 @@ class MainFrame(wx.Frame):
             get_adjacent_stream
         """
 
-        get_adjacent_stream(mode='next')
+        self.get_adjacent_stream(mode='next', debug=True)
 
 
-    def get_adjacent_stream(self, mode='next'):
+    def get_adjacent_stream(self, mode='next', debug=False):
         """
         DESCRIPTION
             Load an adjacent data set prior to or after the current data set from the same directory
@@ -3632,63 +3636,101 @@ class MainFrame(wx.Frame):
         # 3. identify dates in path and increase or decrease the range
         # 4. Load the new data set (eventually check if a corresponding streamid is already existing.
         # 5.
+        def _replace_first_date_occurrence(name, runtime=1, debug=False):
+            """
+            DESCRIPTION
+                Will replace any date recognized by extract_date_from_string, (exception: APR0218.WIK)
+                Inserted are YEAR1, MONTH1, DAY1 if runtime is 1
+            """
+            skip = False
+            today = datetime.now()
+            tyear = today.year
+            resdate = extract_date_from_string(name)
+            coverage = 1
+            if debug:
+                print(resdate)
+            if not resdate or (len(resdate) == 1 and resdate[0] == False):
+                if debug:
+                    print("No date found:", name)
+                skip = True
+            elif len(resdate) > 1:
+                coverage = (resdate[-1] - resdate[0]).days
+            elif len(resdate) == 1:
+                # single date found or False
+                coverage = 1
+            if not skip:
+                newname = name
+                year = str(resdate[0].year)
+                month = str(resdate[0].month).zfill(2)
+                day = str(resdate[0].day).zfill(2)
+                if debug:
+                    print(year, month, day)
+                if coverage <= 366 and int(year) <= tyear:
+                    # find date in string and replace by dummy
+                    # 1 find year
+                    if newname.find(year) >= 0:
+                        newname = newname.replace(year, 'YEAR{}'.format(runtime), 1)
+                if coverage <= 31:
+                    if newname.find(month) >= 0:
+                        newname = newname.replace(month, 'MONTH{}'.format(runtime), 1)
+                if coverage <= 2:
+                    if newname.find(day) >= 0:
+                        newname = newname.replace(day, 'DAY{}'.format(runtime), 1)
+                return newname
+            else:
+                return ''
 
+        stream = DataStream()
         source = self.magpystate.get('source')
         sourcepath = self.magpystate.get('currentpath')
         sourcename = self.magpystate.get('filename')
         newstart = None
         newend = None
+        sr = self.datadict.get(self.active_id).get('samplingrate')
+        start = self.datadict.get(self.active_id).get('start')
+        end = self.datadict.get(self.active_id).get('end') + timedelta(seconds=sr)
+        if mode == 'next':
+            newstart = end
+            newend = end + (end - start)
+        if mode == 'previous':
+            newstart = start - (end - start)
+            newend = start
+        if debug:
+            print ("oldstart, newstart, oldend, newend:", start, newstart, end, newend)
+        newstart += timedelta(minutes=5)
+        newstart -= timedelta(minutes=newstart.minute % 10,
+                                 seconds=newstart.second,
+                                 microseconds=newstart.microsecond)
+        if debug:
+            print ("newstart, newend:", newstart, newend)
         if source == 'db':
-            start = self.datadict.get(self.active_id).get('start')
-            end = self.datadict.get(self.active_id).get('end')
-            if mode=='next':
-                newstart = end
-                newend = end + (end-start)
-            if mode=='previous':
-                newstart = start - (end-start)
-                newend = start
             db, success = self._db_connect(*self.magpystate.get('dbtuple'))
             stream = db.read(sourcename, starttime=newstart, endtime=newend)
         elif source == 'file':
-            date = methods.extract_date_from_string(sourcename)
+            sourcename = sourcename.split(',')
+            if isinstance(sourcename, (list,tuple)):
+                sourcename = sourcename[0].strip()
+            newname = _replace_first_date_occurrence(sourcename, runtime=1)
+            newname = newname.replace("YEAR1MONTH1DAY1", "*").replace("YEAR1-MONTH1-DAY1", "*").replace("YEAR1MONTH1",
+                                                                                                        "*").replace(
+                "YEAR1-MONTH1", "*").replace(
+                "YEAR1", "*")
+            if debug:
+                print ("FILE - next, previous", newname, newstart.strftime("%Y-%m-%d"), newend)
+            stream = read(os.path.join(sourcepath,newname),newstart.strftime("%Y-%m-%d"),newend.strftime("%Y-%m-%d"))
         elif source == 'url':
-            date = methods.extract_date_from_string(sourcepath)
-
-        if date and len(date) > 0 and not date[0] == False:
-            if date[-1] < datetime.now().date():
-                self.menu_p.str_page.nextButton.Enable()  # always
-            self.menu_p.str_page.previousButton.Enable()  # always
+            newname = _replace_first_date_occurrence(sourcepath, runtime=1)
+            newname = _replace_first_date_occurrence(newname, runtime=2)
+            print (sourcepath)
+            newname = newname.replace("YEAR1-MONTH1-DAY1", newstart.strftime("%Y-%m-%d")).replace("YEAR1MONTH1DAY1", newstart.strftime("%Y%m%d")).replace("YEAR1MONTH1", newstart.strftime("%Y%m")).replace("YEAR1", newstart.strftime("%Y"))
+            newname = newname.replace("YEAR2-MONTH2-DAY2", newend.strftime("%Y-%m-%d")).replace("YEAR2MONTH2DAY2", newend.strftime("%Y%m%d")).replace("YEAR2MONTH2", newend.strftime("%Y%m")).replace("YEAR2", newend.strftime("%Y"))
+            print (newname)
+            stream = read(sourcepath)
 
         if len(stream) > 0:
             streamid = self._initial_read(stream)
             self._initial_plot(streamid)
 
-        # finaldate=date[-1]
-        # if finaldate < datetime.now().date():
-        # enddate = self.datadict.get(self.active_id).get('end')
-        # fullpath = os.path.join(sourcepath,sourcename)
-        # import re
-        # result = re.sub('\s(\d*\s\w*\s\d*)\s', ' DATE ', fullpath)
-        # date = dparser.parse(fullpath, fuzzy=True)
-        # print ("HERE", date)
-        # check for date(s) in path/filename combination
-        # if date(s), activate - eventually check for multiple files in dir
-        # self.menu_p.str_page.nextButton.Enable()  # always
-        # self.menu_p.str_page.previousButton.Enable()  # always
-
-        """
-        if success:
-            streamid = self._initial_read(stream)
-            if streamid: # will create a new input into datadict
-                self._initial_plot(streamid)
-        else:
-            dlg = wx.MessageDialog(self, message,
-                "OpenFile", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Loading file failed ... Ready")
-            dlg.Destroy()
-        """
-        pass
 
 
     @deprecated("Restore is not used any more as any significant change will create a new memory input")

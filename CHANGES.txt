@@ -68,7 +68,15 @@ Installation instructions can be found on the main download page.
      - deleted old MARTAS related items (collector, acquisition)
 
 2.0.0 XMagPy - graphical user interface:
-     - to be done
+     - reorganizations and regrouping:
+           * of buttons on several panels
+           * of menu items
+     - added quick access buttons for next or previous data sets
+     - removal of open directory, store working state, restore button
+     - any new or essentially modified data set will be stored automatically in the memory
+     - new plot design, more options
+     - better export possibilities
+     - any many more -> see new manual
 
 2.0.0 mostly unseen things:
     - test routines for all methods and classes

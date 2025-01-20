@@ -10,7 +10,20 @@ Authors: Leonhardt, R. et al
 3. [Main window and its menu bar](#3-main-window-and-its-menu-bar)
    1. [Layout and default configuration](#31-layout-and-default-configuration)
    2. [Reading and exporting data sets](#32-reading-and-exporting-data-sets)
+   3. [Database](#33-database)
+   4. [DI](#34-di-)
+   5. [Memory](#35-memory)
+   6. [Special](#36-specials)
+   7. [Options](#37-options)
+   8. [Help](#38-help)
 4. [Panels](#4-panels)
+   1. [The data panel](#41-the-data-panel)
+   2. [The flag panel](#42-the-flag-panel)
+   3. [The meta panel](#43-the-meta-panel)
+   4. [The analysis panel](#44-the-analysis-panel)
+   5. [The DI panel](#45-the-di-panel)
+   6. [The report panel](#46-the-report-panel)
+   7. [The monitor panel](#47-the-monitor-panel)
 5. [Application recipies for geomagnetic observatory data analysis](#5-application-recipies-for-geomagnetic-observatory-data-analysis)
 6. [Additional applications](#6-additional-applications)
 7. [Appendix](#7-appendix)
@@ -66,7 +79,99 @@ Linux and MacOs:
 
 ### 3.1 Layout and default configuration
 
+The graphical user interface of MagPy is based on [WXPython](https://wxpython.org/).  
+
+Figure 3.1: The graphical user interface of XMagPy consists of 4 standard sections and 1 optional part. 
+
+The main program window is separated in several parts as shown in Figure 3. Figure 3.1a contains the main menu for 
+data access and memory/multiple data operations. Within the main menu you will find drop down lists for file operations, 
+database issues, DI analysis, memory operations, some extra stuff, options and the help menu. The main menu bar 
+will be discussed in this section. The panels (Figure 3.1b) provide access to individual methods for data analysis, 
+interpretation and manipulation of active data sets. An individual section is devoted to each panel in chapter 4. 
+Timeseries plots are displayed within the plotting area (Figure 3.1c). Options for modifying the plots appearance are
+discussed in section 3.7. Status information (Figure 3.1d) and current working states are found at the bottom of the
+window. An optional statistics view (Figure 3.1e) can be  activated within the Analysis Panel (see section 4.1). 
+
 ### 3.2 Reading and exporting data sets
+
+MagPy supports a large variety of different data sources and formats, which are typically used within the geomagnetic
+community. When looking at the file menu, you see direct support for the following sources: file(s), webservices,
+remote data sources and database. Databases such as MySQL and MariaDB are also supported. In order to access existing
+data go to menu **File** in the main menu bar.
+
+#### 3.2.1 Loading single or multiple files
+
+Most users will access data files on a local or connected file system. To do this use **Open File** in the **File** menu.
+This will open a standard file selection menu for your operating system. Locate the file you want to open. 
+No further selections are necessary. If the format type is supported, MagPy will identify it and open the data. 
+Multiple selections are possible. Currently supported file formats can be found in menu **Help**, **Read Formats...**.
+
+
+#### 3.2.2 Accessing Webservices
+
+Using **Open Webservice** in the **File** menu will gives you access to machine readable webservices of institutions
+and organizations. Currently (01/2024) webservices of [INTERMAGNET](https://www.intermagnet.org), the [USGS] and 
+[GeoSphere Austria](https://cobs.geosphere.at) are included for 
+accessing geomagnetic variation data and also a few other data sources. Please check the corresponding data licenses 
+of the data suppliers before using it. **Open Webservice** will open a selection dialog as displayed in figure 3.2.1
+
+Figure 3.2.1: Webservice selection window. The data request url will be constructed from the given parameters.  
+
+In future versions this list can be extended to other webservices as well. 
+
+#### 3.2.2 Accessing general URLs
+
+It is possible to open supported web based data from basically any web address. When suing **Open  URL** you can enter 
+basically every web address and access available data products directly. A number of examples for various data sources
+are listed in section 3 of the main MagPy manual. Pre-installed with XMagPy are a few examples for the Kp webservice 
+of the [GFZ Potsdam], data access at the [WDC] and some satellite data from [ACE]. As shown in figure 3.2.2 you can 
+change/modify bookmarks and add your favorite quick access list here.   
+
+Figure 3.2.2: Input window for remote connections. The example accesses hourly wdc data from the world data center in 
+Edinburgh via FTP. 
+
+
+#### 3.2.3 Database access
+
+If a MagPy based MySQL/MariaDB database is connected you can also access and data sources directly from the database. 
+Please check the main MagPy manual and section 3.3 for details on how to setup such a database. Using a data base comes
+with a number of benefits regarding data organization, quick access, flagging and meta information storage. When 
+clicking on **Open database** a drop down combo box will give you access to data tables contained within the database. 
+When opening you will further be asked to define a time range.  
+
+Figure 3.2.3: Database table access.
+
+### 3.2.4 Exporting data
+
+You can save data by using the **Export data** method of the file menu. A selection window as shown in Figure 3.3.1 
+is showing up. 
+
+Figure 3.3.1: Export data window.
+
+Within the export data window you can select the destination path. In dependency of the selected format, file name 
+eventual prerequisites are constructed. Please note, that some file formats require specific meta information. 
+A number of file formats also allow a more complex storage protocol. Please use the button **Export Option** within the 
+**Export Data** dialog to few these additional option which are different for the respective export formats. 
+
+As an example we will load variation data in one
+second resolution, , : Just load for example your IAGA-2002 one second data for one month 
+and then export it to ImagCDF. For correct outputs you have to add ImagCDF specific meta information before exporting as shown in 4.3. As a plot will be generated when opening one month of one second data, this will need some time. If you have a large amount of data to be converted it is advisable to use the MagPy back-end‘s read/write methods or the MagPy command line application mpconvert (see appendix 8.3.  
+
+Please note that not all export formats make sense for all data types. Here it is assumed that the user knows about 
+benefits and drawbacks of specific well known geomagnetic data formats. Details on these geomagnetic data formats and
+their contents as well as meta information requirements can be found here:
+https://www.intermagnet.org/data-donnee/formatdata-eng.php
+There are also three MagPy specific output formats which can be used for archiving and storage. PYCDF is based on
+NasaCDF and can hold basically any meta information you define. It is specifically designed to save flagging
+information and adopted baselines along with raw data, to allow for a single file storage (and thus reconstruction)
+of all analysis steps typically used in geomagnetic data analysis. PYSTR is a comma separated ascii text file which
+supports all basic meta information. PYASCII is a semi-colon separated ASCIItext file which focuses on data.  
+
+
+#### 3.2.5 Quit
+
+Does what is says... will quit XMagPy.
+
 
 ### 3.3 Database
 
@@ -100,7 +205,29 @@ meta information into the database.
 
 ### 3.5 Memory
 
+The main menu item **Memory** provides gives you access to previously opened/modified data sets and allows for some 
+multiple data operations. The dialog as shown in figure 3.5.1 will give you access to all data sets and working states
+in the memory. They are characterized by a unique ID which is constructed from data characteristics. Shown data columns
+(keys) can be modified. On the right side you will see a number of operations:
+
+**Plot** will activate and show the selected plot. If multiple plots are selected all of them will be shown above each 
+other as long as similar time ranges are available. Selecting multiple plots will disable all analysis functions.
+
+**Plot nested** will show similar data sets (similar timerange, similar keys) within a single plot.
+
+**Merge** will add data from a secondary source into a primary source. If some data is already existing this will remain
+untouched and only gaps will be filled by the merged secondary source. Typical place holders as used in IAGA files
+(99999, 88888) will be treated as non-existing data. The time series will always be limited to the time range of the
+primary source. You can only merge two data sets at once.
+
+**Subtract** will subtract identical columns from two data sets. You can only subtract two data sets at once.
+
+**Combine** will join two time series and fill non-existing columns. If data is already existing, they remain
+untouched. 
+
 ### 3.6 Specials
+
+TODO
 
 ### 3.7 Options
 
@@ -133,6 +260,150 @@ General information about XMagPy and currently supported file formats for readin
 ## 4. Panels
 
 ### 4.1 The data panel
+
+An overview about the data panel is shown in figure 4.1.1. On top of the data panel you will find two quick access
+buttons, **Previous** and **Next**. When opening data files with dates in the filename, assuming multiple adjacent files
+in the same directory, database sources or webservice/url data with time ranges, then these buttons will be activated
+and you can quickly switch to the next or previous data with a similar coverage. At the moment this quick access buttons
+are available if dates are characterized by numerical values. Thus, for some data files like geomagnetic IAF data these
+options are NOT available. 
+
+The source of the opened time series and its covered time range is shown below the quick access buttons within the
+**Data information** field. You can modify start and end time by changing times or dates subsequently using the trim 
+button. Please note: the trim button will cut down the original data set and create an new input in the memory. 
+
+The field **Data selection** allows you to select specific key for displaying in the diagram (button **Select keys**). 
+You can also modify the data set but deleting unused keys using **Drop keys**, which will lead to an new memory input.
+**Extract values** gives you the possibility to remove larger or smaller values than a given threshold. Multiple 
+criteria are possible. By default such data, including time stamp, is removed. If you want to keep timestamps and use
+missing data place holders (np.nan by default) use the **Get Gaps** method afterwards, which will also then lead to a
+discontinuous line plot.
+You might want to change the **coordinate system** between cartesian, cylindrical and spherical coordinates if vector
+data is provided. Select a line or point plot. More options are available using **Plotting options** in the **Options**
+menu.
+
+Finally, you can activate the **Continuous statistics** panel below the main frame. 
+
+### 4.2 The flag panel
+
+The flags button on the analysis panel will open a flag statistics dialog (figure 4.4.5). In case that no flags are currently available, the status field (figure 3.1d) will tell you and nothing else will happen.
+Figure 4.4.5: The flag dialog opened in the analysis panel.
+The flag dialog will provide some basic information on the flags currently stored in the sensor related flaglist. As shown in the example (flagging_example.json applied to example1) , 252 individual flags are currently included. The flags have all been created by automatic outlier detection (aof = automatic outlier flag), which is also expressed by the yellow flag annotation color. 252 flags were created using the outlier detection parameters as given in the comment. Within this dialog it is also possible to modify the flagging information. Please note that this method is preliminary and more sophisticated flagging tools will be available in a future version of MagPy. 
+Figure 4.4.5: Modifying flags will open this dialog.
+At present (MagPy1.0) you can change between different modification types (select, replace, delete), apply this type to either the flags key, comment, sensorid, or flagnumber. In above example we are deleting all flags for column key f.  
+
+
+### 4.3 The meta panel
+
+The meta data panel gives you an overview about all meta information connected to the currently active data set. This
+meta information is usually obtained from the data file. If a database is connected, and you have information for
+DataID, SensorID and/or StationID within your database, you can extend that information with database contents
+(**Get from DB**). This is useful for exporting data e.g. when converting IAGA-2002 to ImagCDF. 
+
+You can always modify or extend meta information when clicking on the buttons for data related, sensor related or 
+station related meta information. 
+
+As an example the input sheet for station related information is shown in figure 4.3.2. Here you will see several 
+field which can be filled with your information. The field names are self explaining and will be automatically 
+converted to obligatory field names when exporting specific formats like ImagCDF. Numbers in parenthesis behind some
+field names indicate that this information has to be provided for the corresponding output
+(1 → INTERMAGNET Archive Format IAF, 2 → IAGA 2002 format, 3→ ImagCDF).
+
+Figure 4.3.2: Input sheet for station related information. 
+
+### 4.4 The analysis panel
+
+The analysis panel provides access to many methods which are useful for data checking and evaluation. In the following
+you will find subsections for buttons and underlying methods on the analysis panel.
+
+**Derivative** will calculate the derivative of all data columns diagrams shown in the plot. If you want the second
+derivative, just press the button again. The derivative method is helpful to identify strong gradients within the
+components, which can be related to spikes, SSC-sudden storm commencements and other artificial or natural reasons.
+
+**Rotation**: When using the rotation button a window will open asking you for rotation angles alpha, beta, gamma. The
+rotation function will use an Eigen rotation to rotate the vector (x,y,z) into a new coordinate system (u,v,w). Alpha
+corresponds to a rotation in the horizontal plane, beta will rotate in the vertical plane. When only using alpha, 
+a „horizontal“ rotation within the x-y plane is accomplished.
+
+The **Fit** method will open an input dialog as shown in figure 4.4.1. The dialog window will ask you to define a fit
+function, its parameters as well as a time range. When choosing spline as fit function, you are asked to provide a
+relative measure of knotsteps for the spline. The provided number defines the position of knotsteps, relative to a
+signal length of 1. 0.33 thus means that two knots at 33% and 66% of the time series are used. Lower numbers increase
+the amount of knots. When choosing polynomial fits, the polynomial order needs to be provided. The higher the
+polynomial order the more complex the fit. Further fit methods are linear least-square, which is equivalent to a
+polynamial fit with order 1, and mean, which will calculate an arithmetic average and use this a horizontal linear fit.
+Choosing none will remove all previously performed fits. You can add multiple fits to a single timeseries. We will come
+back to this option when discussing adopted baselines. You can save and load fit parameters from disk. The Save button
+will save  all applied fit parameters to a json file. The Load method will obtain such stored data and directly apply
+the fitting parameters to the data set. When replacing a given “enddate” within the json file by “now”, then
+datetime.utcnow() will be used whenever loading this file. 
+
+Figure 4.4.3: Fitting data dialog window. 
+
+The three methods **Maxima**, **Minima** and **Mean** will open an information dialog with the requested values. 
+In case of mean also the standard deviation of these values for the shown data within the plotting window. You can
+change the active window using the plots’ zoom method.
+
+**Filter** will allow you apply typically geomagnetically recommended filters and also some others to your time series.
+Principally, filtering is a combination of smoothing using a certain smoothing window e.g. gaussian and a resampling
+of the smoothed time series at new intervals. The default filter parameters will be given in dependency to the sampling
+resolution of the time series and will correspond to IAGA/INTERMAGNET recommended filter parameters.
+The filter dialog allows you to select an appropriate filter window. Detailed descriptions of all possible filter 
+windows can be found elsewhere e.g. python signal analysis. You further define a window length, a sampling interval in
+seconds and eventually an offset for the window center. 0.0 as shown above will center the window on the minute.
+Furthermore you have to select a preferred missing data treatment. By default, the IAGA recommended method will be
+used, which means that filtering will be performed if more than 90% of data is available within the filtering window.
+Please note the filter weight are always determined analytically and therefore missing data is correctly accounted for
+when applying the filter window. Interpolation as missing data treatment will interpolate missing data if more than
+90% of data is available. If less than 90% is present than this window will not be filtered. Conservative treatment
+will not perform any filtering if already one data point is missing within the filter window.  
+
+**Offset** allows you to define a certain offset in time or component for either the whole time series or the selected
+(zoomed) time window.  Figure 4.4.7 shows an example of an offset within a time series and the offset dialog to correct
+this offset. 
+Figure 4.4.7: a) time series with an offset of 10 nT for almost 12 minutes. When using the offset button, the dialog window b) will open. Here you can provide offset values which are then applied to the time series.
+
+**Smooth** data sets support the same smoothing windows as the filter method. In principle smoothing does exactly the 
+same as the filter method without resampling the data set a new time stamps. Please check the filter function for
+supported methods.
+
+**Resample** method can be used to subsample a time series at specific periodic intervals. If no measurements are
+available at the specific time stamp, than a linear extrapolation between surrounding points is used. 
+
+**Delta F** is available if vector components (x,y,z) and an independent f column is present within the active data
+set. When clicking on delta F, the vector sum (F[Vector]) is determined and subtracted from f (F[Scalar]).
+Delta F = F[Vector] - F[Scalar]
+
+**Calculate F** will calculate the vector sum of x,y,z components and store the result within the reserved f column of
+the data object. If an independent f is already existing within this column, you will be asked whether you want to
+overwrite the existing information. 
+
+**Activity** will calculate the geomagnetic activity index k from the provided time series using the [FMI] method. The
+activity button is only active if geomagnetic components covering at least 3 days are available. Currently, the
+k index is solely calculated with the FMI method. Depending on the provided data eventually additional steps are
+automatically performed. The FMI method basically works with minute data resolution. If you have second resolution
+data, the filtering process is automatically performed using IAGA recommended filter options before k calculation.
+
+4.4.12 Baseline
+The baseline method is only available if a basevalue data set has been opened previously and is still present in the memory. When now opening a variation time series, which is covered by the time range of available basevalues, the baseline button gets enabled. When pressing the baseline button you will be asked to provide fitting parameters for adopted baselines. This baseline will be calculated and a baseline correction function of the the time series will  be obtained. This function will not be applied directly but stored within the time series meta information. You can apply the adopted baseline be pressing on the now available button „Baseline Corr(ection)“ on the data panel. Exporting this data set now as PYCDF will export the adopted baseline function along with the data meta info. This way, uncorrected and corrected data is not separated any more. Extensive details and a complete walkthrough with hands-on examples for this method is provided in section 6.2.
+
+**Power** will plot the power spectral density based on the matplotlib psd method for the selected components. You can
+zoom etc. If you want to return to the original plot access the **Memory**. Parameters for the PSD plot can be changed
+using plot options.
+
+**Spectrum** is disabled by default as this method is currently under development. You can activate a preliminary 
+access in the options menu. Currently you can view power and spectral densities for individual components. Yet, it is
+not yet possible to access any parameters, window sizes , colors etc. This will come in a future version on MagPy.  
+
+### 4.5 The DI panel
+
+### 4.6 The report panel
+
+The report panel will provide a summary of all analysis steps which have been performed so far. This report might be
+used for better transparency and the ability reproducing analysis routines. You can save the report messages as ASCII
+txt file by using the **Save log** button.
+
+### 4.7 The monitor panel
 
 ## 5. Application recipies for geomagnetic observatory data analysis
 
