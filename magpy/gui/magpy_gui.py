@@ -5057,6 +5057,11 @@ class MainFrame(wx.Frame):
             keys = False
         plotstream = stream.copy()
         plotstream = plotstream.dailymeans(keys)
+        print (plotstream.variables())
+
+        e1={'key':'dx','color':'red','capsize':5, 'marker':'o', 'linestyle':'-'}
+        e2={'key':'dy'}
+        e3={'key':'dz'}
 
         streamid = self._initial_read(plotstream)
         # activate errobars
@@ -5064,6 +5069,10 @@ class MainFrame(wx.Frame):
 
         self.changeStatusbar("Ready")
 
+
+    # ##################################################################################################################
+    # ####    DI Panel                                         #########################################################
+    # ##################################################################################################################
 
 
     # ##################################################################################################################
