@@ -1133,20 +1133,20 @@ CALLED BY:
     def _remove_nancolumns(self):
         """
     DEFINITION:
-        Remove any columsn soley filled with nan values
+        Remove any columns solely filled with nan values
 
     APPLICATION:
         called by plot methods in mpplot
 
     RETURNS:
-        - DataStream:   (DataStream) New stream reduced to below pointlimit.
+        - DataStream:   (DataStream) New stream reduced to below point limit.
 
         """
         array = [[] for key in self.KEYLIST]
         arraylengths = []
         if len(self.ndarray[0]) > 0:
             for idx, elem in enumerate(self.ndarray):
-                if len(self.ndarray[idx]) > 0 and self.KEYLIST[idx] in self.NUMKEYLIST:
+                if len(self.ndarray[idx]) > 0 and self.KEYLIST[idx] in self.NUMKEYLIST and is_number(self.ndarray[idx][0]):
                     lst = list(self.ndarray[idx])
                     if np.isnan(float(lst[0])) and np.isnan(float(lst[-1])):
                         nanlen = np.count_nonzero(np.isnan(lst))

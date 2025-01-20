@@ -2354,7 +2354,6 @@ REMOVED:
 
         TODO:
             - If sampling rate not given in DATAINFO get it from the datastream
-            - begin needs to be string - generalize that
         """
         wherelist = []
         stream = DataStream()
@@ -2434,20 +2433,21 @@ REMOVED:
             columns = rows.T
             array = [[] for el in stream.KEYLIST]
             for idx,key in enumerate(keys):
+                pos = stream.KEYLIST.index(key)
                 if not False in checkEqual3(columns[idx]):
                     print("readDB: Found identical values only:{}".format(key))
                     col = columns[idx]
                     if len(col) < 1 or str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find(
                                 '0000000000000000') or str(col[0]).find('xyz'):
-                        array[idx] = np.asarray([])
+                        array[pos] = np.asarray([])
                     else:
-                        array[idx] = col[:1]
+                        array[pos] = col[:1]
                 elif key in stream.NUMKEYLIST:
-                    array[idx] = np.asarray(columns[idx], dtype=np.float64)
+                    array[pos] = np.asarray(columns[idx], dtype=np.float64)
                 elif key.endswith('time'):
-                    array[idx] = np.asarray(columns[idx], dtype=datetime)
+                    array[pos] = np.asarray(columns[idx], dtype=datetime)
                 else:
-                    array[idx] = np.asarray(columns[idx], dtype=object)
+                    array[pos] = np.asarray(columns[idx], dtype=object)
                 # consider nan elemenets - done
 
             stream.ndarray = np.asarray(array, dtype=object)

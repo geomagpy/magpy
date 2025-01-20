@@ -107,11 +107,11 @@ Major methods:              major_method
 |  MainFrame     | _open_stream  |     2.0.0  |             | level 0    |               |        | file_on_open  |
 |  MainFrame     | _update_statistics | 2.0.0  |            | level 0    |               |        | _do_plot  |
 |  MainFrame     | changeStatusbar  |  2.0.0  |             | level 2    |               |        | everywhere  |
-|  MainFrame     | file_on_open_file  | 2.0.0  |            | level 1    |               |        |   |
+|  MainFrame     | file_on_open_file  | 2.0.0  |            | level 2    |               |        |   |
 |  MainFrame     | file_on_open_dir  | 1.0.0  |  removed    | level 1    |               |        |   |
-|  MainFrame     | file_on_open_url  | 2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | file_on_open_url  | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 1    |               |        |   |
-|  MainFrame     | file_on_open_db  |  2.0.0  |             |            |               |        |   |
+|  MainFrame     | file_on_open_db  |  2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | file_on_export |    2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | file_on_quit  |     2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | db_on_connect  |    2.0.0  |             | level 2    |               |        |   |
@@ -119,15 +119,15 @@ Major methods:              major_method
 |  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | memory_select |     2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | options_init |      2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | options_plot   |    2.0.0  |             | level 0    |               |        |   |
+|  MainFrame     | options_plot   |    2.0.0  |             |            |               |        |   |
 |  MainFrame     | options_di   |      2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_about  |       2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
 |  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | d_get_adjacent_stream | 2.0.0  |         | level 1    |               |        |   |
-|  MainFrame     | d_onNextButton |    2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | d_onPreviousButton |  2.0.0  |           | level 1    |               |        |   |
+|  MainFrame     | d_get_adjacent_stream | 2.0.0  |         | level 2    |               |        |   |
+|  MainFrame     | d_onNextButton |    2.0.0  |             | level 2    |               |        | get_adjacent  |
+|  MainFrame     | d_onPreviousButton |  2.0.0  |           | level 2    |               |        | get_adjacent  |
 |  MainFrame     | d_onTrimButton |    2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | d_onSelectButton |  2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | d_onDropButton |    2.0.0  |             | level 1    |               |        |   |
@@ -2093,11 +2093,12 @@ class MainFrame(wx.Frame):
         # ----------------------------------------
         # if the path/filename combination contains a vaild date and/or the current source is a databse
         # then activate the next/previous file path
-        source = self.magpystate.get('source')
-        sourcepath = self.magpystate.get('currentpath')
-        sourcename = self.magpystate.get('filename')
+        source = datacont.get('source')
+        sourcepath = datacont.get('sourcepath')
+        sourcename = datacont.get('filename')
+        date = None
         if source == 'db':
-            date = [self.datadict.get(self.active_id).get('end')]
+            date = [self.datadict.get(self.active_id).get('end').date()]
         elif source == 'file':
             date = methods.extract_date_from_string(sourcename)
         elif source == 'url':
@@ -2284,6 +2285,10 @@ class MainFrame(wx.Frame):
         datacont['keys'] = stream.variables()
         datacont['components'] = stream.header.get('DataComponents', '')[:3]
         datacont['flags'] = flags
+        # store current state information within the data dictionary
+        datacont['source'] = self.magpystate.get('source')
+        datacont['filename'] = self.magpystate.get('filename')
+        datacont['sourcepath'] = self.magpystate.get('currentpath')
         stream_id_str = "{}{}{}{}{}{}".format(sensorid,start,end,sr,str(flags),",".join(stream.variables()))
         # create id from string
         m = hashlib.md5()
@@ -2353,7 +2358,7 @@ class MainFrame(wx.Frame):
         mintime = datacont.get('start')
         maxtime = datacont.get('end')
         coverage = datacont.get('coverage')
-        debug = True
+        debug = False
 
         if debug:
             print ("Plotdict BEFORE _update_plot:")
@@ -2609,7 +2614,7 @@ class MainFrame(wx.Frame):
             self.changeStatusbar("Loading file failed ... Ready")
             dlg.Destroy()
 
-
+    @deprecated("OpenDir will be removed")
     def file_on_open_dir(self, event):
         """
         DESCRIPTION
@@ -2948,10 +2953,8 @@ class MainFrame(wx.Frame):
             self.menu_p.rep_page.logMsg('- Accessing database ...')
             output = db.select('DataID,DataMinTime,DataMaxTime', 'DATAINFO')
             datainfoidlist = [elem[0] for elem in output]
-            print (datainfoidlist)
             # Verify datainfoidlist
             datainfoidlist = dataAvailabilityCheck(db, datainfoidlist)
-            print (datainfoidlist)
             if len(datainfoidlist) < 1:
                 dlg = wx.MessageDialog(self, "No data tables available!\n"
                             "please check your database\n",
@@ -2980,6 +2983,8 @@ class MainFrame(wx.Frame):
 
         if getdata:
             path = [db,datainfoid]
+            self.magpystate['source'] = 'db'
+            self.magpystate['currentpath'] = ''
             self.magpystate['filename'] = datainfoid
             stream = self._open_stream(path=path, mintime=pydate2wxdate(mintime), maxtime=pydate2wxdate(maxtime),extension='MySQL Database')
             stream = stream._remove_nancolumns()
@@ -3636,7 +3641,7 @@ class MainFrame(wx.Frame):
         # 3. identify dates in path and increase or decrease the range
         # 4. Load the new data set (eventually check if a corresponding streamid is already existing.
         # 5.
-        def _replace_first_date_occurrence(name, runtime=1, debug=False):
+        def _replace_first_date_occurrence(name, runtime='a', debug=False):
             """
             DESCRIPTION
                 Will replace any date recognized by extract_date_from_string, (exception: APR0218.WIK)
@@ -3664,26 +3669,31 @@ class MainFrame(wx.Frame):
                 month = str(resdate[0].month).zfill(2)
                 day = str(resdate[0].day).zfill(2)
                 if debug:
-                    print(year, month, day)
+                    print(year, month, day, newname, coverage)
                 if coverage <= 366 and int(year) <= tyear:
                     # find date in string and replace by dummy
                     # 1 find year
                     if newname.find(year) >= 0:
                         newname = newname.replace(year, 'YEAR{}'.format(runtime), 1)
+                print (newname)
                 if coverage <= 31:
                     if newname.find(month) >= 0:
                         newname = newname.replace(month, 'MONTH{}'.format(runtime), 1)
+                print (newname)
                 if coverage <= 2:
                     if newname.find(day) >= 0:
                         newname = newname.replace(day, 'DAY{}'.format(runtime), 1)
+                print (newname)
                 return newname
             else:
                 return ''
 
         stream = DataStream()
-        source = self.magpystate.get('source')
-        sourcepath = self.magpystate.get('currentpath')
-        sourcename = self.magpystate.get('filename')
+        datacont = self.datadict.get(self.active_id)
+        print ("DATACONT", datacont)
+        source = datacont.get('source')
+        sourcepath = datacont.get('sourcepath')
+        sourcename = datacont.get('filename')
         newstart = None
         newend = None
         sr = self.datadict.get(self.active_id).get('samplingrate')
@@ -3697,6 +3707,7 @@ class MainFrame(wx.Frame):
             newend = start
         if debug:
             print ("oldstart, newstart, oldend, newend:", start, newstart, end, newend)
+            print (source, sourcename, sourcepath)
         newstart += timedelta(minutes=5)
         newstart -= timedelta(minutes=newstart.minute % 10,
                                  seconds=newstart.second,
@@ -3706,26 +3717,38 @@ class MainFrame(wx.Frame):
         if source == 'db':
             db, success = self._db_connect(*self.magpystate.get('dbtuple'))
             stream = db.read(sourcename, starttime=newstart, endtime=newend)
+            self.magpystate['source'] = 'db'
+            self.magpystate['filename'] = sourcename
+            self.magpystate['currentpath'] = ''
         elif source == 'file':
             sourcename = sourcename.split(',')
             if isinstance(sourcename, (list,tuple)):
                 sourcename = sourcename[0].strip()
-            newname = _replace_first_date_occurrence(sourcename, runtime=1)
-            newname = newname.replace("YEAR1MONTH1DAY1", "*").replace("YEAR1-MONTH1-DAY1", "*").replace("YEAR1MONTH1",
-                                                                                                        "*").replace(
-                "YEAR1-MONTH1", "*").replace(
-                "YEAR1", "*")
+            newname = _replace_first_date_occurrence(sourcename, runtime='a', debug=debug)
+            newname = newname.replace("YEARaMONTHaDAYa", "*").replace(
+                "YEARa-MONTHa-DAYa", "*").replace(
+                "YEARaMONTHa","*").replace(
+                "YEARa-MONTHa", "*").replace(
+                "YEARa", "*")
             if debug:
-                print ("FILE - next, previous", newname, newstart.strftime("%Y-%m-%d"), newend)
+                print ("FILE - next, previous:", newname, newstart.strftime("%Y-%m-%d"), newend)
             stream = read(os.path.join(sourcepath,newname),newstart.strftime("%Y-%m-%d"),newend.strftime("%Y-%m-%d"))
+            self.magpystate['source'] = 'file'
+            self.magpystate['filename'] = sourcename
+            self.magpystate['currentpath'] = sourcepath
         elif source == 'url':
-            newname = _replace_first_date_occurrence(sourcepath, runtime=1)
-            newname = _replace_first_date_occurrence(newname, runtime=2)
-            print (sourcepath)
-            newname = newname.replace("YEAR1-MONTH1-DAY1", newstart.strftime("%Y-%m-%d")).replace("YEAR1MONTH1DAY1", newstart.strftime("%Y%m%d")).replace("YEAR1MONTH1", newstart.strftime("%Y%m")).replace("YEAR1", newstart.strftime("%Y"))
-            newname = newname.replace("YEAR2-MONTH2-DAY2", newend.strftime("%Y-%m-%d")).replace("YEAR2MONTH2DAY2", newend.strftime("%Y%m%d")).replace("YEAR2MONTH2", newend.strftime("%Y%m")).replace("YEAR2", newend.strftime("%Y"))
-            print (newname)
+            newname = _replace_first_date_occurrence(sourcepath, runtime='a')
+            newname = _replace_first_date_occurrence(newname, runtime='b')
+            newname = newname.replace("YEARa-MONTHa-DAYa", newstart.strftime("%Y-%m-%d")).replace(
+                "YEARaMONTHaDAYa", newstart.strftime("%Y%m%d")).replace(
+                "YEARaMONTHa", newstart.strftime("%Y%m")).replace("YEARa", newstart.strftime("%Y"))
+            newname = newname.replace("YEARb-MONTHb-DAYb", newend.strftime("%Y-%m-%d")).replace(
+                "YEARbMONTHbDAYb", newend.strftime("%Y%m%d")).replace(
+                "YEARbMONTHb", newend.strftime("%Y%m")).replace("YEARb", newend.strftime("%Y"))
             stream = read(sourcepath)
+            self.magpystate['source'] = 'url'
+            self.magpystate['filename'] = ''
+            self.magpystate['currentpath'] = sourcepath
 
         if len(stream) > 0:
             streamid = self._initial_read(stream)

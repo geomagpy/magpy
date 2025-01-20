@@ -7218,8 +7218,10 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         self.mergeButton = wx.Button(self,-1,"Merge",size=(160,-1))
         self.subtractButton = wx.Button(self,-1,"Subtract",size=(160,-1))
         self.joinButton = wx.Button(self,-1,"Join",size=(160,-1))
+        self.clearButton = wx.Button(self, wx.ID_YES,"Clear memory",size=(160,-1))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,-1))
 
+        self.clearButton.Disable()  # not yet available
         if count < 2:
             self.plotButton.Disable()
             self.mergeButton.Disable()
@@ -7239,10 +7241,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                       (self.joinButton, dict(flag=wx.ALIGN_CENTER)),
                       (self.mergeButton, dict(flag=wx.ALIGN_CENTER)),
                       (self.subtractButton, dict(flag=wx.ALIGN_CENTER)),
-                      emptySpace,
+                      (self.clearButton, dict(flag=wx.ALIGN_CENTER)),
                       (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
-        if amount > 8:
+        if amount > 7:
             buttonlist = [buttonlist[idx] if idx < len(buttonlist) else emptySpace for idx in list(range(0,amount))]
+        print (buttonlist)
 
         contlst = []
         contlst.append((self.head1Label, noOptions))
@@ -7250,6 +7253,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         contlst.append((self.head3Label, noOptions))
         contlst.append((self.head4Label, noOptions))
         for idx in list(range(0,amount)):
+            print (idx, amount)
             if idx < len(layoutcheckids):
                 contlst.append(eval(layoutcheckids[idx]))
                 contlst.append(eval(layouttextids[idx]))
