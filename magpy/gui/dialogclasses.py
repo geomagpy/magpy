@@ -38,9 +38,9 @@ import platform
 | MultiStreamPanel |        2.0.0  |                 |  level 2       |          | memory_select |
 | InputSheetDialog |       2.0.0   |                 |  level 1       |          | di_input_sheet |
 | SettingsPanel |          2.0.0   |                 |  level 1       |          | InputSheetDialog |
+| AnalysisBaselineDialog | 2.0.0   |                 |  level 1       |          | a_onBaselineButton |
 | AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
-| AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
-| AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
+| xxxx                   | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
 
 runtime test:
 - : not tested
@@ -2332,6 +2332,10 @@ class AnalysisFitDialog(wx.Dialog):
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
+        for elem in self.shownkeys:
+            exec('self.{}CheckBox = wx.CheckBox(self, label="{}", size=(160,30))'.format(elem, elem))
+            exec('self.{}CheckBox.SetValue(True)'.format(elem))
+
         self.funcComboBox.Bind(wx.EVT_COMBOBOX, self.onUpdate)
         self.loadButton.Bind(wx.EVT_BUTTON, self.on_load)
         self.saveButton.Bind(wx.EVT_BUTTON, self.on_save)
@@ -2362,6 +2366,9 @@ class AnalysisFitDialog(wx.Dialog):
         contlst.append((self.UpperTimeText, noOptions))
         contlst.append((self.endFitDatePicker, expandOption))
         contlst.append((self.endFitTimePicker, expandOption))
+        for elem in self.shownkeys:
+            contlst.append((eval('self.{}CheckBox'.format(elem)), expandOption))
+
         if not self.hide_file:
             contlst.append(emptySpace)
             contlst.append((self.loadButton, dict(flag=wx.ALIGN_CENTER)))
@@ -3015,68 +3022,75 @@ class AnalysisRotationDialog(wx.Dialog):
 
 class AnalysisBaselineDialog(wx.Dialog):
     """
-    Dialog for Stream panel
-    Select shown keys
+    DESCRIPTION
+        Dialog will be opened when choosing the Baseline button on the Analysis panel.
     """
 
-    def __init__(self, parent, title, idxlst, dictlst, options, stream, shownkeylist, keylist, plotopt,last_dir: string = ''):
+    def __init__(self, parent, title, baseid, baselinedict, stream, shownkeylist, keylist, path: string = ''):
         super(AnalysisBaselineDialog, self).__init__(parent=parent,
-            title=title, size=(600, 600))
-        self.options = options
-        self.last_dir = last_dir
+            title=title, size=(600, 900))
+        self.absstreamlist = []
+        self.last_dir = path
+        self.baselinedict = baselinedict
         self.plotstream = stream
         self.shownkeylist = shownkeylist
         self.keylist = keylist
-        self.idxlst = idxlst
-        self.dictlst = dictlst
-        self.activedict = self.dictlst[-1]
-        self.plotoptlist = plotopt
-        self.starttime = None
-        self.endtime = None
-        self.absstreamlist = []
+        self.active_baseid = baseid
+        self.starttime = baselinedict.get(baseid).get("startdate")
+        self.endtime = baselinedict.get(baseid).get("enddate")
 
-        for idx, ele in enumerate(dictlst):
-            st = ele.get('startdate')
-            et = ele.get('enddate')
-            line = "{}: {}_{}_{}".format(str(idx),ele.get('filename'),datetime.strftime(st,"%Y%m%d"),datetime.strftime(et,"%Y%m%d"))
+        baseids = [bid for bid in baselinedict]
+
+        # Create selection and information lines for all baseline inputs
+        for bid in baseids:
+            basecont = baselinedict.get(bid)
+            # coverage of all basevalue data
+            st = basecont.get('startdate')
+            et = basecont.get('enddate')
+            line = "{}: {}_{}_{}".format(str(bid), basecont.get('filename'), st.strftime("%Y%m%d"), et.strftime("%Y%m%d"))
             self.absstreamlist.append(line)
-            self.starttime = st  # as the last one is selected by default
-            self.endtime = et
 
-        self.selecteddict = dictlst[-1]
-        self.fitparameters = self.get_fitpara(self.selecteddict, self.plotoptlist, starttime=self.starttime,endtime=self.endtime)
+        # Select the fitting parameter lists for currently active baseline
+        self.fitparameters = self.get_fitpara(self.active_baseid, starttime=self.starttime,endtime=self.endtime)
 
-        #self.parameterstring = "Adopt Baseline: \nStarttime: {}\nFunction: {}\nKnotstep: {}\nDegree: {}\nEndttime: {}\n".format(self.starttime, self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree',''),self.endtime)
-        self.parameterstring = self.create_fitparameterstring(self.fitparameters)
+        # Create an infromation string for the currently active baseid
+        self.parameterstring = self.create_fitparameterstring(self.active_baseid)
+
         self.createControls()
         self.doLayout()
         self.bindControls()
 
-    def get_fitpara(self,selecteddict, plotoptlist,starttime=None,endtime=None):
+
+    def get_fitpara(self, baseid, starttime=None,endtime=None):
         fitparameters = {}
-        idx = int(selecteddict.get("streamidx",0))
-        plotopt = plotoptlist[idx]
-        functlist = plotopt.get('function',[])
+
+        bd = self.baselinedict.get(baseid)
+        functlist = bd.get('function',[])
+
         if functlist and len(functlist) > 0:
             for idx,func in enumerate(functlist):
                 funcdict = {"keys":func[8], "fitfunc":func[3],"fitdegree":func[4], "knotstep":func[5], "starttime":func[6],"endtime":func[7], "sv":func[1], "ev":func[2]}
                 fitparameters[idx] = funcdict
-        else:
-            fitparameters = {0:{"keys":[], "fitfunc":selecteddict.get('fitfunction','spline'),"fitdegree":selecteddict.get('fitdegree','5'), "knotstep":selecteddict.get('fitknotstep',"0.3"), "starttime":starttime,"endtime":endtime}}
         return fitparameters
 
-    def create_fitparameterstring(self,fitparameters):
-        ps = "Adopted Baseline:\n"
-        for fitpara in fitparameters:
-            para = fitparameters.get(fitpara)
-            ps += "\n"
-            ps += " Starttime: {}\n".format(para.get("starttime"))
-            ps += " Function: {}\n".format(para.get("fitfunc"))
-            if para.get("fitfunc","").startswith("poly"):
-                ps += " Degree: {}\n".format(para.get("fitdegree"))
-            elif para.get("fitfunc","").startswith("spline"):
-                ps += " Knotstep: {}\n".format(para.get("knotstep"))
-            ps += " Endtime: {}\n".format(para.get("endtime"))
+
+    def create_fitparameterstring(self, baseid):
+        activeparameters = self.baselinedict.get(baseid)
+        st = activeparameters.get('startdate')
+        et = activeparameters.get('enddate')
+        ps = "Adopted Baseline (ID: {}):\n\n Starttime: {}\n".format(baseid, st.strftime("%Y-%m-%d"))
+        functlist = activeparameters.get('function')
+        if functlist and len(functlist) > 0:
+            for idx,func in enumerate(functlist):
+                place = ''
+                fitfunc = func[3]
+                if fitfunc == 'spline':
+                    place = " Knotstep: {},".format(func[5])
+                elif fitfunc == 'poly':
+                    place = " Degree: {},".format(func[4])
+                line = " - Fitfunc: {} ,{} between {} and {}\n".format(fitfunc, place, func[6], func[7])
+                ps += line
+        ps += " Endtime: {}\n".format(et.strftime("%Y-%m-%d"))
         return ps
 
     def _pydate2wxdate(self,date):
@@ -3092,19 +3106,20 @@ class AnalysisBaselineDialog(wx.Dialog):
     def createControls(self):
         self.absstreamLabel = wx.StaticText(self, label="Select basevalue data:",size=(190,30))
         self.absstreamComboBox = wx.ComboBox(self, choices=self.absstreamlist,
-            style=wx.CB_DROPDOWN, value=self.absstreamlist[-1],size=(190,-1))
+            style=wx.CB_DROPDOWN, value=self.absstreamlist[-1],size=(550,-1))
         self.parameterLabel = wx.StaticText(self, label="Fit parameter:",size=(190,30))
-        self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(300,120),
+        self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(550,120),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.parameterButton = wx.Button(self, label='Add ...',size=(190,30))
-        self.clearButton = wx.Button(self, label='Reset ...',size=(190,30))
+        self.parameterButton = wx.Button(self, label='Add new',size=(190,30))
+        self.clearButton = wx.Button(self, label='Delete all',size=(190,30))
         self.loadButton = wx.Button(self, label='Load ...',size=(190,30))
         self.saveButton = wx.Button(self, label='Save ...',size=(190,30))
 
         self.okButton = wx.Button(self, wx.ID_OK, label='Adopt baseline',size=(190,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(190,30))
 
-        if PLATFORM.startswith('linux'):
+        plat_form = platform.platform()
+        if plat_form.startswith('linux') or plat_form.startswith('Linux'):
             self.parameterTextCtrl.Disable()
 
     def doLayout(self):
@@ -3122,11 +3137,11 @@ class AnalysisBaselineDialog(wx.Dialog):
         contlst.append((self.absstreamComboBox, expandOption))
         contlst.append((self.parameterLabel, noOptions))
         contlst.append((self.parameterTextCtrl, expandOption))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.parameterButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.clearButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.loadButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.saveButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.clearButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
         # A GridSizer will contain the other controls:
         cols = 1
@@ -3141,12 +3156,14 @@ class AnalysisBaselineDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+
     def bindControls(self):
         self.parameterButton.Bind(wx.EVT_BUTTON, self.OnParameter)
         self.clearButton.Bind(wx.EVT_BUTTON, self.OnClear)
         self.loadButton.Bind(wx.EVT_BUTTON, self.OnLoad)
         self.saveButton.Bind(wx.EVT_BUTTON, self.OnSave)
         self.absstreamComboBox.Bind(wx.EVT_TEXT, self.OnUpdate)
+
 
     def OnLoad(self, e):
         # Load will load from file and replace current fit parameters
@@ -3158,15 +3175,27 @@ class AnalysisBaselineDialog(wx.Dialog):
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         if openFileDialog.ShowModal() == wx.ID_OK:
             fitname = openFileDialog.GetPath()
-            self.fitparameters = DataStream().func_from_file(fitname,debug=False)
+            basedict = func_from_file(fitname,debug=False)
             openFileDialog.Destroy()
             self.parameterTextCtrl.Clear()
-            self.parameterstring = self.create_fitparameterstring(self.fitparameters)
-            self.parameterTextCtrl.SetValue(self.parameterstring)
+            print ("LOADED", basedict)
+            keys = [key for key in basedict]
+            if keys and len(keys) > 0:
+                mainkey = keys[0]
+                self.baselinedict[mainkey] = basedict.get(mainkey)
+                self.active_baseid = mainkey
+                self.parameterstring = self.create_fitparameterstring(self.active_baseid)
+                self.parameterTextCtrl.SetValue(self.parameterstring)
         else:
             openFileDialog.Destroy()
 
+
     def OnSave(self, e):
+
+        savedict = {}
+        bd = self.baselinedict.get(self.active_baseid)
+        savedict[self.active_baseid] = bd
+
         saveFileDialog = wx.FileDialog(self, "Save As", self.last_dir, "",
                                        "json fit parameter (*.json)|*.json",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
@@ -3179,20 +3208,27 @@ class AnalysisBaselineDialog(wx.Dialog):
                 savename = savename+extensions[extind]
 
             saveFileDialog.Destroy()
-            DataStream().func_to_file(self.fitparameters,savename,debug=False)
+            func_to_file(savedict,savename,debug=False)
             self.Close(True)
         else:
              saveFileDialog.Destroy()
 
+
     def OnClear(self, e):
         # delete current fitparameter
-        self.fitparameters = {}
+        self.baselinedict = {}
         self.parameterTextCtrl.Clear()
         self.parameterTextCtrl.SetValue("")
+        self.parameterButton.Disable()
+        self.clearButton.Disable()
+        self.saveButton.Disable()
+        self.absstreamComboBox.Clear()
+        self.okButton.Disable()
+
 
     def OnParameter(self, e):
         # open fit dlg
-        idx = int(self.absstreamComboBox.GetValue().split(':')[0])
+        baseid = int(self.absstreamComboBox.GetValue().split(':')[0])
         keynums = []
         for key in self.fitparameters:
             keynums.append(int(key))
@@ -3203,15 +3239,13 @@ class AnalysisBaselineDialog(wx.Dialog):
             nextkey = 0
             lastfitparameter = {}
 
-        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', options=self.options, stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=False, hide_file=True)
-        #startdate=self.dictlst[idx].get('startdate')
-        #enddate=self.dictlst[idx].get('enddate')
+        dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter', baseid=self.active_baseid, stream=self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=False, hide_file=True)
         if lastfitparameter:
             startdate = lastfitparameter.get('starttime')
             enddate = lastfitparameter.get('endtime')
         else:
-            startdate=self.dictlst[idx].get('startdate')
-            enddate=self.dictlst[idx].get('enddate')
+            startdate=self.baselinedict.get(baseid).get('startdate')
+            enddate=self.baselinedict.get(baseid).get('enddate')
 
         dlg.setTimeRange(date2num(startdate), date2num(enddate))
 
@@ -3232,21 +3266,26 @@ class AnalysisBaselineDialog(wx.Dialog):
             #self.selecteddict['degree'] = str(params['degree'])
         dlg.Destroy()
 
-    def OnUpdate(self, e):
-        # open fit dlg
-        idx = int(self.absstreamComboBox.GetValue().split(':')[0])
-        self.selecteddict = self.dictlst[idx]
 
-        self.starttime=self.dictlst[idx].get('startdate')
-        self.endtime=self.dictlst[idx].get('enddate')
+    def OnUpdate(self, e):
+        """
+        DESCRIPTION
+            will be called by an update event in the selection ComboBox
+        :param e:
+        :return:
+        """
+        # open fit dlg
+        self.active_baseid = self.absstreamComboBox.GetValue().split(':')[0]
+        print (self.active_baseid, self.baselinedict)
+        activeparameters = self.baselinedict.get(self.active_baseid)
+        self.starttime = activeparameters.get('startdate')
+        self.endtime = activeparameters.get('enddate')
         # get the selected data from plotoptlist - and then update the data here
-        self.fitparameters = self.get_fitpara(self.selecteddict, self.plotoptlist, starttime=self.starttime,endtime=self.endtime)
-        self.parameterstring = self.create_fitparameterstring(self.fitparameters)
+        self.fitparameters = self.get_fitpara(self.active_baseid, starttime=self.starttime,endtime=self.endtime)
+        self.parameterstring = self.create_fitparameterstring(self.active_baseid)
         ## also add funtional parameters to the dictionary
         self.parameterTextCtrl.Clear()
         self.parameterTextCtrl.SetValue(self.parameterstring)
-
-
 
 
 class AnalysisFlagsDialog(wx.Dialog):
@@ -7233,7 +7272,6 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         emptySpace = ((0, 0), noOptions)
 
         amount = len(layoutcheckids)
-        print ("Number of plots", amount)
         if amount <= 7:
             amount = 7
         buttonlist = [(self.applyButton, dict(flag=wx.ALIGN_CENTER)),
@@ -7245,7 +7283,6 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                       (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
         if amount > 7:
             buttonlist = [buttonlist[idx] if idx < len(buttonlist) else emptySpace for idx in list(range(0,amount))]
-        print (buttonlist)
 
         contlst = []
         contlst.append((self.head1Label, noOptions))
@@ -7253,7 +7290,6 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         contlst.append((self.head3Label, noOptions))
         contlst.append((self.head4Label, noOptions))
         for idx in list(range(0,amount)):
-            print (idx, amount)
             if idx < len(layoutcheckids):
                 contlst.append(eval(layoutcheckids[idx]))
                 contlst.append(eval(layouttextids[idx]))

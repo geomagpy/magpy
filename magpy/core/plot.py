@@ -318,12 +318,13 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
             # plot only selected indicies
             xinds[idx] = list(range(0, len(x), 1))
         # drop nan columns
+        # TODO : better to do remove_nancolumns not during plotting?
         dat = dat._remove_nancolumns()
         if debug:
             t3 = datetime.now()
         for i, component in enumerate(keys[idx]):
             comp = dat._get_column(component)
-            if len(comp) > 0 or force:
+            if len(comp) > 0  or force:
                 if separate:
                     subplot = int("{}1{}".format(total_keys, total_pos + 1))
                 else:
@@ -489,14 +490,12 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                         if len(np.array(function,
                                         dtype=object).shape) > 1:  # allow multiple functions for each component
                             for functio in function:
-                                print (functio)
                                 # function should contain the fitted time range and the projected timerange
                                 fres = evaluate_function(component, functio, dat.samplingrate(), starttime=None,
                                                          endtime=None, debug=False)
                                 if fres and len(fres) == 2:
                                     ax.plot(fres[0], fres[1], functionfmt, alpha=0.5)
                         else:
-                            print (function)
                             # function should contain the fitted time range and the projected timerange
                             fres = evaluate_function(component, function, dat.samplingrate(), starttime=None,
                                                      endtime=None, debug=False)

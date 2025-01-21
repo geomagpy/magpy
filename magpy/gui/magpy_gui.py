@@ -152,6 +152,11 @@ Major methods:              major_method
 |  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | a_onActivityButton |  2.0.0  |           | level 1    |               |        |   |
 |  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onDailyMeansButton | 2.0.0  |          | level 2    |               |        |   |
+|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 1    |               |        |   |
+|  MainFrame     | a_onApplyBCButton | 2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onPowerButton |   2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | a_onSpectrogramButton | 2.0.0  |         | level 0    |               |        |   |
 |  MainFrame     | r_onSaveLogButton |  2.0.0  |            | level 2    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
@@ -755,7 +760,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             plotdict : all visualization parameter
             sharey : limit shownkeys to a single input to share y axis for multiple diagrams
         """
-        debug = True
+        debug = False
 
         streams = []
         keys = []
@@ -1252,6 +1257,7 @@ class MainFrame(wx.Frame):
         self.baselineidxlst = []
 
         self.active_id = 0
+        self.active_baseid = 0
 
         # Menu Bar
         # --------------
@@ -1688,9 +1694,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.analysis_onActivityButton, self.menu_p.ana_page.activityButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onDeltafButton, self.menu_p.ana_page.deltafButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onCalcfButton, self.menu_p.ana_page.calcfButton)
-        self.Bind(wx.EVT_BUTTON, self.onBaselineButton, self.menu_p.ana_page.baselineButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onBaselineButton, self.menu_p.ana_page.baselineButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onDailyMeansButton, self.menu_p.ana_page.dailyMeansButton)
-        self.Bind(wx.EVT_BUTTON, self.onApplyBCButton, self.menu_p.ana_page.applyBCButton)
+        self.Bind(wx.EVT_BUTTON, self.analysis_onApplyBCButton, self.menu_p.ana_page.applyBCButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onPowerButton, self.menu_p.ana_page.powerButton)
         self.Bind(wx.EVT_BUTTON, self.analysis_onSpectrumButton, self.menu_p.ana_page.spectrumButton)
         #        DI Page
@@ -2000,7 +2006,6 @@ class MainFrame(wx.Frame):
                 dis = str(value)
             return dis
 
-        baselineexists = False
         # get data dict
         datacont = self.datadict.get(streamid)
         stream = datacont.get('dataset')
@@ -2033,14 +2038,6 @@ class MainFrame(wx.Frame):
 
         self.menu_p.str_page.symbolRadioBox.Enable()
 
-        """
-        # Coverage
-        ind = np.argmin(stream.ndarray[0])
-        # Flag column
-        commidx = DataStream().KEYLIST.index('comment')
-        commcol = stream.ndarray[commidx]
-        commcol = np.asarray([el for el in commcol if not el in ['','-',np.nan]])
-        """
         # Delta
         deltas = False
         if 'dx' in keys or 'dy' in keys or 'dz' in keys or 'df' in keys:
@@ -2068,6 +2065,7 @@ class MainFrame(wx.Frame):
                  metastationtext += "{}: \t{}\n".format(key.replace('Station',''),stream.header.get(key,'')) #key.replace('Station','')+': \t'+stream.header.get(key,'')+'\n'
 
         # Append baselineinfo to baselinedictlist
+        # ------------------------------------------
         if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
             if not sensorid and not dataid:
                 basename = self.menu_p.str_page.fileTextCtrl.GetValue()
@@ -2075,23 +2073,31 @@ class MainFrame(wx.Frame):
                 basename = dataid
             else:
                 basename = sensorid
-            # Obtain the correct stream idx function
-            fitfunc = self.analysisdict.get('fitfunction')
-            knotstep = self.analysisdict.get('fitknotstep')
-            degree = self.analysisdict.get('fitdegree')
-            basedict = {'startdate': mintime,
+            # Get a general single fitting function with default parameters and add this as starting parameter to
+            # baselinedict
+            functions = self.plotdict.get(streamid).get('functions')
+            # clean functions:
+            if functions:
+                new_functions = []
+                for func in functions[0]:
+                    new_functions.append([{}, func[1], func[2], func[3], func[4], func[5], func[6], func[7], []])
+                res = []
+                [res.append(val) for val in new_functions if val not in res]
+                functions = res
+                # functions = [[ {}, mintime, maxtime, fitfunc, degree, knotstep, mintime, maxtime, [] ]]
+
+                basedict = {'startdate': mintime,
                         'enddate': maxtime, 'filename': basename, 'streamid': streamid,
-                        'function': fitfunc, 'knotstep': knotstep,
-                        'degree': degree}
-            basestr = "{}{}{}{}{}{}{}".format(mintime,maxtime,basename,streamid,fitfunc,knotstep,degree)
-            m = hashlib.md5()
-            m.update(basestr.encode('utf-8'))
-            baseid = str(int(m.hexdigest(), 16))[0:12]
-            self.baselinedict[baseid] = basedict
+                        'function': functions}
+                basestr = "{}{}{}{}{}".format(mintime,maxtime,basename,streamid,functions)
+                m = hashlib.md5()
+                m.update(basestr.encode('utf-8'))
+                baseid = str(int(m.hexdigest(), 16))[0:12]
+                self.baselinedict[baseid] = basedict
 
         # Check data path/filename for dates
         # ----------------------------------------
-        # if the path/filename combination contains a vaild date and/or the current source is a databse
+        # if the path/filename combination contains a valid date and/or the current source is a database
         # then activate the next/previous file path
         source = datacont.get('source')
         sourcepath = datacont.get('sourcepath')
@@ -2152,11 +2158,12 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.maxButton.Enable()           # always
         self.menu_p.ana_page.minButton.Enable()           # always
         self.menu_p.ana_page.offsetButton.Enable()        # always
-        self.menu_p.ana_page.resampleButton.Enable()        # always
+        self.menu_p.ana_page.resampleButton.Enable()      # always
         self.menu_p.ana_page.filterButton.Enable()        # always
         self.menu_p.ana_page.smoothButton.Enable()        # always
+        # baseline related stuff and activity below
+        self.menu_p.ana_page.powerButton.Enable()         # if experimental
         if self.guidict.get('experimental'):
-            self.menu_p.ana_page.powerButton.Enable()  # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
 
         # ----------------------------------------
@@ -2165,7 +2172,6 @@ class MainFrame(wx.Frame):
 
         # Selective fields
         # ----------------------------------------
-        print ("COMPONENTS", comps)
         if comps in ['xyz','XYZ','hdz','HDZ','idf','IDF','hez','HEZ','DIF','dif']:
             self.menu_p.str_page.compRadioBox.Enable()
             if comps in ['hdz','HDZ']:
@@ -2217,6 +2223,11 @@ class MainFrame(wx.Frame):
                 baselinelist = [key for key in self.baselinedict]
                 if len(baselinelist) > 0:
                     self.menu_p.ana_page.baselineButton.Enable()  # activate if baselinedata is existing
+
+        if self.analysisdict.get('baselinedirect'):
+            self.menu_p.ana_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
+        if contenttype == 'BC':
+            self.menu_p.ana_page.applyBCButton.Disable()       # disabled if already corrected
 
 
         # Update "information" fields
@@ -2289,7 +2300,7 @@ class MainFrame(wx.Frame):
         datacont['source'] = self.magpystate.get('source')
         datacont['filename'] = self.magpystate.get('filename')
         datacont['sourcepath'] = self.magpystate.get('currentpath')
-        stream_id_str = "{}{}{}{}{}{}".format(sensorid,start,end,sr,str(flags),",".join(stream.variables()))
+        stream_id_str = "{}{}{}{}{}{}{}".format(sensorid,start,end,sr,str(flags),",".join(stream.variables()),stream.header)
         # create id from string
         m = hashlib.md5()
         m.update(stream_id_str.encode('utf-8'))
@@ -2326,9 +2337,6 @@ class MainFrame(wx.Frame):
 
             if debug:
                 print ("plotdict AFTER _update_plot", self.plotdict)
-            #if not restore:
-            #    self.streamkeylist.append(keylist)
-            #    self.plotoptlist.append(self.plotopt)
             self._do_plot([streamid])
 
 
@@ -2367,8 +2375,11 @@ class MainFrame(wx.Frame):
         # 2. get the existing plotdict input
         plotcont = self.plotdict.get(streamid)
         shownkeys = plotcont.get('shownkeys',keys)
+        # LIMIT shown keys to numerical ones
+        shownkeys = [key for key in shownkeys if key in stream.NUMKEYLIST]
         if not shownkeys or len(shownkeys) > len(keys):
             shownkeys = keys
+            shownkeys = [key for key in shownkeys if key in stream.NUMKEYLIST]
             plotcont['shownkeys'] = shownkeys
         lenshownkeys = max(np.array(shownkeys).shape) # ignores [[1,2,3]] or [1,2,3]
 
@@ -2382,7 +2393,6 @@ class MainFrame(wx.Frame):
         else:
             plotcont['symbols'] =  ['.'] * lenshownkeys
         if plotcont.get('colors') and not len(plotcont.get('colors',[])) == len(shownkeys):
-            print ("COLORS")
             colors = plotcont.get('colors')
             if len(colors) > lenshownkeys:
                 plotcont['colors'] = colors[:lenshownkeys]
@@ -2409,12 +2419,17 @@ class MainFrame(wx.Frame):
         # 4. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
         # ------------------------------
         if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
-            if len(stream._get_column('x')) > 0:   # is a PYSTR or PYCDF file with basevalues
+            shownkeys = plotcont.get('shownkeys')
+            if len(stream._get_column('x')) > 0 and shownkeys == keys:   # is a PYSTR or PYCDF file with basevalues
+                #if len(shownkeys) > 7: # not the case if dailymeans are caluclated
                 shownkeys = ['x','y','z','dx','dy','dz','df']
                 plotcont['padding'] = [0,0,0,5,0.05,5,2]
-            else:                                  # is a BLV file with basevalues
+            elif not len(stream._get_column('x')) > 0 :                  # is a BLV file with basevalues
                 shownkeys = ['dx','dy','dz']
                 plotcont['padding'] = [5,0.05,5,2]
+            # If dailymeans were calcluated
+            if isinstance(plotcont.get('errorbars'), (list,tuple)) and len(plotcont.get('errorbars')) > 0:
+                shownkeys = shownkeys[:len(plotcont.get('errorbars'))]
             plotcont['symbols'] =  ['.'] * len(shownkeys)
             plotcont['shownkeys'] = shownkeys
             colors = plotcont['colors']
@@ -3679,18 +3694,15 @@ class MainFrame(wx.Frame):
                 if coverage <= 31:
                     if newname.find(month) >= 0:
                         newname = newname.replace(month, 'MONTH{}'.format(runtime), 1)
-                print (newname)
                 if coverage <= 2:
                     if newname.find(day) >= 0:
                         newname = newname.replace(day, 'DAY{}'.format(runtime), 1)
-                print (newname)
                 return newname
             else:
                 return ''
 
         stream = DataStream()
         datacont = self.datadict.get(self.active_id)
-        print ("DATACONT", datacont)
         source = datacont.get('source')
         sourcepath = datacont.get('sourcepath')
         sourcename = datacont.get('filename')
@@ -4531,7 +4543,11 @@ class MainFrame(wx.Frame):
                 self.analysisdict['fitdegree'] = fitdegree
                 self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
                         params['fitfuncname'], params['knotstep'], params['fitdegree']))
-                func = plotstream.fit(keys=keys,
+                funckeys = []
+                for elem in keys:
+                    if eval('dlg.{}CheckBox.GetValue()'.format(elem)):
+                        funckeys.append(elem)
+                func = plotstream.fit(keys=funckeys,
                             fitfunc=params['fitfunc'],
                             fitdegree=params['fitdegree'], knotstep=params['knotstep'],
                             starttime=params['starttime'],
@@ -4899,84 +4915,86 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def onBaselineButton(self, event):
+    def analysis_onBaselineButton(self, event):
         """
         DESCRIPTION
              Calculates baseline correction
         """
         self.changeStatusbar("Baseline adoption ...")
-        if self.plotstream.header.get('DataAbsInfo'):
-            #print ("Baseline has been calculated already - existing adopted baseline will be replaced")
+        currentdir = self.guidict.get('dirname')
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        keys = datacont.get('keys')
+        plotcont = self.plotdict.get(self.active_id)
+        shownkeys = plotcont.get('shownkeys')
+
+        plotstream = stream.copy()
+
+        if stream.header.get('DataAbsInfo'):
             existdlg = wx.MessageDialog(self, "Baseline date already connected to timeseries\n"
                         "Append new data (YES) or replace (No)\n".format(time),
                         "Baseline data existing", wx.YES_NO|wx.ICON_INFORMATION)
             if existdlg.ShowModal() == wx.ID_NO:
-                self.plotstream.header['DataAbsInfo'] = ''
-                self.plotstream.header['DataBaseValues'] = None
+                plotstream.header['DataAbsInfo'] = ''
+                plotstream.header['DataBaseValues'] = None
             existdlg.Destroy()
 
-        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', idxlst=self.baselineidxlst,
-                                     dictlst = self.baselinedictlst, options=self.options, stream = self.plotstream,
-                                     shownkeylist=self.shownkeylist, keylist=self.keylist, plotopt=self.plotoptlist,
-                                     last_dir = self.last_dir)
+        # get all baseline ids which can be used
+        baseids =  [baseid for baseid in self.baselinedict]
+        if not self.active_baseid:
+            self.active_baseid = baseids[-1]
+
+        dlg = AnalysisBaselineDialog(None, title='Analysis: Baseline adoption', baseid=self.active_baseid, baselinedict=self.baselinedict,
+                                     stream=plotstream,
+                                     shownkeylist=shownkeys, keylist=keys,
+                                     path=currentdir)
         # open dlg which allows to choose baseline data stream, function and parameters
-        # Drop down for baseline data stream (idx: filename)
+        # Drop down for baseline data stream (BaseID: filename)
         # Text window describing baseline parameter
         # button to modify baseline parameter
-        #print ("BASELINEDICT CoNTENTS:", self.baselinedictlst,self.baselineidxlst)
         if dlg.ShowModal() == wx.ID_OK:
-            # return active stream idx ()
-            #print ("Here", dlg.absstreamComboBox.GetStringSelection())
-            #print ("Here2", dlg.absstreamComboBox.GetValue())
-            self.options = dlg.options
-            # fitparameters is a dictionary containing fitting parameters
-            # like fitdict = {1: {"keys":None, "fitfunc":"poly","fitdegree":5, "knotstep":0.3, "starttime":starttime,"endtime":endtime},
-            #             2: {"keys":None, "fitfunc":"mean","fitdegree":5, "knotstep":0.3, "starttime":starttime,"endtime":endtime}}
+            # returns a pointer to the selected baseline parameters
             fitparameters = dlg.fitparameters
-            # basedict contains ?
-            basedict = dlg.selecteddict # tmpbasedict[0]
-            absstream = self.streamlist[int(basedict.get('streamidx'))]
+            baseid = dlg.active_baseid
+            self.active_baseid = baseid
+            absstreamid = self.baselinedict.get(baseid).get("streamid")
+            absstream = self.datadict.get(absstreamid).get("dataset")
 
-            #print ("CHECKING BASE", starttime, endtime, knotstep, fitfunc, degree, absstream.length()[0])
-            #baselinefunc = self.plotstream.baseline(absstream,fitfunc=fitfunc, knotstep=float(knotstep), fitdegree=int(degree), startabs=starttime, endabs=endtime)
-            baselinefunclist = []
-            if not fitparameters:
+            baselinefunclist = []   # will hold a list of iundividual functions obtained by stream.baseline
+            if not baseid:
                 self.menu_p.rep_page.logMsg('- baseline adoption aborted as no fit function defined')
                 self.changeStatusbar("Ready")
             else:
                 for fitparameter in fitparameters:
                     fitpara = fitparameters.get(fitparameter)
-                    #print ("Correcting with ", fitpara)
-                    baselinefunclist.append(self.plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
+                    baselinefunclist.append(plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
 
-                #keys = self.shownkeylist
-                self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: function={}, knotsteps(spline)={}, degree(polynomial)={}'.format(basedict['filename'],self.options.get('fitfunction',''),self.options.get('fitknotstep',''),self.options.get('fitdegree','')))
-                # add new stream, with baselinecorr
-                # BASECORR
-                # provide possibility to directly calculate bc
-                calc_bc = self.options.get("baselinedirect")
+                self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: '
+                                            'from Baseline ID {}'.format(self.baselinedict.get('filename'),baseid))
+
+                # calc_bc True will directly calulate the baseline corrected values and disable bcCorr
+                calc_bc = self.analysisdict.get("baselinedirect")
                 if calc_bc:
                     msgtext = "Baseline correction performed - Ready"
-                    self.plotstream = self.plotstream.bc(function=baselinefunclist)
-                    # Eventually update delta F
-                    if 'df' in self.plotstream._get_key_headers():
-                        self.plotstream = self.plotstream.delta_f()
-                    currentstreamindex = len(self.streamlist)
-                    self.streamlist.append(self.plotstream)
-                    self.streamkeylist.append(self.shownkeylist)
-                    self.headerlist.append(self.plotstream.header)
-                    self.currentstreamindex = currentstreamindex
-                    self.plotoptlist.append(self.plotopt)
+                    #self.plotstream = self.plotstream.bc(function=baselinefunclist)
+                    plotstream = plotstream.bc(function=baselinefunclist)
+                    # Eventually update delta F - recalculate from F as variometer data has been corrected
+                    if 'df' in plotstream.variables() and 'f' in plotstream.variables():
+                        plotstream = plotstream.delta_f()
+                    plotstream.header['DataType'] = 'BC'
+                    streamid = self._initial_read(plotstream)
+                    self._initial_plot(streamid)
                 else:
                     msgtext = "BC function available - Ready"
                     dlg = wx.MessageDialog(self, "Adopted baseline calculated.\n"
-                               "Baseline parameters added to meta information and option 'Baseline Corr' on 'Data' panel now enabled.\n",
+                               "Baseline parameters added to meta information and option 'Baseline Corr' on 'Analysis' panel now enabled.\n",
                                "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
                     dlg.ShowModal()
                     dlg.Destroy()
+                    # header is changed - apply is possible now
+                    streamid = self._initial_read(plotstream)
+                    self._initial_plot(streamid)
 
-                self.ActivateControls(self.plotstream)
-                self.OnPlot(self.plotstream,self.shownkeylist)
                 self.changeStatusbar(msgtext)
         else:
             self.changeStatusbar("Ready")
@@ -5008,10 +5026,6 @@ class MainFrame(wx.Frame):
             if cont:
                 self.changeStatusbar("Calculating F from components ...")
                 plotstream = plotstream.calc_f(skipdelta=True)
-                #if 'f' in plotstream.variables() and not 'f' in keys:
-                #    keys.append('f')
-                #    plotcont['shownkeys'] = keys
-                #    self.plotdict[self.active_id] = plotcont
                 if 'df' in plotstream.variables(): # why?
                     plotstream = plotstream.delta_f()
                 self.menu_p.rep_page.logMsg(' - determined f from x,y,z')
@@ -5057,16 +5071,36 @@ class MainFrame(wx.Frame):
             keys = False
         plotstream = stream.copy()
         plotstream = plotstream.dailymeans(keys)
-        print (plotstream.variables())
 
-        e1={'key':'dx','color':'red','capsize':5, 'marker':'o', 'linestyle':'-'}
+        e1={'key':'dx'}
         e2={'key':'dy'}
         e3={'key':'dz'}
 
+        plotcont = self.plotdict[self.active_id]
         streamid = self._initial_read(plotstream)
         # activate errobars
-        self._initial_plot(streamid)
+        plotcont['errorbars'] = [e1, e2, e3]
+        self.plotdict[streamid] = plotcont
+        self._initial_plot(streamid, keepplotdict=True)
 
+        self.changeStatusbar("Ready")
+
+
+    def analysis_onApplyBCButton(self,event):
+        """
+        Apply baselinecorrection
+        """
+        self.changeStatusbar("Applying baseline ...")
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+
+        plotstream = stream.bc()
+        plotstream.header['DataType'] = 'BC'
+        # Eventually update delta F
+        if 'df' in plotstream.variables() and 'f' in plotstream.variables():
+            plotstream = plotstream.delta_f()
+        streamid = self._initial_read(plotstream)
+        self._initial_plot(streamid)
         self.changeStatusbar("Ready")
 
 
@@ -5199,34 +5233,6 @@ class MainFrame(wx.Frame):
 
                 self.ActivateControls(self.plotstream)
                 self.OnPlot(self.plotstream,self.shownkeylist)
-
-
-
-
-
-    def onApplyBCButton(self,event):
-        """
-        Apply baselinecorrection
-        """
-        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
-        #print ("BC - Ans info", self.plotstream.header.get('DataAbsInfo'))
-        self.changeStatusbar("Applying baseline ...")
-
-        self.plotstream = self.plotstream.bc()
-        # Eventually update delta F
-        if 'df' in self.plotstream._get_key_headers():
-            self.plotstream = self.plotstream.delta_f()
-        currentstreamindex = len(self.streamlist)
-        self.streamlist.append(self.plotstream)
-        self.streamkeylist.append(self.shownkeylist)
-        self.headerlist.append(self.plotstream.header)
-        self.currentstreamindex = currentstreamindex
-        self.plotoptlist.append(self.plotopt)
-
-        #print ('self.plotstream', self.plotstream.header.get('DataComponents',''))
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
 
 
     def onAnnotateCheckBox(self,event):

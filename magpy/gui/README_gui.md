@@ -331,10 +331,11 @@ relative measure of knotsteps for the spline. The provided number defines the po
 signal length of 1. 0.33 thus means that two knots at 33% and 66% of the time series are used. Lower numbers increase
 the amount of knots. When choosing polynomial fits, the polynomial order needs to be provided. The higher the
 polynomial order the more complex the fit. Further fit methods are linear least-square, which is equivalent to a
-polynamial fit with order 1, and mean, which will calculate an arithmetic average and use this a horizontal linear fit.
-Choosing none will remove all previously performed fits. You can add multiple fits to a single timeseries. We will come
+polynomial fit with order 1, and mean, which will calculate an arithmetic average and use this a horizontal linear fit.
+Choosing none will remove all previously performed fits. You can add multiple fits to a single timeseries and you can 
+apply fits to selected keys only. We will come
 back to this option when discussing adopted baselines. You can save and load fit parameters from disk. The Save button
-will save  all applied fit parameters to a json file. The Load method will obtain such stored data and directly apply
+will save all applied fit parameters to a json file. The Load method will obtain such stored data and directly apply
 the fitting parameters to the data set. When replacing a given “enddate” within the json file by “now”, then
 datetime.utcnow() will be used whenever loading this file. 
 
@@ -410,3 +411,11 @@ txt file by using the **Save log** button.
 ## 6. Additional applications
 
 ## 7. Appendix
+
+### 7.1 Known issues and bugs
+
+Fitting: if fits are applied to a data set and afterwards the amount of shown columns is reduced or increased using the
+**SelectColumns** option on the **Data panel** then the fits are not shown any more. Only if the originally selected 
+columns are selected again the fitting curves will be visible again. The reason is that plotting depends on lists of keys,
+and lists for symbols, colors, padding and functions, which all depend on the key list. Possible solutions: do not use lists 
+but dictionaries. Well.... in a major future version.
