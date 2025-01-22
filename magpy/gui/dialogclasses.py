@@ -38,9 +38,14 @@ import platform
 | MultiStreamPanel |        2.0.0  |                 |  level 2       |          | memory_select |
 | InputSheetDialog |       2.0.0   |                 |  level 1       |          | di_input_sheet |
 | SettingsPanel |          2.0.0   |                 |  level 1       |          | InputSheetDialog |
-| AnalysisBaselineDialog | 2.0.0   |                 |  level 1       |          | a_onBaselineButton |
-| AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
-| xxxx                   | 2.0.0   |                 |  level 2       |          | a_onRotationButton |
+| AnalysisBaselineDialog | 2.0.0   |                 |  level 1       |          | ana_onBaselineButton |
+| AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | ana_onRotationButton |
+| AnalysisFitDialog      | 2.0.0   |                 |  level 2       |          | ana_onFitButton |
+| AnalysisFilterDialog   | 2.0.0   |                 |  level 2       |          | ana_onFilterButton |
+| AnalysisOffsetDialog   | 2.0.0   |                 |  level 1       |          | ana_onOffsetButton |
+| AnalysisResampleDialog | 2.0.0   |                 |  level 2       |          | ana_onOffsetButton |
+
+| LoadDIDialog           | 2.0.0   |                 |  level 1       |          | dip_onLoadDIButton |
 
 runtime test:
 - : not tested
@@ -161,6 +166,7 @@ class OpenWebAddressDialog(wx.Dialog):
             self.getFavsComboBox.Append(elem)
         if self.favorites and len(self.favorites) > 0:
             self.getFavsComboBox.SetValue(self.favorites[0])
+
 
 class ConnectWebServiceDialog(wx.Dialog):
     """
@@ -382,6 +388,7 @@ class ConnectWebServiceDialog(wx.Dialog):
     def updateGroup(self, event):
         self.getGroup()
 
+
 class LoadDataDialog(wx.Dialog):
     """
     Dialog for Stream panel
@@ -589,7 +596,8 @@ class ExportDataDialog(wx.Dialog):
         if self.exportoptions.get('coverage') == 'all':
             datelook = ''
         else:
-            datelook = datetime.strftime(stream._find_t_limits()[0],self.exportoptions.get('dateformat'))
+            datelooktmp = stream.start()
+            datelook = datelooktmp.strftime(self.exportoptions.get('dateformat'))
         if format_type.endswith('PYCDF'):
             self.exportoptions['filenameends'] = '.cdf'
         filename = self.exportoptions.get('filenamebegins')+datelook+self.exportoptions.get('filenameends')
@@ -892,7 +900,7 @@ class ExportBLVDialog(wx.Dialog):
             if name == 'stream{}'.format(idx):
                 name = elem.header.get('SensorID','stream'+str(idx)).strip()
             try:
-                name = "{}_{}".format(name,datetime.strftime(elem.start(),"%Y%m%d"))
+                name = "{}_{}".format(name,elem.start().strftime("%Y%m%d"))
             except:
                 pass
             name = name.replace('-','_')
@@ -1345,22 +1353,6 @@ class DatabaseContentDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
-
-
-# ##################################################################################################################
-# ####    Analysis Panel                                   #########################################################
-# ##################################################################################################################
-
-
-
-
-
-
-# ##################################################################################################################
-# ####    Monitor  Panel                                   #########################################################
-# ##################################################################################################################
-
-
 
 
 # ##################################################################################################################
@@ -2105,9 +2097,232 @@ class StreamSaveFlagDialog(wx.Dialog):
             saveflags(self.flaglist,flagname)
         self.Close(True)
 
-# ###################################################
-#    Meta page
-# ###################################################
+
+class StreamFlagSelectionDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for Parameter selection of flag range routine
+    USED BY:
+        Stream Method: onFlagRange()
+    """
+    def __init__(self, parent, title, shownkeylist, keylist):
+        super(StreamFlagSelectionDialog, self).__init__(parent=parent,
+            title=title, size=(600, 600))
+        self.shownkeys=shownkeylist
+        self.selectedkey = shownkeylist[0]
+        self.keys2flag = ",".join(shownkeylist)
+        self.keys=keylist
+        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
+        self.comment = ''
+        self.createControls()
+        self.doLayout()
+        #print ("Dialog open", shownkeylist, keylist)
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
+        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
+        self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
+        self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
+            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
+        self.CommentText = wx.StaticText(self,label="Comment:")
+        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        contlst = []
+        contlst.append((self.KeyListText, noOptions))
+        contlst.append((self.FlagIDText, noOptions))
+        contlst.append((self.CommentText, noOptions))
+        # 8 row
+        contlst.append((self.AffectedKeysTextCtrl, expandOption))
+        contlst.append((self.FlagIDComboBox, expandOption))
+        contlst.append((self.CommentTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 3
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+
+
+class AnalysisFlagsDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+    def __init__(self, parent, title, stats, flaglist, stream):
+        super(AnalysisFlagsDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.stats = stats
+        self.fllist = flaglist
+        self.plotstream = stream
+        self.newfllist = []
+        self.mod = False
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        self.statsLabel = wx.StaticText(self,label="Flagging statistics")
+        self.statsTextCtrl = wx.TextCtrl(self,value=self.stats,size=(400,300),style=wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
+        self.modifyButton = wx.Button(self, label='Modify Flags')
+        self.okButton = wx.Button(self, wx.ID_OK, label='OK')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # (self.'+elem+'Label, noOptions),
+        contlst = []
+        contlst.append((self.statsLabel, noOptions))
+        contlst.append((self.statsTextCtrl, expandOption))
+        contlst.append((self.modifyButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.modifyButton.Bind(wx.EVT_BUTTON, self.OnModify)
+
+    def OnModify(self, e):
+        # open modification dlg
+        dlg = AnalysisFlagmodDialog(None, title='Analysis: Modify flags')
+        if dlg.ShowModal() == wx.ID_OK:
+            select = dlg.selectComboBox.GetValue()
+            parameter = dlg.parameterComboBox.GetValue()
+            value = dlg.valueTextCtrl.GetValue()
+            newvalue = dlg.newvalueTextCtrl.GetValue()
+            self.newfllist = self.plotstream.flaglistmod(mode=select, flaglist=self.fllist, parameter=parameter, value=value, newvalue=newvalue) #, starttime=None, endtime=None)
+            self.stats = self.plotstream.flagliststats(self.newfllist,intensive=True, output='string')
+            self.mod = True
+            self.statsTextCtrl.SetValue(self.stats)
+        dlg.Destroy()
+
+class AnalysisFlagmodDialog(wx.Dialog):
+    """
+    Dialog for Stream panel
+    Select shown keys
+    """
+    def __init__(self, parent, title):
+        super(AnalysisFlagmodDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.select = ['select','replace','delete']
+        self.parameter = ['key', 'sensorid', 'flagnumber', 'comment']
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        self.selectLabel = wx.StaticText(self,label="modification type")
+        self.parameterLabel = wx.StaticText(self,label="flag parameter")
+        self.valueLabel = wx.StaticText(self,label="value")
+        self.newvalueLabel = wx.StaticText(self,label="new value")
+        self.starttimeLabel = wx.StaticText(self,label="start time")
+        self.endtimeLabel = wx.StaticText(self,label="end time")
+        self.selectComboBox = wx.ComboBox(self, choices=self.select,
+                 style=wx.CB_DROPDOWN, value=self.select[0],size=(160,-1))
+        self.parameterComboBox = wx.ComboBox(self, choices=self.parameter,
+                 style=wx.CB_DROPDOWN, value=self.parameter[0],size=(160,-1))
+        self.valueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
+        self.newvalueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
+        self.starttimeTextCtrl = wx.TextCtrl(self,value="coming soon",size=(160,-1),style=wx.TE_READONLY)
+        self.endtimeTextCtrl = wx.TextCtrl(self,value="coming soon",size=(160,-1),style=wx.TE_READONLY)
+        self.okButton = wx.Button(self, wx.ID_OK, label='OK')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # (self.'+elem+'Label, noOptions),
+        contlst = []
+        contlst.append((self.selectLabel, noOptions))
+        contlst.append((self.parameterLabel, noOptions))
+        contlst.append((self.valueLabel, noOptions))
+        contlst.append((self.newvalueLabel, noOptions))
+        contlst.append((self.starttimeLabel, noOptions))
+        contlst.append((self.endtimeLabel, noOptions))
+        contlst.append((self.selectComboBox, noOptions))
+        contlst.append((self.parameterComboBox, noOptions))
+        contlst.append((self.valueTextCtrl, expandOption))
+        contlst.append((self.newvalueTextCtrl, expandOption))
+        contlst.append((self.starttimeTextCtrl, expandOption))
+        contlst.append((self.endtimeTextCtrl, expandOption))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 6
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+
+# ##################################################################################################################
+# ####    Meta Panel                                       #########################################################
+# ##################################################################################################################
+
 
 class MetaDataDialog(wx.Dialog):
     """
@@ -2269,9 +2484,11 @@ class MetaDataPanel(scrolledpanel.ScrolledPanel):
 
         return label
 
-# ###################################################
-#    Analysis page
-# ###################################################
+
+# ##################################################################################################################
+# ####    Analysis Panel                                   #########################################################
+# ##################################################################################################################
+
 
 class AnalysisFitDialog(wx.Dialog):
     """
@@ -2399,6 +2616,7 @@ class AnalysisFitDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+
     def on_load(self,e):
         openFileDialog = wx.FileDialog(self, "Open", self.last_dir, "",
                                        "json fit parameter (*.json)|*.json|all files (*.*)|*.*",
@@ -2409,6 +2627,7 @@ class AnalysisFitDialog(wx.Dialog):
         openFileDialog.Destroy()
         self.Close(True)
         self.Destroy()
+
 
     def on_save(self,e):
         saveFileDialog = wx.FileDialog(self, "Save As", self.last_dir, "",
@@ -2427,6 +2646,7 @@ class AnalysisFitDialog(wx.Dialog):
             methods.func_to_file(self.plotcont.get('functions'),savename,debug=False)
         self.Close(True)
         self.Destroy()
+
 
     def getFitParameters(self):
         params = {}
@@ -2451,6 +2671,7 @@ class AnalysisFitDialog(wx.Dialog):
             degree = int(degree)
         params['fitdegree'] = degree
         return params
+
 
     def getTimeRange(self):
         # Get start time
@@ -2479,6 +2700,7 @@ class AnalysisFitDialog(wx.Dialog):
         endtime = datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
         return starttime, endtime
 
+
     def setTimeRange(self, startdate, enddate):
         from magpy.gui.magpy_gui import pydate2wxdate
         starttime = num2date(startdate).strftime('%X')
@@ -2486,6 +2708,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.startFitDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
         self.endFitDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
         self.startFitTimePicker.SetValue(starttime)
+
 
     def modifyWindows(self, select):
         if select == 'spline':
@@ -2606,8 +2829,8 @@ class AnalysisOffsetDialog(wx.Dialog):
         self.choices = ['all','timerange']
         self.start = self._pydate2wxdate(xlimits[0])
         self.end = self._pydate2wxdate(xlimits[1])
-        self.starttime = datetime.strftime(xlimits[0], "%H:%M:%S")
-        self.endtime = datetime.strftime(xlimits[1], "%H:%M:%S")
+        self.starttime = xlimits[0].strftime("%H:%M:%S")
+        self.endtime = xlimits[1].strftime("%H:%M:%S")
         self.val = {}
         self.val['time'] = '0'
         mtime = date2num(xlimits[1])
@@ -2615,11 +2838,13 @@ class AnalysisOffsetDialog(wx.Dialog):
         def parse_time(timestring):
             #timestring can either be isotime or a string containing numerical datetime in old or new format
             #returns a numerical time value within the current systems date2num matplotlib version
+            timefloat = 0
             try:
                 # first check whether timestring can converted to numerical value
                 timefloat = float(timestring)
                 # Assume a valid date after 1830:
-                #print (MATPLOTLIB_VERSION)
+                mavers = matplotlib.__version__
+                MATPLOTLIB_VERSION = [int(a) for a in mavers.split('.')]
                 if MATPLOTLIB_VERSION[0] >= 3 and MATPLOTLIB_VERSION[1] >= 3 and timefloat > 660770:
                     timefloat = timefloat-719163.0
                 elif MATPLOTLIB_VERSION[0] == 3 and MATPLOTLIB_VERSION[1] < 3 and  timefloat < 20000:
@@ -2629,7 +2854,7 @@ class AnalysisOffsetDialog(wx.Dialog):
                 #730120, and a 64-bit floating point number has a resolution of 2^{-52}, or approximately 14 microseconds, so microsecond precision was lost. With the new default epoch "2020-01-01" is 10957.0,
             except:
                 try:
-                     dt = dateutil.parser.parse(date_string)
+                     dt = dateutil.parser.parse(timestring)
                      timefloat = date2num(dt).replace(tzinfo=None)
                      #parse isotime
                 except:
@@ -2800,148 +3025,6 @@ class AnalysisResampleDialog(wx.Dialog):
         cols = 2
         rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
-        for control, options in contlst:
-            gridSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-
-        self.SetSizerAndFit(boxSizer)
-
-
-class AnalysisPlotDialog(wx.Dialog):
-    """
-    DESCRITPTION
-        AnalysisPlotDialog
-    """
-
-    def __init__(self, parent, title, fig, xsize, ysize):
-        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
-        super(AnalysisPlotDialog, self).__init__(parent=parent,
-            title=title, style=style) #, size=(600, 600))
-
-        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
-        # Add Settings Panel
-        self.panel = AnalysisPlotPanel(self, fig)
-        self.panel.SetInitialSize((xsize, ysize))
-        self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
-        # Add Save/Cancel Buttons
-        self.createWidgets()
-        # Set sizer and window size
-        self.SetSizerAndFit(self.mainSizer)
-        #self.mainSizer.Fit(self)
-
-    def createWidgets(self):
-        """Create and layout the widgets in the dialog"""
-        btnSizer = wx.StdDialogButtonSizer()
-
-        cancelBtn = wx.Button(self, wx.ID_NO, label="Close",size=(160,30))
-        cancelBtn.Bind(wx.EVT_BUTTON, self.OnClose)
-        btnSizer.AddButton(cancelBtn)
-        btnSizer.Realize()
-        self.mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
-
-    def OnClose(self, event):
-        self.Close(True)
-
-
-class AnalysisPlotPanel(scrolledpanel.ScrolledPanel):
-    """
-    Dialog for MetaData panel
-    """
-    def __init__(self, parent, fig):
-        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(600, 600))
-
-        from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
-
-        #self.figure = plt.figure()
-        #self.plt = plt
-        self.figure = fig
-        self.canvas = FigureCanvas(self,-1,self.figure)
-
-
-        #self.axes = self.figure.add_subplot(111)
-        self.toolbar = NavigationToolbar(self.canvas)
-        self.toolbar.Realize()
-
-        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
-        self.mainSizer.Add(self.canvas, 1, wx.EXPAND)
-        self.mainSizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
-        self.SetSizer(self.mainSizer)
-        self.mainSizer.Fit(self)
-        self.SetupScrolling()
-        #self.canvas.draw()
-
-    # Widgets
-    def createControls(self):
-        pass
-    def doLayout(self):
-        pass
-
-
-class StreamFlagSelectionDialog(wx.Dialog):
-    """
-    DESCRIPTION
-        Dialog for Parameter selection of flag range routine
-    USED BY:
-        Stream Method: onFlagRange()
-    """
-    def __init__(self, parent, title, shownkeylist, keylist):
-        super(StreamFlagSelectionDialog, self).__init__(parent=parent,
-            title=title, size=(600, 600))
-        self.shownkeys=shownkeylist
-        self.selectedkey = shownkeylist[0]
-        self.keys2flag = ",".join(shownkeylist)
-        self.keys=keylist
-        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
-        self.comment = ''
-        self.createControls()
-        self.doLayout()
-        #print ("Dialog open", shownkeylist, keylist)
-
-    # Widgets
-    def createControls(self):
-        # countvariables for specific header blocks
-        self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
-        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
-        self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
-        self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
-            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
-        self.CommentText = wx.StaticText(self,label="Comment:")
-        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
-
-    def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        # Add the controls to the sizers:
-        # transform headerlist to an array with lines like cnts
-        contlst = []
-        contlst.append((self.KeyListText, noOptions))
-        contlst.append((self.FlagIDText, noOptions))
-        contlst.append((self.CommentText, noOptions))
-        # 8 row
-        contlst.append((self.AffectedKeysTextCtrl, expandOption))
-        contlst.append((self.FlagIDComboBox, expandOption))
-        contlst.append((self.CommentTextCtrl, expandOption))
-        contlst.append(emptySpace)
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
-
-        # A GridSizer will contain the other controls:
-        cols = 3
-        rows = int(np.ceil(len(contlst)/float(cols)))
-        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
-
         for control, options in contlst:
             gridSizer.Add(control, **options)
 
@@ -3284,7 +3367,6 @@ class AnalysisBaselineDialog(wx.Dialog):
         """
         # open fit dlg
         self.active_baseid = self.absstreamComboBox.GetValue().split(':')[0]
-        print (self.active_baseid, self.baselinedict)
         activeparameters = self.baselinedict.get(self.active_baseid)
         self.starttime = activeparameters.get('startdate')
         self.endtime = activeparameters.get('enddate')
@@ -3296,157 +3378,91 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.parameterTextCtrl.SetValue(self.parameterstring)
 
 
-class AnalysisFlagsDialog(wx.Dialog):
+@deprecated("AnalysisPlotDialog apparently not used any more")
+class AnalysisPlotDialog(wx.Dialog):
     """
-    Dialog for Stream panel
-    Select shown keys
+    DESCRITPTION
+        AnalysisPlotDialog
     """
-    def __init__(self, parent, title, stats, flaglist, stream):
-        super(AnalysisFlagsDialog, self).__init__(parent=parent,
-            title=title, size=(400, 600))
-        self.stats = stats
-        self.fllist = flaglist
-        self.plotstream = stream
-        self.newfllist = []
-        self.mod = False
-        self.createControls()
-        self.doLayout()
-        self.bindControls()
+
+    def __init__(self, parent, title, fig, xsize, ysize):
+        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+        super(AnalysisPlotDialog, self).__init__(parent=parent,
+            title=title, style=style) #, size=(600, 600))
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        # Add Settings Panel
+        self.panel = AnalysisPlotPanel(self, fig)
+        self.panel.SetInitialSize((xsize, ysize))
+        self.mainSizer.Add(self.panel, 0, wx.EXPAND | wx.ALL, 20)
+        # Add Save/Cancel Buttons
+        self.createWidgets()
+        # Set sizer and window size
+        self.SetSizerAndFit(self.mainSizer)
+        #self.mainSizer.Fit(self)
+
+    def createWidgets(self):
+        """Create and layout the widgets in the dialog"""
+        btnSizer = wx.StdDialogButtonSizer()
+
+        cancelBtn = wx.Button(self, wx.ID_NO, label="Close",size=(160,30))
+        cancelBtn.Bind(wx.EVT_BUTTON, self.OnClose)
+        btnSizer.AddButton(cancelBtn)
+        btnSizer.Realize()
+        self.mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+
+    def OnClose(self, event):
+        self.Close(True)
+
+
+@deprecated("AnalysisPlotPanel apparently not used any more")
+class AnalysisPlotPanel(scrolledpanel.ScrolledPanel):
+    """
+    Dialog for MetaData panel
+    """
+    def __init__(self, parent, fig):
+        scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(600, 600))
+
+        from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
+
+        #self.figure = plt.figure()
+        #self.plt = plt
+        self.figure = fig
+        self.canvas = FigureCanvas(self,-1,self.figure)
+
+
+        #self.axes = self.figure.add_subplot(111)
+        self.toolbar = NavigationToolbar(self.canvas)
+        self.toolbar.Realize()
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        self.mainSizer.Add(self.canvas, 1, wx.EXPAND)
+        self.mainSizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
+        self.SetSizer(self.mainSizer)
+        self.mainSizer.Fit(self)
+        self.SetupScrolling()
+        #self.canvas.draw()
 
     # Widgets
     def createControls(self):
-        self.statsLabel = wx.StaticText(self,label="Flagging statistics")
-        self.statsTextCtrl = wx.TextCtrl(self,value=self.stats,size=(400,300),style=wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
-        self.modifyButton = wx.Button(self, label='Modify Flags')
-        self.okButton = wx.Button(self, wx.ID_OK, label='OK')
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
-
+        pass
     def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        # Add the controls to the sizers:
-        # (self.'+elem+'Label, noOptions),
-        contlst = []
-        contlst.append((self.statsLabel, noOptions))
-        contlst.append((self.statsTextCtrl, expandOption))
-        contlst.append((self.modifyButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
-
-        # A GridSizer will contain the other controls:
-        cols = 1
-        rows = int(np.ceil(len(contlst)/float(cols)))
-        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
-        for control, options in contlst:
-            gridSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-
-        self.SetSizerAndFit(boxSizer)
-
-    def bindControls(self):
-        self.modifyButton.Bind(wx.EVT_BUTTON, self.OnModify)
-
-    def OnModify(self, e):
-        # open modification dlg
-        dlg = AnalysisFlagmodDialog(None, title='Analysis: Modify flags')
-        if dlg.ShowModal() == wx.ID_OK:
-            select = dlg.selectComboBox.GetValue()
-            parameter = dlg.parameterComboBox.GetValue()
-            value = dlg.valueTextCtrl.GetValue()
-            newvalue = dlg.newvalueTextCtrl.GetValue()
-            self.newfllist = self.plotstream.flaglistmod(mode=select, flaglist=self.fllist, parameter=parameter, value=value, newvalue=newvalue) #, starttime=None, endtime=None)
-            self.stats = self.plotstream.flagliststats(self.newfllist,intensive=True, output='string')
-            self.mod = True
-            self.statsTextCtrl.SetValue(self.stats)
-        dlg.Destroy()
-
-class AnalysisFlagmodDialog(wx.Dialog):
-    """
-    Dialog for Stream panel
-    Select shown keys
-    """
-    def __init__(self, parent, title):
-        super(AnalysisFlagmodDialog, self).__init__(parent=parent,
-            title=title, size=(400, 600))
-        self.select = ['select','replace','delete']
-        self.parameter = ['key', 'sensorid', 'flagnumber', 'comment']
-        self.createControls()
-        self.doLayout()
-
-    # Widgets
-    def createControls(self):
-        self.selectLabel = wx.StaticText(self,label="modification type")
-        self.parameterLabel = wx.StaticText(self,label="flag parameter")
-        self.valueLabel = wx.StaticText(self,label="value")
-        self.newvalueLabel = wx.StaticText(self,label="new value")
-        self.starttimeLabel = wx.StaticText(self,label="start time")
-        self.endtimeLabel = wx.StaticText(self,label="end time")
-        self.selectComboBox = wx.ComboBox(self, choices=self.select,
-                 style=wx.CB_DROPDOWN, value=self.select[0],size=(160,-1))
-        self.parameterComboBox = wx.ComboBox(self, choices=self.parameter,
-                 style=wx.CB_DROPDOWN, value=self.parameter[0],size=(160,-1))
-        self.valueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
-        self.newvalueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
-        self.starttimeTextCtrl = wx.TextCtrl(self,value="coming soon",size=(160,-1),style=wx.TE_READONLY)
-        self.endtimeTextCtrl = wx.TextCtrl(self,value="coming soon",size=(160,-1),style=wx.TE_READONLY)
-        self.okButton = wx.Button(self, wx.ID_OK, label='OK')
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
-
-    def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        # Add the controls to the sizers:
-        # (self.'+elem+'Label, noOptions),
-        contlst = []
-        contlst.append((self.selectLabel, noOptions))
-        contlst.append((self.parameterLabel, noOptions))
-        contlst.append((self.valueLabel, noOptions))
-        contlst.append((self.newvalueLabel, noOptions))
-        contlst.append((self.starttimeLabel, noOptions))
-        contlst.append((self.endtimeLabel, noOptions))
-        contlst.append((self.selectComboBox, noOptions))
-        contlst.append((self.parameterComboBox, noOptions))
-        contlst.append((self.valueTextCtrl, expandOption))
-        contlst.append((self.newvalueTextCtrl, expandOption))
-        contlst.append((self.starttimeTextCtrl, expandOption))
-        contlst.append((self.endtimeTextCtrl, expandOption))
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
-
-        # A GridSizer will contain the other controls:
-        cols = 6
-        rows = int(np.ceil(len(contlst)/float(cols)))
-        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
-        for control, options in contlst:
-            gridSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-
-        self.SetSizerAndFit(boxSizer)
+        pass
 
 
-# ###################################################
-#    DI page
-# ###################################################
+
+
+# ##################################################################################################################
+# ####    Monitor  Panel                                   #########################################################
+# ##################################################################################################################
+
+
+
+
+
+# ##################################################################################################################
+# ####    DI Panel                                         #########################################################
+# ##################################################################################################################
 
 class SetStationIDDialog(wx.Dialog):
     """
@@ -3572,11 +3588,12 @@ class LoadDIDialog(wx.Dialog):
         self.options['diparameter']    :  parameter for analysis
     """
 
-    def __init__(self, parent, title, dirname, db, services, defaultservice):
+    def __init__(self, parent, title, dicont, db, services, defaultservice):
         super(LoadDIDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.pathlist = []
-        self.dirname = dirname
+        self.dicont = dicont   # content of the station specific DI dictionary - will be updated here
+        self.dirname = dicont.get('didatapath','')
         self.db = db
         self.absolutes = []
         self.services =  self.get_basevalue_service(services)
@@ -3597,14 +3614,10 @@ class LoadDIDialog(wx.Dialog):
         """
         basevaluedict = {}
         for service in services:
-            #print (services[service])
             cont = services[service]
             for el in cont:
-                #print (service,el)
                 if el == 'basevalues':
                     basecont = {}
-                    #print ("FOUND", service)
-                    #print (cont[el])
                     if not cont[el].get('type'):
                         cont[el]['type'] = ['basevalue']
                     if not cont[el].get('sampling'):
@@ -3627,7 +3640,7 @@ class LoadDIDialog(wx.Dialog):
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         if not self.db:
             self.loadDBButton.Disable()
-        #self.loadRemoteButton.Disable()
+
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -3666,16 +3679,28 @@ class LoadDIDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+
     def bindControls(self):
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadDIFiles)
         self.loadDBButton.Bind(wx.EVT_BUTTON, self.OnLoadDIDB)
         self.loadRemoteButton.Bind(wx.EVT_BUTTON, self.OnLoadDIRemote)
+
 
     def LoadFiles(self, pathlist, stationid=None, azimuth=None, pier=None, source='file'):
         """
         DESCRIPTION
             internal method to load all files from a list
             and create a absdata list
+        RETURNS
+            a didict dictionary will be assigned to self.pathlist
+                    didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
+                    didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
+                    didict['selectedpier'] = pierlist[0]
+                    didict['azimuth'] = azimuthlist[0]
+                    didict['station'] = stationlist[0]
+                    didict['source'] = source
+                    didict['absdata'] = abslist
+
         """
         didict = {}
         abslist = []
@@ -3683,28 +3708,20 @@ class LoadDIDialog(wx.Dialog):
         azimuthlist = []
         for elem in pathlist:
             absst = di.abs_read(elem, output='DIListStruct')
-            #if elem.endswith('.json'):
-            #    absst = readJSONABS(elem)
-            #    #print ("Json", absst)
-            #else:
-            #    pier = None
-            #    stationid = None
-            #    absst = abs_read(elem,output='DIListStruct')
-
             try:
 
                 for a in absst:
                     stream =a.get_abs_distruct()
+                    print ("DATE", stream[0].time)
                     abslist.append(a)
-                    datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None),"%Y-%m-%d"))
+                    tempdate = num2date(stream[0].time).replace(tzinfo=None)
+                    datelist.append(tempdate.strftime("%Y-%m-%d"))
                     pierlist.append(a.pier)
                     azimuthlist.append(a.azimuth)
                     stationlist.append(a.stationid)
             except:
                 print("absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem)
-                #failinglist.append(elem)
-                # TODO Drop that line from filelist
-        print ("Came HERE - LoadDIDlg", abslist)
+                pass
 
         pierlist = list(set(pierlist))
         azimuthlist = list(set(azimuthlist))
@@ -3713,6 +3730,7 @@ class LoadDIDialog(wx.Dialog):
             # TODO do something here
         if len(abslist) == 0:
             raise Exception("DI File has no valid measurements")
+        #self.dicont =
         didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
         didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
         didict['selectedpier'] = pierlist[0]
@@ -3730,10 +3748,15 @@ class LoadDIDialog(wx.Dialog):
                 stationid = dlg.StationTextCtrl.GetValue()
             dlg.Destroy()
             didict['station'] =  stationid
+
         return didict
 
 
     def OnLoadDIFiles(self,e):
+        """
+        CALLS
+            LoadFiles
+        """
         try:
             self.difiledirname = ''
             stream = DataStream()
@@ -3745,7 +3768,7 @@ class LoadDIDialog(wx.Dialog):
                     logger.error(exc)
 
                 self.pathlist = self.LoadFiles(dlg.GetPaths())
-
+            #dlg.Destroy()
         except Exception as exc:
             logger.error(exc)
         finally:
@@ -3754,7 +3777,23 @@ class LoadDIDialog(wx.Dialog):
 
 
     def OnLoadDIDB(self,e):
+        """
+        DESCRIPTION
+            internal method to load DI files from a database
+            and create a absdata list
+        RETURNS
+            self.pathlist will be set to a current content dictionary
+                    content['mindatetime'] = midate
+                    content['maxdatetime'] = madate
+                    content['source'] = 'db'
+                    self.absolutes = self.db.diline_from_db(starttime=midate,endtime=madate,sql=sql)
+                    content['absdata'] = self.absolutes
+                    content['azimuth'] = self.absolutes[0].azimuth
+                    (missing are 'station', 'selectedpier')
+
+        """
         # 1. check whether data is accessible
+        ditables = []
         if not self.db:
             dlg = wx.MessageDialog(self, "Could not access database!\n"
                         "please check your connection\n",
@@ -3765,12 +3804,13 @@ class LoadDIDialog(wx.Dialog):
             return
         # 2. Identify all tables with DIDATA_xxx
         if self.db:
-            cursor = self.db.cursor()
             sql = "SHOW TABLES LIKE 'DIDATA\_%'"
-            cursor.execute(sql)
+            cursor = self.db.db.cursor()
+            message = self.db._executesql(cursor, sql)
+            #cursor.execute(sql)
             tablelist = cursor.fetchall()
             ditables = [el[0] for el in tablelist]
-            #print ("Test", ditables)
+            print ("Test", ditables)
             if len(ditables) < 1:
                 dlg = wx.MessageDialog(self, "No DI tables available!\n"
                             "please check your database\n",
@@ -3780,8 +3820,9 @@ class LoadDIDialog(wx.Dialog):
                 self.Close(True)
                 return
         # 3. check contents of DIDATA_Obscode
-        if self.db:
-            cursor = self.db.cursor()
+        didatadict = {}
+        if self.db and len(ditables) > 0:
+            cursor = self.db.db.cursor()
             # cycle through all tables
             didatadict = {}
             for table in ditables:
@@ -3791,11 +3832,11 @@ class LoadDIDialog(wx.Dialog):
                 except:
                     stationid = 'None'
                 sql = "SELECT DIID, Pier, Observer, StartTime FROM {}".format(table)
-                cursor.execute(sql)
+                message = self.db._executesql(cursor, sql)
                 output = cursor.fetchall()
                 piers = list(set([el[1] for el in output]))
                 observers = list(set([el[2] for el in output]))
-                output = [[el[0],el[1],el[2],datetime.strptime(el[3],"%Y-%m-%d %H:%M:%S")] for el in output]
+                output = [[el[0],el[1],el[2],el[3]] for el in output]
                 #
                 # get unique list of piers and observers
                 #
@@ -3803,7 +3844,6 @@ class LoadDIDialog(wx.Dialog):
                 dicont['observers'] = observers
                 dicont['data'] = output
                 didatadict[stationid] = dicont
-
 
         #4. if didatadict existing
         # open a new selection window with station id, pier and observer combos
@@ -3829,18 +3869,31 @@ class LoadDIDialog(wx.Dialog):
             content['mindatetime'] = midate
             content['maxdatetime'] = madate
             content['source'] = 'db'
-            self.absolutes = db2diline(self.db,starttime=midate,endtime=madate,sql=sql)
-            content['absdata'] = self.absolutes
-            content['azimuth'] = self.absolutes[0].azimuth
+            absolutes = self.db.diline_from_db(starttime=midate, endtime=madate, tablename=ditables[0], sql=sql)
+            content['absdata'] = absolutes
+            content['azimuth'] = absolutes[0].azimuth
             self.pathlist = content
-            #print (sql)
-            self.absolutes = db2diline(self.db,starttime=midate,endtime=madate,sql=sql)
-            # write to tmp or provide DIDATA_ and parameter to absanalysis
 
         dlg.Destroy()
         self.Close(True)
 
     def OnLoadDIRemote(self,e):
+        """
+        DESCRIPTION
+            internal method to load DI files from a database
+            and create a absdata list
+        RETURNS
+            self.pathlist will be set to a didict dictionary (see LoadFiles for general dictionary contents)
+                in here are set:
+                    didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
+                    didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
+                    didict['selectedpier'] = pierlist[0]
+                    didict['source'] = source
+                    didict['absdata'] = abslist
+                    didict['station'] =  stationid
+                    didict['azimuth'] = azimuthlist[0]
+
+        """
         url = ''
         stationid = 'None'
         source = 'webservice'
@@ -3860,19 +3913,24 @@ class LoadDIDialog(wx.Dialog):
             stday = dlg.startDatePicker.GetValue()
             sttime = str(dlg.startTimePicker.GetValue())
             if sttime.endswith('AM') or sttime.endswith('am'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+                sttime_tmp = datetime.strptime(sttime,"%I:%M:%S %p")
+                sttime = sttime_tmp.strftime("%H:%M:%S")
             if sttime.endswith('pm') or sttime.endswith('PM'):
-                sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-            sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+                sttime_tmp = datetime.strptime(sttime, "%I:%M:%S %p")
+                sttime = sttime_tmp.strftime("%H:%M:%S")
+            sd_tmp = datetime.fromtimestamp(stday.GetTicks())
+            sd = sd_tmp.strftime("%Y-%m-%d")
             start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
             enday = dlg.endDatePicker.GetValue()
             entime = str(dlg.endTimePicker.GetValue())
             if entime.endswith('AM') or entime.endswith('am'):
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+                entime_tmp = datetime.strptime(entime,"%I:%M:%S %p")
+                entime = entime_tmp.strftime("%H:%M:%S")
             if entime.endswith('pm') or entime.endswith('PM'):
-                #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
-                entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-            ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+                entime_tmp = datetime.strptime(entime,"%I:%M:%S %p")
+                entime = entime_tmp.strftime("%H:%M:%S")
+            ed_tmp = datetime.fromtimestamp(enday.GetTicks())
+            ed = ed_tmp.strftime("%Y-%m-%d")
             end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
             if start < end:
                 stationid = dlg.idComboBox.GetValue()
@@ -3904,12 +3962,14 @@ class LoadDIDialog(wx.Dialog):
             fh.write(content)
             fh.close()
             # create temporary file??
-            absst = readJSONABS(fh.name)
+            absst = di.abs_read(fh.name, output='DIListStruct')
+            #absst = readJSONABS(fh.name)
             # JSONABS returns a DILIST
             for a in absst:
-                stream = a.getAbsDIStruct()
+                stream = a.get_abs_distruct()
                 abslist.append(a)
-                datelist.append(datetime.strftime(num2date(stream[0].time).replace(tzinfo=None), "%Y-%m-%d"))
+                tempdate = num2date(stream[0].time).replace(tzinfo=None)
+                datelist.append(tempdate.strftime("%Y-%m-%d"))
                 pierlist.append(a.pier)
                 azimuthlist.append(a.azimuth)
 
@@ -3922,7 +3982,6 @@ class LoadDIDialog(wx.Dialog):
             didict['azimuth'] = azimuthlist[0]
 
             self.pathlist = didict
-            #print ("Check", didict)
         else:
             # set some info parameters on DI panel
             pass

@@ -1180,7 +1180,7 @@ REMOVED:
             - starttime:    (string/datetime) - time range to select
             - endtime:      (string/datetime) - if not given just the day defined by starttime is used
             - sql:          (list) - define any additional selection criteria (e.g. ["Pier = 'A2'", "Observer = 'Mickey Mouse'"] )
-                                    important: dont forget the ' '
+                                    important: don't forget the ' '
             - tablename:    (string) - specify tablename of the DI table (default is DIDATA)
 
         EXAMPLE:

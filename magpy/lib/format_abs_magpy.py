@@ -51,7 +51,7 @@ def isAUTODIFABS(filename: string):
 
 def isJSONABS(filename):
     """
-    Checks whether a file is AUTODIF format.
+    Checks whether a file is a USGS JSON absolute format.
     """
     try:
         jsonfile = open(filename, 'r')
@@ -59,17 +59,14 @@ def isJSONABS(filename):
         jsonfile.close()
     except:
         return False
-    #try:
-    print (dataset)
-    for idx, elem in enumerate(dataset):
-        if idx==0:
-            print (dataset.get(elem))
-            datadict = dataset[elem][0]
-            if not 'readings' in datadict:
+    try:
+        if isinstance(dataset.get('data'), (list,tuple)):
+            first = dataset.get('data')[0]
+            if not 'readings' in first:
                 return False
-    #except:
-    #    return False
-    print ("Testing json - success")
+            print ("FOUND JSON ABS")
+    except:
+        return False
     return True
 
 
