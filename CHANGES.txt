@@ -1,7 +1,7 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<2.0.0>, <2024-xx-xx> --
+####v<2.0.0>, <2025-xx-xx> --
 
 2.0.0 general:
     - considerable changes to internal data structure
@@ -34,6 +34,8 @@ Installation instructions can be found on the main download page.
         - more flexibility with layout defined in configuration dictionaries
         - modern look
         - auto-zoom function for all axes
+        - new power spectral plots based on matplotlib psd
+        - new spectrograms based on matplotlib specgram
     flagging of signals and annotations:
         - all flagging and labelling functions are reorganized in an own class
         - flagging dictionary structure allows more input and definitions
@@ -58,7 +60,7 @@ Installation instructions can be found on the main download page.
      - DKA export with missing data
      - fixed K (FMI) calculation
      - interpreting missing data and adopted baseline corrections when reading BLV
-     - IMAGCDF multiple time column treatment
+     - corrected IMAGCDF multiple time column treatment
 
 2.0.0 removed items:
      - opt.emd replaced by official python emd package
@@ -72,6 +74,7 @@ Installation instructions can be found on the main download page.
            * of buttons on several panels
            * of menu items
      - added quick access buttons for next or previous data sets
+     - fit individual components differently
      - removal of open directory, store working state, restore button
      - any new or essentially modified data set will be stored automatically in the memory
      - new plot design, more options
@@ -89,7 +92,7 @@ MagPy for your work, we are happy. In any case we are much interested in your op
 comments. Donations in form of free drinks to any of the developers, either because of gratitude or
 compassion, are highly welcome. Best wishes, Roman
 
-####v<1.1.8>, <2024-xx-xx> --
+####v<1.1.8>, <2024-11-01> --
 
 1.1.8 general:
     - speed issues

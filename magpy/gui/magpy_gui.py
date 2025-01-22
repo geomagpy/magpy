@@ -938,16 +938,6 @@ class PlotPanel(scrolled.ScrolledPanel):
             ax.callbacks.connect('xlim_changed', on_xlims_change)
             ax.callbacks.connect('ylim_changed', on_ylims_change)
 
-        """
-        stream = streams[-1]
-        key = keys[-1]
-
-        self.t = stream.ndarray[0]
-        flagpos = DataStream().KEYLIST.index('flag')
-        firstcol = DataStream().KEYLIST.index(key[0])
-        flag = stream.ndarray[flagpos]
-        self.k = stream.ndarray[firstcol]
-        """
         self.canvas.draw()
 
 
@@ -5110,7 +5100,44 @@ class MainFrame(wx.Frame):
 
     def onLoadDI(self,event):
         """
-        open dialog to load DI data
+        DESCRIPTION
+            Open dialog to load DI data.
+            All DI data relevant paranmeters are stored within a station dictionary of the analysisdict.
+            Each station can have its own parameters. All DI analysis methods will be performed using the
+            selected default station in options.
+
+            A station dictionary has the following contents:
+
+            content['dipathlist'] = {}
+            content['divariopath'] = os.path.join(basepath, '*')
+            content['discalarpath'] = os.path.join(basepath, '*')
+            content['diexpD'] = 0.0
+            content['diexpI'] = 0.0
+            content['didatapath'] = basepath             # default path where to find DI measurement files
+            content['divariourl'] = ''
+            content['discalarurl'] = ''
+            content['divarioDBinst'] = '1'
+            content['discalarDBinst'] = '4'
+            content['divariosource'] = 0
+            content['discalarsource'] = 0
+            content['diusedb'] = False
+            content['divariocorr'] = False
+            content['diid'] = ''
+            content['ditype'] = 'manual'
+            content['diazimuth'] = 0.0
+            content['dipier'] = 'A2'
+            content['dialpha'] = 0.0
+            content['dibeta'] = 0.0
+            content['dideltaF'] = 0.0
+            content['dideltaD'] = 0.0
+            content['dideltaI'] = 0.0
+            content['blvoutput'] = 'HDZ'
+            content['fluxgateorientation'] = 'inline'
+            content['diannualmean'] = []
+            content['didbadd'] = False
+            content['scalevalue'] = True
+            content['double'] = True
+            content['order'] = 'MU,MD,EU,WU,ED,WD,NU,SD,ND,SU'
         """
         """
         if isinstance(self.dipathlist, str):
@@ -5120,16 +5147,21 @@ class MainFrame(wx.Frame):
         else:
             dipathlist = self.dipathlist[0]
         """
-        defaultpath = self.options.get('didictionary',{}).get('didatapath','')
+        # get defaultstation
+        defaultstation = self.analysisdict('defaultstation')
+        allstations = self.analysisdict('stations')
+        dicont = allstations.get(defaultstation)
+        defaultpath = dicont.get('didatapath','')
 
         if os.path.isfile(defaultpath):
             defaultpath = os.path.split(defaultpath)[0]
 
-        services = self.options.get('webservices',{})
-        default = self.options.get('defaultservice','conrad')
+        services = self.analysisdict.get('webservices',{})
+        default = self.analysisdict.get('defaultwebservice','imws')
+        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
 
-        dlg = LoadDIDialog(None, title='Get DI data', dirname=defaultpath, db=self.db, services=services, defaultservice=default)
-        dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.options.get('dbname','')))
+        dlg = LoadDIDialog(None, title='Get DI data', dirname=defaultpath, db=db, services=services, defaultservice=default)
+        dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.magpystate.get('dbtuple',['None'])[-1]))
         dlg.ShowModal()
         if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
             self.menu_p.rep_page.logMsg("- loaded DI data")

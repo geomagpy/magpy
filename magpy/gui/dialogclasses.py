@@ -3560,16 +3560,16 @@ class SetAzimuthDialog(wx.Dialog):
 
 class LoadDIDialog(wx.Dialog):
     """
-    Dialog for Stream panel
-    Select shown keys
+    DESCRIPTION
+        Dialog for loading di data
 
-    Essetial parameters for DI analysis:
-    self.dipathlist                :  contains the obtained dictionary from the Load process with a diline structure
-    self.divariopath               :  the sourcepath
-    self.discalarpath              :  the sourcepath
-    self.dirname                   :  initial path for vario, scalar and di data
-    self.options['didictionary']   :  basically all options and defauts for variometer and scalar
-    self.options['diparameter']    :  parameter for analysis
+        Essential parameters for DI analysis:
+        self.dipathlist                :  contains the obtained dictionary from the Load process with a diline structure
+        self.divariopath               :  the sourcepath
+        self.discalarpath              :  the sourcepath
+        self.dirname                   :  initial path for vario, scalar and di data
+        self.options['didictionary']   :  basically all options and defauts for variometer and scalar
+        self.options['diparameter']    :  parameter for analysis
     """
 
     def __init__(self, parent, title, dirname, db, services, defaultservice):
@@ -3579,7 +3579,7 @@ class LoadDIDialog(wx.Dialog):
         self.dirname = dirname
         self.db = db
         self.absolutes = []
-        self.services =  self.getBasevalueService(services)
+        self.services =  self.get_basevalue_service(services)
         self.serviceitems = list(self.services.keys())
         if not defaultservice in self.serviceitems:
             self.mainsource = self.serviceitems[0]
@@ -3589,7 +3589,7 @@ class LoadDIDialog(wx.Dialog):
         self.doLayout()
         self.bindControls()
 
-    def getBasevalueService(self,services):
+    def get_basevalue_service(self,services):
         """
         DESCRIPTION
           Obtain only services providing basevalues
@@ -3682,13 +3682,14 @@ class LoadDIDialog(wx.Dialog):
         datelist, pierlist,stationlist = [], [], []
         azimuthlist = []
         for elem in pathlist:
-            if elem.endswith('.json'):
-                absst = readJSONABS(elem)
-                #print ("Json", absst)
-            else:
-                pier = None
-                stationid = None
-                absst = abs_read(elem,output='DIListStruct')
+            absst = di.abs_read(elem, output='DIListStruct')
+            #if elem.endswith('.json'):
+            #    absst = readJSONABS(elem)
+            #    #print ("Json", absst)
+            #else:
+            #    pier = None
+            #    stationid = None
+            #    absst = abs_read(elem,output='DIListStruct')
 
             try:
 
@@ -3703,6 +3704,7 @@ class LoadDIDialog(wx.Dialog):
                 print("absoluteAnalysis: Failed to analyse %s - problem of filestructure" % elem)
                 #failinglist.append(elem)
                 # TODO Drop that line from filelist
+        print ("Came HERE - LoadDIDlg", abslist)
 
         pierlist = list(set(pierlist))
         azimuthlist = list(set(azimuthlist))
