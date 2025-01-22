@@ -2312,25 +2312,25 @@ class AnalysisFitDialog(wx.Dialog):
         except:
             stfit = wx.DateTimeFromDMY(self.mintime.day,self.mintime.month-1,self.mintime.year)
             etfit = wx.DateTimeFromDMY(self.maxtime.day,self.maxtime.month-1,self.maxtime.year)
-        self.funcLabel = wx.StaticText(self, label="Fit function:",size=(160,30))
+        self.funcLabel = wx.StaticText(self, label="Fit function:",size=(200,30))
         self.funcComboBox = wx.ComboBox(self, choices=self.funclist,
-            style=wx.CB_DROPDOWN, value=self.fitfunc,size=(160,-1))
-        self.knotsLabel = wx.StaticText(self, label="Knots [e.g. 0.5  (0..1)] (spline only):")
-        self.knotsTextCtrl = wx.TextCtrl(self, value=self.fitknots,size=(160,30))
-        self.degreeLabel = wx.StaticText(self, label="Degree [e.g. 1, 2, 345, etc.] (polynomial only):")
-        self.degreeTextCtrl = wx.TextCtrl(self, value=self.fitdegree,size=(160,30))
+            style=wx.CB_DROPDOWN, value=self.fitfunc,size=(200,-1))
+        self.knotsLabel = wx.StaticText(self, label="Knots (0 - 1) (spline only):")
+        self.knotsTextCtrl = wx.TextCtrl(self, value=self.fitknots,size=(200,30))
+        self.degreeLabel = wx.StaticText(self, label="Degree (1 - ..) (polynom only):")
+        self.degreeTextCtrl = wx.TextCtrl(self, value=self.fitdegree,size=(200,30))
 
         self.UpperTimeText = wx.StaticText(self,label="Fit data before:")
         self.LowerTimeText = wx.StaticText(self,label="Fit data after:")
-        self.startFitDatePicker = wxDatePickerCtrl(self, dt=stfit,size=(160,30))
-        self.startFitTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
-        self.endFitDatePicker = wxDatePickerCtrl(self, dt=etfit,size=(160,30))
-        self.endFitTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
-        self.loadButton = wx.Button(self, label='Load fit',size=(160,30))
-        self.saveButton = wx.Button(self, label='Save fit(s)',size=(160,30))
+        self.startFitDatePicker = wxDatePickerCtrl(self, dt=stfit,size=(200,30))
+        self.startFitTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(200,30))
+        self.endFitDatePicker = wxDatePickerCtrl(self, dt=etfit,size=(200,30))
+        self.endFitTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(200,30))
+        self.loadButton = wx.Button(self, label='Load fit',size=(200,30))
+        self.saveButton = wx.Button(self, label='Save fit(s)',size=(200,30))
 
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(200,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(200,30))
 
         for elem in self.shownkeys:
             exec('self.{}CheckBox = wx.CheckBox(self, label="{}", size=(160,30))'.format(elem, elem))
@@ -2359,26 +2359,34 @@ class AnalysisFitDialog(wx.Dialog):
         contlst.append((self.degreeLabel, noOptions))
         contlst.append((self.degreeTextCtrl, expandOption))
         contlst.append(emptySpace)
+        contlst.append(emptySpace)
         contlst.append((self.LowerTimeText, noOptions))
-        contlst.append((self.startFitDatePicker, expandOption))
-        contlst.append((self.startFitTimePicker, expandOption))
-        contlst.append(emptySpace)
         contlst.append((self.UpperTimeText, noOptions))
+        contlst.append((self.startFitDatePicker, expandOption))
         contlst.append((self.endFitDatePicker, expandOption))
+        contlst.append((self.startFitTimePicker, expandOption))
         contlst.append((self.endFitTimePicker, expandOption))
-        for elem in self.shownkeys:
-            contlst.append((eval('self.{}CheckBox'.format(elem)), expandOption))
-
-        if not self.hide_file:
-            contlst.append(emptySpace)
-            contlst.append((self.loadButton, dict(flag=wx.ALIGN_CENTER)))
-            contlst.append((self.saveButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
+        maxrange = max([len(self.shownkeys), 4])
+        for i in range(0,maxrange):
+            if i < len(self.shownkeys):
+                contlst.append((eval('self.{}CheckBox'.format(self.shownkeys[i])), expandOption))
+            else:
+                contlst.append(emptySpace)
+            if i == 0:
+                contlst.append((self.loadButton, dict(flag=wx.ALIGN_CENTER)))
+            elif i == 1:
+                contlst.append((self.saveButton, dict(flag=wx.ALIGN_CENTER)))
+            elif i == 2:
+                contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+            elif i == 3:
+                contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+            else:
+                contlst.append(emptySpace)
 
         # A GridSizer will contain the other controls:
-        cols = 1
+        cols = 2
         rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
 
@@ -2397,7 +2405,7 @@ class AnalysisFitDialog(wx.Dialog):
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         openFileDialog.ShowModal()
         fitname = openFileDialog.GetPath()
-        self.fitparameter = methods.func_from_file(fitname,debug=False)
+        self.plotcont['functions'] = methods.func_from_file(fitname,debug=False)
         openFileDialog.Destroy()
         self.Close(True)
         self.Destroy()
@@ -2415,8 +2423,8 @@ class AnalysisFitDialog(wx.Dialog):
             savename = savename+extensions[extind]
 
         saveFileDialog.Destroy()
-        if self.plotdict.get('functions',False):
-            methods.func_to_file(self.plotdict.get('functions'),savename,debug=False)
+        if self.plotcont.get('functions',False):
+            methods.func_to_file(self.plotcont.get('functions'),savename,debug=False)
         self.Close(True)
         self.Destroy()
 

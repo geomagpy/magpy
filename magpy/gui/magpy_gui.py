@@ -927,7 +927,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             pass
 
         self.figure, self.axes = mp.psplot(data=stream, keys=keys, colors=colors, title=title, legend=legend, grid=grid,
-              fill=fill, ylabelposition=ylabelposition, yscale=yscale, alpha=alpha, figure=self.figure, separate=separate)
+              ylabelposition=ylabelposition, alpha=alpha, figure=self.figure, separate=separate)
 
         self.axlist = self.figure.axes
 
@@ -2340,7 +2340,6 @@ class MainFrame(wx.Frame):
             self._do_plot([streamid])
 
 
-
     def _update_plot(self, streamid):
         """
         DESCRIPTION
@@ -3486,7 +3485,7 @@ class MainFrame(wx.Frame):
         DEFINITION
             Change options
         """
-        if len(stream) > 0:
+        if self.active_id:
             dlg = StreamPlotOptionsDialog(None, title='Plot Options:',optdict=self.plotopt)
             if dlg.ShowModal() == wx.ID_OK:
                 for elem in self.plotopt:
@@ -5109,6 +5108,59 @@ class MainFrame(wx.Frame):
     # ##################################################################################################################
 
 
+    def onLoadDI(self,event):
+        """
+        open dialog to load DI data
+        """
+        """
+        if isinstance(self.dipathlist, str):
+            dipathlist = self.dipathlist
+        elif isinstance(self.dipathlist, dict):
+            dipathlist = "DB"
+        else:
+            dipathlist = self.dipathlist[0]
+        """
+        defaultpath = self.options.get('didictionary',{}).get('didatapath','')
+
+        if os.path.isfile(defaultpath):
+            defaultpath = os.path.split(defaultpath)[0]
+
+        services = self.options.get('webservices',{})
+        default = self.options.get('defaultservice','conrad')
+
+        dlg = LoadDIDialog(None, title='Get DI data', dirname=defaultpath, db=self.db, services=services, defaultservice=default)
+        dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.options.get('dbname','')))
+        dlg.ShowModal()
+        if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
+            self.menu_p.rep_page.logMsg("- loaded DI data")
+            self.dipathlist = dlg.pathlist
+            if isinstance(self.dipathlist,list):
+                self.menu_p.abs_page.diTextCtrl.SetValue(','.join(self.dipathlist))
+                if os.path.isfile(dlg.pathlist[0]):
+                    dlgpath = os.path.split(dlg.pathlist[0])[0]
+                else:
+                    dlgpath = dlg.pathlist[0]
+                self.options['dipathlist'] = [dlgpath]
+                self.menu_p.abs_page.diSourceLabel.SetLabel('Source: files')
+            elif isinstance(self.dipathlist,dict):
+                info = "{}: {} dataset(s)".format(self.dipathlist.get('station'),len(self.dipathlist.get('absdata')))
+                self.menu_p.abs_page.diTextCtrl.SetValue(info)
+                self.menu_p.abs_page.diSourceLabel.SetLabel("Source: {}".format(self.dipathlist.get('source')))
+            # Update di data path
+            didict = self.options.get('didictionary')
+            didict['didatapath'] = dlg.dirname
+            self.options['didictionary'] = didict
+            self.menu_p.abs_page.AnalyzeButton.Enable()
+        dlg.Destroy()
+
+        # Used for checking while switching to dictionary structure
+        #if isinstance(self.dipathlist,dict):
+        #    print ("onLoadDI: Obtained DI data in a dictionary")
+        #    print (self.dipathlist.get('absdata')[0])
+
+
+
+
     # ##################################################################################################################
     # ####    Report Panel                                     #########################################################
     # ##################################################################################################################
@@ -5752,57 +5804,6 @@ class MainFrame(wx.Frame):
     # Absolute functions
     # ################
     # ------------------------------------------------------------------------------------------
-
-
-    def onLoadDI(self,event):
-        """
-        open dialog to load DI data
-        """
-        """
-        if isinstance(self.dipathlist, str):
-            dipathlist = self.dipathlist
-        elif isinstance(self.dipathlist, dict):
-            dipathlist = "DB"
-        else:
-            dipathlist = self.dipathlist[0]
-        """
-        defaultpath = self.options.get('didictionary',{}).get('didatapath','')
-
-        if os.path.isfile(defaultpath):
-            defaultpath = os.path.split(defaultpath)[0]
-
-        services = self.options.get('webservices',{})
-        default = self.options.get('defaultservice','conrad')
-
-        dlg = LoadDIDialog(None, title='Get DI data', dirname=defaultpath, db=self.db, services=services, defaultservice=default)
-        dlg.databaseTextCtrl.SetValue('Connected: {}'.format(self.options.get('dbname','')))
-        dlg.ShowModal()
-        if not dlg.pathlist == 'None' and not len(dlg.pathlist) == 0:
-            self.menu_p.rep_page.logMsg("- loaded DI data")
-            self.dipathlist = dlg.pathlist
-            if isinstance(self.dipathlist,list):
-                self.menu_p.abs_page.diTextCtrl.SetValue(','.join(self.dipathlist))
-                if os.path.isfile(dlg.pathlist[0]):
-                    dlgpath = os.path.split(dlg.pathlist[0])[0]
-                else:
-                    dlgpath = dlg.pathlist[0]
-                self.options['dipathlist'] = [dlgpath]
-                self.menu_p.abs_page.diSourceLabel.SetLabel('Source: files')
-            elif isinstance(self.dipathlist,dict):
-                info = "{}: {} dataset(s)".format(self.dipathlist.get('station'),len(self.dipathlist.get('absdata')))
-                self.menu_p.abs_page.diTextCtrl.SetValue(info)
-                self.menu_p.abs_page.diSourceLabel.SetLabel("Source: {}".format(self.dipathlist.get('source')))
-            # Update di data path
-            didict = self.options.get('didictionary')
-            didict['didatapath'] = dlg.dirname
-            self.options['didictionary'] = didict
-            self.menu_p.abs_page.AnalyzeButton.Enable()
-        dlg.Destroy()
-
-        # Used for checking while switching to dictionary structure
-        #if isinstance(self.dipathlist,dict):
-        #    print ("onLoadDI: Obtained DI data in a dictionary")
-        #    print (self.dipathlist.get('absdata')[0])
 
 
     def onDIParameter(self,event):
