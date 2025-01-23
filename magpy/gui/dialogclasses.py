@@ -3712,7 +3712,6 @@ class LoadDIDialog(wx.Dialog):
 
                 for a in absst:
                     stream =a.get_abs_distruct()
-                    print ("DATE", stream[0].time)
                     abslist.append(a)
                     tempdate = num2date(stream[0].time).replace(tzinfo=None)
                     datelist.append(tempdate.strftime("%Y-%m-%d"))
@@ -3730,7 +3729,6 @@ class LoadDIDialog(wx.Dialog):
             # TODO do something here
         if len(abslist) == 0:
             raise Exception("DI File has no valid measurements")
-        #self.dicont =
         didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
         didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
         didict['selectedpier'] = pierlist[0]
@@ -4053,7 +4051,7 @@ class LoadVarioScalarDialog(wx.Dialog):
             return "...{}".format(path[-slen:])
 
     def checkDB(self, search='f'):
-        cursor = self.db.cursor()
+        cursor = self.db.db.cursor()
         sql = "SELECT DataID, ColumnContents, ColumnUnits FROM DATAINFO"
         cursor.execute(sql)
         output = cursor.fetchall()
@@ -4987,7 +4985,7 @@ class InputSheetDialog(wx.Dialog):
         InputDialog for DI data
     """
 
-    def __init__(self, parent, title, path, distation, diparameters, cdate, datapath):
+    def __init__(self, parent, title, path, distation, diparameters, cdate, datapath, distruct):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(InputSheetDialog, self).__init__(parent=parent,
             title=title, style=style) #size=(1000, 800),
@@ -4999,14 +4997,9 @@ class InputSheetDialog(wx.Dialog):
         layout['double'] = diparameters.get('double')
         layout['order'] = diparameters.get('order').split(',')
         # diparameters contains a list of all opened/available DI files for this stationID
-        distruct = diparameters.get('dipathlist', {})
 
         self.cdate = cdate
         self.units = ['degree','gon']
-        #if isinstance(dipathdict, dict):
-        #    self.didict = dipathdict
-        #else:
-        #    self.didict = {}
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add Settings Panel
@@ -5513,8 +5506,10 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.datapath = datapath
 
         # TODO Chech this code
-        #self.didict = didict
-        #self.diline2datalist(didict)
+        self.didict = distruct
+        self.diline2datalist(distruct)
+        print ("distruct", distruct)
+        print ("distruct", self.dichoices)
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         self.createWidgets()
@@ -5685,8 +5680,8 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
         if not len(self.dichoices) > 0:
             self.memdataComboBox.Hide()
-        #else:
-        #    self.memdataComboBox.SetValue(self.dichoices[0])
+        else:
+            self.memdataComboBox.SetValue(self.dichoices[0])
 
         if not self.layout['double'] == 'False':
             #self.SD2TimeTextCtrl.Hide()
