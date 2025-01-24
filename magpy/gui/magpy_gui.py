@@ -5187,7 +5187,7 @@ class MainFrame(wx.Frame):
         dicont = allstations.get(defaultstation,{})
 
         valuedict = {}
-        dlg = ParameterDictDialog(None, title="Modify DI analysis parameter", dictionary=dicont, preselect=[defaultstation])
+        dlg = ParameterDictDialog(None, title="Modify DI analysis parameter for {}".format(defaultstation), dictionary=dicont, preselect=[defaultstation])
         if dlg.ShowModal() == wx.ID_OK:
             ok = True
             for el in dlg.panel.elementlist:
@@ -5420,9 +5420,11 @@ class MainFrame(wx.Frame):
             elif primaryparametersource == 'file':
                 pass
 
+        print ("HERE")
         if self.active_didata:
             # Identify source -> Future version: use absolutClass which contains raw data
             #                    and necessary variation,scalar data
+            print ("and here")
             activatereport = True
             if activatereport:
                 prev_redir = sys.stdout
