@@ -44,8 +44,16 @@ import platform
 | AnalysisFilterDialog   | 2.0.0   |                 |  level 2       |          | ana_onFilterButton |
 | AnalysisOffsetDialog   | 2.0.0   |                 |  level 1       |          | ana_onOffsetButton |
 | AnalysisResampleDialog | 2.0.0   |                 |  level 2       |          | ana_onOffsetButton |
+| LoadDIDialog           | 2.0.0   |                 |  level 2       |          | dip_onLoadDIButton |
+| SetAzimuthDialog       | 2.0.0   |                 |  level 2       |          | dip_onDIAnanlysis |
+| SetStationIDDialog     | 2.0.0   |                 |  level 2       |          | LoadDIDialog |
+| LoadVarioScalarDialog     | 2.0.0   |              |  level 2       |          | dip_onDIVarioButton |
+| DIConnectDatabaseDialog   | 2.0.0   |              |  level 2       |          | LoadDIDialog |
+| DefineVarioDialog      | 2.0.0   |                 |  level 2       |          | LoadDIDialog |
+| DefineScalarDialog     | 2.0.0   |                 |  level 2       |          | LoadDIDialog |
+| DISaveDialog           | 2.0.0   |                 |  level 2       |          | dip_onDISaveButton |
+| ParameterDictDialog    | 2.0.0   |                 |  level 2       |          | dip_onDIParameterButton |
 
-| LoadDIDialog           | 2.0.0   |                 |  level 1       |          | dip_onLoadDIButton |
 
 runtime test:
 - : not tested
@@ -3317,6 +3325,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.okButton.Disable()
 
 
+    @deprecated("To be removed - new fits are done in main analysis panel")
     def OnParameter(self, e):
         # open fit dlg
         baseid = int(self.absstreamComboBox.GetValue().split(':')[0])
@@ -3726,21 +3735,26 @@ class LoadDIDialog(wx.Dialog):
         azimuthlist = list(set(azimuthlist))
         if len(pierlist) > 1:
             print ("Multiple piers selected - TODO")
-            # TODO do something here
+            # TODO do something here TODO stationid not extracted from filename in old AUTODIF files
         if len(abslist) == 0:
             raise Exception("DI File has no valid measurements")
+        stationid = stationlist[0]
         didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
-        didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
+        didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")+timedelta(days=1)
         didict['selectedpier'] = pierlist[0]
         didict['azimuth'] = azimuthlist[0]
-        didict['station'] = stationlist[0]
+        didict['station'] = stationid
         didict['source'] = source
         didict['absdata'] = abslist
 
+        #check stationlist[0]
+        if not stationid is None and not len(stationid) == 3:
+            stationid = None
+
         # stationid needs to be defined !!!!
-        if stationlist[0] is None:
+        if stationid is None:
             # Open a dialog to set the stationid
-            stationid = 'NONE'
+            stationid = 'invalid'
             dlg = SetStationIDDialog(self, title='Define a StationID (e.g. IAGA code)', stationid=stationid)
             if dlg.ShowModal() == wx.ID_OK:
                 stationid = dlg.StationTextCtrl.GetValue()
@@ -3865,7 +3879,7 @@ class LoadDIDialog(wx.Dialog):
                 sql += ' AND Observer="{}"'.format(content.get('selectedpier'))
 
             content['mindatetime'] = midate
-            content['maxdatetime'] = madate
+            content['maxdatetime'] = madate+timedelta(days=1)
             content['source'] = 'db'
             absolutes = self.db.diline_from_db(starttime=midate, endtime=madate, tablename=ditables[0], sql=sql)
             content['absdata'] = absolutes
@@ -3972,7 +3986,7 @@ class LoadDIDialog(wx.Dialog):
                 azimuthlist.append(a.azimuth)
 
             didict['mindatetime'] = datetime.strptime(min(datelist),"%Y-%m-%d")
-            didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")
+            didict['maxdatetime'] = datetime.strptime(max(datelist),"%Y-%m-%d")+timedelta(days=1) # add one day as rounded to full days
             didict['selectedpier'] = pierlist[0]
             didict['source'] = source
             didict['absdata'] = abslist
@@ -4006,8 +4020,14 @@ class LoadVarioScalarDialog(wx.Dialog):
         self.schoicesselection[self.schoice] = True
         self.defaultvariopath = defaultvariopath.split('*.')[0]
         self.defaultscalarpath = defaultscalarpath.split('*.')[0]
-        self.varioext = ['*.*']
-        self.scalarext = ['*.*']
+        try:
+            vext = os.path.split(defaultvariopath)[-1]
+            sext = os.path.split(defaultscalarpath)[-1]
+        except:
+            vext = '*.*'
+            sext = '*.*'
+        self.varioext = [vext]
+        self.scalarext = [sext]
         self.db = db
         if self.db:
             self.variotables = self.checkDB(search='x,y,z')
@@ -4291,7 +4311,7 @@ class LoadVarioScalarDialog(wx.Dialog):
             scalarext = self.getExtensionList(path)
             self.scalarExtComboBox.Clear()
             try:
-                self.scalarExtComboBox.Append(varioext)
+                self.scalarExtComboBox.Append(scalarext)
             except:
                 self.scalarExtComboBox.AppendItems(scalarext)
             self.scalarExtComboBox.SetValue(scalarext[0])
@@ -4352,6 +4372,7 @@ class LoadVarioScalarDialog(wx.Dialog):
             self.discalarws = url
             self.scalarWSButton.SetLabel(service)
             self.mainsource = service
+
 
 class DIConnectDatabaseDialog(wx.Dialog):
     """
@@ -4476,9 +4497,9 @@ class DIConnectDatabaseDialog(wx.Dialog):
         timecol = [el[3] for el in data]
         mindatetime = min(timecol)
         maxdatetime = max(timecol)
-        mintime = datetime.strftime(mindatetime,"%H:%M:%S")
+        mintime = mindatetime.strftime("%H:%M:%S")
         mindate = self.pydate2wxdate(mindatetime)
-        maxtime = datetime.strftime(maxdatetime,"%H:%M:%S")
+        maxtime = maxdatetime.strftime("%H:%M:%S")
         maxdate = self.pydate2wxdate(maxdatetime)
         return mintime, maxtime, mindate, maxdate
 
@@ -4746,21 +4767,6 @@ class DISaveDialog(wx.Dialog):
 
 
         mainSizer.Add(self.sourceLabel, 0, wx.ALIGN_LEFT | wx.ALL, 3)
-        """
-        labellst=[]
-        labellst.append((self.sourceLabel, noOptions))
-
-        # A GridSizer will contain the other controls:
-        cols = 1
-        rows = int(np.ceil(len(contlst)/float(cols)))
-        gridlabelSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
-        for control, options in labellst:
-            gridlabelSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridlabelSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-        """
 
         # A GridSizer will contain the other controls:
         cols = 3
@@ -4828,7 +4834,9 @@ class ParameterDictDialog(wx.Dialog):
         self.panel.SetInitialSize((450, 400))
         self.mainSizer.Insert(1, self.panel, 1, wx.EXPAND | wx.ALL, 10)
 
-    def iter_leafs(self, d, keys=[]):
+    def iter_leafs(self, d, keys=None):
+        if not keys:
+            keys = []
         for key, val in d.items():
             if isinstance(val, dict):
                 #try:
@@ -4839,7 +4847,9 @@ class ParameterDictDialog(wx.Dialog):
             else:
                 yield keys + [key], val
 
-    def getHeadsAndLast(self, depth, d, preselect = []):
+    def getHeadsAndLast(self, depth, d, preselect=None):
+        if not preselect:
+            preselect = []
         #print ("PreselectioN", preselect)
         if self.depth > 1:
             lay = []
@@ -4955,6 +4965,7 @@ class ParameterDictPanel(scrolledpanel.ScrolledPanel):
         emptySpace = ((0, 0), noOptions)
 
         contlist = []
+        opt=None
         for el in self.elementlist:
             if el[0] == 'Label':
                 opt = noOptions
@@ -7378,7 +7389,6 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
 
 
     def bindControls(self):
-        from functools import partial
         self.mergeButton.Bind(wx.EVT_BUTTON, self.onMergeButton)
         self.subtractButton.Bind(wx.EVT_BUTTON, self.onSubtractButton)
         self.joinButton.Bind(wx.EVT_BUTTON, self.onJoinButton)
@@ -7386,6 +7396,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         for elem in self.bindkeys:
             selid = elem[0]
             exec(elem[1])
+
 
     def on_get_keys(self, e, activeid):
         keys = self.datadict.get(activeid).get('keys')
@@ -7417,6 +7428,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
 
             # update
             exec('self.id{}KeyButton.SetLabel("Keys: {}")'.format(activeid, ",".join(shownkeylist)))
+
 
     def onMergeButton(self, event):
         """
@@ -7505,13 +7517,11 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                 keylist.append(self.plotdict.get(elem).get('shownkeys'))
                 startlist.append(self.datadict.get(elem).get('start'))
                 endlist.append(self.datadict.get(elem).get('end'))
-        print ("LISTS", keylist, startlist, endlist)
         startinvalid = any([1 if el > ref else 0 for el in startlist for ref in endlist])
         endinvalid = any([1 if el > ref else 0 for el in startlist for ref in endlist])
         # if time ranges are overlapping and shownkeys keys are identical then
         # all starttime < min(endtime) and all endtime > max(starttime)
         if all(i == keylist[0] for i in keylist) and not startinvalid and not endinvalid:
-            print ("Everything find - plotting nested")
             self.selectedids = selectedids
             self.modify = True
             self.Close(True)

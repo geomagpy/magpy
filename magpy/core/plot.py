@@ -326,10 +326,12 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
             comp = dat._get_column(component)
             if len(comp) > 0  or force:
                 if separate:
-                    subplot = int("{}1{}".format(total_keys, total_pos + 1))
+                    subpos1 = total_keys
+                    subpos3 = total_pos + 1
                 else:
-                    subplot = int("{}1{}".format(len(keys[idx]), i + 1))
-                ax = plt.subplot(subplot)
+                    subpos1 = len(keys[idx])
+                    subpos3 = i + 1
+                ax = plt.subplot(subpos1,1,subpos3)
                 axs.append(ax)
                 if testtimestep(x[0]):
                     ax.xaxis.axis_date()
@@ -669,11 +671,13 @@ def psplot(data=None, keys=None, colors=None, title=None, legend=None, grid=None
         cdata = cdata._drop_nans(component)
         comp = cdata._get_column(component)
         if len(comp) > 0:
-            if not separate:
-                subplot = int("{}1{}".format(1, total_pos + 1))
+            if separate:
+                subpos1 = len(keys)
+                subpos3 = i + 1
             else:
-                subplot = int("{}1{}".format(len(keys), i + 1))
-            ax = plt.subplot(subplot)
+                subpos1 = 1
+                subpos3 = total_pos + 1
+            ax = plt.subplot(subpos1, 1, subpos3)
             axs.append(ax)
             power, freqs = ax.psd(comp, NFFT=NFFT, pad_to=pad_to, Fs=1. / sr,
                                   detrend=detrend, scale_by_freq=scale_by_freq, color=colors[i])
@@ -849,8 +853,7 @@ def spplot(data=None, keys=None, colormap=None, title=None, legend=None, grid=No
         #cdata = cdata._drop_nans(component)
         comp = data._get_column(component)
         if len(comp) > 0:
-            subplot = int("{}1{}".format(len(keys), i + 1))
-            ax = plt.subplot(subplot)
+            ax = plt.subplot(len(keys), 1, i+1)
             axs.append(ax)
             Pxx, freqs, bins, im = ax.specgram(comp, NFFT=1024, Fs=1. / sr, noverlap=512, pad_to=pad_to, detrend=detrend,
                                                scale_by_freq=scale_by_freq, mode=mode, cmap=cmap, xextent=(T[0], T[-1]))

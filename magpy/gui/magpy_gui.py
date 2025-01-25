@@ -2,6 +2,7 @@
 
 # TODO - remove the following two line as soon as new packages are updated (only required for testruns (python stream.py)
 import sys
+
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 
 import wx
@@ -158,9 +159,9 @@ Major methods:              major_method
 |  MainFrame     | a_onPowerButton |   2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | a_onSpectrogramButton | 2.0.0  |         | level 0    |               |        |   |
 |  MainFrame     | di_onLoadDIButton |  2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | di_onDefineVarioScalar |  2.0.0  |       | level 0    |               |        |   |
-|  MainFrame     | di_onDIAnalysis |   2.0.0  |             | level 0    |               |        |   |
-|  MainFrame     | di_onDIParameter |   2.0.0  |             | level 0    |               |        |   |
+|  MainFrame     | di_onDefineVarioScalar |  2.0.0  |       | level 1    |               |        |   |
+|  MainFrame     | di_onDIAnalysis |   2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | di_onDIParameter |   2.0.0  |            | level 1    |               |        |   |
 |  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
 |  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
 |  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
@@ -2242,8 +2243,8 @@ class MainFrame(wx.Frame):
         if station_analysiscont and isinstance(station_analysiscont, dict):
             self.menu_p.abs_page.varioTextCtrl.SetValue(display(station_analysiscont.get('divariopath','')))
             self.menu_p.abs_page.scalarTextCtrl.SetValue(display(station_analysiscont.get('discalarpath','')))
-            self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[station_analysiscont.get('divariosource')]))
-            self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[station_analysiscont.get('discalarsource')]))
+            self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[int(station_analysiscont.get('divariosource'))]))
+            self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[int(station_analysiscont.get('discalarsource'))]))
 
 
     def _initial_read(self, stream):
@@ -2411,15 +2412,20 @@ class MainFrame(wx.Frame):
         # ------------------------------
         if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
             shownkeys = plotcont.get('shownkeys')
-            if len(stream._get_column('x')) > 0 and shownkeys == keys:   # is a PYSTR or PYCDF file with basevalues
-                #if len(shownkeys) > 7: # not the case if dailymeans are caluclated
-                shownkeys = ['x','y','z','dx','dy','dz','df']
-                plotcont['padding'] = [0,0,0,5,0.05,5,2]
+            if len(stream._get_column('x')) > 0 and not stream.header.get('DataFormat') == 'MagPyDailyMean':   # is a PYSTR or PYCDF file with basevalues
+                shownkeys = ['dx','dy','dz']
+                plotcont['padding'] = [5,0.05,5]
             elif not len(stream._get_column('x')) > 0 :                  # is a BLV file with basevalues
                 shownkeys = ['dx','dy','dz']
-                plotcont['padding'] = [5,0.05,5,2]
+                plotcont['padding'] = [5,0.05,5]
+            dfcol = stream._get_column('df')
+            # check if df contains valid data
+            if not np.isnan(dfcol).all():
+                shownkeys.append('df')
+                plotcont['padding'].append(2)
             # If dailymeans were calcluated
             if isinstance(plotcont.get('errorbars'), (list,tuple)) and len(plotcont.get('errorbars')) > 0:
+                shownkeys = ['x','y','z','f']
                 shownkeys = shownkeys[:len(plotcont.get('errorbars'))]
             plotcont['symbols'] =  ['.'] * len(shownkeys)
             plotcont['shownkeys'] = shownkeys
@@ -2610,6 +2616,8 @@ class MainFrame(wx.Frame):
         # plot data
         if success:
             self.magpystate['source'] = 'file'
+            # remember filepath
+            self.guidict['dirname'] = self.magpystate['currentpath']
             streamid = self._initial_read(stream)
             if streamid: # will create a new input into datadict
                 self._initial_plot(streamid)
@@ -5146,7 +5154,9 @@ class MainFrame(wx.Frame):
         defaultstation = self.analysisdict.get('defaultstation')
         allstations = self.analysisdict.get('stations')
         dicont = allstations.get(defaultstation,{})
+        newdicont = dicont.copy()
         defaultpath = dicont.get('didatapath','')
+        debug = False
 
         if os.path.isfile(defaultpath):
             defaultpath = os.path.split(defaultpath)[0]
@@ -5168,72 +5178,81 @@ class MainFrame(wx.Frame):
             elif isinstance(dipathlist,list):
                 print ("outdated - should not happen any more")
             # Update di data path
-            dicont['didatapath'] = dlg.dirname
+            newdicont['didatapath'] = dlg.dirname
             self.active_didata = dipathlist
-            allstations[defaultstation] = dicont
-            self.analysisdict['stations'] = allstations
             self.menu_p.abs_page.AnalyzeButton.Enable()
         dlg.Destroy()
 
+        if debug:
+            print ("Now get parameters from active didata and update analysisdict[stations].get(stationid)")
+        stationid = self.active_didata.get('station')
+        if stationid == defaultstation:
+            # that should be the normal case
+            pass
+        elif stationid in allstations:
+            self.analysisdict['defaultstation'] = stationid
+            if debug:
+                print ("DI analysis: Switching default station to existing input of {}".format(stationid))
+        else:
+            # create a new stationinput
+            self.analysisdict['defaultstation'] = stationid
+            if debug:
+                print("DI analysis: Creating new station input {}".format(stationid))
+        newdicont['dipier'] = self.active_didata.get('selectedpier')
+        newdicont['diazimuth'] = self.active_didata.get('azimuth')
+        allstations[stationid] = newdicont
+        self.analysisdict['stations'] = allstations
+
+        # to be updated: if no stationid -> defaultstation, else if stationid not existing then create
+        # update selected dipier, diazimuth, diid etc.
 
 
     def di_onDIParameter(self,event):
         """
         open dialog to modify analysis parameters for DI
         """
-        ok = False
-        defaultstation = self.analysisdict.get('defaultstation')
-        allstations = self.analysisdict.get('stations')
+        defaultstation = self.analysisdict.get('defaultstation','')
+        allstations = self.analysisdict.get('stations',{})
         dicont = allstations.get(defaultstation,{})
+
+        # parameters should be updated from loaded data set
+        boollist = ['diusedb','divariocorr','didbadd','scalevalue','double']
+        numlist = ['diexpD','diexpI','divariosource','discalarsource','diazimuth','dialpha','dibeta','dideltaF','dideltaD','dideltaI']
+        listlist = ['diannualmean']
 
         valuedict = {}
         dlg = ParameterDictDialog(None, title="Modify DI analysis parameter for {}".format(defaultstation), dictionary=dicont, preselect=[defaultstation])
         if dlg.ShowModal() == wx.ID_OK:
-            ok = True
             for el in dlg.panel.elementlist:
                 if not el[1].GetName() == 'Label':
-                    try:
-                        val = el[1].GetValue()
-                        valuedict[el[1].GetName()] = val
-                    except:
-                        try:
-                            val = el[1].GetStringSelection()
-                            if val == 'False':
-                                val = False
-                            if val == 'True':
-                                val = True
-                            valuedict[el[1].GetName()] = val
-                            #print ("Val:", el[1].GetName(), val)
+                    key = el[1].GetName()
+                    if key in boollist:
+                        val = el[1].GetStringSelection()
+                        if val in ['True','true',True]:
+                            val = True
+                        else:
+                            val = False
+                        valuedict[key] = val
+                    else:
+                        try: # there might be other panel elements like StaticText without values
+                            val = el[1].GetValue()
+                            if key in listlist and val.startswith('['):
+                                if val == '[]':
+                                    val = []
+                                else:
+                                    val = val.replace('[','').replace(']','').split(',')
+                            elif key in numlist and methods.is_number(val):
+                                val = float(val)
+                            valuedict[key] = val
                         except:
                             pass
-
+            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('options')
+        else:
+            valuedict = dicont.copy()
         dlg.Destroy()
 
-        # Test if modified
-        print (valuedict)
-
-        """
-        if ok:
-            #print ("Station", valuedict.get('stationid'))
-            stationid = valuedict.get('stationid')
-            if not stationid == defaultstation:
-                dicont = allstations.get(stationid, {})
-
-            if not dicont == {} and stationid in  allstations:
-                exstationid =  dipara.get(valuedict.get('stationid')).get('stationid','')
-                #print ("StationID existing")
-                # Update
-                dipara[stationid] = valuedict
-                self.options['diparameter'] = dipara
-
-            elif not stationid in  allstations:
-                #print ("StationID not yet existing")
-                # add new station information?
-                allstations[stationid] = valuedict
-
-
-            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('options')
-        """
+        allstations[defaultstation] = valuedict
+        self.analysisdict['stations'] = allstations
 
 
     def di_onDefineVarioScalar(self,event):
@@ -5266,7 +5285,6 @@ class MainFrame(wx.Frame):
         allstations = self.analysisdict.get('stations')
         dicont = allstations.get(defaultstation,{})
 
-        saveoptions = False
         discalarpath = dicont.get('discalarpath','')
         divariopath = dicont.get('divariopath','')
         discalarurl = dicont.get('discalarurl','')
@@ -5292,7 +5310,6 @@ class MainFrame(wx.Frame):
             dicont['discalarDBinst'] = dialog.scalarDBComboBox.GetValue()
             dicont['divariourl'] = dialog.divariows
             dicont['discalarurl'] = dialog.discalarws
-            #print (dialog.vchoice, dialog.defaultvariopath, varioext)
             self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[dialog.vchoice]))
             self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[dialog.schoice]))
             res_divariopath = getPathFromDict("vario", dicont, db)
@@ -5316,168 +5333,101 @@ class MainFrame(wx.Frame):
         defaultstation = self.analysisdict.get('defaultstation')
         allstations = self.analysisdict.get('stations')
         dicont = allstations.get(defaultstation,{})
+        debug = False
 
         divariopath = dicont.get('divariopath','')
         discalarpath = dicont.get('discalarpath','')
 
-        # Get parameters from options
-        #didict = self.options.get('didictionary')
-        #dipara = self.options.get('diparameter')
-
-        # Get didictionary variables directly obtained from file/DB/WS
-        print ("DI analysis", self.active_didata)
-        f_azimuth = self.active_didata.get('azimuth')
-        f_pier = self.active_didata.get('selectedpier',None)
-        stationid= self.active_didata.get('station','')
-
-        # Select appropriate diparameters for station from options
-        # if specified to use parameters
         primaryparametersource = self.menu_p.abs_page.parameterRadioBox.GetStringSelection()
 
-        # Currently not all parameters are in use
-        # only expD, expI, alpha, beta and all delta values are considered
-        # (and azimuth)
-        # Please note: station and pier are always taken from the file (dipathlist dictionary)
-        expD=0.0
-        expI=0.0
-        alpha=0.0
-        beta=0.0
-        deltaF=0.0
-        deltaD=0.0
-        deltaI=0.0
-        abstype= 'manual'   # is tested in absoluteAnalysis and not necessary
-        azimuth = None
-        variometerorientation=None
+        # redefining blv output by orientation of the variometer (i.e. xyz output requires xyz variometer
+        variometerorientation = None
         residualsign = 1
-        db = None
-        magrotation = None
-        usedb = False
-        annualmeans=None
+        blvoutput = dicont.get('blvoutput')
+        if blvoutput.lower().startswith("xyz"):
+            print (" Selected Variometerorientation in xyz")
+            variometerorientation = "XYZ"
 
-        #stationpara = dipara.get(stationid,{})
-        if primaryparametersource == 'options' and dicont == {}:
-            self.menu_p.abs_page.parameterRadioBox.SetStringSelection('file')
+        fluxorient = dicont.get('fluxgateorientation')
+        if fluxorient.lower().startswith('opp'):
+            print(" Selected opposite fluxgate orientation for DI flux")
+            residualsign = -1
 
-        if primaryparametersource == 'options' and not (f_pier == dicont.get('dipier') and not dicont == {}):
-            print ("Careful: pier in options differs from pier in file -> using file")
+        magrotation = dicont.get('divariocorr')
 
-        for el in dicont:
-            value = dicont[el]
-            print ("HERE", el, value)
-            if methods.is_number(value):
-                value = float(value)
-            elif value in [False,'False']:
-                value = False
-            elif value in [True,'True']:
-                value = True
-            elif isinstance(value,(list,tuple)):
-                value = [float(el) for el in value]
-            elif value.startswith('['):
-                value = value.replace('[','').replace(']','').replace('"','').replace("'",'').split(',')
-                value = [float(el) for el in value]
-            elif value == '':
-                value = None
-
-            if primaryparametersource == 'options':
-                if not value == 0 or value == '':
-                    if el == 'diexpD':
-                        expD = value
-                    elif el == 'diexpI':
-                        expI = value
-                    elif el == 'dideltaD':
-                        deltaD = value
-                    elif el == 'dideltaI':
-                        deltaI = value
-                    elif el == 'dideltaF':
-                        deltaF = value
-                    elif el == 'dialpha':
-                        alpha = value
-                    elif el == 'dibeta':
-                        beta = value
-                    elif el == 'diid':
-                        diid = value
-                    elif el == 'blvoutput':
-                        if value.lower().startswith("xyz"):
-                            #print (" Selected Variometerorientation in xyz")
-                            variometerorientation = "XYZ"
-                    elif el == 'fluxgateorientation':
-                        if value.lower().startswith("opp"):
-                            print (" Selected opposite fluxgate orientation for DI flux")
-                            residualsign = -1
-                        else:
-                            residualsign = 1
-                    elif el == 'diannualmean':
-                        annualmeans = value
-                    elif el == 'diazimuth':
-                        azimuth = value
-                    elif el == 'diusedb':
-                        usedb = value
-                        if usedb and db:
-                            pass
-                    elif el == 'divariocorr':
-                        magrotation = value
-                        # does only work with db? compensation data is path of the vario source
-            elif primaryparametersource == 'file':
-                pass
-
-        print ("HERE")
         if self.active_didata:
             # Identify source -> Future version: use absolutClass which contains raw data
             #                    and necessary variation,scalar data
-            print ("and here")
             activatereport = True
+            prev_redir = None
             if activatereport:
+                if debug:
+                    print("sending reports to dialogTextCtrl now...")
                 prev_redir = sys.stdout
                 redir=RedirectText(self.menu_p.abs_page.dilogTextCtrl)
                 sys.stdout=redir
+            else:
+                if debug:
+                    print ("sending reports to stdout by default")
+
             absstream = DataStream()
 
             if db:
                 print ("Database connected")
-            elif usedb and not db:
+            elif dicont.get('usedb') and not db:
                 print ("No database connected")
+            # no report necessary for all other cases
 
             if isinstance(self.active_didata, dict):
                 # Dictionary is the new default - all processes will return a dictionary
                 self.changeStatusbar("Processing DI data ... please be patient")
-                stationid = self.active_didata.get('station')
+                stationid = defaultstation  # should already be replaced by some valid station code
+                if not self.active_didata.get('station') == defaultstation:
+                    print ("WARNING - station differenecs between source and options")
                 starttime = self.active_didata.get('mindatetime')
                 endtime = self.active_didata.get('maxdatetime')
                 pier = self.active_didata.get('selectedpier')
                 abstable = "DIDATA_{}".format(stationid.upper())
                 absdata = self.active_didata.get('absdata')
-                f_azimuth = self.active_didata.get('azimuth')
+                azimuth = self.active_didata.get('azimuth')
                 if variometerorientation and variometerorientation.lower().startswith("xyz"):
                     print(" Selected basevalue output in xyz components")
-                if azimuth:
-                    print ("Using aziumth from options menu: {}".format(azimuth))
-                    absstream = di.absolute_analysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
-                    # abstream... aziumth =
-                elif not f_azimuth or np.isnan(f_azimuth) or f_azimuth == 'nan' or f_azimuth == None:
+                if not dicont.get('diazimuth') == azimuth:
+                    print(" Azimuth given in data source and in options are different")
+                    if primaryparametersource == 'options':
+                        azimuth = dicont.get('diazimuth')
+                if not dicont.get('dipier') == pier:
+                    print(" Pier given in data source and in options are different")
+                    if primaryparametersource == 'options':
+                        pier = dicont.get('dipier')
+                # check for valid azimuth and eventually request input
+                if not azimuth or np.isnan(azimuth) or azimuth == 'nan' or azimuth == None:
                     print ("no aziumth so far - please define")
                     # open dialog
                     ok = False
                     dlg = SetAzimuthDialog(None, title='Define azimuth', azimuth=0.0)
                     if dlg.ShowModal() == wx.ID_OK:
-                        print (dlg.AzimuthTextCtrl.GetValue())
                         azimuth = float(dlg.AzimuthTextCtrl.GetValue())
                         ok = True
-                        #except:
-                        #    pass
                     dlg.Destroy()
                     if ok:
-                        print ("Using given aziumth: {}".format(azimuth))
-                        absstream = di.absolute_analysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,azimuth=azimuth,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
-                else:
-                    # Please NOte: observer selection does not yet work #  db=self.db
-                    print ("Using aziumth values from data sources")
-                    absstream = di.absolute_analysis(absdata,divariopath,discalarpath, db=db, magrotation=magrotation, annualmeans=annualmeans, expD=expD,expI=expI,stationid=stationid,pier=pier,alpha=alpha,beta=beta,deltaF=deltaF, starttime=starttime,endtime=endtime,variometerorientation=variometerorientation,residualsign=residualsign,absstruct=True)
+                        print ("Using manually provided aziumth: {}".format(azimuth))
+                if debug:
+                    print ("Some variables to test:")
+
+                #TODO diusedb
+                absstream = di.absolute_analysis(absdata, divariopath, discalarpath, db=db, magrotation=magrotation,
+                                                 annualmeans=dicont.get('diannualmeans'), expD=dicont.get('diexpD'),
+                                                 expI=dicont.get('diexpI'), stationid=stationid,
+                                                 pier=pier, alpha=dicont.get('dialpha'), beta=dicont.get('dibeta'),
+                                                 deltaF= dicont.get('deltaF'), starttime=starttime,endtime=endtime,
+                                                 azimuth=azimuth, variometerorientation=variometerorientation,
+                                                 residualsign=residualsign, absstruct=True)
 
             else:
                 print ("Could not identify absolute data")
                 absstream = DataStream()
 
-            print ("HERE", absstream)
             try:
                 if not divariopath == '' and not discalarpath == '':
                     variid = absstream.header.get('SensorID').split('_')[1]
@@ -5503,14 +5453,6 @@ class MainFrame(wx.Frame):
             # only if more than one point is selected
             self.changeStatusbar("Ready")
             if absstream and len(absstream) > 0:
-                # Convert absstream
-                array = [[] for el in DataStream().KEYLIST]
-                for idx,el in enumerate(absstream.ndarray):
-                    if absstream.KEYLIST[idx] in absstream.NUMKEYLIST or absstream.KEYLIST[idx] == 'time':
-                        array[idx] = np.asarray(el).astype(float)
-                    else:
-                        array[idx] = np.asarray(el)
-                absstream.ndarray = np.asarray(array,dtype=object)
                 streamid = self._initial_read(absstream)
                 self._initial_plot(streamid)
 
@@ -5519,22 +5461,15 @@ class MainFrame(wx.Frame):
                     self.menu_p.abs_page.SaveLogButton.Enable()
             else:
                 pass
-                """
-                if absstream:
-                    self.ActivateControls(self.plotstream)
-                    if not str(self.menu_p.abs_page.dilogTextCtrl.GetValue()) == '':
-                        self.menu_p.abs_page.ClearLogButton.Enable()
-                        self.menu_p.abs_page.SaveLogButton.Enable()
-                # set load di to something useful (seems to be empty now)
-                """
+
 
     def onSaveDIData(self, event):
         """
         DESCRIPTION
             Save data of the logger to file
         """
-        # TODO When starting ANalysis -> stout is redirected .. switch back to normal afterwards
-        saveFileDialog = wx.FileDialog(self, "Save As", "", self.last_dir,
+        dirname = self.guidict.get('dirname')
+        saveFileDialog = wx.FileDialog(self, "Save As", "", dirname,
                                        "DI analysis report (*.txt)|*.txt",
                                        wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         saveFileDialog.ShowModal()
@@ -5546,7 +5481,6 @@ class MainFrame(wx.Frame):
         difile.write(text)
         difile.close()
 
-        self.last_dir = savepath
 
     def onClearDIData(self, event):
         self.menu_p.abs_page.dilogTextCtrl.SetValue('')

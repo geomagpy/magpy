@@ -362,6 +362,7 @@ will not perform any filtering if already one data point is missing within the f
 **Offset** allows you to define a certain offset in time or component for either the whole time series or the selected
 (zoomed) time window.  Figure 4.4.7 shows an example of an offset within a time series and the offset dialog to correct
 this offset. 
+
 Figure 4.4.7: a) time series with an offset of 10 nT for almost 12 minutes. When using the offset button, the dialog window b) will open. Here you can provide offset values which are then applied to the time series.
 
 **Smooth** data sets support the same smoothing windows as the filter method. In principle smoothing does exactly the 
@@ -398,6 +399,33 @@ not yet possible to access any parameters, window sizes , colors etc. This will 
 
 ### 4.5 The DI panel
 
+The DI panel provides all necessary functions and methods to calculate basevalues and DI timeseries from basic/residual 
+DI fluxgate measurements.
+ 
+The upper part of the DI panel is dedicated to the definition of data sources. Firstly you need to provide access to 
+DI measurements data (DI data). Such DI data can either be located on your file system, within a MagPy database, or 
+provided by a web service. Supported data formats can be found in the basic MagPy manual. When clicking on DI data, 
+an input dialog will open asking you for a specific data source.
+
+In order to regard for geomagnetic variation throughout the DI measurement and obtaining basevalues you further 
+require variation data and measurements of F. Scalar F measurements can either be provided along with the DI data set, 
+as usually the case if you measure F before or after the DI measurements at the same pier, or you can provide access 
+to a continuously measured F using vario/scalar associated by a delta F value to consider pier differences. All MagPy 
+supported data formats are also supported for this analysis.  
+
+Before analyzing the data set, you can modify/set analysis parameters. Such parameter include pier differences like 
+delta F between continuously recording instruments and the DI pier, as well as threshold parameters etc. It is 
+recommended to provide such parameters along with the meta information of the DI data.  If you want to export baseline
+values in geographic XYZ coordinates please insert “XYZ” into the blvoutput field within the analysis parameter dialog.
+Please note: this will only work if the provided variation data is also from a XYZ oriented instruments
+and available in this coordinate system. 
+
+When finally using the analysis button, which will be enabled if sufficient information is provided, a DI analysis
+will be performed. The results will be written to the logging window and can be saved as ASCII txt files. The plot 
+panel will show the time series of resulting basevalues. By default the basevalues baseH, baseD and baseZ will be shown.
+Other parameters like collimation angles are available (4.1.1). Details on the DI-flux evaluation method used by 
+MagPy are summarized in the general MagPy README on github, chapter 7.
+
 ### 4.6 The report panel
 
 The report panel will provide a summary of all analysis steps which have been performed so far. This report might be
@@ -407,6 +435,104 @@ txt file by using the **Save log** button.
 ### 4.7 The monitor panel
 
 ## 5. Application recipies for geomagnetic observatory data analysis
+
+### 5.1 Daily review of data and flagging
+
+### 5.2 DI analysis and adopted baselines
+
+Here you will get a step by step example about analyzing DI measurement data, obtaining basevalues, getting adopted 
+baselines and applying baseline corrections to variation data in order to produce adjusted, quasi-definitive and 
+definitive data sets. For this recipe we will use example3.txt, example5.sec, as well as DI measurement data in 
+example6a.txt and example6b.txt.
+
+Lets start with the input sheet. In the Input sheet dialog we click on Open DI data 
+and locate/open example6a.txt. Here you will have an example of a measurement using the residual method. It is 
+recommended to use serial number for unique identification of theodolite and fluxgate. Also a self-defined revision 
+number, for the theodolite might be useful to verify e.g. maintenance changes for fluxgate alignment and thus the
+collimation angles.
+
+MagPy DI data files usually contain only measurements directly connected to the DI pier. Thus theodolite measurements 
+are contained as well as F data prior to or after the directional measurements on the same pier. In order to analyze 
+such data and to calculate absolute values of declination D and inclination I for a specific time we will need to 
+consider magnetic field variations throughout the DI measurement period. For our example data we need both, a
+continuously recording variometer and also scalar data, as well as the pier differences between continuously recording
+instruments and the DI pier.
+
+In order to analyze DI data files we now go to the DI panel, and firstly load DI data files into the memory.
+The source information will then show “file” and you will see that two data sets from station code “WIC” have been 
+loaded. Next, we will have to access variometer and scalar data for this time range. Such data is contained in
+example5.sec. 
+
+Example5.sec contains variation data and independent F from the observatory. In order to consider the pier difference
+between F and DI pier, please modify Analysis Parameter. 
+
+For our analysis the delta F values have already been considered in the F record and other deltas are negligible.
+We can directly use the Analyze button. This will result in a plot of D,I,F and basevalues as well as a detailed
+report on the results in the Analysis Log window of the DI panel (Figure 6.2.1). 
+
+Figure 6.2.1: After DI analysis is finished, the screen will look similar as in this figure. You can change padding
+ranges in the graph using the plot options method of the Data panel. 
+
+Finally we export baseline and analysis data. The recommended export formats are either PYCDF or PYSTR as those will
+contain all analysis information and you can create i.e. INTERMAGNET IBVF files anytime later from them.
+
+For our example we choose PYSTR as output format, modify name, coverage and path, and check the contents of the 
+newly created file using a text editor of your choice. You will see that all analysis information is contained 
+in this time series file. For further analysis we will now switch to example3.txt as this file contains such DI 
+analysis data for one year.
+
+When opening this data file you get figure 6.2.2. You will find many individual DI measurements for one year. All 
+these measurements are performed at a single pier (“A2”) and for analysis we used the same variometer/scalar 
+instruments, thus obtaining base values for these instruments. Please note that measurements from other piers are 
+saved in separate files.  
+
+Figure 6.2.2: Basevalues for 2018 for pier A2 using a Lemi036 variometer and a GP20S3 potassium scalar magnetometer
+as reference. Only measurements of s specific theodolite are shown. The gaps in May and June are related to the usage
+of various other DI instruments in preparation of an IAGA workshop. Checkout the Conrad Observatory Yearbook 2018 for
+complete data.
+
+
+Having the spot basevalues we can now continue with fitting an adopted baseline. It is obvious that a simple linear 
+fit will do a good job here. Anyway, for demonstration purposes we will use two separate fits to describe the baseline.
+
+In the fit dialog we add the first fit, a cubic spline,  as shown in figure 6.2.3a. Then we add a second fit, a linear
+least-squares according to figure 6.2.3b.  
+
+Figure 6.2.3: Fit dialog for first and second fit.
+Both fits will be shown in the plot (Figure 6.2.4) and also be automatically recognized as fits to basevalue data in
+MagPy’s memory. 
+Figure 6.2.4: Adopted baseline.
+
+If you are satisfied with that you can save a BLV file. Please note that the file name will automatically be set with
+the correct year. Now we want to use the adopted baseline for baseline correction of the variation data. Therefore 
+we load such variation data (example5.sec). After that you will find the button Baseline on the Analysis page enabled.
+Time to use it.
+
+A dialog will open as shown in figure 6.2.6. This dialog will let you choose from different baseline data sets and
+their fitting options within the memory from the upper drop down box. You can also redefine an adopted baseline by
+using  Change Fit. For our baseline we just use the latest (final) input in the drop down menu, telling us that this
+will use a linear-least square based on example3.txt contents for our data set.
+
+Figure 6.2.5: Baseline adoption dialog.
+
+After using Adopt baseline an information dialog (Figure 6.2.6) will pop-up telling you that the baseline correction
+has been calculated. Its functional parameters are now contained in the meta information of the variation data set.
+Yet, the correction has not yet been performed. If you want you can now save your variation data set as an PYCDF
+archive which will store the functional parameters and, if available, also any flagging information currently connected
+with the data set. This way you can keep a single archive file which contains basically every data analysis step
+between raw data and definitive products. 
+
+Figure 6.2.6: Information pop-up that an adopted baseline has been calculated and added to the variation meta data.
+
+In order to apply baseline correction go to 
+
+This will apply the functional parameter and you will now have a baseline corrected record for publication. 
+
+Special cases for XYZ basevalues (since v1.0.1): 
+Please note that MagPy by defaults expects basevalues for HDZ (see example3). When applying these basevalues the
+D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy
+basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the
+correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt). 
 
 ## 6. Additional applications
 

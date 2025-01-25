@@ -603,7 +603,8 @@ ignored. This mode will give you an exact reproduction of the contained adopted 
 
 If you want to plot data and original adopted basevalues use
 
-        mp.tsplot([basevalues,adoptedbase], [['dx','dy','dz']], symbols=[['o','o','o'],['-','-','-']])
+        mp.tsplo    tcol = teststr
+t([basevalues,adoptedbase], [['dx','dy','dz']], symbols=[['o','o','o'],['-','-','-']])
 
 The meta information is accessible within the data header. MagPy is designed to be strongly related to underlying 
 instruments, as defined by SensorID's and PierID's. BLV files are strongly instrument related as the baseline is always

@@ -1494,12 +1494,7 @@ def readBLV1_2(filename, headonly=False, **kwargs):
     # read file and split text into channels
     stream = DataStream()
     # Check whether header infromation is already present
-    if stream.header is None:
-        headers = {}
-    else:
-        headers = stream.header
     headers = {}
-
     data = []
     key = None
 
@@ -1642,7 +1637,7 @@ def readBLV1_2(filename, headonly=False, **kwargs):
             elif line.startswith('*'):
                 # data info
                 starfound.append('*')
-                if len(starfound) > 1: # Comment section starts here
+                if len(starfound) > 1 and not mode == 'adopted': # Comment section starts here
                     if debug:
                         print("Fitting from {} to {}".format(farray[0][0], farray[0][-1]))
                     tempstream = DataStream(header={}, ndarray=np.asarray([np.asarray(el) for el in farray],dtype=object))
@@ -1652,6 +1647,7 @@ def readBLV1_2(filename, headonly=False, **kwargs):
                     if len(tempstream.ndarray[fpos]) > 0:
                         func2 = tempstream.fit([KEYLIST[fpos]],fitfunc='spline')
                         funclist.append(func2)
+
             elif len(starfound) > 1: # Comment section starts here
                 logger.debug("Found comment section", starfound)
                 if block[0].startswith('Scalar') and len(block) > 1:
@@ -3165,6 +3161,7 @@ if __name__ == '__main__':
             print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
         testset = 'BLV'
         try:
+            print ("Running BLV test")
             from magpy.stream import example3
             filename = os.path.join('/tmp',
                                     '{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test, '%Y%m%d-%H%M')))
@@ -3172,8 +3169,8 @@ if __name__ == '__main__':
             ts = datetime.now(timezone.utc).replace(tzinfo=None)
             base = read(example3)
             # fit adopted baseline
-            func1 = base.fit(['dx', 'dy', 'dz'], fitfunc='spline', knotstep=0.33, endtime='2018-07-15')
-            func2 = base.fit(['dx', 'dy', 'dz'], fitfunc='spline', knotstep=0.05, starttime='2018-07-15')
+            func1 = base.fit(['dx', 'dy', 'dz'], fitfunc='spline', knotstep=0.33, endtime='2023-07-15')
+            func2 = base.fit(['dx', 'dy', 'dz'], fitfunc='spline', knotstep=0.05, starttime='2023-07-15')
             func = [func1, func2]
             # no extrapolation to a endtime
             base.header['DataFunctionObject'] = [func1, func2]
