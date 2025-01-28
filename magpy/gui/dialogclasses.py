@@ -3881,7 +3881,8 @@ class LoadDIDialog(wx.Dialog):
             content['mindatetime'] = midate
             content['maxdatetime'] = madate+timedelta(days=1)
             content['source'] = 'db'
-            absolutes = self.db.diline_from_db(starttime=midate, endtime=madate, tablename=ditables[0], sql=sql)
+            # add one hour to the timerange to make sure that data sets are all loaded even if start time lightly differs
+            absolutes = self.db.diline_from_db(starttime=midate-timedelta(hours=1), endtime=madate+timedelta(hours=1), tablename=ditables[0], sql=sql)
             content['absdata'] = absolutes
             content['azimuth'] = absolutes[0].azimuth
             self.pathlist = content
@@ -4049,8 +4050,6 @@ class LoadVarioScalarDialog(wx.Dialog):
         self.discalarws = 'url'
         self.variopath_short = self.getShort(self.defaultvariopath)
         self.scalarpath_short = self.getShort(self.defaultscalarpath)
-        print ("ANOTHER STUPID ERROR", self.defaultvariopath)
-        print (self.variopath_short)
 
         # the following variables contain the resulting source information for absoluteAnalysis
         self.variosource = ''
@@ -4077,8 +4076,13 @@ class LoadVarioScalarDialog(wx.Dialog):
         sql = "SELECT DataID, ColumnContents, ColumnUnits FROM DATAINFO"
         cursor.execute(sql)
         output = cursor.fetchall()
-        #print ("Test", output)
-        datainfoidlist = [elem[0] for elem in output if search in elem[1].lower() and 'nT' in  elem[2]]
+        datainfoidlist = []
+        if search == 'f':
+            search = [',f',',s']
+        else:
+            search = ['x,y,z','h,e,z']
+        for se in search:
+            datainfoidlist += [elem[0] for elem in output if se in elem[1].lower() and 'nT' in elem[2]]
         return datainfoidlist
 
     # Widgets
@@ -4095,15 +4099,15 @@ class LoadVarioScalarDialog(wx.Dialog):
         self.ssource2CheckBox = wx.CheckBox(self, label='DB',size=(160,30))
         self.ssource3CheckBox = wx.CheckBox(self, label='webservice',size=(160,30))
 
-        self.varioButton = wx.Button(self, -1, self.variopath_short, size=(210,30))
-        self.scalarButton = wx.Button(self, -1, self.scalarpath_short, size=(210,30))
+        self.varioButton = wx.Button(self, -1, label=self.variopath_short, size=(210,30))
+        self.scalarButton = wx.Button(self, -1, label=self.scalarpath_short, size=(210,30))
 
         self.varioDBComboBox = wx.ComboBox(self, choices=self.variotables,
                  style=wx.CB_DROPDOWN, value=self.defaultvariotable,size=(210,-1))
         self.scalarDBComboBox = wx.ComboBox(self, choices=self.scalartables,
                  style=wx.CB_DROPDOWN, value=self.defaultscalartable,size=(210,-1))
-        self.varioWSButton = wx.Button(self, -1, self.mainsource ,size=(210,30))
-        self.scalarWSButton = wx.Button(self, -1, self.mainsource ,size=(210,30))
+        self.varioWSButton = wx.Button(self, -1, label=self.mainsource ,size=(210,30))
+        self.scalarWSButton = wx.Button(self, -1, label=self.mainsource ,size=(210,30))
 
         self.varioExtComboBox = wx.ComboBox(self, choices=self.varioext,
                  style=wx.CB_DROPDOWN, value=self.varioext[0],size=(80,-1))

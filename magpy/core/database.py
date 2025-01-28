@@ -2239,7 +2239,7 @@ REMOVED:
 
         # Identify version (MagPy1.x - string, MagPy2.x json)
         if row.find("_") > 0:
-            print (" get_pier: found old dictionary string - updated elsewhere - where this data is filled in")
+            print (" get_pier: found MagPy1.x structure in database - will be deprecated")
             d = string2dict(row)
         else:
             d = json.loads(row)
@@ -2430,23 +2430,24 @@ REMOVED:
 
             columns = rows.T
             array = [[] for el in stream.KEYLIST]
-            for idx,key in enumerate(keys):
-                pos = stream.KEYLIST.index(key)
-                if not False in checkEqual3(columns[idx]):
-                    print("readDB: Found identical values only:{}".format(key))
-                    col = columns[idx]
-                    if len(col) < 1 or str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find(
+            if columns:
+                for idx,key in enumerate(keys):
+                    pos = stream.KEYLIST.index(key)
+                    if not False in checkEqual3(columns[idx]):
+                        print("readDB: Found identical values only:{}".format(key))
+                        col = columns[idx]
+                        if len(col) < 1 or str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find(
                                 '0000000000000000') or str(col[0]).find('xyz'):
-                        array[pos] = np.asarray([])
+                            array[pos] = np.asarray([])
+                        else:
+                            array[pos] = col[:1]
+                    elif key in stream.NUMKEYLIST:
+                        array[pos] = np.asarray(columns[idx], dtype=np.float64)
+                    elif key.endswith('time'):
+                        array[pos] = np.asarray(columns[idx], dtype=datetime)
                     else:
-                        array[pos] = col[:1]
-                elif key in stream.NUMKEYLIST:
-                    array[pos] = np.asarray(columns[idx], dtype=np.float64)
-                elif key.endswith('time'):
-                    array[pos] = np.asarray(columns[idx], dtype=datetime)
-                else:
-                    array[pos] = np.asarray(columns[idx], dtype=object)
-                # consider nan elemenets - done
+                        array[pos] = np.asarray(columns[idx], dtype=object)
+                    # consider nan elemenets - done
 
             stream.ndarray = np.asarray(array, dtype=object)
             stream.header = self.fields_to_dict(table)

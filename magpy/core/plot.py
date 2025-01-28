@@ -49,6 +49,17 @@ import matplotlib.patches as patches
 
 edgecolor = [0.8, 0.8, 0.8]
 
+"""
+|class | method | since version | until version | runtime test | result verification | manual | *tested by |
+|----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
+|**core.plot** |  |             |               |              |                     |        | |
+|    | tsplot          | 2.0.0  |               | yes          | -                   | 4.1    | |
+|    | testtimestep    | 2.0.0  |               | yes          | yes                 |        | tsplot |
+|    | fill_list       | 2.0.0  |               | yes          | yes                 |        | tsplot |
+|    | psplot          | 2.0.0  |               | yes          | -                   | 4.6    | |
+|    | spplot          | 2.0.0  |               | yes          | not working in gui  | 4.7    | |
+
+"""
 
 class AutoScaleY():
     # Used to rescale all y axes in a multicomponent plot to optimal range

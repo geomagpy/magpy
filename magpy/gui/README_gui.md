@@ -458,10 +458,15 @@ consider magnetic field variations throughout the DI measurement period. For our
 continuously recording variometer and also scalar data, as well as the pier differences between continuously recording
 instruments and the DI pier.
 
-In order to analyze DI data files we now go to the DI panel, and firstly load DI data files into the memory.
-The source information will then show “file” and you will see that two data sets from station code “WIC” have been 
-loaded. Next, we will have to access variometer and scalar data for this time range. Such data is contained in
-example5.sec. 
+In order to analyze DI data files we now go to the DI panel, and firstly load DI data files into the memory. You can
+get DI data from files of which MagPy Di files, AutoDIF abs data and USGS DI json structures are supported. If files
+are accessed, like example61 and example6b of the MagPy package, source information will then show “file”. You will
+need to enter a station code "WIC" as this code is not contained in the example files.  
+
+Next, we will have to access variometer and scalar data for this time range. Such data is contained in
+example5.sec. You can also select a database as variometer and scaler data source, if connected. Please note
+that the DATAINFO table is essential for selecting such data and only variometer data containing XYZ or HEZ components
+are shown. Scalar data is limited to F or S notations. Finally you can also choose a webservice as data source. 
 
 Example5.sec contains variation data and independent F from the observatory. In order to consider the pier difference
 between F and DI pier, please modify Analysis Parameter. 

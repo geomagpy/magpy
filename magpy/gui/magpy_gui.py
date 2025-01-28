@@ -2241,8 +2241,18 @@ class MainFrame(wx.Frame):
         sourcelist = ['file','database','webservice']
         station_analysiscont = self.analysisdict.get('stations').get(stationid)
         if station_analysiscont and isinstance(station_analysiscont, dict):
-            self.menu_p.abs_page.varioTextCtrl.SetValue(display(station_analysiscont.get('divariopath','')))
-            self.menu_p.abs_page.scalarTextCtrl.SetValue(display(station_analysiscont.get('discalarpath','')))
+            if int(station_analysiscont.get('divariosource')) == 0:
+                self.menu_p.abs_page.varioTextCtrl.SetValue(display(station_analysiscont.get('divariopath','')))
+            elif int(station_analysiscont.get('divariosource')) == 1:
+                self.menu_p.abs_page.varioTextCtrl.SetValue(display(station_analysiscont.get('divarioDBinst', '')))
+            else:
+                self.menu_p.abs_page.varioTextCtrl.SetValue(display(station_analysiscont.get('divariourl', '')))
+            if int(station_analysiscont.get('discalarsource')) == 0:
+                self.menu_p.abs_page.scalarTextCtrl.SetValue(display(station_analysiscont.get('discalarpath','')))
+            elif int(station_analysiscont.get('discalarsource')) == 1:
+                self.menu_p.abs_page.scalarTextCtrl.SetValue(display(station_analysiscont.get('discalarDBinst','')))
+            else:
+                self.menu_p.abs_page.scalarTextCtrl.SetValue(display(station_analysiscont.get('discalarurl','')))
             self.menu_p.abs_page.VarioSourceLabel.SetLabel("Vario: from {}".format(sourcelist[int(station_analysiscont.get('divariosource'))]))
             self.menu_p.abs_page.ScalarSourceLabel.SetLabel("Scalar: from {}".format(sourcelist[int(station_analysiscont.get('discalarsource'))]))
 
@@ -2366,12 +2376,11 @@ class MainFrame(wx.Frame):
 
         # 2. get the existing plotdict input
         plotcont = self.plotdict.get(streamid)
-        shownkeys = plotcont.get('shownkeys',keys)
         # LIMIT shown keys to numerical ones
-        shownkeys = [key for key in shownkeys if key in stream.NUMKEYLIST]
+        lkeys = [key for key in keys if key in stream.NUMKEYLIST]
+        shownkeys = plotcont.get('shownkeys',lkeys)
         if not shownkeys or len(shownkeys) > len(keys):
-            shownkeys = keys
-            shownkeys = [key for key in shownkeys if key in stream.NUMKEYLIST]
+            shownkeys = lkeys
             plotcont['shownkeys'] = shownkeys
         lenshownkeys = max(np.array(shownkeys).shape) # ignores [[1,2,3]] or [1,2,3]
 
@@ -2412,25 +2421,27 @@ class MainFrame(wx.Frame):
         # ------------------------------
         if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
             shownkeys = plotcont.get('shownkeys')
-            if len(stream._get_column('x')) > 0 and not stream.header.get('DataFormat') == 'MagPyDailyMean':   # is a PYSTR or PYCDF file with basevalues
-                shownkeys = ['dx','dy','dz']
-                plotcont['padding'] = [5,0.05,5]
-            elif not len(stream._get_column('x')) > 0 :                  # is a BLV file with basevalues
-                shownkeys = ['dx','dy','dz']
-                plotcont['padding'] = [5,0.05,5]
-            dfcol = stream._get_column('df')
-            # check if df contains valid data
-            if not np.isnan(dfcol).all():
-                shownkeys.append('df')
-                plotcont['padding'].append(2)
-            # If dailymeans were calcluated
-            if isinstance(plotcont.get('errorbars'), (list,tuple)) and len(plotcont.get('errorbars')) > 0:
-                shownkeys = ['x','y','z','f']
-                shownkeys = shownkeys[:len(plotcont.get('errorbars'))]
-            plotcont['symbols'] =  ['.'] * len(shownkeys)
-            plotcont['shownkeys'] = shownkeys
-            colors = plotcont['colors']
-            plotcont['colors'] = colors[:len(shownkeys)]
+            # only for initial plot - not if selection or drop is chosen
+            if shownkeys == lkeys:
+                if len(stream._get_column('x')) > 0 and not stream.header.get('DataFormat') == 'MagPyDailyMean':   # is a PYSTR or PYCDF file with basevalues
+                    shownkeys = ['dx','dy','dz']
+                    plotcont['padding'] = [5,0.05,5]
+                elif not len(stream._get_column('x')) > 0 :                  # is a BLV file with basevalues
+                    shownkeys = ['dx','dy','dz']
+                    plotcont['padding'] = [5,0.05,5]
+                dfcol = stream._get_column('df')
+                # check if df contains valid data
+                if not np.isnan(dfcol).all():
+                    shownkeys.append('df')
+                    plotcont['padding'].append(2)
+                # If dailymeans were calcluated
+                if isinstance(plotcont.get('errorbars'), (list,tuple)) and len(plotcont.get('errorbars')) > 0:
+                    shownkeys = ['x','y','z','f']
+                    shownkeys = shownkeys[:len(plotcont.get('errorbars'))]
+                plotcont['symbols'] =  ['.'] * len(shownkeys)
+                plotcont['shownkeys'] = shownkeys
+                colors = plotcont['colors']
+                plotcont['colors'] = colors[:len(shownkeys)]
 
         # 5. If K values are shown: preselect bar chart
         # ------------------------------
@@ -5154,6 +5165,16 @@ class MainFrame(wx.Frame):
         defaultstation = self.analysisdict.get('defaultstation')
         allstations = self.analysisdict.get('stations')
         dicont = allstations.get(defaultstation,{})
+        print ("CHECKING", defaultstation, dicont)
+        if not dicont:
+            # identify a non-empty dictionary in allstations and get this one
+            stats = [s for s in allstations]
+            for stat in stats:
+                dicont = allstations.get(stat, {})
+                if dicont:
+                    defaultstation = stat
+                    break
+        print ("CHECKING again", defaultstation, dicont)
         newdicont = dicont.copy()
         defaultpath = dicont.get('didatapath','')
         debug = False
@@ -5336,10 +5357,23 @@ class MainFrame(wx.Frame):
         defaultstation = self.analysisdict.get('defaultstation')
         allstations = self.analysisdict.get('stations')
         dicont = allstations.get(defaultstation,{})
-        debug = False
+        debug = True
 
-        divariopath = dicont.get('divariopath','')
-        discalarpath = dicont.get('discalarpath','')
+        # Select the chosen source for variometer and scalar data
+        divariosource = dicont.get('divariosource')
+        discalarsource = dicont.get('discalarsource')
+        if divariosource in [0,'0']:
+            divario = {'file': dicont.get('divariopath','')}
+        elif divariosource in [1,'1']:
+            divario = {'db': (db,dicont.get('divarioDBinst'))}
+        else:
+            divario = {'file': dicont.get('divariourl')}
+        if discalarsource in [0,'0']:
+            discalar = {'file': dicont.get('discalarpath','')}
+        elif discalarsource in [1,'1']:
+            discalar = {'db': (db,dicont.get('discalarDBinst'))}
+        else:
+            discalar = {'file': dicont.get('discalarurl')}
 
         primaryparametersource = self.menu_p.abs_page.parameterRadioBox.GetStringSelection()
 
@@ -5361,7 +5395,7 @@ class MainFrame(wx.Frame):
         if self.active_didata:
             # Identify source -> Future version: use absolutClass which contains raw data
             #                    and necessary variation,scalar data
-            activatereport = True
+            activatereport = False
             prev_redir = None
             if activatereport:
                 if debug:
@@ -5419,8 +5453,8 @@ class MainFrame(wx.Frame):
                     print ("Some variables to test:")
 
                 #TODO diusedb
-                print (divariopath, discalarpath)
-                absstream = di.absolute_analysis(absdata, divariopath, discalarpath, db=db, magrotation=magrotation,
+                print (divario, discalar)
+                absstream = di.absolute_analysis(absdata, divario, discalar, db=db, magrotation=magrotation,
                                                  annualmeans=dicont.get('diannualmeans'), expD=dicont.get('diexpD'),
                                                  expI=dicont.get('diexpI'), stationid=stationid,
                                                  pier=pier, alpha=dicont.get('dialpha'), beta=dicont.get('dibeta'),
@@ -5433,7 +5467,7 @@ class MainFrame(wx.Frame):
                 absstream = DataStream()
 
             try:
-                if not divariopath == '' and not discalarpath == '':
+                if not divario == '' and not discalar == '':
                     variid = absstream.header.get('SensorID').split('_')[1]
                     scalid = absstream.header.get('SensorID').split('_')[2]
                     msgtxt = ''
