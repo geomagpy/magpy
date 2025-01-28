@@ -4049,6 +4049,8 @@ class LoadVarioScalarDialog(wx.Dialog):
         self.discalarws = 'url'
         self.variopath_short = self.getShort(self.defaultvariopath)
         self.scalarpath_short = self.getShort(self.defaultscalarpath)
+        print ("ANOTHER STUPID ERROR", self.defaultvariopath)
+        print (self.variopath_short)
 
         # the following variables contain the resulting source information for absoluteAnalysis
         self.variosource = ''
@@ -4093,8 +4095,8 @@ class LoadVarioScalarDialog(wx.Dialog):
         self.ssource2CheckBox = wx.CheckBox(self, label='DB',size=(160,30))
         self.ssource3CheckBox = wx.CheckBox(self, label='webservice',size=(160,30))
 
-        self.varioButton = wx.Button(self, -1, self.variopath_short,size=(210,30))
-        self.scalarButton = wx.Button(self, -1, self.scalarpath_short,size=(210,30))
+        self.varioButton = wx.Button(self, -1, self.variopath_short, size=(210,30))
+        self.scalarButton = wx.Button(self, -1, self.scalarpath_short, size=(210,30))
 
         self.varioDBComboBox = wx.ComboBox(self, choices=self.variotables,
                  style=wx.CB_DROPDOWN, value=self.defaultvariotable,size=(210,-1))
@@ -7320,7 +7322,8 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             layoutcheckids.append('(self.id{}CheckBox, noOptions)'.format(selid))
             layouttextids.append('(self.id{}TextCtrl, expandOption)'.format(selid))
             layoutbuttonids.append('(self.id{}KeyButton, expandOption)'.format(selid))
-            self.bindkeys.append([selid,'self.id{}KeyButton.Bind(wx.EVT_BUTTON, partial( self.on_get_keys, activeid = selid ) )'.format(selid)])
+            #self.bindkeys.append([selid,'self.id{}KeyButton.Bind(wx.EVT_BUTTON, partial( self.on_get_keys, activeid = selid ) )'.format(selid)])
+            self.bindkeys.append([selid,'self.id{}KeyButton.Bind(wx.EVT_BUTTON, lambda evt, activeid={}: self.on_get_keys(evt, activeid) )'.format(selid,selid)])
             exec('self.id{}CheckBox = wx.CheckBox(self, label="{}")'.format(selid,selid))
             exec('self.id{}TextCtrl = wx.TextCtrl(self, value="{}", size=(320,-1))'.format(selid,label))
             exec('self.id{}KeyButton = wx.Button(self,-1,"Keys: {}", size=(160,-1))'.format(selid, ",".join(shownkeys)))
@@ -7395,6 +7398,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         self.plotButton.Bind(wx.EVT_BUTTON, self.onPlotButton)
         for elem in self.bindkeys:
             selid = elem[0]
+            print (elem[1])
             exec(elem[1])
 
 

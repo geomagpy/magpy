@@ -5186,26 +5186,29 @@ class MainFrame(wx.Frame):
         if debug:
             print ("Now get parameters from active didata and update analysisdict[stations].get(stationid)")
         stationid = self.active_didata.get('station')
-        if stationid == defaultstation:
-            # that should be the normal case
-            pass
-        elif stationid in allstations:
-            self.analysisdict['defaultstation'] = stationid
-            if debug:
-                print ("DI analysis: Switching default station to existing input of {}".format(stationid))
+
+        if stationid and self.active_didata:
+            if stationid == defaultstation:
+                # that should be the normal case
+                pass
+            elif stationid in allstations:
+                self.analysisdict['defaultstation'] = stationid
+                if debug:
+                    print ("DI analysis: Switching default station to existing input of {}".format(stationid))
+            else:
+                # create a new stationinput
+                self.analysisdict['defaultstation'] = stationid
+                if debug:
+                    print("DI analysis: Creating new station input {}".format(stationid))
+            newdicont['dipier'] = self.active_didata.get('selectedpier')
+            newdicont['diazimuth'] = self.active_didata.get('azimuth')
+            allstations[stationid] = newdicont
+            self.analysisdict['stations'] = allstations
         else:
-            # create a new stationinput
-            self.analysisdict['defaultstation'] = stationid
-            if debug:
-                print("DI analysis: Creating new station input {}".format(stationid))
-        newdicont['dipier'] = self.active_didata.get('selectedpier')
-        newdicont['diazimuth'] = self.active_didata.get('azimuth')
-        allstations[stationid] = newdicont
-        self.analysisdict['stations'] = allstations
-
-        # to be updated: if no stationid -> defaultstation, else if stationid not existing then create
-        # update selected dipier, diazimuth, diid etc.
-
+            msgtxt = "Could not identify DI data.\n Please check your data source."
+            dlg = wx.MessageDialog(self, msgtxt, "DI data failed", wx.OK | wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
 
     def di_onDIParameter(self,event):
         """
@@ -5416,6 +5419,7 @@ class MainFrame(wx.Frame):
                     print ("Some variables to test:")
 
                 #TODO diusedb
+                print (divariopath, discalarpath)
                 absstream = di.absolute_analysis(absdata, divariopath, discalarpath, db=db, magrotation=magrotation,
                                                  annualmeans=dicont.get('diannualmeans'), expD=dicont.get('diexpD'),
                                                  expI=dicont.get('diexpI'), stationid=stationid,

@@ -603,9 +603,7 @@ REMOVED:
 
         # check for appropriate sensorid
         loggerdatabase.debug("dbdatainfo: Reselecting SensorID")
-        # print "dbdatainfo: (1)", sensorid, datakeydict
         sensorid = self.sensorinfo(sensorid, datakeydict)
-        # print "dbdatainfo: (2)", sensorid
         if 'SensorID' in datainfohead:
             index = datainfohead.index('SensorID')
             datainfovalue[index] = sensorid
@@ -2894,10 +2892,10 @@ REMOVED:
             rsr = datastream.samplingrate()
 
             # Updating DATAINFO, SENSORS and STATIONS
-            # TODO: Abolute function object
+            # TODO: Absolute function object
             # Current solution: remove it
             datastream.header['DataAbsFunctionObject'] = ''
-            tablename = self.datainfo(datastream.header['SensorID'], datastream.header, None, datastream.header.get('StationID'))
+            tablename = self.datainfo(datastream.header.get('SensorID'), datastream.header, None, datastream.header.get('StationID'))
 
             #print ("After", tablename, datastream.header.get('SensorID'))
 
