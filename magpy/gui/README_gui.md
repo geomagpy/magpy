@@ -420,11 +420,16 @@ values in geographic XYZ coordinates please insert “XYZ” into the blvoutput 
 Please note: this will only work if the provided variation data is also from a XYZ oriented instruments
 and available in this coordinate system. 
 
-When finally using the analysis button, which will be enabled if sufficient information is provided, a DI analysis
-will be performed. The results will be written to the logging window and can be saved as ASCII txt files. The plot 
-panel will show the time series of resulting basevalues. By default the basevalues baseH, baseD and baseZ will be shown.
-Other parameters like collimation angles are available (4.1.1). Details on the DI-flux evaluation method used by 
-MagPy are summarized in the general MagPy README on github, chapter 7.
+When finally using the **Analyze** button, which will be enabled if sufficient information is provided, a DI analysis
+will be performed. The results will be written to the logging window and can be saved as ASCII txt files by using the 
+**Save Log** button. The plot panel will show the time series of resulting basevalues if available. 
+By default the basevalues baseH, baseD and baseZ will be shown. An empty plot will be created if basevalues could not
+be calculated i.e. no vaild variometer data is available. D, I and eventually F however will be available even then und
+can be selected on the **Data** panel.
+Explanations for the shown results and other parameters like collimation angles, as well as further details on the 
+DI-flux evaluation method used by MagPy are summarized in the general MagPy README.md on github, chapter 7.
+
+Before starting a new analysis you might want to clear the report box by using the **Clear Log** button.
 
 ### 4.6 The report panel
 

@@ -28,6 +28,7 @@ import magpy.core.plot as mp
 from magpy.absolutes import *
 from magpy.core import methods
 from magpy.core import database
+from magpy.core import flagging
 from magpy.core import activity
 from magpy.version import __version__
 from magpy.gui.streampage import *
@@ -108,60 +109,66 @@ Major methods:              major_method
 |  MainFrame     | _open_stream  |     2.0.0  |             | level 0    |               |        | file_on_open  |
 |  MainFrame     | _update_statistics | 2.0.0  |            | level 0    |               |        | _do_plot  |
 |  MainFrame     | changeStatusbar  |  2.0.0  |             | level 2    |               |        | everywhere  |
-|  MainFrame     | file_on_open_file  | 2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | file_on_open_dir  | 1.0.0  |  removed    | level 1    |               |        |   |
-|  MainFrame     | file_on_open_url  | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 1    |               |        |   |
-|  MainFrame     | file_on_open_db  |  2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | file_on_export |    2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | file_on_quit  |     2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | db_on_connect  |    2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | db_on_init  |       2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | memory_select |     2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | options_init |      2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | options_plot   |    2.0.0  |             |            |               |        |   |
-|  MainFrame     | options_di   |      2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | help_about  |       2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | d_get_adjacent_stream | 2.0.0  |         | level 2    |               |        |   |
-|  MainFrame     | d_onNextButton |    2.0.0  |             | level 2    |               |        | get_adjacent  |
-|  MainFrame     | d_onPreviousButton |  2.0.0  |           | level 2    |               |        | get_adjacent  |
-|  MainFrame     | d_onTrimButton |    2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | d_onSelectButton |  2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | d_onDropButton |    2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | d_onExtrcatButton | 2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | d_onGetGapsButton | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | d_onStatusButton |  2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | m_onDataButton |    2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | m_onSensorButton |  2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | m_onStationButton | 2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | a_onDerivativeButton | 2.0.0  |          | level 2    |               |        |   |
-|  MainFrame     | a_onDeltaFButton  | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | a_onRotationButton | 2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | a_onMeanButton   |  2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | a_onMaxButton |     2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | a_onMinButton |     2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | a_onFitButton    |  2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | a_onFilterButton |  2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | a_onOffsetButton |  2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               |        |   |
-|  MainFrame     | a_onActivityButton |  2.0.0  |           | level 1    |               |        |   |
-|  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | a_onDailyMeansButton | 2.0.0  |          | level 2    |               |        |   |
-|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 1    |               |        |   |
-|  MainFrame     | a_onApplyBCButton | 2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | a_onPowerButton |   2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | file_on_open_file  | 2.0.0  |            | level 2    |               | 3.2    |   |
+|  MainFrame     | file_on_open_dir  | 1.0.0  |  removed    | level 1    |               | 3.2    |   |
+|  MainFrame     | file_on_open_url  | 2.0.0  |             | level 2    |               | 3.2    |   |
+|  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 1    |               | 3.2    |   |
+|  MainFrame     | file_on_open_db  |  2.0.0  |             | level 2    |               | 3.2    |   |
+|  MainFrame     | file_on_export |    2.0.0  |             | level 1    |               | 3.2    |   |
+|  MainFrame     | file_on_quit  |     2.0.0  |             | level 1    |               | 3.2    |   |
+|  MainFrame     | db_on_connect  |    2.0.0  |             | level 2    |               | 3.3    |   |
+|  MainFrame     | db_on_init  |       2.0.0  |             | level 2    |               | 3.3    |   |
+|  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               | 3.4    |   |
+|  MainFrame     | memory_select |     2.0.0  |             | level 1    |               | 3.5    |   |
+|  MainFrame     | options_init |      2.0.0  |             | level 2    |               | 3.7    |   |
+|  MainFrame     | options_plot   |    2.0.0  |             |            |               | 3.7    |   |
+|  MainFrame     | options_di   |      2.0.0  |             | level 2    |               | 3.7    |   |
+|  MainFrame     | help_about  |       2.0.0  |             | level 2    |               | 3.8    |   |
+|  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               | 3.8    |   |
+|  MainFrame     | help_write_formats | 2.0.0  |            | level 2    |               | 3.8    |   |
+|  MainFrame     | help_open_log     | 2.0.0  |             | level 2    |               | 3.8    |   |
+|  MainFrame     | d_get_adjacent_stream | 2.0.0  |         | level 2    |               | 4.1    |   |
+|  MainFrame     | d_onNextButton |    2.0.0  |             | level 2    |               | 4.1    | get_adjacent  |
+|  MainFrame     | d_onPreviousButton |  2.0.0  |           | level 2    |               | 4.1    | get_adjacent  |
+|  MainFrame     | d_onTrimButton |    2.0.0  |             | level 1    |               | 4.1    |   |
+|  MainFrame     | d_onSelectButton |  2.0.0  |             | level 2    |               | 4.1    |   |
+|  MainFrame     | d_onDropButton |    2.0.0  |             | level 1    |               | 4.1    |   |
+|  MainFrame     | d_onExtrcatButton | 2.0.0  |             | level 1    |               | 4.1    |   |
+|  MainFrame     | d_onGetGapsButton | 2.0.0  |             | level 2    |               | 4.1    |   |
+|  MainFrame     | d_onStatusButton |  2.0.0  |             | level 1    |               | 4.1    |   |
+|  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 2    |               |        |   |
+|  MainFrame     | flag_onFlagOutlier | 2.0.0  |            | level 2    |               |        |   |
+|  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 0    |               |        |   |
+
+|  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
+|  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
+|  MainFrame     | m_onDataButton |    2.0.0  |             | level 1    |               | 4.3    |   |
+|  MainFrame     | m_onSensorButton |  2.0.0  |             | level 1    |               | 4.3    |   |
+|  MainFrame     | m_onStationButton | 2.0.0  |             | level 1    |               | 4.3    |   |
+|  MainFrame     | a_onDerivativeButton | 2.0.0  |          | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onDeltaFButton  | 2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onRotationButton | 2.0.0  |            | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onMeanButton   |  2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onMaxButton |     2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onMinButton |     2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onFitButton    |  2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onFilterButton |  2.0.0  |             | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onOffsetButton |  2.0.0  |             | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onActivityButton |  2.0.0  |           | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onDailyMeansButton | 2.0.0  |          | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onApplyBCButton | 2.0.0  |             | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onPowerButton |   2.0.0  |             | level 1    |               | 4.4    |   |
 |  MainFrame     | a_onSpectrogramButton | 2.0.0  |         | level 0    |               |        |   |
-|  MainFrame     | di_onLoadDIButton |  2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | di_onDefineVarioScalar |  2.0.0  |       | level 1    |               |        |   |
-|  MainFrame     | di_onDIAnalysis |   2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | di_onDIParameter |   2.0.0  |            | level 1    |               |        |   |
+|  MainFrame     | di_onLoadDIButton |  2.0.0  |            | level 2    |               | 4.5,5.2 |   |
+|  MainFrame     | di_onDefineVarioScalar |  2.0.0  |       | level 2    |               | 4.5,5.2  |   |
+|  MainFrame     | di_onDIAnalysis |   2.0.0  |             | level 2    |               | 4.5,5.2  |   |
+|  MainFrame     | di_onDIParameter |   2.0.0  |            | level 2    |               | 4.5,5.2  |   |
+|  MainFrame     | di_onSaveDI    |    2.0.0  |             | level 2    |               | 4.5,5.2  |   |
+|  MainFrame     | di_onClearDI   |    2.0.0  |             | level 2    |               | 4.5,5.2  |   |
 |  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
 |  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
 |  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
@@ -768,7 +775,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             plotdict : all visualization parameter
             sharey : limit shownkeys to a single input to share y axis for multiple diagrams
         """
-        debug = False
+        debug = True
 
         streams = []
         keys = []
@@ -826,8 +833,9 @@ class PlotPanel(scrolled.ScrolledPanel):
             keys = [keys[0]]
 
         if debug:
-            print (keys,colors,symbols,timecolumn,errorbars,yranges,fill,padding,showpatch,functions)
-            print (title,legend,grid,patch,annotate,alpha,ylabelposition,yscale,functionfmt)
+            print (keys,colors,symbols,timecolumn,errorbars,yranges,fill,padding,functions)
+            print (title,legend,grid,annotate,alpha,ylabelposition,yscale,functionfmt)
+            print (showpatch, streamids) #,patch)
 
         # Declare and register callbacks
         def on_xlims_change(axes):
@@ -1325,6 +1333,10 @@ class MainFrame(wx.Frame):
         analysisdict['fitfunction'] = 'spline'
         analysisdict['fitdegree'] = '5'
         analysisdict['fitknotstep'] = '0.3'
+        # flagging
+        analysisdict['threshold'] = 4.
+        analysisdict['timerange'] = 60.
+        analysisdict['markall'] = False
         # monitor
         analysisdict['martasscantime'] = '20'
         favoritemartas = {}
@@ -1509,10 +1521,7 @@ class MainFrame(wx.Frame):
         self.MainMenu.Append(self.DIMenu, "D&I")
         # ## Stream Operations
         self.StreamOperationsMenu = wx.Menu()
-        self.StreamAddListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Store &working state...\tCtrl+W", "Add data set", wx.ITEM_NORMAL)
-        self.StreamOperationsMenu.Append(self.StreamAddListSelect)
-        self.StreamOperationsMenu.AppendSeparator()
-        self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 602, "Access data &memory...\tCtrl+M", "Select data set(s)", wx.ITEM_NORMAL)
+        self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Access data &memory...\tCtrl+M", "Select data set(s)", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.Append(self.StreamListSelect)
         self.MainMenu.Append(self.StreamOperationsMenu, "Memo&ry")
         # ## Data Checker
@@ -1554,7 +1563,7 @@ class MainFrame(wx.Frame):
         USED BY
             MainFrame.__init__
         """
-        self.menu_p.fla_page.annotateCheckBox.SetValue(True)
+        self.menu_p.fla_page.annotateCheckBox.SetValue(False)
 
         shownkeys = []
         colors = ['gray']*15
@@ -1615,7 +1624,6 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.db_on_init, self.DBInit)
         # Memory Menu
         self.Bind(wx.EVT_MENU, self.memory_select, self.StreamListSelect)
-        self.Bind(wx.EVT_MENU, self.memory_add, self.StreamAddListSelect) # remove
         # DI Menu
         self.Bind(wx.EVT_MENU, self.di_input_sheet, self.DIInputSheet)
         # Options Menu
@@ -1644,16 +1652,16 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_CHECKBOX, self.data_onStatsCheckBox, self.menu_p.str_page.activateStatsCheckBox)
         #        Flags Page
         # --------------------------
-        self.Bind(wx.EVT_BUTTON, self.onFlagOutlierButton, self.menu_p.fla_page.flagOutlierButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagSelectionButton, self.menu_p.fla_page.flagSelectionButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagOutlierButton, self.menu_p.fla_page.flagOutlierButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagSelectionButton, self.menu_p.fla_page.flagSelectionButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagRangeButton, self.menu_p.fla_page.flagRangeButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagLoadButton, self.menu_p.fla_page.flagLoadButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagSaveButton, self.menu_p.fla_page.flagSaveButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.fla_page.flagDropButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.fla_page.flagMinButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.fla_page.flagMaxButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagClearButton, self.menu_p.fla_page.flagClearButton)
-        self.Bind(wx.EVT_CHECKBOX, self.onAnnotateCheckBox, self.menu_p.fla_page.annotateCheckBox)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagClearButton, self.menu_p.fla_page.flagClearButton)
+        self.Bind(wx.EVT_CHECKBOX, self.flag_onAnnotateCheckBox, self.menu_p.fla_page.annotateCheckBox)
         self.Bind(wx.EVT_BUTTON, self.onFlagmodButton, self.menu_p.fla_page.flagmodButton)
         #        Meta Page
         # --------------------------
@@ -1699,8 +1707,8 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.di_onDefineVarioScalar, self.menu_p.abs_page.defineVarioScalarButton)
         self.Bind(wx.EVT_BUTTON, self.di_onDIParameter, self.menu_p.abs_page.defineParameterButton)
         self.Bind(wx.EVT_BUTTON, self.di_onDIAnalyze, self.menu_p.abs_page.AnalyzeButton)
-        self.Bind(wx.EVT_BUTTON, self.onSaveDIData, self.menu_p.abs_page.SaveLogButton)
-        self.Bind(wx.EVT_BUTTON, self.onClearDIData, self.menu_p.abs_page.ClearLogButton)
+        self.Bind(wx.EVT_BUTTON, self.di_onSaveDIData, self.menu_p.abs_page.SaveLogButton)
+        self.Bind(wx.EVT_BUTTON, self.di_onClearDIData, self.menu_p.abs_page.ClearLogButton)
         #        Report Page
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.report_onSaveLogButton, self.menu_p.rep_page.saveLoggerButton)
@@ -2184,8 +2192,8 @@ class MainFrame(wx.Frame):
             self.menu_p.fla_page.flagDropButton.Enable()     # activated if annotation are present
             self.menu_p.fla_page.flagSaveButton.Enable()      # activated if annotation are present
             self.menu_p.fla_page.annotateCheckBox.Enable()    # activated if annotation are present
-            if self.menu_p.fla_page.annotateCheckBox.GetValue():
-                self.menu_p.fla_page.annotateCheckBox.SetValue(True)
+            #if self.menu_p.fla_page.annotateCheckBox.GetValue():
+            #    self.menu_p.fla_page.annotateCheckBox.SetValue(True)
         if not formattype == 'MagPyDI' and not contenttype.startswith('MagPyDI'):
             self.menu_p.str_page.getGapsButton.Enable()    # activated if not DI data
         if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
@@ -2368,6 +2376,7 @@ class MainFrame(wx.Frame):
         mintime = datacont.get('start')
         maxtime = datacont.get('end')
         coverage = datacont.get('coverage')
+        flags = datacont.get('flags') # True/False
         debug = False
 
         if debug:
@@ -2413,8 +2422,6 @@ class MainFrame(wx.Frame):
             plotcont['title'] = "{}: {} to {}".format(stationid,mintime.date(),maxtime.date())
         elif coverage <= 1:
             plotcont['title'] = "{}: {}".format(stationid,mintime.date())
-        if datacont.get('flags'):
-            plotcont['annotate'] = True                   # activate annotation
 
 
         # 4. If DataFormat = MagPyDI then preselect scatter, and idf and basevalues
@@ -2443,7 +2450,16 @@ class MainFrame(wx.Frame):
                 colors = plotcont['colors']
                 plotcont['colors'] = colors[:len(shownkeys)]
 
-        # 5. If K values are shown: preselect bar chart
+        # 5. Flagging patches
+        # ------------------------------
+        if flags:
+            fl = stream.header.get("DataFlags",{})
+            plotcont['patch'] = fl.create_patch()
+            truelist = [True for el in shownkeys]
+            plotcont['showpatch'] = [truelist]
+            #plotcont['annotate'] = True                   # activate annotation - no -> manually
+
+        # 6. If K values are shown: preselect bar chart
         # ------------------------------
         if stream.header.get('DataFormat') == 'MagPyK' or stream.header.get('DataType','').startswith('MagPyK') or ('var1' in shownkeys and stream.header.get('col-var1','').startswith('K')):
             if 'var1' in shownkeys:
@@ -4053,9 +4069,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Identifying gaps ...")
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
-        print (len(stream))
         stream = stream.get_gaps()
-        print (len(stream))
         streamid = self._initial_read(stream)
         self._initial_plot(streamid)
         self.changeStatusbar("Ready")
@@ -4077,7 +4091,7 @@ class MainFrame(wx.Frame):
         compselect = self.menu_p.str_page.comp[event.GetInt()]
         coordinate = "{}2{}".format(orgcomp,compselect)
         self.changeStatusbar("Transforming ... {}".format(coordinate))
-        print("Transforming ... {}".format(coordinate))
+        #print("Transforming ... {}".format(coordinate))
         stream = stream._convertstream(coordinate)
         datacont['dataset'] = stream
         datacont['components'] = compselect
@@ -4180,6 +4194,483 @@ class MainFrame(wx.Frame):
     # ##################################################################################################################
     # ####    Flagging Panel                                   #########################################################
     # ##################################################################################################################
+
+
+    def flag_onFlagSelectionButton(self,event):
+        """
+        DESCRIPTION
+            Flag all data within the zoomed region
+        """
+
+        debug = True
+
+        datacont = self.datadict.get(self.active_id)
+        streamid = self.active_id
+        stream = datacont.get('dataset')
+        keys = datacont.get('keys')
+        plotcont = self.plotdict.get(self.active_id)
+        shownkeys = plotcont.get('shownkeys')
+
+        plotstream = stream.copy()
+        newplotcont = plotcont.copy()
+        efl = flagging.Flags()
+        sfl = flagging.Flags()
+        fl = stream.header.get('DataFlags',efl)
+
+        sensid = plotstream.header.get('SensorID','')
+        dataid = plotstream.header.get('DataID','')
+        if sensid == '' and not dataid == '':
+            sensid = dataid[:-5]
+
+        if fl: # and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Flagging information in already associated with the data set. Keep them \n YES \n or drop them  \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                fl = efl
+            dlg.Destroy()
+
+        self.xlimits = self.plot_p.xlimits
+        self.ylimits = self.plot_p.ylimits
+        selplt = self.plot_p.selplt
+        selkey=[shownkeys[selplt]] # Get the marked key here
+
+        if sensid == '':
+            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
+                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            self.changeStatusbar("Flagging selection ...")
+            dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=shownkeys, keylist=keys)
+            if dlg.ShowModal() == wx.ID_OK:
+                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                keys2flag = keys2flag.split(',')
+                keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
+                comment = dlg.CommentTextCtrl.GetValue()
+                flagid = dlg.FlagIDComboBox.GetValue()
+                flagid = int(flagid[0])
+                operator = 'RL'
+                groups = None
+                labelid = '099'
+
+                above = min(self.ylimits)
+                below = max(self.ylimits)
+                starttime =num2date(min(self.xlimits)).replace(tzinfo=None)
+                endtime = num2date(max(self.xlimits)).replace(tzinfo=None)
+                print (min(self.xlimits),max(self.xlimits),min(self.ylimits),max(self.ylimits))
+
+                if debug:
+                    print ("GUI FlagID:", flagid, starttime, endtime)
+                sfl = flagging.flag_range(plotstream, keys=selkey, flagtype=flagid, labelid=labelid, operator=operator,
+                                          groups=groups, text=comment, keystoflag=keys2flag,
+                                          starttime=starttime, endtime=endtime, above=above, below=below)
+                if fl:
+                    sfl = fl.join(sfl)
+                self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(sfl)))
+                if debug:
+                    print ("GUI Flaglist", sfl)
+
+        if sfl:
+            plotstream.header['DataFlags'] = sfl
+            # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
+            # and update plot will create patches
+            streamid = self._initial_read(plotstream)
+            self.plotdict[streamid] = newplotcont
+        self._initial_plot(streamid, keepplotdict=True)
+        self.changeStatusbar("Ready")
+
+    def flag_onFlagClearButton(self, event):
+        """
+        DESCRIPTION
+            Clear current flaglist
+        """
+        self.changeStatusbar("Deleting flaglist ...")
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotstream = stream.copy()
+        plotstream.header['DataFlags'] = None
+        streamid = self._initial_read(plotstream)
+        self._initial_plot(streamid)
+        self.changeStatusbar("Ready")
+
+
+    def flag_onFlagOutlierButton(self, event):
+        """
+        DESCRIPTION
+            Method for Outlier
+        """
+        self.changeStatusbar("Flagging outliers ...")
+
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        streamid = self.active_id
+        plotcont = self.plotdict.get(self.active_id)
+        keys = plotcont.get('shownkeys')
+        sr = datacont.get("samplingrate")
+
+        timerange = float(sr) * self.analysisdict.get('timerange',60.0) # in seconds
+        threshold = self.analysisdict.get('threshold',4.0)
+        markall = self.analysisdict.get('markall',False)
+        efl = flagging.Flags()
+        ofl = flagging.Flags()
+
+        # Get current flagging object from data header
+        plotstream = stream.copy()
+        newplotcont = plotcont.copy()
+        fl = stream.header.get('DataFlags',efl)
+
+        print (fl)
+        if fl: # and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Flagging information in already associated with the data set. Keep them \n YES \n or drop them  \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                fl = efl
+            dlg.Destroy()
+
+        # Open Dialog and return the parameters threshold, keys, timerange
+        dlg = StreamFlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange, markall=markall)
+        if dlg.ShowModal() == wx.ID_OK:
+            threshold = dlg.ThresholdTextCtrl.GetValue()
+            timerange = dlg.TimerangeTextCtrl.GetValue()
+            markall = dlg.MarkAllCheckBox.GetValue()
+            try:
+                threshold = float(threshold)
+                timerange = float(timerange)
+                ofl = flagging.flag_outlier(plotstream, keys=keys, timerange=timerange, threshold=threshold, markall=markall)
+                if fl:
+                    ofl = fl.join(ofl)
+                self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(ofl)))
+                if markall:
+                        self.menu_p.rep_page.logMsg('- flagged outliers: used option markall')
+                # set analysisdict values
+                self.analysisdict['threshold'] = threshold
+                self.analysisdict['timerange'] = timerange / float(sr)
+                self.analysisdict['markall'] = markall
+            except:
+                print("flag outliers failed: check parameter")
+                self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
+
+            if ofl:
+                plotstream.header['DataFlags'] = ofl
+                # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
+                # and update plot will create patches
+                streamid = self._initial_read(plotstream)
+                self.plotdict[streamid] = newplotcont
+            self._initial_plot(streamid, keepplotdict=True)
+
+        self.changeStatusbar("Ready")
+
+
+    def onFlagRangeButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to select the range to be flagged
+        """
+        flaglist = []
+        sensid = self.plotstream.header.get('SensorID','')
+        dataid = self.plotstream.header.get('DataID','')
+        if sensid == '' and not dataid == '':
+            sensid = dataid[:-5]
+
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        self.xlimits = self.plot_p.xlimits
+
+        if sensid == '':
+            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
+                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+        else:
+            self.changeStatusbar("Flagging range ...")
+            dlg = StreamFlagRangeDialog(None, title='Stream: Flag range', stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
+            startdate=self.xlimits[0]
+            enddate=self.xlimits[1]
+            starttime = num2date(startdate).strftime('%X')
+            endtime = num2date(enddate).strftime('%X')
+            try:
+                dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
+                dlg.startFlagTimePicker.SetValue(starttime)
+            except:
+                pass
+            try:
+                dlg.endFlagDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
+                dlg.endFlagTimePicker.SetValue(endtime)
+            except:
+                pass
+            if dlg.ShowModal() == wx.ID_OK:
+                # get values from dlg
+                flagtype = dlg.rangeRadioBox.GetStringSelection()
+                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
+                keys2flag = keys2flag.split(',')
+                keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
+                comment = dlg.CommentTextCtrl.GetValue()
+                flagid = dlg.FlagIDComboBox.GetValue()
+                flagid = int(flagid[0])
+                if flagtype == 'value':
+                     keys = str(dlg.SelectKeyComboBox.GetValue())
+                     above = dlg.LowerLimitTextCtrl.GetValue()
+                     below = dlg.UpperLimitTextCtrl.GetValue()
+                     flagval = True
+                     if not below == '' and not above == '':
+                         above = float(above)
+                         below = float(below)
+                         #below = None
+                         self.menu_p.rep_page.logMsg('- flagging values between {} and {}'.format(above, below))
+                     elif not below == '':
+                         below = float(below)
+                         above = None
+                         self.menu_p.rep_page.logMsg('- flagging values below {}'.format(below))
+                     elif not above == '':
+                         above = float(above)
+                         below = None
+                         self.menu_p.rep_page.logMsg('- flagging values above {}'.format(above))
+                     else:
+                         flagval = False
+                     if flagval:
+                         #print ("Above , Below:", above, below)
+                         flaglist = self.plotstream.flag_range(keys=[keys],flagnum=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
+                         self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(flaglist)))
+                elif flagtype == 'time':
+                     if comment == '':
+                         comment = 'Time range flagged with unspecified reason'
+                     stday = dlg.startFlagDatePicker.GetValue()
+                     sttime = str(dlg.startFlagTimePicker.GetValue())
+                     if sttime.endswith('AM') or sttime.endswith('am'):
+                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+                     if sttime.endswith('pm') or sttime.endswith('PM'):
+                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+                     sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+                     starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
+                     enday = dlg.endFlagDatePicker.GetValue()
+                     entime = str(dlg.endFlagTimePicker.GetValue())
+                     if entime.endswith('AM') or entime.endswith('am'):
+                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+                     if entime.endswith('pm') or entime.endswith('PM'):
+                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+                     ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+                     endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
+                     #print ("Range", starttime, endtime, keys2flag)
+                     flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
+                     self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+                else:
+                     pass
+
+        if len(flaglist) > 0:
+            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
+            #print ("TEst", flaglist)
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+
+            self.ActivateControls(self.plotstream)
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.changeStatusbar("Ready")
+
+
+    def onFlagLoadButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to load flags either from a DB or from file
+        """
+        # Check whether DB still available
+        self._check_db('minimal')
+
+        sensorid = self.plotstream.header.get('SensorID','')
+        # Open Dialog and return the parameters threshold, keys, timerange
+        self.changeStatusbar("Loading flags ... please be patient")
+        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid, start=self.plotstream.start(),
+                                   end=self.plotstream.end(),last_dir = self.last_dir)
+        dlg.ShowModal()
+        if len(dlg.flaglist) > 0:
+            flaglist = dlg.flaglist
+            #print ("Loaded flags like", flaglist[0], self.flaglist[0])
+            self.flaglist.extend(flaglist)
+            #print ("extended flaglist looking like", self.flaglist)
+            self.changeStatusbar("Applying flags ... please be patient")
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))
+
+            self.ActivateControls(self.plotstream)
+            #self.annotate = True
+            self.plotopt['annotate'] = True
+
+            #self.menu_p.str_page.annotateCheckBox.SetValue(False)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.changeStatusbar("Ready")
+
+
+    def onFlagSaveButton(self,event):
+        """
+        DESCRIPTION
+            Opens a dialog which allows to save flags either to DB or to file
+        """
+        # Check whether DB still available
+        self._check_db('minimal')
+
+        currentlen = len(self.flaglist)
+
+        #print ("FlagSave", self.flaglist)
+
+        self.changeStatusbar("Saving flags ...")
+        dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist,
+                                   last_dir=self.last_dir)
+        if dlg.ShowModal() == wx.ID_OK:
+            #flaglist = dlg.flaglist
+            pass
+
+        #self.flaglist = []
+        self.changeStatusbar("Flaglist saved and reset - Ready")
+
+
+    def onFlagDropButton(self,event):
+        """
+        DESCRIPTION
+            Drops all flagged data
+        """
+        self.changeStatusbar("Dropping flagged data ...")
+
+        #dlg = wx.MessageDialog(self, "Please select:\n"
+        #       "Yes: drop data from all columns\nNo: drop only selected data\n","Drop", wx.YES_NO |wx.ICON_INFORMATION)
+        #if dlg.ShowModal() == wx.ID_YES:
+        #    self.plotstream = self.plotstream.flag(self.shownkeylist)
+        #else:
+        self.plotstream = self.plotstream.remove_flagged()
+        flagid = DataStream().KEYLIST.index('flag')
+        check = [el for el in self.plotstream.ndarray[flagid] if '0' in el or '2' in el or '4' in el]
+        if not len(check) > 0:
+           self.plotstream = self.plotstream._drop_column('flag')
+           self.plotstream = self.plotstream._drop_column('comment')
+           #self.plotopt['annotate'] = False
+        else:
+           pass
+           #self.plotopt['annotate'] = True
+
+        self.menu_p.rep_page.logMsg('- flagged data removed')
+
+        self.flaglist = []
+        self.ActivateControls(self.plotstream)
+
+        self.OnPlot(self.plotstream,self.shownkeylist)
+
+        self.changeStatusbar("Ready")
+
+    def onFlagMinButton(self,event):
+        """
+        DESCRIPTION
+            Flags minimum value in zoomed region
+        """
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged minimum'
+        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
+        if flagid == 0:
+            comment = ''
+        for idx,me in enumerate(mini):
+            if not keys[idx] == 'df':
+                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
+                if checkbox.IsChecked():
+                    starttime = num2date(me[1] - xtol)
+                    endtime = num2date(me[1] + xtol)
+                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+        if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged minimum: added {} flags'.format(len(flaglist)))
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+
+    def flag_onAnnotateCheckBox(self,event):
+        """
+        DESCRIPTION
+             activate annotations of flag patches
+        """
+        #### get True or False
+        plotcont = self.plotdict.get(self.active_id)
+        if not self.menu_p.fla_page.annotateCheckBox.GetValue():
+            plotcont['annotate'] = False
+            self.menu_p.fla_page.annotateCheckBox.SetValue(False)
+        else:
+            plotcont['annotate'] = True
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
+        self.plotdict[self.active_id] = plotcont
+        self._initial_plot(self.active_id, keepplotdict=True)
+
+
+    def onFlagMaxButton(self,event):
+        """
+        DESCRIPTION
+            Flags maximum value in zoomed region
+        """
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged maximum'
+        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
+        if flagid == 0:
+            comment = ''
+        for idx,me in enumerate(maxi):
+            if not keys[idx] == 'df':
+                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
+                if checkbox.IsChecked():
+                    starttime = num2date(me[1] - xtol)
+                    endtime = num2date(me[1] + xtol)
+                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+        if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
 
 
     def onFlagmodButton(self, event):
@@ -5501,7 +5992,7 @@ class MainFrame(wx.Frame):
                 pass
 
 
-    def onSaveDIData(self, event):
+    def di_onSaveDIData(self, event):
         """
         DESCRIPTION
             Save data of the logger to file
@@ -5520,7 +6011,7 @@ class MainFrame(wx.Frame):
         difile.close()
 
 
-    def onClearDIData(self, event):
+    def di_onClearDIData(self, event):
         self.menu_p.abs_page.dilogTextCtrl.SetValue('')
 
 
@@ -5550,6 +6041,12 @@ class MainFrame(wx.Frame):
         logfile = open(savepath, "w")
         logfile.write(text)
         logfile.close()
+
+
+    # ##################################################################################################################
+    # ####    Monitor Panel                                    #########################################################
+    # ##################################################################################################################
+
 
 
     @deprecated("currently only used by spectrogram - remove when replacing this method")
@@ -5651,24 +6148,6 @@ class MainFrame(wx.Frame):
                 self.OnPlot(self.plotstream,self.shownkeylist)
 
 
-    def onAnnotateCheckBox(self,event):
-        """
-        Restore originally loaded data
-        """
-        #### get True or False
-        if not self.menu_p.fla_page.annotateCheckBox.GetValue():
-            #self.annotate=False
-            self.plotopt['annotate'] = False
-            self.menu_p.fla_page.annotateCheckBox.SetValue(False)
-        else:
-            #self.annotate=True
-            self.plotopt['annotate'] = True
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-
-        #mp.plot(self.plotstream,annotate=True)
-        self.ActivateControls(self.plotstream)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-
 
     def OnFlagClick(self, event):
         """Mouse event for flagging with double click."""
@@ -5719,435 +6198,6 @@ class MainFrame(wx.Frame):
                 self.changeStatusbar("Ready")
                 """
 
-    def onFlagSelectionButton(self,event):
-        """
-        DESCRIPTION
-            Flag all data within the zoomed region
-        """
-
-        debug = False
-        flaglist = []
-        sensid = self.plotstream.header.get('SensorID','')
-        dataid = self.plotstream.header.get('DataID','')
-        if sensid == '' and not dataid == '':
-            sensid = dataid[:-5]
-
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        self.xlimits = self.plot_p.xlimits
-        self.ylimits = self.plot_p.ylimits
-        selplt = self.plot_p.selplt
-        selkey=[self.shownkeylist[selplt]] # Get the marked key here
-
-        if sensid == '':
-            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
-                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-        else:
-            self.changeStatusbar("Flagging selection ...")
-            dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
-            if dlg.ShowModal() == wx.ID_OK:
-                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
-                keys2flag = keys2flag.split(',')
-                keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
-                comment = dlg.CommentTextCtrl.GetValue()
-                flagid = dlg.FlagIDComboBox.GetValue()
-                flagid = int(flagid[0])
-
-                above = min(self.ylimits)
-                below = max(self.ylimits)
-                starttime =num2date(min(self.xlimits))
-                endtime = num2date(max(self.xlimits))
-
-                if debug:
-                    print ("GUI FlagID:", flagid, starttime, endtime)
-                flaglist = self.plotstream.flag_range(keys=selkey,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime,above=above,below=below)
-                self.menu_p.rep_page.logMsg('- flagged selection: added {} flags'.format(len(flaglist)))
-                if debug:
-                    print ("GUI Flaglist", flaglist)
-
-        if len(flaglist) > 0:
-            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
-            #print ("TEst", flaglist)
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-
-            #print (self.plotstream.ndarray)
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-    def onFlagClearButton(self, event):
-        """
-        DESCRIPTION
-            Clear current flaglist
-        """
-        self.changeStatusbar("Deleting flaglist ...")
-        self.flaglist = []
-        self.plotstream = self.plotstream._drop_column('flag')
-        self.plotstream = self.plotstream._drop_column('comment')
-        self.ActivateControls(self.plotstream)
-        self.plotopt['annotate'] = False
-        self.menu_p.fla_page.annotateCheckBox.SetValue(False)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-        self.changeStatusbar("Ready")
-
-
-    def onFlagOutlierButton(self, event):
-        """
-        DESCRIPTION
-            Method for Outlier
-        """
-        self.changeStatusbar("Flagging outliers ...")
-        sr = self.menu_p.met_page.samplingrateTextCtrl.GetValue().encode('ascii','ignore')
-        keys = self.shownkeylist
-        timerange = float(sr)*600.
-        threshold=5.0
-        markall = False
-
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        # Open Dialog and return the parameters threshold, keys, timerange
-        dlg = StreamFlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange)
-        if dlg.ShowModal() == wx.ID_OK:
-            threshold = dlg.ThresholdTextCtrl.GetValue()
-            timerange = dlg.TimerangeTextCtrl.GetValue()
-            markall = dlg.MarkAllCheckBox.GetValue()
-            try:
-                threshold = float(threshold)
-                timerange = float(timerange)
-                timerange = timedelta(seconds=timerange)
-                flaglist = self.plotstream.flag_outlier(stdout=True,returnflaglist=True, keys=keys,threshold=threshold,timerange=timerange,markall=markall)
-                self.flaglist.extend(flaglist)
-                #self.plotstream = self.plotstream.flag_outlier(stdout=True, keys=keys,threshold=threshold,timerange=timerange)
-                self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(flaglist)))
-                if markall:
-                    self.menu_p.rep_page.logMsg('- flagged outliers: used option markall')
-            except:
-                print("flag outliers failed: check parameter")
-                self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
-
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.changeStatusbar("Ready")
-
-
-    def onFlagRangeButton(self,event):
-        """
-        DESCRIPTION
-            Opens a dialog which allows to select the range to be flagged
-        """
-        flaglist = []
-        sensid = self.plotstream.header.get('SensorID','')
-        dataid = self.plotstream.header.get('DataID','')
-        if sensid == '' and not dataid == '':
-            sensid = dataid[:-5]
-
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        self.xlimits = self.plot_p.xlimits
-
-        if sensid == '':
-            dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
-                            "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-        else:
-            self.changeStatusbar("Flagging range ...")
-            dlg = StreamFlagRangeDialog(None, title='Stream: Flag range', stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
-            startdate=self.xlimits[0]
-            enddate=self.xlimits[1]
-            starttime = num2date(startdate).strftime('%X')
-            endtime = num2date(enddate).strftime('%X')
-            try:
-                dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
-                dlg.startFlagTimePicker.SetValue(starttime)
-            except:
-                pass
-            try:
-                dlg.endFlagDatePicker.SetValue(pydate2wxdate(num2date(enddate)))
-                dlg.endFlagTimePicker.SetValue(endtime)
-            except:
-                pass
-            if dlg.ShowModal() == wx.ID_OK:
-                # get values from dlg
-                flagtype = dlg.rangeRadioBox.GetStringSelection()
-                keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
-                keys2flag = keys2flag.split(',')
-                keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
-                comment = dlg.CommentTextCtrl.GetValue()
-                flagid = dlg.FlagIDComboBox.GetValue()
-                flagid = int(flagid[0])
-                if flagtype == 'value':
-                     keys = str(dlg.SelectKeyComboBox.GetValue())
-                     above = dlg.LowerLimitTextCtrl.GetValue()
-                     below = dlg.UpperLimitTextCtrl.GetValue()
-                     flagval = True
-                     if not below == '' and not above == '':
-                         above = float(above)
-                         below = float(below)
-                         #below = None
-                         self.menu_p.rep_page.logMsg('- flagging values between {} and {}'.format(above, below))
-                     elif not below == '':
-                         below = float(below)
-                         above = None
-                         self.menu_p.rep_page.logMsg('- flagging values below {}'.format(below))
-                     elif not above == '':
-                         above = float(above)
-                         below = None
-                         self.menu_p.rep_page.logMsg('- flagging values above {}'.format(above))
-                     else:
-                         flagval = False
-                     if flagval:
-                         #print ("Above , Below:", above, below)
-                         flaglist = self.plotstream.flag_range(keys=[keys],flagnum=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
-                         self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(flaglist)))
-                elif flagtype == 'time':
-                     if comment == '':
-                         comment = 'Time range flagged with unspecified reason'
-                     stday = dlg.startFlagDatePicker.GetValue()
-                     sttime = str(dlg.startFlagTimePicker.GetValue())
-                     if sttime.endswith('AM') or sttime.endswith('am'):
-                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-                     if sttime.endswith('pm') or sttime.endswith('PM'):
-                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-                     sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
-                     starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-                     enday = dlg.endFlagDatePicker.GetValue()
-                     entime = str(dlg.endFlagTimePicker.GetValue())
-                     if entime.endswith('AM') or entime.endswith('am'):
-                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-                     if entime.endswith('pm') or entime.endswith('PM'):
-                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-                     ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
-                     endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-                     #print ("Range", starttime, endtime, keys2flag)
-                     flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
-                     self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
-                else:
-                     pass
-
-        if len(flaglist) > 0:
-            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
-            #print ("TEst", flaglist)
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.changeStatusbar("Ready")
-
-
-    def onFlagLoadButton(self,event):
-        """
-        DESCRIPTION
-            Opens a dialog which allows to load flags either from a DB or from file
-        """
-        # Check whether DB still available
-        self._check_db('minimal')
-
-        sensorid = self.plotstream.header.get('SensorID','')
-        # Open Dialog and return the parameters threshold, keys, timerange
-        self.changeStatusbar("Loading flags ... please be patient")
-        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid, start=self.plotstream.start(),
-                                   end=self.plotstream.end(),last_dir = self.last_dir)
-        dlg.ShowModal()
-        if len(dlg.flaglist) > 0:
-            flaglist = dlg.flaglist
-            #print ("Loaded flags like", flaglist[0], self.flaglist[0])
-            self.flaglist.extend(flaglist)
-            #print ("extended flaglist looking like", self.flaglist)
-            self.changeStatusbar("Applying flags ... please be patient")
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))
-
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            #self.menu_p.str_page.annotateCheckBox.SetValue(False)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.changeStatusbar("Ready")
-
-
-    def onFlagSaveButton(self,event):
-        """
-        DESCRIPTION
-            Opens a dialog which allows to save flags either to DB or to file
-        """
-        # Check whether DB still available
-        self._check_db('minimal')
-
-        currentlen = len(self.flaglist)
-
-        #print ("FlagSave", self.flaglist)
-
-        self.changeStatusbar("Saving flags ...")
-        dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist,
-                                   last_dir=self.last_dir)
-        if dlg.ShowModal() == wx.ID_OK:
-            #flaglist = dlg.flaglist
-            pass
-
-        #self.flaglist = []
-        self.changeStatusbar("Flaglist saved and reset - Ready")
-
-
-    def onFlagDropButton(self,event):
-        """
-        DESCRIPTION
-            Drops all flagged data
-        """
-        self.changeStatusbar("Dropping flagged data ...")
-
-        #dlg = wx.MessageDialog(self, "Please select:\n"
-        #       "Yes: drop data from all columns\nNo: drop only selected data\n","Drop", wx.YES_NO |wx.ICON_INFORMATION)
-        #if dlg.ShowModal() == wx.ID_YES:
-        #    self.plotstream = self.plotstream.flag(self.shownkeylist)
-        #else:
-        self.plotstream = self.plotstream.remove_flagged()
-        flagid = DataStream().KEYLIST.index('flag')
-        check = [el for el in self.plotstream.ndarray[flagid] if '0' in el or '2' in el or '4' in el]
-        if not len(check) > 0:
-           self.plotstream = self.plotstream._drop_column('flag')
-           self.plotstream = self.plotstream._drop_column('comment')
-           #self.plotopt['annotate'] = False
-        else:
-           pass
-           #self.plotopt['annotate'] = True
-
-        self.menu_p.rep_page.logMsg('- flagged data removed')
-
-        self.flaglist = []
-        self.ActivateControls(self.plotstream)
-
-        self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.changeStatusbar("Ready")
-
-    def onFlagMinButton(self,event):
-        """
-        DESCRIPTION
-            Flags minimum value in zoomed region
-        """
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        keys = self.shownkeylist
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-        xdata = self.plot_p.t
-        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-        mini = [teststream._get_min(key,returntime=True) for key in keys]
-        flaglist = []
-        comment = 'Flagged minimum'
-        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
-        flagid = int(flagid[0])
-        if flagid == 0:
-            comment = ''
-        for idx,me in enumerate(mini):
-            if not keys[idx] == 'df':
-                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
-                if checkbox.IsChecked():
-                    starttime = num2date(me[1] - xtol)
-                    endtime = num2date(me[1] + xtol)
-                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-        if len(flaglist) > 0:
-            self.menu_p.rep_page.logMsg('- flagged minimum: added {} flags'.format(len(flaglist)))
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.ActivateControls(self.plotstream)
-            self.plotopt['annotate'] = True
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
-
-    def onFlagMaxButton(self,event):
-        """
-        DESCRIPTION
-            Flags maximum value in zoomed region
-        """
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        keys = self.shownkeylist
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-        xdata = self.plot_p.t
-        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-        maxi = [teststream._get_max(key,returntime=True) for key in keys]
-        flaglist = []
-        comment = 'Flagged maximum'
-        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
-        flagid = int(flagid[0])
-        if flagid == 0:
-            comment = ''
-        for idx,me in enumerate(maxi):
-            if not keys[idx] == 'df':
-                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
-                if checkbox.IsChecked():
-                    starttime = num2date(me[1] - xtol)
-                    endtime = num2date(me[1] + xtol)
-                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-        if len(flaglist) > 0:
-            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.ActivateControls(self.plotstream)
-            self.plotopt['annotate'] = True
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
 
     # ------------------------------------------------------------------------------------------
     # ################

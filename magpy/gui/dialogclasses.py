@@ -1597,11 +1597,12 @@ class StreamFlagOutlierDialog(wx.Dialog):
     USED BY:
         Stream Method: onFlagOutlier()
     """
-    def __init__(self, parent, title, threshold, timerange):
+    def __init__(self, parent, title, threshold, timerange, markall):
         super(StreamFlagOutlierDialog, self).__init__(parent=parent,
             title=title, size=(600, 600))
         self.threshold=str(threshold)
         self.timerange=str(timerange)
+        self.markall=markall
         self.createControls()
         self.doLayout()
 
@@ -1617,6 +1618,7 @@ class StreamFlagOutlierDialog(wx.Dialog):
         self.MarkText = wx.StaticText(self,label="all components")
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+        self.MarkAllCheckBox.SetValue(self.markall)
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)

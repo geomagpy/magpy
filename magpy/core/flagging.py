@@ -1677,7 +1677,7 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
     if above and below:
         # TODO create True/False list and then follow the bin detector example
         ind = data.KEYLIST.index(keys[0])
-        trueindices = (trimmedstream.ndarray[ind] > above) + (trimmedstream.ndarray[ind] < below)
+        trueindices = (trimmedstream.ndarray[ind] > above) & (trimmedstream.ndarray[ind] < below)
         d = np.diff(trueindices)
         idx, = d.nonzero()
         idx += 1

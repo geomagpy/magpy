@@ -1992,16 +1992,14 @@ example1 and its outliers:
         data = read(example1)
         fl = flagging.flag_outlier(data, timerange=120, threshold=3, markall=True)
 
-Now we need to apply the flagging object to the data and insert flagging information directly into the data stream
+Now we need we just add the flagging object to the data's header
 
-        dataiwithflags = fl.apply_flags(data, mode='insert')
+        data.header['DataFlags'] = fl
 
 And then we can save this data set with flagging data included as CDF. Please note that only CDF export types support
 flagging contents
 
-        dataiwithflags.write('/tmp/',filenamebegins='MyFlaggedExample_', format_type='PYCDF')
-
-Extracting such incorporated flagging information is currently not possible in MagPy 2.0.
+        data.write('/tmp/',filenamebegins='MyFlaggedExample_', format_type='PYCDF')
 
 
 ### 6.7 Advanced flagging methods and *flag_bot*
