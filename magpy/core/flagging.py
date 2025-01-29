@@ -1490,7 +1490,7 @@ def extract_flags(data, debug=False):
 
     return fl
 
-def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, groups=None, datawindow=None, debug=False):
+def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, labelid='002', groups=None, datawindow=None, debug=False):
     """
     DEFINITION:
         Flags outliers in data, using inner quartiles ranges
@@ -1592,9 +1592,9 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
                              flaginds[el[0]] > lowwin and flaginds[el[1]] < highwin]
                 for flagtimes in flag_inds:
                     fl.add(sensorid=sensorid, starttime=seltcol[flagtimes[0]], endtime=seltcol[flagtimes[0]+1],
-                           components=fkey, flagtype=1, labelid='002', label='spike',
-                           comment='automatically marked by flag_outlier with threshold {} and timerange {}'.format(
-                               threshold, timerange), groups=groups, stationid='stationid', operator='MagPy',
+                           components=fkey, flagtype=1, labelid=labelid,
+                           comment='automatically marked by flag_outlier with threshold {}, timerange {}, markall {}'.format(
+                               threshold, timerange, markall), groups=groups, stationid='stationid', operator='MagPy',
                            flagversion='2.0')
     fl = fl.union()
 
@@ -1675,7 +1675,6 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
         return fl
 
     if above and below:
-        # TODO create True/False list and then follow the bin detector example
         ind = data.KEYLIST.index(keys[0])
         trueindices = (trimmedstream.ndarray[ind] > above) & (trimmedstream.ndarray[ind] < below)
         d = np.diff(trueindices)
@@ -1702,7 +1701,6 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
                    groups=groups, stationid=stationid, operator=operator,
                    flagversion='2.0')
     elif above:
-        # TODO create True/False list and then follow the bin detector example
         ind = data.KEYLIST.index(keys[0])
         trueindices = trimmedstream.ndarray[ind] > above
         d = np.diff(trueindices)
@@ -1729,7 +1727,6 @@ def flag_range(data, keys=None, above=0, below=0, starttime=None, endtime=None, 
                    groups=groups, stationid=stationid, operator=operator,
                    flagversion='2.0')
     elif below:
-        # TODO create True/False the other way round
         ind = data.KEYLIST.index(keys[0])
         truefalse = trimmedstream.ndarray[ind] < below
         d = np.diff(truefalse)

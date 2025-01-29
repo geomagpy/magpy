@@ -137,8 +137,9 @@ Major methods:              major_method
 |  MainFrame     | d_onGetGapsButton | 2.0.0  |             | level 2    |               | 4.1    |   |
 |  MainFrame     | d_onStatusButton |  2.0.0  |             | level 1    |               | 4.1    |   |
 |  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagOutlier | 2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 0    |               |        |   |
+|  MainFrame     | flag_onFlagOutlier | 2.0.0  |            | level 1    |               |        |   |
+|  MainFrame     | flag_onFlagSelection | 2.0.0  |          | level 1    |               |        |   |
+|  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 1    |               |        |   |
 
 |  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
 |  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
@@ -1337,6 +1338,10 @@ class MainFrame(wx.Frame):
         analysisdict['threshold'] = 4.
         analysisdict['timerange'] = 60.
         analysisdict['markall'] = False
+        analysisdict['operator'] = 'Robot'
+        analysisdict['labelid'] = '002'
+        analysisdict['flagtype'] = 3
+        analysisdict['flagversion'] = '2.0'
         # monitor
         analysisdict['martasscantime'] = '20'
         favoritemartas = {}
@@ -1484,7 +1489,7 @@ class MainFrame(wx.Frame):
         self.MainMenu = wx.MenuBar()
         # ## File Menu
         self.fileMenu = wx.Menu()
-        self.fileOpen = wx.MenuItem(self.fileMenu, 101, "&Open File...\tCtrl+F", "Open file", wx.ITEM_NORMAL)
+        self.fileOpen = wx.MenuItem(self.fileMenu, 101, "&Open File...\tCtrl+O", "Open file", wx.ITEM_NORMAL)
         self.fileMenu.Append(self.fileOpen)
         self.dirOpen = wx.MenuItem(self.fileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
         self.fileMenu.Append(self.dirOpen)
@@ -1495,7 +1500,7 @@ class MainFrame(wx.Frame):
         self.webOpen = wx.MenuItem(self.fileMenu, 104, "Open general &URL...\tCtrl+U", "Get data from the internet", wx.ITEM_NORMAL)
         self.fileMenu.Append(self.webOpen)
         self.fileMenu.AppendSeparator()
-        self.dbOpen = wx.MenuItem(self.fileMenu, 105, "&Open DB table...\tCtrl+S", "Select a MySQL database", wx.ITEM_NORMAL)
+        self.dbOpen = wx.MenuItem(self.fileMenu, 105, "Open D&B table...\tCtrl+B", "Select a MySQL database", wx.ITEM_NORMAL)
         self.fileMenu.Append(self.dbOpen)
         self.dbOpen.Enable(False)
         self.fileMenu.AppendSeparator()
@@ -1508,12 +1513,12 @@ class MainFrame(wx.Frame):
         self.MainMenu.Append(self.fileMenu, "&File")
         # ## Database Menu
         self.DatabaseMenu = wx.Menu()
-        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "&Connect MySQL DB...\tCtrl+O", "Connect Database", wx.ITEM_NORMAL)
+        self.DBConnect = wx.MenuItem(self.DatabaseMenu, 201, "Connect &MySQL DB...\tCtrl+M", "Connect Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.Append(self.DBConnect)
         self.DatabaseMenu.AppendSeparator()
-        self.DBInit = wx.MenuItem(self.DatabaseMenu, 202, "&Initialize a new MySQL DB...\tCtrl+Z", "Initialize Database", wx.ITEM_NORMAL)
+        self.DBInit = wx.MenuItem(self.DatabaseMenu, 202, "Initiali&ze a new MySQL DB...\tCtrl+Z", "Initialize Database", wx.ITEM_NORMAL)
         self.DatabaseMenu.Append(self.DBInit)
-        self.MainMenu.Append(self.DatabaseMenu, "Data&base")
+        self.MainMenu.Append(self.DatabaseMenu, "D&atabase")
         # ## DI Menu
         self.DIMenu = wx.Menu()
         self.DIInputSheet = wx.MenuItem(self.DIMenu, 501, "O&pen DI input sheet...\tCtrl+P", "Input sheet...", wx.ITEM_NORMAL)
@@ -1523,25 +1528,28 @@ class MainFrame(wx.Frame):
         self.StreamOperationsMenu = wx.Menu()
         self.StreamListSelect = wx.MenuItem(self.StreamOperationsMenu, 601, "Access data &memory...\tCtrl+M", "Select data set(s)", wx.ITEM_NORMAL)
         self.StreamOperationsMenu.Append(self.StreamListSelect)
+        self.StreamOperationsMenu.AppendSeparator()
+        self.StreamListClean = wx.MenuItem(self.StreamOperationsMenu, 602, "C&lear memory...\tCtrl+L", "Remove data set(s) from memory", wx.ITEM_NORMAL)
+        self.StreamOperationsMenu.Append(self.StreamListClean)
         self.MainMenu.Append(self.StreamOperationsMenu, "Memo&ry")
         # ## Data Checker
         self.CheckDataMenu = wx.Menu()
-        self.CheckDefinitiveDataSelect = wx.MenuItem(self.CheckDataMenu, 701, "Check &definitive data...\tCtrl+H", "Check data", wx.ITEM_NORMAL)
+        self.CheckDefinitiveDataSelect = wx.MenuItem(self.CheckDataMenu, 701, "C&heck definitive data...\tCtrl+H", "Check data", wx.ITEM_NORMAL)
         self.CheckDataMenu.Append(self.CheckDefinitiveDataSelect)
-        self.MainMenu.Append(self.CheckDataMenu, "Spe&cials")
+        self.MainMenu.Append(self.CheckDataMenu, "&Specials")
         # ## Options Menu
         self.OptionsMenu = wx.Menu()
-        self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "&Basic parameter\tCtrl+B", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
+        self.OptionsInitItem = wx.MenuItem(self.OptionsMenu, 401, "Basic o&ptions\tCtrl+P", "Modify general defaults (e.g. DB, paths)", wx.ITEM_NORMAL)
         self.OptionsMenu.Append(self.OptionsInitItem)
         self.OptionsMenu.AppendSeparator()
-        self.OptionsPlotItem = wx.MenuItem(self.OptionsMenu, 402, "Plotting parameter\tCtrl+I", "Modify plotting parameters", wx.ITEM_NORMAL)
+        self.OptionsPlotItem = wx.MenuItem(self.OptionsMenu, 402, "Plo&t options\tCtrl+T", "Modify plotting parameters", wx.ITEM_NORMAL)
         self.OptionsMenu.Append(self.OptionsPlotItem)
         self.OptionsMenu.AppendSeparator()
-        self.OptionsDIItem = wx.MenuItem(self.OptionsMenu, 403, "D&I parameter\tCtrl+I", "Modify DI related parameters (e.g. thresholds, paths, input sheet layout)", wx.ITEM_NORMAL)
+        self.OptionsDIItem = wx.MenuItem(self.OptionsMenu, 403, "DI pa&rameter\tCtrl+R", "Modify DI related parameters (e.g. thresholds, paths, input sheet layout)", wx.ITEM_NORMAL)
         self.OptionsMenu.Append(self.OptionsDIItem)
         self.MainMenu.Append(self.OptionsMenu, "&Options")
         self.HelpMenu = wx.Menu()
-        self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "&About...", "Display general information about the program", wx.ITEM_NORMAL)
+        self.HelpAboutItem = wx.MenuItem(self.HelpMenu, 301, "About...", "Display general information about the program", wx.ITEM_NORMAL)
         self.HelpMenu.Append(self.HelpAboutItem)
         self.HelpReadFormatsItem = wx.MenuItem(self.HelpMenu, 302, "Read Formats...", "Supported data formats to read", wx.ITEM_NORMAL)
         self.HelpMenu.Append(self.HelpReadFormatsItem)
@@ -1654,9 +1662,9 @@ class MainFrame(wx.Frame):
         # --------------------------
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagOutlierButton, self.menu_p.fla_page.flagOutlierButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagSelectionButton, self.menu_p.fla_page.flagSelectionButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagRangeButton, self.menu_p.fla_page.flagRangeButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagLoadButton, self.menu_p.fla_page.flagLoadButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagSaveButton, self.menu_p.fla_page.flagSaveButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagRangeButton, self.menu_p.fla_page.flagRangeButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagLoadButton, self.menu_p.fla_page.flagLoadButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagSaveButton, self.menu_p.fla_page.flagSaveButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.fla_page.flagDropButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.fla_page.flagMinButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.fla_page.flagMaxButton)
@@ -4216,6 +4224,11 @@ class MainFrame(wx.Frame):
         efl = flagging.Flags()
         sfl = flagging.Flags()
         fl = stream.header.get('DataFlags',efl)
+        labelid = self.analysisdict.get('labelid','002')
+        operator = self.analysisdict.get('operator')
+        self.flagversion = self.analysisdict.get('flagversion', '2.0')
+        group = ''
+        print ("Sensor Group:", plotstream.header.get('SensorGroup',''))
 
         sensid = plotstream.header.get('SensorID','')
         dataid = plotstream.header.get('DataID','')
@@ -4240,7 +4253,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
         else:
             self.changeStatusbar("Flagging selection ...")
-            dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=shownkeys, keylist=keys)
+            dlg = FlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, group=group, flagversion=self.flagversion)
             if dlg.ShowModal() == wx.ID_OK:
                 keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
                 keys2flag = keys2flag.split(',')
@@ -4248,15 +4261,14 @@ class MainFrame(wx.Frame):
                 comment = dlg.CommentTextCtrl.GetValue()
                 flagid = dlg.FlagIDComboBox.GetValue()
                 flagid = int(flagid[0])
-                operator = 'RL'
-                groups = None
-                labelid = '099'
+                operator = dlg.OperatorTextCtrl.GetValue()
+                groups = dlg.GroupTextCtrl.GetValue()
+                labelid = dlg.LabelComboBox.GetValue()
 
                 above = min(self.ylimits)
                 below = max(self.ylimits)
                 starttime =num2date(min(self.xlimits)).replace(tzinfo=None)
                 endtime = num2date(max(self.xlimits)).replace(tzinfo=None)
-                print (min(self.xlimits),max(self.xlimits),min(self.ylimits),max(self.ylimits))
 
                 if debug:
                     print ("GUI FlagID:", flagid, starttime, endtime)
@@ -4310,6 +4322,8 @@ class MainFrame(wx.Frame):
         timerange = float(sr) * self.analysisdict.get('timerange',60.0) # in seconds
         threshold = self.analysisdict.get('threshold',4.0)
         markall = self.analysisdict.get('markall',False)
+        labelid = self.analysisdict.get('labelid','002')
+        operator = 'MagPy' # is disabeld as it well be set to MagPy by flag_outlier method
         efl = flagging.Flags()
         ofl = flagging.Flags()
 
@@ -4318,7 +4332,6 @@ class MainFrame(wx.Frame):
         newplotcont = plotcont.copy()
         fl = stream.header.get('DataFlags',efl)
 
-        print (fl)
         if fl: # and len(self.flaglist)>0:
             dlg = wx.MessageDialog(self, 'Flagging information in already associated with the data set. Keep them \n YES \n or drop them  \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
             if dlg.ShowModal() == wx.ID_NO:
@@ -4326,15 +4339,18 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
 
         # Open Dialog and return the parameters threshold, keys, timerange
-        dlg = StreamFlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange, markall=markall)
+        dlg = FlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange, labelid=labelid, operator=operator, markall=markall)
         if dlg.ShowModal() == wx.ID_OK:
             threshold = dlg.ThresholdTextCtrl.GetValue()
             timerange = dlg.TimerangeTextCtrl.GetValue()
             markall = dlg.MarkAllCheckBox.GetValue()
+            label = dlg.LabelComboBox.GetValue()
+            operator = dlg.OperatorTextCtrl.GetValue()
             try:
                 threshold = float(threshold)
                 timerange = float(timerange)
-                ofl = flagging.flag_outlier(plotstream, keys=keys, timerange=timerange, threshold=threshold, markall=markall)
+                labelid = label[:3]
+                ofl = flagging.flag_outlier(plotstream, keys=keys, timerange=timerange, threshold=threshold, labelid=labelid, markall=markall)
                 if fl:
                     ofl = fl.join(ofl)
                 self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(ofl)))
@@ -4344,6 +4360,8 @@ class MainFrame(wx.Frame):
                 self.analysisdict['threshold'] = threshold
                 self.analysisdict['timerange'] = timerange / float(sr)
                 self.analysisdict['markall'] = markall
+                self.analysisdict['labelid'] = labelid
+                # operator is not updated here
             except:
                 print("flag outliers failed: check parameter")
                 self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
@@ -4359,23 +4377,37 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def onFlagRangeButton(self,event):
+    def flag_onFlagRangeButton(self,event):
         """
         DESCRIPTION
             Opens a dialog which allows to select the range to be flagged
         """
-        flaglist = []
-        sensid = self.plotstream.header.get('SensorID','')
-        dataid = self.plotstream.header.get('DataID','')
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        keys = datacont.get('keys')
+        plotcont = self.plotdict.get(self.active_id)
+        shownkeys = plotcont.get('shownkeys')
+
+        labelid = self.analysisdict.get('labelid','002')
+        operator = self.analysisdict.get('operator')
+        groups = ''
+        self.flagversion = self.analysisdict.get('flagversion', '2.0')
+        efl = flagging.Flags()
+        rfl = flagging.Flags()
+
+        # Get current flagging object from data header
+        plotstream = stream.copy()
+        newplotcont = plotcont.copy()
+        fl = stream.header.get('DataFlags',efl)
+        sensid = plotstream.header.get('SensorID','')
+        dataid = plotstream.header.get('DataID','')
         if sensid == '' and not dataid == '':
             sensid = dataid[:-5]
 
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+        if fl: # and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Flagging information in already associated with the data set. Keep them \n YES \n or drop them  \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
             if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
+                fl = efl
             dlg.Destroy()
 
         self.xlimits = self.plot_p.xlimits
@@ -4387,11 +4419,11 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
         else:
             self.changeStatusbar("Flagging range ...")
-            dlg = StreamFlagRangeDialog(None, title='Stream: Flag range', stream = self.plotstream, shownkeylist=self.shownkeylist, keylist=self.keylist)
+            dlg = FlagRangeDialog(None, title='Stream: Flag range', stream=plotstream, shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, group=groups, flagversion=self.flagversion)
             startdate=self.xlimits[0]
             enddate=self.xlimits[1]
-            starttime = num2date(startdate).strftime('%X')
-            endtime = num2date(enddate).strftime('%X')
+            starttime = num2date(startdate).replace(tzinfo=None).strftime('%X')
+            endtime = num2date(enddate).replace(tzinfo=None).strftime('%X')
             try:
                 dlg.startFlagDatePicker.SetValue(pydate2wxdate(num2date(startdate)))
                 dlg.startFlagTimePicker.SetValue(starttime)
@@ -4433,102 +4465,116 @@ class MainFrame(wx.Frame):
                          flagval = False
                      if flagval:
                          #print ("Above , Below:", above, below)
-                         flaglist = self.plotstream.flag_range(keys=[keys],flagnum=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
-                         self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(flaglist)))
+                         rfl = flagging.flag_range(plotstream, keys=[keys], flagtype=flagid, labelid=labelid,
+                                                   operator=operator,
+                                                   groups=groups, text=comment, keystoflag=keys2flag,
+                                                   starttime=starttime, endtime=endtime, above=above, below=below)
+                         if fl:
+                             rfl = fl.join(rfl)
+                         #flaglist = flagging.flag_range(plotstream, keys=[keys],flagtype=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
+                         self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(rfl)))
                 elif flagtype == 'time':
                      if comment == '':
                          comment = 'Time range flagged with unspecified reason'
                      stday = dlg.startFlagDatePicker.GetValue()
                      sttime = str(dlg.startFlagTimePicker.GetValue())
                      if sttime.endswith('AM') or sttime.endswith('am'):
-                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
+                         sttime_tmp = datetime.strptime(sttime,"%I:%M:%S %p")
+                         sttime = sttime_tmp.strftime("%H:%M:%S")
                      if sttime.endswith('pm') or sttime.endswith('PM'):
-                         sttime = datetime.strftime(datetime.strptime(sttime,"%I:%M:%S %p"),"%H:%M:%S")
-                     sd = datetime.strftime(datetime.fromtimestamp(stday.GetTicks()), "%Y-%m-%d")
+                         sttime_tmp = datetime.strptime(sttime,"%I:%M:%S %p")
+                         sttime = sttime_tmp.strftime("%H:%M:%S")
+                     sd_tmp = datetime.fromtimestamp(stday.GetTicks())
+                     sd = sd_tmp.strftime("%Y-%m-%d")
                      starttime= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
                      enday = dlg.endFlagDatePicker.GetValue()
                      entime = str(dlg.endFlagTimePicker.GetValue())
                      if entime.endswith('AM') or entime.endswith('am'):
-                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
+                         entime_tmp = datetime.strptime(entime,"%I:%M:%S %p")
+                         entime = entime_tmp.strftime("%H:%M:%S")
                      if entime.endswith('pm') or entime.endswith('PM'):
-                         entime = datetime.strftime(datetime.strptime(entime,"%I:%M:%S %p"),"%H:%M:%S")
-                     ed = datetime.strftime(datetime.fromtimestamp(enday.GetTicks()), "%Y-%m-%d")
+                         entime_tmp = datetime.strptime(entime,"%I:%M:%S %p")
+                         entime = entime_tmp.strftime("%H:%M:%S")
+                     ed_tmp = datetime.fromtimestamp(enday.GetTicks())
+                     ed = ed_tmp.strftime("%Y-%m-%d")
                      endtime= datetime.strptime(str(ed)+'_'+entime, "%Y-%m-%d_%H:%M:%S")
                      #print ("Range", starttime, endtime, keys2flag)
-                     flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
-                     self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
+                     rfl = flagging.flag_range(plotstream, keys=shownkeys, flagtype=flagid, labelid=labelid,
+                                               operator=operator,
+                                               groups=groups, text=comment, keystoflag=keys2flag,
+                                               starttime=starttime, endtime=endtime)
+                     if fl:
+                         rfl = fl.join(rfl)
+                     #flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
+                     self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(rfl)))
                 else:
                      pass
 
-        if len(flaglist) > 0:
-            #print ("FlagRange: Please note that the range definition needs an update as only single values are considered")
-            #print ("TEst", flaglist)
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+        if rfl:
+            plotstream.header['DataFlags'] = rfl
+            # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
+            # and update plot will create patches
+            streamid = self._initial_read(plotstream)
+            self.plotdict[streamid] = newplotcont
+            self._initial_plot(streamid, keepplotdict=True)
 
         self.changeStatusbar("Ready")
 
 
-    def onFlagLoadButton(self,event):
+    def flag_onFlagLoadButton(self,event):
         """
         DESCRIPTION
             Opens a dialog which allows to load flags either from a DB or from file
         """
-        # Check whether DB still available
-        self._check_db('minimal')
 
-        sensorid = self.plotstream.header.get('SensorID','')
+        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        datacont = self.datadict.get(self.active_id)
+        cdir = self.guidict.get('dirname')
+        stream = datacont.get('dataset')
+        plotstream = stream.copy()
+        sensorid = plotstream.header.get('SensorID','')
+        plotcont = self.plotdict.get(self.active_id)
+        newplotcont = plotcont.copy()
+
         # Open Dialog and return the parameters threshold, keys, timerange
         self.changeStatusbar("Loading flags ... please be patient")
-        dlg = StreamLoadFlagDialog(None, title='Load Flags', db = self.db, sensorid=sensorid, start=self.plotstream.start(),
-                                   end=self.plotstream.end(),last_dir = self.last_dir)
+        dlg = FlagLoadDialog(None, title='Load Flags', db=db, sensorid=sensorid, start=plotstream.start(),
+                                   end=plotstream.end(), last_dir=cdir)
         dlg.ShowModal()
-        if len(dlg.flaglist) > 0:
-            flaglist = dlg.flaglist
-            #print ("Loaded flags like", flaglist[0], self.flaglist[0])
-            self.flaglist.extend(flaglist)
-            #print ("extended flaglist looking like", self.flaglist)
+        if len(dlg.fl) > 0:
+            fl = dlg.fl
+            oldfl = plotstream.header.get('DataFlags')
+            if oldfl:
+                fl = oldfl.join(fl)
+            plotstream.header['DataFlags'] = fl
             self.changeStatusbar("Applying flags ... please be patient")
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(flaglist)))
+            self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(fl)))
 
-            self.ActivateControls(self.plotstream)
-            #self.annotate = True
-            self.plotopt['annotate'] = True
-
-            #self.menu_p.str_page.annotateCheckBox.SetValue(False)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+            streamid = self._initial_read(plotstream)
+            self.plotdict[streamid] = newplotcont
+            self._initial_plot(streamid, keepplotdict=True)
 
         self.changeStatusbar("Ready")
 
 
-    def onFlagSaveButton(self,event):
+    def flag_onFlagSaveButton(self,event):
         """
         DESCRIPTION
             Opens a dialog which allows to save flags either to DB or to file
         """
-        # Check whether DB still available
-        self._check_db('minimal')
-
-        currentlen = len(self.flaglist)
-
-        #print ("FlagSave", self.flaglist)
+        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        datacont = self.datadict.get(self.active_id)
+        cdir = self.guidict.get('dirname')
+        stream = datacont.get('dataset')
+        fl = stream.header.get('DataFlags')
 
         self.changeStatusbar("Saving flags ...")
-        dlg = StreamSaveFlagDialog(None, title='Save Flags', db = self.db, flaglist=self.flaglist,
-                                   last_dir=self.last_dir)
+        dlg = FlagSaveDialog(None, title='Save Flags', db=db, flaglist=fl,
+                                   last_dir=cdir)
         if dlg.ShowModal() == wx.ID_OK:
             #flaglist = dlg.flaglist
             pass
 
-        #self.flaglist = []
         self.changeStatusbar("Flaglist saved and reset - Ready")
 
 

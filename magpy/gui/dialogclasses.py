@@ -53,6 +53,7 @@ import platform
 | DefineScalarDialog     | 2.0.0   |                 |  level 2       |          | LoadDIDialog |
 | DISaveDialog           | 2.0.0   |                 |  level 2       |          | dip_onDISaveButton |
 | ParameterDictDialog    | 2.0.0   |                 |  level 2       |          | dip_onDIParameterButton |
+| FlagOutlierDialog    |   2.0.0   |                 |  level 1       |          | flag_onFlagOutlier |
 
 
 runtime test:
@@ -1590,35 +1591,46 @@ class StreamPlotOptionsDialog(wx.Dialog):
 # ####    Flagging Panel                                   #########################################################
 # ##################################################################################################################
 
-class StreamFlagOutlierDialog(wx.Dialog):
+class FlagOutlierDialog(wx.Dialog):
     """
     DESCRIPTION
         Dialog for Parameter selection of outlier flagging routine
     USED BY:
         Stream Method: onFlagOutlier()
     """
-    def __init__(self, parent, title, threshold, timerange, markall):
-        super(StreamFlagOutlierDialog, self).__init__(parent=parent,
-            title=title, size=(600, 600))
-        self.threshold=str(threshold)
-        self.timerange=str(timerange)
-        self.markall=markall
+    def __init__(self, parent, title, threshold, timerange, markall, labelid, operator):
+        super(FlagOutlierDialog, self).__init__(parent=parent,
+            title=title, size=(600, 700))
+        fl = flagging.Flags()
+        self.threshold = str(threshold)
+        self.timerange = str(timerange)
+        self.markall = markall
+        self.labelid = labelid
+        self.operator = operator
+        self.labels = ["{}: {}".format(key, fl.FLAGLABEL.get(key)) for key in fl.FLAGLABEL]
+        self.currentlabelindex = [i for i, el in enumerate(self.labels) if el.startswith(labelid)][0]
         self.createControls()
         self.doLayout()
+        print (i for i, el in enumerate(self.labels) if el.startswith(labelid))
 
     # Widgets
     def createControls(self):
         # countvariables for specific header blocks
         self.ThresholdText = wx.StaticText(self,label="Threshold")
-        self.TimerangeText = wx.StaticText(self,label="Window width")
-        self.UnitText = wx.StaticText(self,label="seconds")
-        self.ThresholdTextCtrl = wx.TextCtrl(self, value=self.threshold)
-        self.TimerangeTextCtrl = wx.TextCtrl(self, value=self.timerange)
-        self.MarkAllCheckBox = wx.CheckBox(self, label="Mark outliers in",size=(160,30))
-        self.MarkText = wx.StaticText(self,label="all components")
+        self.TimerangeText = wx.StaticText(self,label="Window width (sec)")
+        self.OperatorText = wx.StaticText(self,label="Operator")
+        self.ThresholdTextCtrl = wx.TextCtrl(self, value=self.threshold, size=(160,-1))
+        self.TimerangeTextCtrl = wx.TextCtrl(self, value=self.timerange, size=(160,-1))
+        self.OperatorTextCtrl = wx.TextCtrl(self, value=self.operator, size=(160,-1))
+        self.MarkAllCheckBox = wx.CheckBox(self, label="other components",size=(160,-1))
+        self.MarkText = wx.StaticText(self,label="Mark outliers also in")
+        self.LabelText = wx.StaticText(self,label="Select label")
+        self.LabelComboBox = wx.ComboBox(self, choices=self.labels,
+            style=wx.CB_DROPDOWN, value=self.labels[self.currentlabelindex],size=(160,-1))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         self.MarkAllCheckBox.SetValue(self.markall)
+        self.OperatorTextCtrl.Disable()
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1635,16 +1647,16 @@ class StreamFlagOutlierDialog(wx.Dialog):
         contlst = []
         contlst.append((self.ThresholdText, noOptions))
         contlst.append((self.TimerangeText, noOptions))
-        contlst.append(emptySpace)
+        contlst.append((self.OperatorText, noOptions))
         contlst.append((self.ThresholdTextCtrl, expandOption))
         contlst.append((self.TimerangeTextCtrl, expandOption))
-        contlst.append((self.UnitText, noOptions))
-        contlst.append(emptySpace)
-        contlst.append((self.MarkAllCheckBox, noOptions))
-        contlst.append(emptySpace)
+        contlst.append((self.OperatorTextCtrl, expandOption))
+        contlst.append((self.LabelText, noOptions))
         contlst.append(emptySpace)
         contlst.append((self.MarkText, noOptions))
+        contlst.append((self.LabelComboBox, expandOption))
         contlst.append(emptySpace)
+        contlst.append((self.MarkAllCheckBox, noOptions))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
@@ -1664,25 +1676,32 @@ class StreamFlagOutlierDialog(wx.Dialog):
         self.SetSizerAndFit(boxSizer)
 
 
-class StreamFlagRangeDialog(wx.Dialog):
+class FlagRangeDialog(wx.Dialog):
     """
     DESCRIPTION
         Dialog for Parameter selection of flag range routine
     USED BY:
         Stream Method: onFlagRange()
     """
-    def __init__(self, parent, title, stream, shownkeylist, keylist):
-        super(StreamFlagRangeDialog, self).__init__(parent=parent,
+    def __init__(self, parent, title, stream, shownkeylist, keylist, labelid, operator, group, flagversion):
+        super(FlagRangeDialog, self).__init__(parent=parent,
             title=title, size=(600, 600))
+        fl = flagging.Flags()
         self.shownkeys=shownkeylist
         self.selectedkey = shownkeylist[0]
         self.keys2flag = ",".join(shownkeylist)
         self.keys=keylist
         self.stream = stream
-        self.mintime = num2date(stream.ndarray[0][0])
-        self.maxtime = num2date(stream.ndarray[0][-1])
-        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
+        self.mintime = stream.start()
+        self.maxtime = stream.end()
+        self.labelid = labelid
+        self.operator = operator
+        self.labels = ["{}: {}".format(key, fl.FLAGLABEL.get(key)) for key in fl.FLAGLABEL]
+        self.currentlabelindex = [i for i, el in enumerate(self.labels) if el.startswith(labelid)][0]
+        cftdict = fl.FLAGTYPE.get(flagversion)
+        self.flagidlist = ["{}: {}".format(key,cftdict.get(key)) for key in cftdict]
         self.comment = ''
+        self.group = group
         #dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
         self.ul = np.nanmax(self.stream.ndarray[KEYLIST.index(self.selectedkey)])
         self.ll = np.nanmin(self.stream.ndarray[KEYLIST.index(self.selectedkey)])
@@ -1858,38 +1877,53 @@ class StreamFlagRangeDialog(wx.Dialog):
         print (str(firstkey),ind, self.ul, self.ll)
 
 
-class StreamFlagSelectionDialog(wx.Dialog):
+class FlagSelectionDialog(wx.Dialog):
     """
     DESCRIPTION
         Dialog for Parameter selection of flag range routine
     USED BY:
         Stream Method: onFlagRange()
     """
-    def __init__(self, parent, title, shownkeylist, keylist):
-        super(StreamFlagSelectionDialog, self).__init__(parent=parent,
-            title=title, size=(600, 600))
+    def __init__(self, parent, title, shownkeylist, keylist, labelid, operator, group, flagversion):
+        super(FlagSelectionDialog, self).__init__(parent=parent,
+            title=title, size=(600, 800))
+        fl = flagging.Flags()
         self.shownkeys=shownkeylist
         self.selectedkey = shownkeylist[0]
         self.keys2flag = ",".join(shownkeylist)
         self.keys=keylist
-        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
+        self.labelid = labelid
+        self.operator = operator
+        self.labels = ["{}: {}".format(key, fl.FLAGLABEL.get(key)) for key in fl.FLAGLABEL]
+        self.currentlabelindex = [i for i, el in enumerate(self.labels) if el.startswith(labelid)][0]
+        cftdict = fl.FLAGTYPE.get(flagversion)
+        self.flagidlist = ["{}: {}".format(key,cftdict.get(key)) for key in cftdict]
         self.comment = ''
+        self.operator = operator
+        self.group = group
         self.createControls()
         self.doLayout()
-        #print ("Dialog open", shownkeylist, keylist)
+        self.bindControls()
 
     # Widgets
     def createControls(self):
         # countvariables for specific header blocks
         self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
-        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,-1))
+        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(200,-1))
         self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
         self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
-            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
+            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(200,-1))
+        self.LabelText = wx.StaticText(self,label="Select label")
+        self.LabelComboBox = wx.ComboBox(self, choices=self.labels,
+            style=wx.CB_DROPDOWN, value=self.labels[self.currentlabelindex],size=(200,-1))
+        self.OperatorText = wx.StaticText(self,label="Operator:")
+        self.OperatorTextCtrl = wx.TextCtrl(self, value=self.operator,size=(200,-1))
+        self.GroupText = wx.StaticText(self,label="Group:")
+        self.GroupTextCtrl = wx.TextCtrl(self, value=self.group,size=(200,-1))
         self.CommentText = wx.StaticText(self,label="Comment:")
-        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,-1))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,-1))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,-1))
+        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(200,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(200,-1))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(200,-1))
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -1905,14 +1939,19 @@ class StreamFlagSelectionDialog(wx.Dialog):
         # transform headerlist to an array with lines like cnts
         contlst = []
         contlst.append((self.KeyListText, noOptions))
+        contlst.append((self.LabelText, noOptions))
         contlst.append((self.FlagIDText, noOptions))
-        contlst.append((self.CommentText, noOptions))
-        # 8 row
         contlst.append((self.AffectedKeysTextCtrl, expandOption))
+        contlst.append((self.LabelComboBox, expandOption))
         contlst.append((self.FlagIDComboBox, expandOption))
+        contlst.append((self.CommentText, noOptions))
+        contlst.append((self.GroupText, noOptions))
+        contlst.append((self.OperatorText, noOptions))
         contlst.append((self.CommentTextCtrl, expandOption))
-        contlst.append(emptySpace)
+        contlst.append((self.GroupTextCtrl, expandOption))
+        contlst.append((self.OperatorTextCtrl, expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append(emptySpace)
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
 
         # A GridSizer will contain the other controls:
@@ -1929,16 +1968,34 @@ class StreamFlagSelectionDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+    def bindControls(self):
+        self.LabelComboBox.Bind(wx.EVT_COMBOBOX, self.OnUpdateLabel)
 
-class StreamLoadFlagDialog(wx.Dialog):
+    def OnUpdateLabel(self, event):
+        """
+        DESCRIPTION
+            update flagtype according to labelid
+        :param e:
+        :return:
+        """
+        label = self.LabelComboBox.GetStringSelection()
+        labelid = label[:3]
+        print ("Changed label to", labelid)
+        if 10 <= int(labelid) < 50:
+            self.FlagIDComboBox.SetValue(self.flagidlist[4])
+        else:
+            self.FlagIDComboBox.SetValue(self.flagidlist[3])
+
+
+class FlagLoadDialog(wx.Dialog):
     """
     DESCRIPTION
         Dialog for Loading Flagging data from file or DB
     """
-    def __init__(self, parent, title, db, sensorid, start, end,last_dir: string =''):
-        super(StreamLoadFlagDialog, self).__init__(parent=parent,
+    def __init__(self, parent, title, db, sensorid, start, end, last_dir: string =''):
+        super(FlagLoadDialog, self).__init__(parent=parent,
             title=title, size=(300, 300))
-        self.flaglist = []
+        self.fl = flagging.Flags()
         self.sensorid = sensorid
         self.db = db
         self.start = start
@@ -1996,7 +2053,8 @@ class StreamLoadFlagDialog(wx.Dialog):
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadFile)
 
     def OnLoadDB(self, e):
-        self.flaglist = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
+        self.fl = self.db.flags_from_db(sensorid=self.sensorid, starttime=self.start, endtime=self.end)
+        #self.fl = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
         dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
@@ -2009,11 +2067,11 @@ class StreamLoadFlagDialog(wx.Dialog):
         if openFileDialog.ShowModal() == wx.ID_OK:
             flagname = openFileDialog.GetPath()
             try:
-                self.flaglist = loadflags(flagname,sensorid=self.sensorid, begin=self.start, end=self.end)
+                self.fl = flagging.load(flagname,sensorid=self.sensorid, begin=self.start, end=self.end)
             except:
-                self.flaglist = []
+                self.fl = flagging.Flags()
             openFileDialog.Destroy()
-            dlg = wx.MessageDialog(self, "Flags for {} loaded from File!\nFound {} flag inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from File", wx.OK|wx.ICON_INFORMATION)
+            dlg = wx.MessageDialog(self, "Flags for {} loaded from File!\nFound {} flag inputs\n".format(self.sensorid,len(self.fl)),"FLAGS obtained from File", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
         else:
@@ -2021,15 +2079,15 @@ class StreamLoadFlagDialog(wx.Dialog):
         self.Close(True)
 
 
-class StreamSaveFlagDialog(wx.Dialog):
+class FlagSaveDialog(wx.Dialog):
     """
     DESCRIPTION
         Dialog for Loading Flagging data from file or DB
     """
     def __init__(self, parent, title, db, flaglist, last_dir: string =''):
-        super(StreamSaveFlagDialog, self).__init__(parent=parent,
+        super(FlagSaveDialog, self).__init__(parent=parent,
             title=title, size=(300, 300))
-        self.flaglist = flaglist
+        self.fl = flaglist
         self.db = db
         self.last_dir = last_dir
         self.createControls()
@@ -2084,8 +2142,8 @@ class StreamSaveFlagDialog(wx.Dialog):
         self.saveFileButton.Bind(wx.EVT_BUTTON, self.OnSaveFile)
 
     def OnSaveDB(self, e):
-        print ("Saving", self.flaglist[0])
-        flaglist2db(self.db, self.flaglist)
+        #print ("Saving", self.flaglist[0])
+        self.db.flags_to_db(self.fl)
         dlg = wx.MessageDialog(self, "Flags stored in connected DB!\nFLAGS table extended with {} inputs\n".format(len(self.flaglist)),"FLAGS added to DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
@@ -2104,7 +2162,7 @@ class StreamSaveFlagDialog(wx.Dialog):
                 flagname = flagname+extensions[extind]
 
             saveFileDialog.Destroy()
-            saveflags(self.flaglist,flagname)
+            self.fl.save(flagname)
         self.Close(True)
 
 
