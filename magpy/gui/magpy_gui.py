@@ -5395,7 +5395,7 @@ class MainFrame(wx.Frame):
         if self.active_didata:
             # Identify source -> Future version: use absolutClass which contains raw data
             #                    and necessary variation,scalar data
-            activatereport = False
+            activatereport = True
             prev_redir = None
             if activatereport:
                 if debug:

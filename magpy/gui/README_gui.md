@@ -466,10 +466,12 @@ need to enter a station code "WIC" as this code is not contained in the example 
 Next, we will have to access variometer and scalar data for this time range. Such data is contained in
 example5.sec. You can also select a database as variometer and scaler data source, if connected. Please note
 that the DATAINFO table is essential for selecting such data and only variometer data containing XYZ or HEZ components
-are shown. Scalar data is limited to F or S notations. Finally you can also choose a webservice as data source. 
+are shown. Scalar data is limited to F or S notations. Finally you can also choose a webservice as data source. Please
+note that although all webservices can be selected only the USGS and Conrad webservices are currently supported
+(MagPy 2.0.0).
 
 Example5.sec contains variation data and independent F from the observatory. In order to consider the pier difference
-between F and DI pier, please modify Analysis Parameter. 
+between F and DI pier one has to provide such data by modifying the analysis parameters. 
 
 For our analysis the delta F values have already been considered in the F record and other deltas are negligible.
 We can directly use the Analyze button. This will result in a plot of D,I,F and basevalues as well as a detailed
