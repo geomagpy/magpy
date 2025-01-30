@@ -53,7 +53,11 @@ import platform
 | DefineScalarDialog     | 2.0.0   |                 |  level 2       |          | LoadDIDialog |
 | DISaveDialog           | 2.0.0   |                 |  level 2       |          | dip_onDISaveButton |
 | ParameterDictDialog    | 2.0.0   |                 |  level 2       |          | dip_onDIParameterButton |
-| FlagOutlierDialog    |   2.0.0   |                 |  level 1       |          | flag_onFlagOutlier |
+| FlagOutlierDialog    |   2.0.0   |                 |  level 2       |          | flag_onFlagOutlier |
+| FlagSelectionDialog  |   2.0.0   |                 |  level 2       |          | flag_onFlagSelection |
+| FlagRangeDialog      |   2.0.0   |                 |  level 1       |          | flag_onFlagRange |
+| FlagLoadDialog       |   2.0.0   |                 |  level 1       |          | flag_onFlagLoad |
+| FlagSaveDialog       |   2.0.0   |                 |  level 1       |          | flag_onFlagSave |
 
 
 runtime test:
@@ -1705,7 +1709,7 @@ class FlagRangeDialog(wx.Dialog):
         #dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
         self.ul = np.nanmax(self.stream.ndarray[KEYLIST.index(self.selectedkey)])
         self.ll = np.nanmin(self.stream.ndarray[KEYLIST.index(self.selectedkey)])
-        self.rangetype = ['value', 'time']
+        self.rangetype = ['time', 'value']
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -1714,13 +1718,9 @@ class FlagRangeDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         try:
-            #stda = wx.DateTime.FromTimeT(time.mktime(self.mintime.timetuple()))
-            #edda = wx.DateTime.FromTimeT(time.mktime(self.maxtime.timetuple()))
             stda = wx.DateTime.FromDMY(day=self.mintime.day,month=self.mintime.month-1,year=self.mintime.year)
             edda = wx.DateTime.FromDMY(day=self.maxtime.day,month=self.maxtime.month-1,year=self.maxtime.year)
         except:
-            #stda = wx.DateTimeFromTimeT(time.mktime(self.mintime.timetuple()))
-            #edda = wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
             stda = wx.DateTimeFromDMY(day=self.mintime.day,month=self.mintime.month-1,year=self.mintime.year)
             edda = wx.DateTimeFromDMY(day=self.maxtime.day,month=self.maxtime.month-1,year=self.maxtime.year)
         # countvariables for specific header blocks
@@ -1739,17 +1739,24 @@ class FlagRangeDialog(wx.Dialog):
         self.startFlagTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(160,30))
         self.endFlagDatePicker = wxDatePickerCtrl(self, dt=edda,size=(160,30))
         self.endFlagTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(160,30))
-        self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
+        self.KeyListText = wx.StaticText(self,label="Keys to flag:")
         self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
-        self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
+        self.FlagIDText = wx.StaticText(self,label="Select Flagtype:")
         self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
             style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
+        self.LabelText = wx.StaticText(self,label="Select label")
+        self.LabelComboBox = wx.ComboBox(self, choices=self.labels,
+            style=wx.CB_DROPDOWN, value=self.labels[self.currentlabelindex],size=(200,-1))
+        self.OperatorText = wx.StaticText(self,label="Operator:")
+        self.OperatorTextCtrl = wx.TextCtrl(self, value=self.operator,size=(200,-1))
+        self.GroupText = wx.StaticText(self,label="Group:")
+        self.GroupTextCtrl = wx.TextCtrl(self, value=self.group,size=(200,-1))
         self.CommentText = wx.StaticText(self,label="Comment:")
         self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
         self.rangeRadioBox = wx.RadioBox(self,
-            label="Select flagging range type:",
+            label="Select range type:",
             choices=self.rangetype, majorDimension=2, style=wx.RA_SPECIFY_COLS, size=(160,-1))
 
     def doLayout(self):
@@ -1765,55 +1772,62 @@ class FlagRangeDialog(wx.Dialog):
         # Add the controls to the sizers:
         # transform headerlist to an array with lines like cnts
         contlst = []
-        # 1 row
+        #
         contlst.append((self.rangeRadioBox, noOptions))
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append(emptySpace)
-        # 2 row
-        contlst.append((self.ValueRangeText, noOptions))
-        contlst.append(emptySpace)
-        contlst.append(emptySpace)
-        contlst.append(emptySpace)
-        contlst.append((self.LimitKeyText, noOptions))
-        contlst.append(emptySpace)
-        contlst.append((self.LowerLimitText, noOptions))
-        contlst.append((self.UpperLimitText, noOptions))
-        # 3 row
-        contlst.append((self.SelectKeyComboBox, expandOption))
-        contlst.append(emptySpace)
-        contlst.append((self.LowerLimitTextCtrl, expandOption))
-        contlst.append((self.UpperLimitTextCtrl, expandOption))
-        # 4 row
-        contlst.append(emptySpace)
-        contlst.append(emptySpace)
-        contlst.append(emptySpace)
-        contlst.append(emptySpace)
+        #
         contlst.append((self.TimeRangeText, noOptions))
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append(emptySpace)
-        # 5 row
+        #
         contlst.append((self.LowerTimeText, noOptions))
         contlst.append(emptySpace)
         contlst.append((self.UpperTimeText, noOptions))
         contlst.append(emptySpace)
-        # 6 row
+        #
         contlst.append((self.startFlagDatePicker, expandOption))
         contlst.append((self.startFlagTimePicker, expandOption))
         contlst.append((self.endFlagDatePicker, expandOption))
         contlst.append((self.endFlagTimePicker, expandOption))
-        # 7 row
+        #
+        contlst.append((self.ValueRangeText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        #
+        contlst.append((self.LimitKeyText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.LowerLimitText, noOptions))
+        contlst.append((self.UpperLimitText, noOptions))
+        #
+        contlst.append((self.SelectKeyComboBox, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.LowerLimitTextCtrl, expandOption))
+        contlst.append((self.UpperLimitTextCtrl, expandOption))
+        #
         contlst.append((self.KeyListText, noOptions))
+        contlst.append((self.LabelText, noOptions))
         contlst.append((self.FlagIDText, noOptions))
-        contlst.append((self.CommentText, noOptions))
-        contlst.append(emptySpace)
-        # 8 row
+        contlst.append((self.OperatorText, noOptions))
+        #
         contlst.append((self.AffectedKeysTextCtrl, expandOption))
+        contlst.append((self.LabelComboBox, expandOption))
         contlst.append((self.FlagIDComboBox, expandOption))
-        contlst.append((self.CommentTextCtrl, expandOption))
+        contlst.append((self.OperatorTextCtrl, expandOption))
+        #
+        contlst.append((self.CommentText, noOptions))
+        contlst.append((self.GroupText, noOptions))
         contlst.append(emptySpace)
-        # 9 row
+        contlst.append(emptySpace)
+        #
+        contlst.append((self.CommentTextCtrl, expandOption))
+        contlst.append((self.GroupTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        #
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
@@ -1836,6 +1850,22 @@ class FlagRangeDialog(wx.Dialog):
     def bindControls(self):
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeGroup, self.rangeRadioBox)
         self.Bind(wx.EVT_COMBOBOX, self.OnChangeSelection, self.SelectKeyComboBox)
+        self.LabelComboBox.Bind(wx.EVT_COMBOBOX, self.OnUpdateLabel)
+
+    def OnUpdateLabel(self, event):
+        """
+        DESCRIPTION
+            update flagtype according to labelid
+        :param e:
+        :return:
+        """
+        label = self.LabelComboBox.GetStringSelection()
+        labelid = label[:3]
+        print ("Changed label to", labelid)
+        if 10 <= int(labelid) < 50:
+            self.FlagIDComboBox.SetValue(self.flagidlist[4])
+        else:
+            self.FlagIDComboBox.SetValue(self.flagidlist[3])
 
     def SetValue(self):
             self.UpperLimitTextCtrl.Enable()
@@ -1882,7 +1912,7 @@ class FlagSelectionDialog(wx.Dialog):
     DESCRIPTION
         Dialog for Parameter selection of flag range routine
     USED BY:
-        Stream Method: onFlagRange()
+        Stream Method: onFlagSelection()
     """
     def __init__(self, parent, title, shownkeylist, keylist, labelid, operator, group, flagversion):
         super(FlagSelectionDialog, self).__init__(parent=parent,
@@ -2164,79 +2194,6 @@ class FlagSaveDialog(wx.Dialog):
             saveFileDialog.Destroy()
             self.fl.save(flagname)
         self.Close(True)
-
-
-class StreamFlagSelectionDialog(wx.Dialog):
-    """
-    DESCRIPTION
-        Dialog for Parameter selection of flag range routine
-    USED BY:
-        Stream Method: onFlagRange()
-    """
-    def __init__(self, parent, title, shownkeylist, keylist):
-        super(StreamFlagSelectionDialog, self).__init__(parent=parent,
-            title=title, size=(600, 600))
-        self.shownkeys=shownkeylist
-        self.selectedkey = shownkeylist[0]
-        self.keys2flag = ",".join(shownkeylist)
-        self.keys=keylist
-        self.flagidlist = ['0: normal data', '1: automatically flagged', '2: keep data in any case', '3: remove data', '4: special flag']
-        self.comment = ''
-        self.createControls()
-        self.doLayout()
-        #print ("Dialog open", shownkeylist, keylist)
-
-    # Widgets
-    def createControls(self):
-        # countvariables for specific header blocks
-        self.KeyListText = wx.StaticText(self,label="Keys which will be flagged:")
-        self.AffectedKeysTextCtrl = wx.TextCtrl(self, value=self.keys2flag,size=(160,30))
-        self.FlagIDText = wx.StaticText(self,label="Select Flag ID:")
-        self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
-            style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
-        self.CommentText = wx.StaticText(self,label="Comment:")
-        self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
-
-    def doLayout(self):
-        # A horizontal BoxSizer will contain the GridSizer (on the left)
-        # and the logger text control (on the right):
-        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
-
-        # Prepare some reusable arguments for calling sizer.Add():
-        expandOption = dict(flag=wx.EXPAND)
-        noOptions = dict()
-        emptySpace = ((0, 0), noOptions)
-
-        # Add the controls to the sizers:
-        # transform headerlist to an array with lines like cnts
-        contlst = []
-        contlst.append((self.KeyListText, noOptions))
-        contlst.append((self.FlagIDText, noOptions))
-        contlst.append((self.CommentText, noOptions))
-        # 8 row
-        contlst.append((self.AffectedKeysTextCtrl, expandOption))
-        contlst.append((self.FlagIDComboBox, expandOption))
-        contlst.append((self.CommentTextCtrl, expandOption))
-        contlst.append(emptySpace)
-        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
-        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
-
-        # A GridSizer will contain the other controls:
-        cols = 3
-        rows = int(np.ceil(len(contlst)/float(cols)))
-        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
-
-        for control, options in contlst:
-            gridSizer.Add(control, **options)
-
-        for control, options in \
-                [(gridSizer, dict(border=5, flag=wx.ALL))]:
-            boxSizer.Add(control, **options)
-
-        self.SetSizerAndFit(boxSizer)
-
 
 
 class AnalysisFlagsDialog(wx.Dialog):

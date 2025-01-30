@@ -139,7 +139,10 @@ Major methods:              major_method
 |  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 2    |               |        |   |
 |  MainFrame     | flag_onFlagOutlier | 2.0.0  |            | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagSelection | 2.0.0  |          | level 1    |               |        |   |
-|  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 1    |               |        |   |
+|  MainFrame     | flag_onFlagDrop   | 2.0.0  |       | level 1    |               |        |   |
+|  MainFrame     | flag_onFlagRange  | 2.0.0  |       | level 1    |               |        |   |
+|  MainFrame     | flag_onFlagLoad   | 2.0.0  |       | level 1    |               |        |   |
+|  MainFrame     | flag_onFlagSave   | 2.0.0  |       | level 1    |               |        |   |
 
 |  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
 |  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
@@ -1665,7 +1668,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagRangeButton, self.menu_p.fla_page.flagRangeButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagLoadButton, self.menu_p.fla_page.flagLoadButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagSaveButton, self.menu_p.fla_page.flagSaveButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagDropButton, self.menu_p.fla_page.flagDropButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagDropButton, self.menu_p.fla_page.flagDropButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.fla_page.flagMinButton)
         self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.fla_page.flagMaxButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagClearButton, self.menu_p.fla_page.flagClearButton)
@@ -4471,7 +4474,6 @@ class MainFrame(wx.Frame):
                                                    starttime=starttime, endtime=endtime, above=above, below=below)
                          if fl:
                              rfl = fl.join(rfl)
-                         #flaglist = flagging.flag_range(plotstream, keys=[keys],flagtype=flagid,text=comment,keystoflag=keys2flag,above=above,below=below)
                          self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(rfl)))
                 elif flagtype == 'time':
                      if comment == '':
@@ -4578,37 +4580,28 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Flaglist saved and reset - Ready")
 
 
-    def onFlagDropButton(self,event):
+    def flag_onFlagDropButton(self,event):
         """
         DESCRIPTION
             Drops all flagged data
         """
         self.changeStatusbar("Dropping flagged data ...")
 
-        #dlg = wx.MessageDialog(self, "Please select:\n"
-        #       "Yes: drop data from all columns\nNo: drop only selected data\n","Drop", wx.YES_NO |wx.ICON_INFORMATION)
-        #if dlg.ShowModal() == wx.ID_YES:
-        #    self.plotstream = self.plotstream.flag(self.shownkeylist)
-        #else:
-        self.plotstream = self.plotstream.remove_flagged()
-        flagid = DataStream().KEYLIST.index('flag')
-        check = [el for el in self.plotstream.ndarray[flagid] if '0' in el or '2' in el or '4' in el]
-        if not len(check) > 0:
-           self.plotstream = self.plotstream._drop_column('flag')
-           self.plotstream = self.plotstream._drop_column('comment')
-           #self.plotopt['annotate'] = False
-        else:
-           pass
-           #self.plotopt['annotate'] = True
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        plotstream = stream.copy()
+        fl = plotstream.header.get('DataFlags')
+        if fl:
+            plotstream = fl.apply_flags(plotstream, mode='drop')
+        #plotstream.header['DataFlags'] = None
 
         self.menu_p.rep_page.logMsg('- flagged data removed')
 
-        self.flaglist = []
-        self.ActivateControls(self.plotstream)
-
-        self.OnPlot(self.plotstream,self.shownkeylist)
+        streamid = self._initial_read(plotstream)
+        self._initial_plot(streamid, keepplotdict=True)
 
         self.changeStatusbar("Ready")
+
 
     def onFlagMinButton(self,event):
         """
