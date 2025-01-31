@@ -4629,46 +4629,64 @@ class MainFrame(wx.Frame):
         DESCRIPTION
             Flags maximum value in zoomed region
         """
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        keys = datacont.get('keys')
+        plotcont = self.plotdict.get(self.active_id)
+        shownkeys = plotcont.get('shownkeys')
+
+        labelid = self.analysisdict.get('labelid','002')
+        operator = self.analysisdict.get('operator')
+        groups = ''
+        self.flagversion = self.analysisdict.get('flagversion', '2.0')
+        efl = flagging.Flags()
+        mfl = flagging.Flags()
+
+        # Get current flagging object from data header
+        plotstream = stream.copy()
+        newplotcont = plotcont.copy()
+        fl = stream.header.get('DataFlags',efl)
+        sensid = plotstream.header.get('SensorID','')
+        dataid = plotstream.header.get('DataID','')
+        if sensid == '' and not dataid == '':
+            sensid = dataid[:-5]
+
+        if fl: # and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Flagging information in already associated with the data set. Keep them \n YES \n or drop them  \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
             if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
+                fl = efl
             dlg.Destroy()
 
-        keys = self.shownkeylist
-        teststream = self.plotstream.copy()
         # limits
         self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        teststream = plotstream.trim(starttime=self.xlimits[0],endtime=self.xlimits[1])
         xdata = self.plot_p.t
         xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-        maxi = [teststream._get_max(key,returntime=True) for key in keys]
-        flaglist = []
-        comment = 'Flagged maximum'
+        mini = [teststream._get_max(key,returntime=True) for key in keys]
+        comment = 'Flagged minimum'
         flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
         flagid = int(flagid[0])
         if flagid == 0:
             comment = ''
-        for idx,me in enumerate(maxi):
+        for idx,me in enumerate(mini):
             if not keys[idx] == 'df':
                 checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
                 if checkbox.IsChecked():
-                    starttime = num2date(me[1] - xtol)
-                    endtime = num2date(me[1] + xtol)
-                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-        if len(flaglist) > 0:
-            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.ActivateControls(self.plotstream)
-            self.plotopt['annotate'] = True
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+                    starttime = me[1] - xtol
+                    endtime = me[1] + xtol
+                    mfl = flagging.flag_range(plotstream, keys=shownkeys, flagtype=flagid, labelid=labelid,
+                                               operator=operator,
+                                               groups=groups, text=comment, keystoflag=keys[idx],
+                                               starttime=starttime, endtime=endtime)
+        if mfl:
+            plotstream.header['DataFlags'] = mfl
+            # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
+            # and update plot will create patches
+            streamid = self._initial_read(plotstream)
+            self.plotdict[streamid] = newplotcont
+            self._initial_plot(streamid, keepplotdict=True)
 
+        self.changeStatusbar("Ready")
 
     def flag_onFlagLoadButton(self,event):
         """
