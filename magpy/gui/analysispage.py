@@ -25,9 +25,7 @@ class AnalysisPage(wx.Panel):
 
     # Widgets
     def createControls(self):
-        # TODO Methods:
-        # filter, derivative, offset, fit, baseline, k_fmi, get_min, get_max, mean, delta_f, rotation, spectrogam, powerspec, smooth
-
+        font = wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.head1Label = wx.StaticText(self, label="Basic methods:")
         # derivative, fit, rotation
         self.head2Label = wx.StaticText(self, label="Characteristic values:")
@@ -39,10 +37,6 @@ class AnalysisPage(wx.Panel):
         self.head5Label = wx.StaticText(self, label="Baseline adoption:")
         # frequency range
         self.head6Label = wx.StaticText(self, label="Frequency range:")
-        #self.head5Label = wx.StaticText(self, label="Multiple streams:")
-        # merge, subtract, stack
-        # display continuous statistics
-        #self.head6Label = wx.StaticText(self, label="Continuous statistics:")
 
         # 1 Line
         self.derivativeButton = wx.Button(self,-1,"Derivative",size=(160,30))
@@ -73,9 +67,12 @@ class AnalysisPage(wx.Panel):
         self.powerButton = wx.Button(self,-1,"Power",size=(160,30))
         self.spectrumButton = wx.Button(self,-1,"Spectrum",size=(160,30))
 
-        # 6 Line
-        #self.statsButton = wx.Button(self,-1,"Show Statistics",size=(160,30))
-
+        self.head1Label.SetFont(font)
+        self.head2Label.SetFont(font)
+        self.head3Label.SetFont(font)
+        self.head4Label.SetFont(font)
+        self.head5Label.SetFont(font)
+        self.head6Label.SetFont(font)
 
 
     def doLayout(self):

@@ -28,6 +28,7 @@ class AbsolutePage(wx.Panel):
 
     # Widgets
     def createControls(self):
+        font = wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.sourceLabel = wx.StaticText(self, label="Data source:")
         self.diLabel = wx.StaticText(self, label="Actions:")
         self.loadDIButton = wx.Button(self,-1,"DI data",size=(160,30))
@@ -41,8 +42,6 @@ class AbsolutePage(wx.Panel):
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.defineParameterButton = wx.Button(self,-1,"Analysis parameter",size=(160,30))
         self.parameterRadioBox = wx.RadioBox(self,label="parameter source",choices=self.choices, majorDimension=2, style=wx.RA_SPECIFY_COLS,size=(160,50))
-        #self.parameterTextCtrl = wx.TextCtrl(self, value="Default",size=(160,30),
-        #                  style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.scalarTextCtrl = wx.TextCtrl(self, value="None",size=(160,40),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.AnalyzeButton = wx.Button(self,-1,"Analyze",size=(160,30))
@@ -52,10 +51,9 @@ class AbsolutePage(wx.Panel):
         self.SaveLogButton = wx.Button(self,-1,"Save Log",size=(160,30))
         self.dilogTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,200),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        #self.varioExtComboBox = wx.ComboBox(self, choices=self.varioext,
-        #         style=wx.CB_DROPDOWN, value=self.varioext[0],size=(160,-1))
-        #self.scalarExtComboBox = wx.ComboBox(self, choices=self.scalarext,
-        #         style=wx.CB_DROPDOWN, value=self.scalarext[0],size=(160,-1))
+        self.sourceLabel.SetFont(font)
+        self.diLabel.SetFont(font)
+        self.logLabel.SetFont(font)
 
 
     def doLayout(self):

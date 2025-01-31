@@ -33,6 +33,7 @@ class StreamPage(wx.Panel):
 
     # Widgets
     def createControls(self):
+        font = wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.nextButton = wx.Button(self,-1,"next >>",size=(160,30))
         self.previousButton = wx.Button(self,-1,"<< previous",size=(160,30))
         self.infoLabel = wx.StaticText(self, label="Data information:")
@@ -73,7 +74,9 @@ class StreamPage(wx.Panel):
         self.compRadioBox.Disable()
         self.symbolRadioBox.Disable()
 
-        #self.dailyMeansButton.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.NORMAL))
+        self.infoLabel.SetFont(font)
+        self.plotOptionsLabel.SetFont(font)
+        self.statsLabel.SetFont(font)
 
 
     def doLayout(self):

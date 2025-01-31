@@ -23,6 +23,7 @@ class MetaPage(wx.Panel):
 
     # Widgets
     def createControls(self):
+        font = wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.head1Label = wx.StaticText(self, label="Basic Information:")
         self.head2Label = wx.StaticText(self, label="Database:")
         self.head3Label = wx.StaticText(self, label="Modify/Review:")
@@ -52,6 +53,9 @@ class MetaPage(wx.Panel):
         self.MetaStationButton = wx.Button(self,-1,"Station related",size=(160,30))
         self.stationTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,80),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.head1Label.SetFont(font)
+        self.head2Label.SetFont(font)
+        self.head3Label.SetFont(font)
 
 
     def doLayout(self):

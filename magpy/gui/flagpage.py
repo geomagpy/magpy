@@ -21,8 +21,11 @@ class FlagPage(wx.Panel):
         fl = flagging.Flags()
         cftdict = fl.FLAGTYPE.get(flagversion)
         self.flagidlist = ["{}: {}".format(key,cftdict.get(key)) for key in cftdict]
+        self.labels = ["{}: {}".format(key, fl.FLAGLABEL.get(key)) for key in fl.FLAGLABEL]
+        self.currentlabelindex = [i for i, el in enumerate(self.labels) if el.startswith('002')][0]
         self.createControls()
         self.doLayout()
+        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -37,7 +40,8 @@ class FlagPage(wx.Panel):
         self.yCheckBox = wx.CheckBox(self,label="Y             ")
         self.zCheckBox = wx.CheckBox(self,label="Z             ")
         self.fCheckBox = wx.CheckBox(self,label="F             ")
-        self.FlagIDText = wx.StaticText(self,label="Select Min/Max Flag ID:")
+        self.LabelComboBox = wx.ComboBox(self, choices=self.labels,
+            style=wx.CB_DROPDOWN, value=self.labels[self.currentlabelindex],size=(160,-1))
         self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
             style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
         self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,30))
@@ -81,7 +85,7 @@ class FlagPage(wx.Panel):
                  'self.yCheckBox, noOptions',
                  'self.zCheckBox, noOptions',
                  'self.fCheckBox, noOptions',
-                 'self.FlagIDText, noOptions',
+                 'self.LabelComboBox, expandOption',
                  'self.FlagIDComboBox, expandOption',
                     'self.flagApplyLabel, noOptions',
                     '(0,0), noOptions',
@@ -134,3 +138,21 @@ class FlagPage(wx.Panel):
         self.SetSizerAndFit(mainSizer)
 
         #self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.LabelComboBox.Bind(wx.EVT_COMBOBOX, self.OnUpdateLabel)
+
+    def OnUpdateLabel(self, event):
+        """
+        DESCRIPTION
+            update flagtype according to labelid
+        :param e:
+        :return:
+        """
+        label = self.LabelComboBox.GetStringSelection()
+        labelid = label[:3]
+        print ("Changed label to", labelid)
+        if 10 <= int(labelid) < 50:
+            self.FlagIDComboBox.SetValue(self.flagidlist[4])
+        else:
+            self.FlagIDComboBox.SetValue(self.flagidlist[3])

@@ -1956,6 +1956,7 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.yCheckBox.Disable()           # always
         self.menu_p.fla_page.zCheckBox.Disable()           # always
         self.menu_p.fla_page.fCheckBox.Disable()           # always
+        self.menu_p.fla_page.LabelComboBox.Disable()       # always
         self.menu_p.fla_page.FlagIDComboBox.Disable()      # always
         self.menu_p.fla_page.flagDropButton.Disable()      # activated if annotation are present
         self.menu_p.fla_page.flagSaveButton.Disable()      # activated if annotation are present
@@ -2189,6 +2190,7 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.flagMaxButton.Enable()       # always
         self.menu_p.fla_page.flagClearButton.Enable()       # always
         self.menu_p.fla_page.FlagIDComboBox.Enable()      # always
+        self.menu_p.fla_page.LabelComboBox.Enable()       # always
         self.menu_p.fla_page.flagmodButton.Enable()       # always
 
         # ----------------------------------------
@@ -4570,7 +4572,7 @@ class MainFrame(wx.Frame):
         plotcont = self.plotdict.get(self.active_id)
         shownkeys = plotcont.get('shownkeys')
 
-        labelid = self.analysisdict.get('labelid','002')
+        labelid = self.menu_p.fla_page.LabelComboBox.GetValue()
         operator = self.analysisdict.get('operator')
         groups = ''
         self.flagversion = self.analysisdict.get('flagversion', '2.0')
@@ -4609,10 +4611,11 @@ class MainFrame(wx.Frame):
                 if checkbox.IsChecked():
                     starttime = me[1] - xtol
                     endtime = me[1] + xtol
-                    mfl = flagging.flag_range(plotstream, keys=shownkeys, flagtype=flagid, labelid=labelid,
+                    nfl = flagging.flag_range(plotstream, keys=shownkeys, flagtype=flagid, labelid=labelid,
                                                operator=operator,
                                                groups=groups, text=comment, keystoflag=keys[idx],
                                                starttime=starttime, endtime=endtime)
+                    mfl = mfl.join(nfl)
         if mfl:
             plotstream.header['DataFlags'] = mfl
             # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
@@ -4635,7 +4638,7 @@ class MainFrame(wx.Frame):
         plotcont = self.plotdict.get(self.active_id)
         shownkeys = plotcont.get('shownkeys')
 
-        labelid = self.analysisdict.get('labelid','002')
+        labelid = self.menu_p.fla_page.LabelComboBox.GetValue()
         operator = self.analysisdict.get('operator')
         groups = ''
         self.flagversion = self.analysisdict.get('flagversion', '2.0')
@@ -4674,10 +4677,11 @@ class MainFrame(wx.Frame):
                 if checkbox.IsChecked():
                     starttime = me[1] - xtol
                     endtime = me[1] + xtol
-                    mfl = flagging.flag_range(plotstream, keys=shownkeys, flagtype=flagid, labelid=labelid,
+                    nfl = flagging.flag_range(plotstream, keys=shownkeys, flagtype=flagid, labelid=labelid,
                                                operator=operator,
                                                groups=groups, text=comment, keystoflag=keys[idx],
                                                starttime=starttime, endtime=endtime)
+                    mfl = mfl.join(nfl)
         if mfl:
             plotstream.header['DataFlags'] = mfl
             # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
