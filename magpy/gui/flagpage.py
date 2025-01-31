@@ -26,6 +26,7 @@ class FlagPage(wx.Panel):
 
     # Widgets
     def createControls(self):
+        font = wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
         self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,30))
         self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
@@ -43,6 +44,7 @@ class FlagPage(wx.Panel):
         self.flagApplyLabel = wx.StaticText(self, label="Apply or cleanup flags:")
         self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
         self.flagClearButton = wx.Button(self, -1, "Clear flags", size=(160, 30))
+        self.flagAcceptButton = wx.Button(self,-1,"Accept modifications",size=(160,30))
         self.flagStorageLabel = wx.StaticText(self, label="Storage operations:")
         self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
         self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,30))
@@ -52,7 +54,11 @@ class FlagPage(wx.Panel):
 
         self.flagviewTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,200),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-
+        self.flagOptionsLabel.SetFont(font)
+        self.flagExtremaLabel.SetFont(font)
+        self.flagApplyLabel.SetFont(font)
+        self.flagStorageLabel.SetFont(font)
+        self.flagExtraLabel.SetFont(font)
 
     def doLayout(self):
         # Prepare some reusable arguments for calling sizer.Add():
@@ -81,6 +87,8 @@ class FlagPage(wx.Panel):
                     '(0,0), noOptions',
                     'self.flagDropButton, dict(flag=wx.ALIGN_CENTER)',
                     'self.flagClearButton, dict(flag=wx.ALIGN_CENTER)',
+                    'self.flagAcceptButton, dict(flag=wx.ALIGN_CENTER)',
+                    '(0,0), noOptions',
                     'self.flagStorageLabel, noOptions',
                     '(0,0), noOptions',
                     'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',

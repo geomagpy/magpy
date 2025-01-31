@@ -46,6 +46,8 @@ from matplotlib.dates import date2num, num2date, DateFormatter
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.backend_bases import MouseButton
+
 
 edgecolor = [0.8, 0.8, 0.8]
 
@@ -147,6 +149,8 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                                  {"patch1":{"start":datetime,"end":datetime,"color":color,"alpha":0.2},"patch2":
                                  {"start":datetime,"end":datetime,"color":color,"alpha":0.2}]
         annotate (Bool/dict) :   default False - if True, then annotations are set to start time of patches
+                                                 True will show labelid's
+                                                 annotate='flagid' or annotate='label' are also possible
         showpatch (list)    :    default True for all streams -
                                  EXAMPLE: data=[stream1,stream2,stream3],showpatches=[True,False,True]
         errorbars (list/dict) :  a list of dicts containing definitions for each plot as follows: i.e. two data stream
@@ -469,13 +473,13 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                             if annotate:
                                 annosign = -1
                                 annocount += 1
-                                annotext = line
+                                annotext = l.get('labelid')
                                 textx = 0
                                 texty = 0
                                 if annotate == "label":
                                     annotext = l.get('label')
-                                elif annotate == "labelid":
-                                    annotext = l.get('labelid')
+                                elif annotate == "flagid":
+                                    annotext = line
                                     #annosign = 1
                                     #texty = rect.get_y()
                                 if annocount % 2:

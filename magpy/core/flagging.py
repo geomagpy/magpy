@@ -938,9 +938,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                     'flagid',            # FlagID of flag
                     'sensorid',          # SensorId of Sensor on which flagging was conducted
                     'components',        # list like [1,2,3] ref. to columns, or ['x','y'] ref. to keys for the sensorid
-                    'flagtype',          # integer 0 (just a comment), 1 (remove for definitiv - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
+                    'flagtype',          # integer 0 (just a comment), 1 (remove for definitive - auto), 2 (keep for definitive - auto), 3 (remove for definitiv - human), 4 (keep for definitive - human),
                     'labelid',           # string with number i.e. '001'
-                    'label',             # name asociated with labelid i.e. lightning
+                    'label',             # name associated with labelid i.e. lightning
                     'comment',           # text without special characters (utf-8)
                     'groups',             # define flaggroups-dict
                     'probabilities',     # measure of probabilities - list

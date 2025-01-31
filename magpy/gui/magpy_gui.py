@@ -106,6 +106,7 @@ Major methods:              major_method
 |  MainFrame     | _update_plot  |     2.0.0  |             | level 1    |               |        | file_on_open  |
 |  MainFrame     | _do_plot  |         2.0.0  |             | level 1    |               |        | file_on_open  |
 |  MainFrame     | _update_cursor_status |  2.0.0  |        | level 1    |               |        |   |
+|  MainFrame     | _update_flags_onclick |  2.0.0  |        | level 0    |               |        |   |
 |  MainFrame     | _open_stream  |     2.0.0  |             | level 0    |               |        | file_on_open  |
 |  MainFrame     | _update_statistics | 2.0.0  |            | level 0    |               |        | _do_plot  |
 |  MainFrame     | changeStatusbar  |  2.0.0  |             | level 2    |               |        | everywhere  |
@@ -140,6 +141,7 @@ Major methods:              major_method
 |  MainFrame     | flag_onFlagOutlier | 2.0.0  |            | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagSelection | 2.0.0  |          | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagDrop   | 2.0.0  |       | level 1    |               |        |   |
+|  MainFrame     | flag_onFlagAccept   | 2.0.0  |       | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagRange  | 2.0.0  |       | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagLoad   | 2.0.0  |       | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagSave   | 2.0.0  |       | level 1    |               |        |   |
@@ -1181,7 +1183,7 @@ class MainFrame(wx.Frame):
         # Update Status Bar with plot values
         self.plot_p.canvas.mpl_connect('motion_notify_event', self._update_cursor_status)
         # Allow flagging with double click
-        #self.plot_p.canvas.mpl_connect('button_press_event', self.OnFlagClick)
+        self.plot_p.canvas.mpl_connect('button_press_event', self._update_flags_onclick)
 
         # basic configuration
         # ----------------------------
@@ -1586,7 +1588,6 @@ class MainFrame(wx.Frame):
         self.monitorSource=None
 
         # please note: symbol and colorlists are defined in ActivateControls
-        # TODO:  add options for psd and specgram
         plotopt = {'yranges' : [],
                         'padding' : [],
                         'shownkeys' : shownkeys,
@@ -1608,7 +1609,13 @@ class MainFrame(wx.Frame):
                         'yscale' : None,
                         'dateformatter' : None,
                         'force' : False,
-                        'alpha' : 0.5
+                        'alpha' : 0.5,
+                        'NFFT' : None,
+                        'noverlap' : None,
+                        'pad_to' : None,
+                        'detrend' : 'mean',
+                        'scale_by_freq' : True,
+                        'keepflags' : True          # non-tsplot: flags will still be shown after removal of flagged data
                         }
         return plotopt
 
@@ -1669,8 +1676,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagLoadButton, self.menu_p.fla_page.flagLoadButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagSaveButton, self.menu_p.fla_page.flagSaveButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagDropButton, self.menu_p.fla_page.flagDropButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagMinButton, self.menu_p.fla_page.flagMinButton)
-        self.Bind(wx.EVT_BUTTON, self.onFlagMaxButton, self.menu_p.fla_page.flagMaxButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagAcceptButton, self.menu_p.fla_page.flagAcceptButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagMinButton, self.menu_p.fla_page.flagMinButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagMaxButton, self.menu_p.fla_page.flagMaxButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagClearButton, self.menu_p.fla_page.flagClearButton)
         self.Bind(wx.EVT_CHECKBOX, self.flag_onAnnotateCheckBox, self.menu_p.fla_page.annotateCheckBox)
         self.Bind(wx.EVT_BUTTON, self.onFlagmodButton, self.menu_p.fla_page.flagmodButton)
@@ -1868,6 +1876,32 @@ class MainFrame(wx.Frame):
             self.changeStatusbar("time: " + str(time) + "  |  ? data value: ?")
 
 
+    def _update_flags_onclick(self, event):
+        """
+        DESCRIPTION
+            Mouse event for flagging
+            Right click will remove flag patches and corresponding flags from the current flaglist
+        """
+        data = self.datadict.get(self.active_id).get('dataset')
+        fl = data.header.get('DataFlags', flagging.Flags())
+        if not event.inaxes or not fl: #or not event.dblclick:
+            return
+        else:
+            pickX, pickY = event.xdata, event.ydata
+            time = num2date(pickX).replace(tzinfo=None)
+            possible_val = []
+            possible_key = []
+            idx = (np.abs(self.plot_p.t - time)).argmin()
+            if event.button is MouseButton.LEFT:
+                print("clicked left", pickX, pickY, time)
+            if event.button is MouseButton.RIGHT:
+                ids = [fid for fid in fl.flagdict if fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
+                newfl = fl.drop(parameter='flagid', values=ids)
+                data.header['DataFlags'] = newfl
+                self._initial_plot(self.active_id, keepplotdict=True)
+                self.menu_p.fla_page.flagAcceptButton.Enable()
+
+
     @deprecated("Will be replaced by _deactivate_controls")
     def DeactivateAllControls(self):
         return self._deactivate_controls()
@@ -1926,6 +1960,7 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.flagDropButton.Disable()      # activated if annotation are present
         self.menu_p.fla_page.flagSaveButton.Disable()      # activated if annotation are present
         self.menu_p.fla_page.annotateCheckBox.Disable()    # activated if annotation are present
+        self.menu_p.fla_page.flagAcceptButton.Disable()    # activated if flags are modified by mouse events
         self.menu_p.fla_page.flagmodButton.Disable()       # always
 
 
@@ -2499,6 +2534,7 @@ class MainFrame(wx.Frame):
                 checkbox = getattr(self.menu_p.fla_page, box + 'CheckBox')
                 if box in shownkeylist:
                     checkbox.Enable()
+                    checkbox.SetValue(True)
                     colname = plotstream.header.get('col-'+box, '')
                     if not colname == '':
                         checkbox.SetLabel(colname)
@@ -4523,6 +4559,117 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
+    def flag_onFlagMinButton(self,event):
+        """
+        DESCRIPTION
+            Flags minimum value in zoomed region
+        """
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        keys = datacont.get('keys')
+        plotcont = self.plotdict.get(self.active_id)
+        shownkeys = plotcont.get('shownkeys')
+
+        labelid = self.analysisdict.get('labelid','002')
+        operator = self.analysisdict.get('operator')
+        groups = ''
+        self.flagversion = self.analysisdict.get('flagversion', '2.0')
+        efl = flagging.Flags()
+        mfl = flagging.Flags()
+
+        # Get current flagging object from data header
+        plotstream = stream.copy()
+        newplotcont = plotcont.copy()
+        fl = stream.header.get('DataFlags',efl)
+        sensid = plotstream.header.get('SensorID','')
+        dataid = plotstream.header.get('DataID','')
+        if sensid == '' and not dataid == '':
+            sensid = dataid[:-5]
+
+        if fl: # and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Flagging information in already associated with the data set. Keep them \n YES \n or drop them  \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                fl = efl
+            dlg.Destroy()
+
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        teststream = plotstream.trim(starttime=self.xlimits[0],endtime=self.xlimits[1])
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        mini = [teststream._get_min(key,returntime=True) for key in keys]
+        comment = 'Flagged minimum'
+        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
+        if flagid == 0:
+            comment = ''
+        for idx,me in enumerate(mini):
+            if not keys[idx] == 'df':
+                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
+                if checkbox.IsChecked():
+                    starttime = me[1] - xtol
+                    endtime = me[1] + xtol
+                    mfl = flagging.flag_range(plotstream, keys=shownkeys, flagtype=flagid, labelid=labelid,
+                                               operator=operator,
+                                               groups=groups, text=comment, keystoflag=keys[idx],
+                                               starttime=starttime, endtime=endtime)
+        if mfl:
+            plotstream.header['DataFlags'] = mfl
+            # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
+            # and update plot will create patches
+            streamid = self._initial_read(plotstream)
+            self.plotdict[streamid] = newplotcont
+            self._initial_plot(streamid, keepplotdict=True)
+
+        self.changeStatusbar("Ready")
+
+
+    def flag_onFlagMaxButton(self,event):
+        """
+        DESCRIPTION
+            Flags maximum value in zoomed region
+        """
+        if self.flaglist and len(self.flaglist)>0:
+            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+            if dlg.ShowModal() == wx.ID_NO:
+                self.flaglist = []
+                self.plotstream = self.plotstream._drop_column('flag')
+                self.plotstream = self.plotstream._drop_column('comment')
+            dlg.Destroy()
+
+        keys = self.shownkeylist
+        teststream = self.plotstream.copy()
+        # limits
+        self.xlimits = self.plot_p.xlimits
+        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
+            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
+            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
+        xdata = self.plot_p.t
+        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        maxi = [teststream._get_max(key,returntime=True) for key in keys]
+        flaglist = []
+        comment = 'Flagged maximum'
+        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
+        flagid = int(flagid[0])
+        if flagid == 0:
+            comment = ''
+        for idx,me in enumerate(maxi):
+            if not keys[idx] == 'df':
+                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
+                if checkbox.IsChecked():
+                    starttime = num2date(me[1] - xtol)
+                    endtime = num2date(me[1] + xtol)
+                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
+        if len(flaglist) > 0:
+            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
+            self.flaglist.extend(flaglist)
+            self.plotstream = self.plotstream.flag(flaglist)
+            self.ActivateControls(self.plotstream)
+            self.plotopt['annotate'] = True
+            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
+            self.OnPlot(self.plotstream,self.shownkeylist)
+
+
     def flag_onFlagLoadButton(self,event):
         """
         DESCRIPTION
@@ -4589,64 +4736,38 @@ class MainFrame(wx.Frame):
 
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
+        plotcont = self.plotdict.get(self.active_id)
         plotstream = stream.copy()
         fl = plotstream.header.get('DataFlags')
         if fl:
             plotstream = fl.apply_flags(plotstream, mode='drop')
-        #plotstream.header['DataFlags'] = None
+        if not plotcont.get('keepflags', True):
+            plotstream.header['DataFlags'] = None
 
         self.menu_p.rep_page.logMsg('- flagged data removed')
 
         streamid = self._initial_read(plotstream)
-        self._initial_plot(streamid, keepplotdict=True)
+        self._initial_plot(streamid)
 
         self.changeStatusbar("Ready")
 
 
-    def onFlagMinButton(self,event):
+    def flag_onFlagAcceptButton(self,event):
         """
         DESCRIPTION
-            Flags minimum value in zoomed region
+            Accept the new flag list which was modified by mouse events
         """
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
+        self.changeStatusbar("Accepting flagging changes ...")
 
-        keys = self.shownkeylist
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-        xdata = self.plot_p.t
-        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-        mini = [teststream._get_min(key,returntime=True) for key in keys]
-        flaglist = []
-        comment = 'Flagged minimum'
-        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
-        flagid = int(flagid[0])
-        if flagid == 0:
-            comment = ''
-        for idx,me in enumerate(mini):
-            if not keys[idx] == 'df':
-                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
-                if checkbox.IsChecked():
-                    starttime = num2date(me[1] - xtol)
-                    endtime = num2date(me[1] + xtol)
-                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-        if len(flaglist) > 0:
-            self.menu_p.rep_page.logMsg('- flagged minimum: added {} flags'.format(len(flaglist)))
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.ActivateControls(self.plotstream)
-            self.plotopt['annotate'] = True
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+        datacont = self.datadict.get(self.active_id)
+        stream = datacont.get('dataset')
+        #newstream = stream.copy()
+        self.menu_p.rep_page.logMsg('- flag modifications accepted - new memory input created')
+        streamid = self._initial_read(stream)
+        self._initial_plot(streamid) #, keepplotdict=True)
+        self.menu_p.fla_page.flagAcceptButton.Disable()
+        self.changeStatusbar("Ready")
+
 
 
     def flag_onAnnotateCheckBox(self,event):
@@ -4665,51 +4786,6 @@ class MainFrame(wx.Frame):
         self.plotdict[self.active_id] = plotcont
         self._initial_plot(self.active_id, keepplotdict=True)
 
-
-    def onFlagMaxButton(self,event):
-        """
-        DESCRIPTION
-            Flags maximum value in zoomed region
-        """
-        if self.flaglist and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Unsaved flagging information in systems memory. If you want to keep and extend this data with new flags select \n YES \n or to discard it starting with fresh flags select \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
-            if dlg.ShowModal() == wx.ID_NO:
-                self.flaglist = []
-                self.plotstream = self.plotstream._drop_column('flag')
-                self.plotstream = self.plotstream._drop_column('comment')
-            dlg.Destroy()
-
-        keys = self.shownkeylist
-        teststream = self.plotstream.copy()
-        # limits
-        self.xlimits = self.plot_p.xlimits
-        if not self.xlimits == [self.plotstream.ndarray[0],self.plotstream.ndarray[-1]]:
-            testarray = self.plotstream._select_timerange(starttime=self.xlimits[0],endtime=self.xlimits[1])
-            teststream = DataStream([LineStruct()],self.plotstream.header,testarray)
-        xdata = self.plot_p.t
-        xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-        maxi = [teststream._get_max(key,returntime=True) for key in keys]
-        flaglist = []
-        comment = 'Flagged maximum'
-        flagid = self.menu_p.fla_page.FlagIDComboBox.GetValue()
-        flagid = int(flagid[0])
-        if flagid == 0:
-            comment = ''
-        for idx,me in enumerate(maxi):
-            if not keys[idx] == 'df':
-                checkbox = getattr(self.menu_p.fla_page, keys[idx] + 'CheckBox')
-                if checkbox.IsChecked():
-                    starttime = num2date(me[1] - xtol)
-                    endtime = num2date(me[1] + xtol)
-                    flaglist.extend(self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys[idx],starttime=starttime,endtime=endtime))
-        if len(flaglist) > 0:
-            self.menu_p.rep_page.logMsg('- flagged maximum: added {} flags'.format(len(flaglist)))
-            self.flaglist.extend(flaglist)
-            self.plotstream = self.plotstream.flag(flaglist)
-            self.ActivateControls(self.plotstream)
-            self.plotopt['annotate'] = True
-            self.menu_p.fla_page.annotateCheckBox.SetValue(True)
-            self.OnPlot(self.plotstream,self.shownkeylist)
 
 
     def onFlagmodButton(self, event):
@@ -6187,55 +6263,6 @@ class MainFrame(wx.Frame):
                 self.OnPlot(self.plotstream,self.shownkeylist)
 
 
-
-    def OnFlagClick(self, event):
-        """Mouse event for flagging with double click."""
-        if not event.inaxes or not event.dblclick:
-            return
-        else:
-            sensid = self.plotstream.header.get('SensorID','')
-            dataid = self.plotstream.header.get('DataID','')
-            if sensid == '' and not dataid == '':
-                sensid = dataid[:-5]
-            if sensid == '':
-                dlg = wx.MessageDialog(self, "No Sensor ID available!\n"
-                                "You need to define a unique Sensor ID\nfor the data set in order to use flagging.\nPlease go the tab Meta for this purpose.\n","Undefined Sensor ID", wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
-            else:
-                flaglist = []
-                xdata = self.plot_p.t
-                xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
-                pickX = event.xdata
-                idx = (np.abs(xdata - pickX)).argmin()
-                time = self.plotstream.ndarray[DataStream().KEYLIST.index('time')][idx]
-                starttime = num2date(time - xtol)
-                endtime = num2date(time + xtol)
-                print ("Double click disabled because of freezing")
-                """
-                print ("Opening Dialog")
-                dlg = StreamFlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=self.shownkeylist, keylist=self.keylist)
-                print ("Waiting for OK ...")
-                if dlg.ShowModal() == wx.ID_OK:
-                    keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
-                    keys2flag = keys2flag.split(',')
-                    keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
-                    flagid = dlg.FlagIDComboBox.GetValue()
-                    flagid = int(flagid[0])
-                    comment = dlg.CommentTextCtrl.GetValue()
-                    if comment == '' and flagid != 0:
-                        comment = 'Point flagged with unspecified reason'
-                    flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
-                    self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(flaglist)))
-                if len(flaglist) > 0:
-                    self.flaglist.extend(flaglist)
-                    self.plotstream = self.plotstream.flag(flaglist)
-                    self.ActivateControls(self.plotstream)
-                    self.plotopt['annotate'] = True
-                    self.menu_p.str_page.annotateCheckBox.SetValue(True)
-                    self.OnPlot(self.plotstream,self.shownkeylist)
-                self.changeStatusbar("Ready")
-                """
 
 
     # ------------------------------------------------------------------------------------------
