@@ -286,9 +286,85 @@ Finally, you can activate the **Continuous statistics** panel below the main fra
 
 ### 4.2 The flag panel
 
-The flags button on the analysis panel will open a flag statistics dialog (figure 4.4.5). In case that no flags are currently available, the status field (figure 3.1d) will tell you and nothing else will happen.
+The flag panel contains methods for flagging data, as well as possibilities to store and load such information. Please 
+note that flags are always connected to a specific SensorID which is related to and obtained from the data source. 
+Every flag is defined by a number of parameters of which the flagtype defines whether data has to be removed for 
+definitive analysis or not. A label and its labelid provides information about the flag reason. Observers can comment 
+the flag and actual operator who issued the flag can be given. Further details are found in the general manual.
+The main flagging functions are accessible by buttons: **Flag outlier** will scan the time series for outliers (4.2.1). 
+**Flag selection** will mark currently selected data enlarged by zoom. To use this method you zoom into a specific plot 
+area (see 3.3) and then press the **Flag selection** button. This is the most common method for regular data flagging. 
+**Flag range** allows for defining either a value or a time range to be flagged. If you just want to flag maxima or minima
+within the time series, you firstly select the component(s), label and flag ID, and then use the **Flag maximum** or 
+**Flag minimum button**. Flags can either be saved within a connected data base (which I would recommend) or into a 
+data file. The flag file supports two formats, pickle, a binary structure, or json, an ASCII structure, of which I 
+recommend the latter. **Drop flagged** will remove flagged data with a 'remove data' flagtype and replace them by NaN.
+**Clear flags** deletes all current flagging information, keeping all data unchanged. 
+
+#### 4.2.1 Flag outlier
+
+Figure 4.2.2: Flag outlier selection menu
+
+The Flag outlier method makes use of interquartile ranges (IQR) to identify how spread-out values are within a 
+certain time window, moving along the time series. Data outside the IQR range multiplied by a certain multiplier, also
+referred to as threshold value, are identified as outliers. In statistics usually a multiplier of 1.5 is assumed. I 
+recommend larger values here. You can change time range and multipliers in a selection window when applying this method
+(Figure 4.2.2). Thresholds of 4 and window lengths of 30 to 60 seconds are typically good to identify lightning strikes
+in one-second data. Thresholds of 5 and window lengths > 300 seconds are good enough to identify spikes and keep most
+natural signals in. By default a time window of 600 times the sampling rate is assumed. If marking outliers in all
+components is chosen then every outlier detected  in a single component is also marked in other components as well.
+This is particularly useful for vectorial data. Outlier flags are „automatic flags“ and will be assigned to the 
+operator "MagPy". The flag comment will contain threshold (muliplier) and time window length.
+
+#### 4.2.2 Flag selection
+
+Figure 4.2.3: Flag selection menu. 
+
+In the Flag selection menu you can define the components (keys) to which this flag has to be applied. You can further
+select a general flag type, characterized by an ID. This type can be either 
+
+ID 0, normal data: 	just add a comment to the selected data
+ID 1, automatic flag - remove: 	    should only be used by automatic processes like outlier detection
+ID 2, automatic flag - keep data: 	data to be kept for definitive data production 
+ID 3, observers flag - remove data:	don‘t use this data for definitive data production
+ID 4, observers flag - keep: 		keep it
+
+Flagtype 3 and 4 cannot be overwritten by automatic processes 1 and 2. The provided comment is free-form text, but 
+don‘t use special characters here. 
+
+
+#### 4.2.3 Flag range
+
+Figure 4.2.4: Flag range menu allows you to flag data between given boundaries either in time or amplitude.
+
+The Flag range method allows you to select specific boundary values. Data exceeding these boundaries are flagged. 
+Initially you have to choose between amplitude (value) or time range. When selecting value, you provide the
+component/key and threshold values.  If a time range is to be flagged, as shown in figure 4.2.4, you will have to
+provide lower and upper date and time. If you zoomed into a graph, these values are prefilled by the boundaries of the
+zooming window. 
+For both selections you have to provide label, operator, comments, flagtype, and components/keys to be flagged as described in section 4.2.3. 
+
+#### 4.2.4 Flagging extrema
+
+For flagging either maximum or minimum values in specific diagrams you firstly need to select the component(s) which 
+you want to flag. Before actually pressing the flag button you also should select the flag ID which should be 
+connected to your extrema flag. Default is a “removal” flag. All field found on the main panel as indicated by
+“Mark extrema” in figure 4.1.1. 
+
+
+#### 4.2.5 Annotation and flagging info
+
+By default 
+
+The flags button on the analysis panel will open a flag statistics dialog (figure 4.4.5). In case that no flags are 
+currently available, the status field (figure 3.1d) will tell you and nothing else will happen.
 Figure 4.4.5: The flag dialog opened in the analysis panel.
-The flag dialog will provide some basic information on the flags currently stored in the sensor related flaglist. As shown in the example (flagging_example.json applied to example1) , 252 individual flags are currently included. The flags have all been created by automatic outlier detection (aof = automatic outlier flag), which is also expressed by the yellow flag annotation color. 252 flags were created using the outlier detection parameters as given in the comment. Within this dialog it is also possible to modify the flagging information. Please note that this method is preliminary and more sophisticated flagging tools will be available in a future version of MagPy. 
+The flag dialog will provide some basic information on the flags currently stored in the sensor related flagging object.
+As shown in the example (flagging_example.json applied to example1) , 252 individual flags are currently included. 
+The flags have all been created by automatic outlier detection (aof = automatic outlier flag), which is also expressed 
+by the yellow flag annotation color. 252 flags were created using the outlier detection parameters as given in the 
+comment. Within this dialog it is also possible to modify the flagging information. Please note that this method is 
+preliminary and more sophisticated flagging tools will be available in a future version of MagPy. 
 Figure 4.4.5: Modifying flags will open this dialog.
 At present (MagPy1.0) you can change between different modification types (select, replace, delete), apply this type to either the flags key, comment, sensorid, or flagnumber. In above example we are deleting all flags for column key f.  
 

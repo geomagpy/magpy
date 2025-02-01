@@ -1680,6 +1680,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagOutlierButton, self.menu_p.fla_page.flagOutlierButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagSelectionButton, self.menu_p.fla_page.flagSelectionButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagRangeButton, self.menu_p.fla_page.flagRangeButton)
+        self.Bind(wx.EVT_BUTTON, self.flag_onFlagUltraButton, self.menu_p.fla_page.flagUltraButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagLoadButton, self.menu_p.fla_page.flagLoadButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagSaveButton, self.menu_p.fla_page.flagSaveButton)
         self.Bind(wx.EVT_BUTTON, self.flag_onFlagDropButton, self.menu_p.fla_page.flagDropButton)
@@ -1969,6 +1970,7 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.flagOutlierButton.Disable()   # always
         self.menu_p.fla_page.flagSelectionButton.Disable() # always
         self.menu_p.fla_page.flagRangeButton.Disable()     # always
+        self.menu_p.fla_page.flagUltraButton.Disable()     # always
         self.menu_p.fla_page.flagLoadButton.Disable()      # always
         self.menu_p.fla_page.flagMinButton.Disable()       # always
         self.menu_p.fla_page.flagMaxButton.Disable()       # always
@@ -2232,8 +2234,9 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.filterButton.Enable()        # always
         self.menu_p.ana_page.smoothButton.Enable()        # always
         # baseline related stuff and activity below
-        self.menu_p.ana_page.powerButton.Enable()         # if experimental
+        self.menu_p.ana_page.powerButton.Enable()         # always
         if self.guidict.get('experimental'):
+            self.menu_p.fla_page.flagUltraButton.Enable()     # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
 
         # ----------------------------------------
@@ -4603,7 +4606,7 @@ class MainFrame(wx.Frame):
         self.changeStatusbar("Ready")
 
 
-    def flag_onFlagProbabilityButton(self, event):
+    def flag_onFlagUltraButton(self, event):
         """
         DESCRIPTION
             Emperical probability method - should not be available as long as not documented and verified.
@@ -4615,16 +4618,9 @@ class MainFrame(wx.Frame):
         stream = datacont.get('dataset')
         streamid = self.active_id
         plotcont = self.plotdict.get(self.active_id)
-        keys = plotcont.get('shownkeys')
-        sr = datacont.get("samplingrate")
 
-        timerange = float(sr) * self.analysisdict.get('timerange',60.0) # in seconds
-        threshold = self.analysisdict.get('threshold',4.0)
-        markall = self.analysisdict.get('markall',False)
-        labelid = self.analysisdict.get('labelid','002')
-        operator = 'MagPy' # is disabeld as it well be set to MagPy by flag_outlier method
         efl = flagging.Flags()
-        ofl = flagging.Flags()
+        ufl = flagging.Flags()
 
         # Get current flagging object from data header
         plotstream = stream.copy()
@@ -4637,40 +4633,17 @@ class MainFrame(wx.Frame):
                 fl = efl
             dlg.Destroy()
 
-        # Open Dialog and return the parameters threshold, keys, timerange
-        dlg = FlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange, labelid=labelid, operator=operator, markall=markall)
-        if dlg.ShowModal() == wx.ID_OK:
-            threshold = dlg.ThresholdTextCtrl.GetValue()
-            timerange = dlg.TimerangeTextCtrl.GetValue()
-            markall = dlg.MarkAllCheckBox.GetValue()
-            label = dlg.LabelComboBox.GetValue()
-            operator = dlg.OperatorTextCtrl.GetValue()
-            try:
-                threshold = float(threshold)
-                timerange = float(timerange)
-                labelid = label[:3]
-                ofl = flagging.flag_outlier(plotstream, keys=keys, timerange=timerange, threshold=threshold, labelid=labelid, markall=markall)
-                if fl:
-                    ofl = fl.join(ofl)
-                self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(ofl)))
-                if markall:
-                        self.menu_p.rep_page.logMsg('- flagged outliers: used option markall')
-                # set analysisdict values
-                self.analysisdict['threshold'] = threshold
-                self.analysisdict['timerange'] = timerange / float(sr)
-                self.analysisdict['markall'] = markall
-                self.analysisdict['labelid'] = labelid
-                # operator is not updated here
-            except:
-                print("flag outliers failed: check parameter")
-                self.menu_p.rep_page.logMsg('- flag outliers failed: check parameter')
+        ufl = flagging.flag_ultra(plotstream)
+        if fl:
+            ufl = fl.join(ufl)
+        self.menu_p.rep_page.logMsg('- flagged with experimental probability method: added {} flags'.format(len(ufl)))
 
-            if ofl:
-                plotstream.header['DataFlags'] = ofl
-                # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
-                # and update plot will create patches
-                streamid = self._initial_read(plotstream)
-                self.plotdict[streamid] = newplotcont
+        if ufl:
+            plotstream.header['DataFlags'] = ufl
+            # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
+            # and update plot will create patches
+            streamid = self._initial_read(plotstream)
+            self.plotdict[streamid] = newplotcont
             self._initial_plot(streamid, keepplotdict=True)
 
         self.changeStatusbar("Ready")

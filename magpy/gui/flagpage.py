@@ -33,6 +33,7 @@ class FlagPage(wx.Panel):
         self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
         self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,30))
         self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
+        self.flagUltraButton = wx.Button(self,-1,"Experimental Flag",size=(160,30))
         self.flagExtremaLabel = wx.StaticText(self, label="Label extrema:")
         self.flagMinButton = wx.Button(self,-1,"Flag Minimum",size=(160,30))
         self.flagMaxButton = wx.Button(self,-1,"Flag Maximum",size=(160,30))
@@ -76,7 +77,7 @@ class FlagPage(wx.Panel):
                  'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
-                    '(0,0), noOptions',
+                    'self.flagUltraButton, dict(flag=wx.ALIGN_CENTER)',
                     'self.flagExtremaLabel, noOptions',
                     '(0,0), noOptions',
                  'self.flagMinButton, dict(flag=wx.ALIGN_CENTER)',
