@@ -53,10 +53,10 @@ class FlagPage(wx.Panel):
         self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
         self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,30))
         self.flagExtraLabel = wx.StaticText(self, label="Information:")
-        self.flagmodButton = wx.Button(self,-1,"Flags",size=(160,30))
+        self.flagmodButton = wx.Button(self,-1,"Flag info",size=(160,30))
         self.annotateCheckBox = wx.CheckBox(self,label="annotate")
 
-        self.flagviewTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,200),
+        self.flagviewTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,150),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
         self.flagOptionsLabel.SetFont(font)
         self.flagExtremaLabel.SetFont(font)

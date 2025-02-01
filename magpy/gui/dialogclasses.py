@@ -2196,18 +2196,18 @@ class FlagSaveDialog(wx.Dialog):
         self.Close(True)
 
 
-class AnalysisFlagsDialog(wx.Dialog):
+class FlagDetailsDialog(wx.Dialog):
     """
     Dialog for Stream panel
     Select shown keys
     """
-    def __init__(self, parent, title, stats, flaglist, stream):
-        super(AnalysisFlagsDialog, self).__init__(parent=parent,
+    def __init__(self, parent, title, stats, flags, stream):
+        super(FlagDetailsDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.stats = stats
-        self.fllist = flaglist
+        self.fl = flags
         self.plotstream = stream
-        self.newfllist = []
+        self.newfl = flagging.Flags()
         self.mod = False
         self.createControls()
         self.doLayout()
@@ -2258,49 +2258,51 @@ class AnalysisFlagsDialog(wx.Dialog):
 
     def OnModify(self, e):
         # open modification dlg
-        dlg = AnalysisFlagmodDialog(None, title='Analysis: Modify flags')
+        dlg = FlagModDialog(None, title='Modify flags')
         if dlg.ShowModal() == wx.ID_OK:
             select = dlg.selectComboBox.GetValue()
             parameter = dlg.parameterComboBox.GetValue()
             value = dlg.valueTextCtrl.GetValue()
             newvalue = dlg.newvalueTextCtrl.GetValue()
-            self.newfllist = self.plotstream.flaglistmod(mode=select, flaglist=self.fllist, parameter=parameter, value=value, newvalue=newvalue) #, starttime=None, endtime=None)
-            self.stats = self.plotstream.flagliststats(self.newfllist,intensive=True, output='string')
+
+            #self.newfl = self.fl.flaglistmod(mode=select, flaglist=self.fl, parameter=parameter, value=value, newvalue=newvalue) #, starttime=None, endtime=None)
+            self.stats = self.newfl.stats(intensive=True, output='string')
             self.mod = True
             self.statsTextCtrl.SetValue(self.stats)
         dlg.Destroy()
 
-class AnalysisFlagmodDialog(wx.Dialog):
+class FlagModDialog(wx.Dialog):
     """
-    Dialog for Stream panel
-    Select shown keys
+    DESCRIPTION
+        Modify flagging data
+        three pulldowns: 1) (select, drop, replace)  2) key (operator etc) 3) value
+        value is either a pulldown (label, labelid) or textctrl
+        'sensorid', 'components', 'flagtype', 'labelid', 'label', 'comment', 'groups', 'probabilities', 'stationid',
+        'validity', 'operator'
     """
     def __init__(self, parent, title):
-        super(AnalysisFlagmodDialog, self).__init__(parent=parent,
-            title=title, size=(400, 600))
-        self.select = ['select','replace','delete']
-        self.parameter = ['key', 'sensorid', 'flagnumber', 'comment']
+        super(FlagModDialog, self).__init__(parent=parent, title=title, size=(400, 600))
+        self.select = ['select','replace','drop']
+        self.parameter = ['sensorid', 'components', 'flagtype', 'labelid', 'label', 'comment', 'groups',
+                          'probabilities', 'stationid', 'validity', 'operator']
         self.createControls()
         self.doLayout()
 
     # Widgets
     def createControls(self):
         self.selectLabel = wx.StaticText(self,label="modification type")
-        self.parameterLabel = wx.StaticText(self,label="flag parameter")
-        self.valueLabel = wx.StaticText(self,label="value")
-        self.newvalueLabel = wx.StaticText(self,label="new value")
-        self.starttimeLabel = wx.StaticText(self,label="start time")
-        self.endtimeLabel = wx.StaticText(self,label="end time")
+        self.parameterLabel = wx.StaticText(self,label="flagging key")
+        self.valueLabel = wx.StaticText(self,label="old value")
+        self.newvalueLabel = wx.StaticText(self,label="desired value")
         self.selectComboBox = wx.ComboBox(self, choices=self.select,
                  style=wx.CB_DROPDOWN, value=self.select[0],size=(160,-1))
         self.parameterComboBox = wx.ComboBox(self, choices=self.parameter,
                  style=wx.CB_DROPDOWN, value=self.parameter[0],size=(160,-1))
         self.valueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
         self.newvalueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
-        self.starttimeTextCtrl = wx.TextCtrl(self,value="coming soon",size=(160,-1),style=wx.TE_READONLY)
-        self.endtimeTextCtrl = wx.TextCtrl(self,value="coming soon",size=(160,-1),style=wx.TE_READONLY)
         self.okButton = wx.Button(self, wx.ID_OK, label='OK')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+        self.valueTextCtrl.Disable()
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -2319,19 +2321,17 @@ class AnalysisFlagmodDialog(wx.Dialog):
         contlst.append((self.parameterLabel, noOptions))
         contlst.append((self.valueLabel, noOptions))
         contlst.append((self.newvalueLabel, noOptions))
-        contlst.append((self.starttimeLabel, noOptions))
-        contlst.append((self.endtimeLabel, noOptions))
         contlst.append((self.selectComboBox, noOptions))
         contlst.append((self.parameterComboBox, noOptions))
         contlst.append((self.valueTextCtrl, expandOption))
         contlst.append((self.newvalueTextCtrl, expandOption))
-        contlst.append((self.starttimeTextCtrl, expandOption))
-        contlst.append((self.endtimeTextCtrl, expandOption))
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
 
         # A GridSizer will contain the other controls:
-        cols = 6
+        cols = 4
         rows = int(np.ceil(len(contlst)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         for control, options in contlst:
@@ -2342,6 +2342,19 @@ class AnalysisFlagmodDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.selectComboBox.Bind(wx.EVT_COMBOBOX, self.onUpdateSelect)
+
+    def onUpdateSelect(self, event):
+        """
+        DESCRIPTION
+            update fields accoring to select
+        """
+        select = self.selectComboBox.GetStringSelection()
+        print (select)
+        if select == 'replace':
+            self.valueTextCtrl.Enable()
 
 
 # ##################################################################################################################
@@ -7356,10 +7369,8 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
         self.mergeButton = wx.Button(self,-1,"Merge",size=(160,-1))
         self.subtractButton = wx.Button(self,-1,"Subtract",size=(160,-1))
         self.joinButton = wx.Button(self,-1,"Join",size=(160,-1))
-        self.clearButton = wx.Button(self, wx.ID_YES,"Clear memory",size=(160,-1))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,-1))
 
-        self.clearButton.Disable()  # not yet available
         if count < 2:
             self.plotButton.Disable()
             self.mergeButton.Disable()
@@ -7378,7 +7389,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
                       (self.joinButton, dict(flag=wx.ALIGN_CENTER)),
                       (self.mergeButton, dict(flag=wx.ALIGN_CENTER)),
                       (self.subtractButton, dict(flag=wx.ALIGN_CENTER)),
-                      (self.clearButton, dict(flag=wx.ALIGN_CENTER)),
+                      emptySpace,
                       (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
         if amount > 7:
             buttonlist = [buttonlist[idx] if idx < len(buttonlist) else emptySpace for idx in list(range(0,amount))]
