@@ -6886,29 +6886,30 @@ class CheckOpenLogDialog(wx.Dialog):
 #    Monitor page
 # ###################################################
 
-class SelectMARTASDialog(wx.Dialog):
+class LiveSelectMARTASDialog(wx.Dialog):
     """
     DESCRIPTION
         Dialog to select table for MARCOS monitoring
     """
 
-    def __init__(self, parent, title, options):
-        super(SelectMARTASDialog, self).__init__(parent=parent,
+    def __init__(self, parent, title, analysisdict):
+        super(LiveSelectMARTASDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
-        self.options = options
-        self.protocol = 'mqtt'
-        self.qos = ['0','1','2']
-        self.stationid = 'WIC'               # should be extracted from options
-        self.user = 'cobs'                   # should be extracted from options
-        if options.get('experimental'):
-            self.protocollist = ['mqtt','wamp*']
-        else:
-            self.protocollist = ['mqtt']
-        self.portlist = ['8080','1883']
-        self.selector = 1                    # list number of protocol
-        self.favoritemartas = self.options.get('favoritemartas')
-        if not self.favoritemartas or not len(self.favoritemartas) > 0:
-            self.favoritemartas = ['www.example.com','192.168.178.42']
+        self.favoritemartas = analysisdict.get('favoritemartas')
+        self.favmartas = [key for key in self.favoritemartas]
+        self.qoslist = ['0','1','2']
+        self.stationid = analysisdict.get('defaultstation')
+        if not self.favmartas or not len(self.favmartas) > 0:
+            self.favoritemartas['example'] = {'address' : 'www.example.com',
+                                    'scantime' : 20,
+                                    'qos' : 1,
+                                    'topic' : 'all',
+                                    'port' : 1883,
+                                    'auth' : True,
+                                    'user' : 'cobs'}
+            self.favmartas = ['example']
+        self.favorite = self.favoritemartas.get(self.favmartas[0])
+        self.selectedmartas = self.favmartas[0]
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -6916,27 +6917,32 @@ class SelectMARTASDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         self.qosLabel = wx.StaticText(self, label="Quality of service:",size=(160,30))
-        self.qosComboBox = wx.ComboBox(self, choices=self.qos,
-                       style=wx.CB_DROPDOWN, value=self.qos[0],size=(160,-1))
-        self.protocolRadioBox = wx.RadioBox(self, label="Communication protocol:",  choices=self.protocollist,
-                       majorDimension=2, style=wx.RA_SPECIFY_COLS ,size=(160,-1))
-        self.addressLabel = wx.StaticText(self, label="Select MARTAS:",size=(160,30))
-        self.addressComboBox = wx.ComboBox(self, choices=self.favoritemartas,
-                       style=wx.CB_DROPDOWN, value=self.favoritemartas[1],size=(160,-1))
+        self.qosComboBox = wx.ComboBox(self, choices=self.qoslist,
+                       style=wx.CB_DROPDOWN, value=str(self.favorite.get('qos')),size=(160,-1))
+        self.protocolLabel = wx.StaticText(self, label="Protocol:",size=(160,30))
+        self.protocolTextCtrl = wx.TextCtrl(self, value='MQTT', size=(160,30))
+        self.martasLabel = wx.StaticText(self, label="Select MARTAS:",size=(160,30))
+        self.martasComboBox = wx.ComboBox(self, choices=self.favmartas,
+                       style=wx.CB_DROPDOWN, value=self.selectedmartas,size=(160,-1))
         self.dropButton = wx.Button(self, label='Remove from favorites',size=(160,30))
         self.newButton = wx.Button(self, label='Add to favorites',size=(160,30))
+        self.addressLabel = wx.StaticText(self, label="URL/IP:",size=(160,30))
+        self.addressTextCtrl = wx.TextCtrl(self, value=self.favorite.get('address'),size=(160,30))
         self.portLabel = wx.StaticText(self, label="Communication port:",size=(160,30))
-        self.portTextCtrl = wx.TextCtrl(self, value=self.portlist[self.selector],size=(160,30))
-        self.stationidLabel = wx.StaticText(self, label="Station ID (e.g. IAGA code):",size=(160,30))
-        self.stationidTextCtrl = wx.TextCtrl(self, value="",size=(160,30))
+        self.portTextCtrl = wx.TextCtrl(self, value=str(self.favorite.get('port')),size=(160,30))
+        self.topicLabel = wx.StaticText(self, label="Topic:", size=(160,30)) #(will extended by /#)
+        self.topicTextCtrl = wx.TextCtrl(self, value=self.favorite.get('topic','all'), size=(160,30))
+        self.scanLabel = wx.StaticText(self, label="Scantime (sec):",size=(160,30))
+        self.scanTextCtrl = wx.TextCtrl(self, value=str(self.favorite.get('scantime',20)),size=(160,30))
         self.userLabel = wx.StaticText(self, label="*User:",size=(160,30))
-        self.userTextCtrl = wx.TextCtrl(self, value=self.user,size=(160,30))
+        self.userTextCtrl = wx.TextCtrl(self, value=self.favorite.get('user',''),size=(160,30))
         self.pwdLabel = wx.StaticText(self, label="*Password:",size=(160,30))
         self.pwdTextCtrl = wx.TextCtrl(self, value="",size=(160,30),style=wx.TE_PASSWORD)
         self.authLabel = wx.StaticText(self, label="* if authentication is required",size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
+        self.protocolTextCtrl.Disable()
 
     def doLayout(self):
         # A horizontal BoxSizer will contain the GridSizer (on the left)
@@ -6948,18 +6954,22 @@ class SelectMARTASDialog(wx.Dialog):
         noOptions = dict()
         emptySpace = ((0, 0), noOptions)
 
-        contlist = [(self.addressLabel, noOptions),
-                 (self.addressComboBox, expandOption),
+        contlist = [(self.martasLabel, noOptions),
+                 (self.martasComboBox, expandOption),
                  (self.dropButton, dict(flag=wx.ALIGN_CENTER)),
                  (self.newButton, dict(flag=wx.ALIGN_CENTER)),
-                  emptySpace,
-                 (self.protocolRadioBox, noOptions),
+                    (self.protocolLabel, noOptions),
+                    (self.protocolTextCtrl, expandOption),
+                 (self.addressLabel, noOptions),
+                 (self.addressTextCtrl, expandOption),
                  (self.portLabel, noOptions),
                  (self.portTextCtrl, expandOption),
-                 (self.stationidLabel, noOptions),
-                 (self.stationidTextCtrl, expandOption),
+                 (self.topicLabel, noOptions),
+                 (self.topicTextCtrl, expandOption),
                  (self.qosLabel, noOptions),
                  (self.qosComboBox, expandOption),
+                 (self.scanLabel, noOptions),
+                 (self.scanTextCtrl, expandOption),
                  (self.userLabel, noOptions),
                  (self.userTextCtrl, expandOption),
                  (self.pwdLabel, noOptions),
@@ -6987,48 +6997,165 @@ class SelectMARTASDialog(wx.Dialog):
     def bindControls(self):
         self.newButton.Bind(wx.EVT_BUTTON, self.OnNew)
         self.dropButton.Bind(wx.EVT_BUTTON, self.OnRemove)
-        self.Bind(wx.EVT_RADIOBOX, self.OnProtocol, self.protocolRadioBox)
+        self.Bind(wx.EVT_COMBOBOX, self.OnUpdate, self.martasComboBox)
 
 
     def OnNew(self, e):
         # get current value in dropdown and append it to
-        newval = self.addressComboBox.GetValue()
-        if not newval in self.favoritemartas:
-            self.favoritemartas.append(newval)
+
+        auth = False
+        user = self.userTextCtrl.GetValue()
+        if user:
+            auth = True
+        newcontent = {'address': self.addressTextCtrl.GetValue(),
+                      'scantime':  int(self.scanTextCtrl.GetValue()),
+                      'qos': int(self.qosComboBox.GetValue()),
+                      'topic': self.topicTextCtrl.GetValue(),
+                      'port': int(self.portTextCtrl.GetValue()),
+                      'auth': auth,
+                      'user': user,
+                      'password': self.pwdTextCtrl.GetValue()
+                      }
+        # Select a name for the new input
+        #existingnames =
+        newname = self.addressTextCtrl.GetValue()
+        dlg = LiveGetMARTASNameDialog(None, title='Input for favorite MARTAS list', address=newname, existing_names=self.favmartas)
+        if dlg.ShowModal() == wx.ID_OK:
+            newname = dlg.nameTextCtrl.GetValue()
+            if newname in self.favmartas:
+                print ("name already existing  - adding some random numnber to it")
+                # add some random number at the end
+                rannum = np.random.randint(100,999)
+                newname = "{}_{}".format(newname,rannum)
+            self.favoritemartas[newname] = newcontent
+
 
     def OnRemove(self, e):
-        # get current value in dropdown and append it to
-        #self.favoritemartas = self.options.get('favoritemartas')
-        dropval = self.addressComboBox.GetValue()
-        if dropval in self.favoritemartas:
-            self.favoritemartas = [elem for elem in self.favoritemartas if not elem == dropval]
-        #print (dropval, self.favoritemartas)
-        #self.Close(True)
+        """
+        DECSRIPTION
+            Will remove MARTAS inputs from favorite list.
+            'example' cannot be removed.
+        :param e:
+        :return:
+        """
+        if self.selectedmartas == 'example':
+            print ("Cannot remove dummy example")
+            dlg = wx.MessageDialog(self, "Cannot remove the example!\n",
+                                   "Not possible", wx.OK | wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
 
-    def OnProtocol(self, e):
-        self.protocol = self.protocolRadioBox.GetStringSelection()
+        else:
+            cleanedmartasdict = {}
+            for key in self.favoritemartas:
+                if not key == self.selectedmartas:
+                    cleanedmartasdict[key] = self.favoritemartas[key]
+            self.martasComboBox.SetValue('example')
+            self.favmartas = [el for el in cleanedmartasdict]
+            #self.martasComboBox.SetChoices(self.favmartas)
+            self.favoritemartas = cleanedmartasdict.copy()
+            self.favorite = self.favoritemartas.get('example')
+            self.qosComboBox.SetValue(str(self.favorite.get('qos')))
+            self.portTextCtrl.SetValue(str(self.favorite.get('port')))
+            self.topicTextCtrl.SetValue(self.favorite.get('topic','all'))
+            self.userTextCtrl.SetValue(self.favorite.get('user',''))
+            self.pwdTextCtrl.SetValue(self.favorite.get('password',''))
+            self.addressTextCtrl.SetValue(self.favorite.get('address',''))
+            self.scanTextCtrl.SetValue(str(self.favorite.get('scantime','')))
 
 
-class AGetMARCOSDialog(wx.Dialog):
+    def OnUpdate(self, e):
+        self.selectedmartas = self.martasComboBox.GetStringSelection()
+        self.favorite = self.favoritemartas.get(self.selectedmartas)
+        self.qosComboBox.SetValue(str(self.favorite.get('qos')))
+        self.portTextCtrl.SetValue(str(self.favorite.get('port')))
+        self.topicTextCtrl.SetValue(self.favorite.get('topic','all'))
+        self.userTextCtrl.SetValue(self.favorite.get('user',''))
+        self.pwdTextCtrl.SetValue(self.favorite.get('password',''))
+        self.addressTextCtrl.SetValue(self.favorite.get('address',''))
+        self.scanTextCtrl.SetValue(str(self.favorite.get('scantime','')))
+
+
+class LiveGetMARTASNameDialog(wx.Dialog):
     """
     DESCRIPTION
-        Dialog to select table for MARCOS monitoring
+        Dialog to select a name for a new MARTAS input
+    USED BY:
+        LiveSelectMARTASDialog in dialogclasses
+    RETURNS:
+        a valid, yet non-existing name for the MARTAS favorite list
     """
 
-    def __init__(self, parent, title, datalst):
-        super(AGetMARCOSDialog, self).__init__(parent=parent,
+    def __init__(self, parent, title, address, existing_names):
+        super(LiveGetMARTASNameDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
-        self.datalst = datalst
+        self.address = address
+        self.existing_names = existing_names
         self.createControls()
         self.doLayout()
 
     # Widgets
     def createControls(self):
-        self.dataLabel = wx.StaticText(self, label="Data tables:",size=(160,30))
-        self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
-            style=wx.CB_DROPDOWN, value=self.datalst[0],size=(160,-1))
-        self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(160,30))
+        self.nameLabel = wx.StaticText(self, label="New shortcut:",size=(160,30))
+        self.nameTextCtrl = wx.TextCtrl(self, value=self.address, size=(160, 30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='OK',size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        contlist = [(self.nameLabel, noOptions),
+                 (self.nameTextCtrl, expandOption),
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(contlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        # Add the controls to the sizers:
+        for control, options in contlist:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+
+
+class LiveGetMARCOSDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog to select table for MARCOS monitoring
+    """
+
+    def __init__(self, parent, title, datadict):
+        super(LiveGetMARCOSDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.datalst = [key for key in datadict if datadict.get(key).get('valid')]
+        self.value = 'No valid data'
+        if len(self.datalst) > 0:
+            self.value = self.datalst[0]
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        self.dataLabel = wx.StaticText(self, label="Data tables:",size=(200,30))
+        self.dataComboBox = wx.ComboBox(self, choices=self.datalst,
+            style=wx.CB_DROPDOWN, value=self.value, size=(200,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Open',size=(200,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(200,30))
 
 
     def doLayout(self):
@@ -7063,6 +7190,7 @@ class AGetMARCOSDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
+@deprecated("not used any more")
 class BGetMARCOSDialog(wx.Dialog):
     """
     DESCRIPTION
@@ -7117,7 +7245,7 @@ class BGetMARCOSDialog(wx.Dialog):
 
         self.SetSizerAndFit(boxSizer)
 
-
+@deprecated("not used any more")
 class AGetMARTASDialog(wx.Dialog):
     """
     DESCRIPTION

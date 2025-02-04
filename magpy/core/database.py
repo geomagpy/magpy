@@ -1658,7 +1658,8 @@ REMOVED:
                 cursor.execute(getstat)
                 row = cursor.fetchone()
             except:
-                print("fields_to_dict: error when executing %s" % getstat)
+                if debug:
+                    print("fields_to_dict: error when executing %s" % getstat)
                 row = [None]
             if isinstance(row[0], basestring):
                 metadatadict[key] = row[0]

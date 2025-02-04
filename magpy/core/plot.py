@@ -107,7 +107,7 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
     symbols = None, colors = None, title = None, xinds = None, legend = None, grid = None, patch = None, annotate = False,
     fill = None, showpatch = None, errorbars = None, functions = None, functionfmt = "r-", xlabelposition = None,
     ylabelposition = None, yscale = None, dateformatter = None, force = False, width = 10, height = 4, alpha = 0.5,
-    variables = None, figure = None, debug=False):
+    variables = None, autoscale=True, figure = None, debug=False):
     """
     DESCRIPTION:
         tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a
@@ -176,6 +176,7 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                                  EXAMPLE: height=2
         width (float)       :    default 10 - default width of all plots
                                  EXAMPLE: width=12
+        autoscale (Bool)    :    default is True - rescale all axes if zoomed
         figure (object)     :    provide a figure object for the plot - used by magpy_gui
                                  EXAMPLE: width=12
 
@@ -359,12 +360,9 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                     color = [0.8, 0.8, 0.8]
                 if symbol == "k":
                     # special symbol for K values
-                    #diffs = (np.asarray(t[1:].astype(datetime64) - t[:-1].astype(datetime64)) / 1000000.).astype(
-                    #    float64)  # in seconds
                     diffs = np.asarray(t[1:] - t[:-1]).astype(float64)  # in days
                     diffs = diffs[~np.isnan(diffs)]
                     me = np.median(diffs)
-                    #bartrange = timedelta(seconds=(me / 2.) * 0.95)  # use 99% of the half distance for bartrange
                     bartrange = ((me / 2.) * 0.95) # use 99% of the half distance for bartrange
                     xy = range(9)
                     for num in range(len(t)):
@@ -411,19 +409,19 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                 if force and not len(comp) > 0 and patch and not is_list_empty(patch):
                     # need the time range covered by patches
                     line, = ax.plot(t, [0.5] * len(t), 'w-', alpha=0.0)
-                    r = AutoScaleY(line)
+                    if autoscale:
+                        r = AutoScaleY(line)
                     mincomp = 0
                     maxcomp = 1
                 else:
                     line, = ax.plot(t, comp, symbol, color=color)
-                    r = AutoScaleY(line)
+                    if autoscale:
+                        r = AutoScaleY(line)
                     mincomp = np.nanmin(comp)
                     maxcomp = np.nanmax(comp)
-                # plt.hlines(0,t[0],t[-1])
                 plt.yscale(yscale[idx][i])
                 if dateformatter:
                     plt.gca().xaxis.set_major_formatter(DateFormatter(dateformatter))
-                    # plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=5))
                     plt.gcf().autofmt_xdate()
                 # Padding and y ranges
                 # ------------------
@@ -518,7 +516,8 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                                 ax.plot(fres[0], fres[1], functionfmt, alpha=0.5)
                 # Labels
                 # ------------------
-                plt.xlabel('Time')
+                if i == len(keys[idx]) - 1:
+                    plt.xlabel('Time')
                 colname = dat.header.get('col-{}'.format(component), '')
                 colunit = dat.header.get('unit-col-{}'.format(component), '')
                 if colunit:
@@ -566,6 +565,12 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                     plt.ticklabel_format(useOffset=False, style='plain', axis='y')
                 except:
                     pass
+
+                # set visibility of x-axis as False
+                # ------------------
+                mid = np.round(len(keys[idx]) / 2, 0) - 1
+                if i < len(keys[idx]) - 1 and len(keys[idx]) > 3: #and separate
+                    plt.xticks(color='w')
                 if i > 0:
                     ax.sharex(axs[0])
                 #plt.tight_layout()

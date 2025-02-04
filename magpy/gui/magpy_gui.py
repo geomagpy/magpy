@@ -41,6 +41,12 @@ from magpy.gui.developpage import *  # remove this
 from magpy.gui.analysispage import *
 from magpy.gui.monitorpage import *
 
+try:
+    import paho.mqtt.client as mqtt
+    global_mqttavailable = True
+except:
+    global_mqttavailable = False
+
 #from magpy.collector import collectormethods as colsup
 
 from magpy.gui.statisticspage import StatisticsPanel
@@ -74,12 +80,12 @@ Major methods:              major_method
 |  RedirectText  |          |          2.0.0  |             |            |             | -       |  core.activity |
 |  PlotPanel     |  __init__  |        2.0.0  |             | level 1    |             |         | |
 |  PlotPanel     |  __do_layout  |     2.0.0  |             | level 1    |             |         | |
-|  PlotPanel     |  timer   |          2.0.0  |             |            |             |      | |
-|  PlotPanel     |  update  |          2.0.0  |             |            |             |      | |
+|  PlotPanel     |  live_timer   |     2.0.0  |             | level 1    |             |      | |
+|  PlotPanel     |  _live_update_marcos | 2.0.0  |          | level 1    |             |      | |
 |  PlotPanel     |  update_mqtt  |     2.0.0  |             |            |             |      | |
 |  PlotPanel     |  start_martas_monitor |  2.0.0  |        |            |             |      | |
-|  PlotPanel     |  start_marcos_monitor |  2.0.0  |        |            |             |      | |
-|  PlotPanel     |  monitor_plot  |    2.0.0  |             |            |             |      | |
+|  PlotPanel     |  start_marcos_monitor |  2.0.0  |        | level 1    |             |      | |
+|  PlotPanel     |  monitor_plot  |    2.0.0  |             | level 1    |             |      | |
 |  PlotPanel     |  gui_plot  |        2.0.0  |             | level 1    |               |      | |
 |  PlotPanel     |  initial_plot  |    2.0.0  |             | level 1    |               |      | |
 |  PlotPanel     |  link_rep  |        2.0.0  |             |            |               |      | |
@@ -176,10 +182,11 @@ Major methods:              major_method
 |  MainFrame     | di_onDIParameter |   2.0.0  |            | level 2    |               | 4.5,5.2  |   |
 |  MainFrame     | di_onSaveDI    |    2.0.0  |             | level 2    |               | 4.5,5.2  |   |
 |  MainFrame     | di_onClearDI   |    2.0.0  |             | level 2    |               | 4.5,5.2  |   |
-|  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
-|  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
-|  MainFrame     | xxxx |   2.0.0  |             | level 0    |               |        |   |
 |  MainFrame     | r_onSaveLogButton |  2.0.0  |            | level 2    |               |        |   |
+|  MainFrame     | live_onConnectMARCOS |   2.0.0  |        | level 1    |               |        |   |
+|  MainFrame     | live_onConnectMARTAS |   2.0.0  |        | level 0    |               |        |   |
+|  MainFrame     | live_onStartMonitor |   2.0.0  |         | level 1    |               |        |   |
+|  MainFrame     | live_onStopMonitor |   2.0.0  |          | level 2    |               |        |   |
 |  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
@@ -317,19 +324,43 @@ class PlotPanel(scrolled.ScrolledPanel):
         # switch to WXAgg (required for MacOS)
         if platform.system() == "Darwin":
             matplotlib.use('WXAgg')
-        #width = 10
-        #hght = 3
-        #self.figure = plt.figure(figsize=(width, hght))
         self.figure = plt.figure()
         self.plt = plt
         scsetmp = ScreenSelections()
         self.canvas = FigureCanvas(self,-1,self.figure)
-        self.datavars = {} # for monitoring
-        self.array = [[] for key in DataStream().KEYLIST] # for monitoring
+        self.datavars = {} # for monitoring   # TODO remove
+        self.array = [[] for key in DataStream().KEYLIST] # TODO remove
+        self.stream = DataStream()
         self.t1_stop= threading.Event()
         self.xlimits = None
         self.ylimits = None
         self.selplt = 0 # Index to the selected plot - used by flagselection
+        self.livedatadict = {"id": '',  # dv 0
+                                    "keys": 'x',  # dv 1
+                                    "limit": 0,  # dv 2
+                                    "pad": 0,  # dv 3
+                                    "currentdate": None,  # dv 4
+                                    "units": [],  # dv 5
+                                    "head": {},   #  new - contains a DataStream header
+                                    "array": [[] for el in DataStream().KEYLIST],   #  new - contains a DataStream ndarray
+                                    "coverage": 0,      # int dv 6  - coverage in N of lines from data set
+                                    "period": 0,  # dv 7 - new data is request with this period in seconds
+                                    "db": None,  # dv 8
+                                    "stationid": '',  # dv 15
+                                    "address": '',  # dv 9
+                                    "port": '',  # dv 10
+                                    "delay": 0,  # dv 11
+                                    "protocol": '',  # dv 11
+                                    "user": '',  # dv 13
+                                    "password": '',  # dv 14
+                                    "qos": 0,     # dv 16
+                                    "dbhost": '',  # new: for logging
+                                    "dbuser": '',  # new: for logging
+                                    "dbpwd": '',  # new: for logging
+                                    "dbname": '',  # new: for logging
+                                    "range": 600,  # new: timerange in seconds
+                                    "samplingrate": 1.0  # new: no need to calculate
+                             }
         self.initial_plot()
         self.__do_layout()
 
@@ -344,92 +375,75 @@ class PlotPanel(scrolled.ScrolledPanel):
         self.SetupScrolling()
 
 
-    def timer(self, arg1, stop_event):
+    def live_timer(self, client, stop_event, stream):
+        """
+        DESCRIPTION
+            timer for live data monitoring
+        :param typus:
+        :param stop_event:
+        :return:
+        """
+        debug = False
         while(not stop_event.is_set()):
-            if arg1 == 1:
-                self.update(self.array)
+            if client == 'marcos':
+                self._live_update_marcos(stream)
             else:
-                self.update_mqtt(arg1,self.array)
-            print ("Running ... {}".format(datetime.utcnow()))
-            stop_event.wait(self.datavars[7])
+                self._live_update_martas(client, stream)
+            if debug:
+                # use a green light to indicate it is running
+                print ("Running ... {}".format(datetime.now(timezone.utc).replace(tzinfo=None)))
+            stop_event.wait(self.livedatadict.get('period'))
         ###
         # Eventually stop client
-        if not arg1 == 1:
+        if not client == 'marcos':
             #try:
-            arg1.loop_stop()
+            client.loop_stop()
             #except:
             #pass
 
-    def update(self,array):
+    def _live_update_marcos(self, stream):
         """
         DESCRIPTION
             Update array with new data and plot it.
             If log file is chosen then this method makes use of collector.subscribe method:
             storeData to save binary file
         """
-        def list_duplicates(seq):
-            seen = set()
-            seen_add = seen.add
-            return [idx for idx,item in enumerate(seq) if item in seen or seen_add(item)]
+        debug=True
+        t1 = datetime.now()
+        db = database.DataBank(host=self.livedatadict.get('dbhost'), user=self.livedatadict.get('dbuser'),
+                               password=self.livedatadict.get('dbpwd'), database=self.livedatadict.get('dbname'))
+        # Get lines according to limit (downloadperiod/sampling rate + 1)
+        newstream = db.get_lines(self.livedatadict.get('id'), int(self.livedatadict.get('limit')+1) )
+        # create DataStream
+        stream = join_streams(stream, newstream)
+        # drop duplicates
+        stream = stream.removeduplicates()
+        # limit max length of stream
+        stream = stream.trim(starttime=datetime.now(timezone.utc).replace(tzinfo=None)-timedelta(seconds=int(self.livedatadict.get('range'))))
 
-        db = self.datavars[8]
-        parameterstring = 'time,'+self.datavars[1]
-        # li should contain a data source of a certain length (can be filled by any reading process)
-        li = sorted(db.select(parameterstring, self.datavars[0], expert='ORDER BY time DESC LIMIT {}'.format(int(self.datavars[2]))))
-        try:
-            tmpdt = [datetime.strptime(elem[0], "%Y-%m-%d %H:%M:%S.%f") for elem in li]
-        except:
-            tmpdt = [datetime.strptime(elem[0], "%Y-%m-%d %H:%M:%S") for elem in li]
-        self.array[0].extend(tmpdt)
-        for idx,para in enumerate(parameterstring.split(',')):
-            if not para.endswith('time'):
-                i = DataStream().KEYLIST.index(para)
-                try:
-                    self.array[i].extend([float(elem[idx]) for elem in li])
-                except:
-                    # None, NAN or string
-                    pass
+        self.monitor_plot(stream)
+        if debug:
+            t2 = datetime.now()
+            print ("Needs", (t2-t1).total_seconds())
 
-        duplicateindicies = list_duplicates(self.array[0])
-        array = [[] for key in DataStream().KEYLIST]
-        for idx, elem in enumerate(self.array):
-            if len(elem) > 0:
-                newelem = np.delete(np.asarray(elem), duplicateindicies)
-                array[idx] = list(newelem)
 
-        coverage = int(self.datavars[6])
-        try:
-           tmp = DataStream([],{},np.asarray(array)).samplingrate()
-           coverage = int(coverage/tmp)
-        except:
-           pass
-
-        array = [ar[-coverage:] if len(ar) > coverage else ar for ar in array ]
-
-        print ("CHECK:", self.datavars)
-        self.monitorPlot(array)
-
-        #if Log2File:
-        #    msubs.output = 'file'
-        #    #sensorid = row[0]
-        #    #module = row[1]
-        #    #line = row[2]
-        #    #msubs.storeData(li,parameterstring.split(','))
-
-    def update_mqtt(self,client,array):
+    def _live_update_martas(self, client, stream):
         """
         DESCRIPTION
             Update array with new data and plot it.
         """
-        #from magpy.collector import collectormethods as colsup
 
         sumtime = 0
 
         debug = False ## PLEASE NOTE Oct 2019: MARTAS is receiving data only at the defined interval, not inbetween
 
-        #print (self.datavars[0][:-5])
-        coverage = int(self.datavars[6])
+        print ("GOT A:", self.livedatadict.get('array'))
+        print ("GOT B:", self.livedatadict.get('head'))
+        # limit length of array to limit
+        # create stream
+        # send stream to monitor plot
 
+        """
         pos = DataStream().KEYLIST.index('t1')
         posvar1 = DataStream().KEYLIST.index('var1')
         if debug:
@@ -437,7 +451,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             print ("data:", self.datavars)
         #OK = True
         #if OK:
-        while sumtime<self.datavars[2]:
+        while sumtime<self.datavars[2]:  # limit
             #client.loop(.1)
             # TODO add reconnection handler here in case that client goes away
             # print (client.connected_flag) -- connected_flag remains True -> can set it to False if no Payload is received ....
@@ -483,11 +497,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             #self.array = np.asarray(self.array)[:,np.argsort(np.asarray(self.array)[0])]
             array = self.array
             self.monitorPlot(array)
-
-    @deprecated("Replaced by start_marcos_monitor")
-    def startMARCOSMonitor(self,**kwargs):
-        self.start_marcos_monitor(**kwargs)
-
+        """
 
     def start_marcos_monitor(self,**kwargs):
         """
@@ -498,56 +508,15 @@ class PlotPanel(scrolled.ScrolledPanel):
             kwargs:  - all plot args
         """
 
-        dataid = self.datavars[0]
-        parameter = self.datavars[1]
-        period = self.datavars[2]
-        pad = self.datavars[3]
-        currentdate = self.datavars[4]
-        unitlist = self.datavars[5]
-        coverage = self.datavars[6]  # coverage
-        updatetime = self.datavars[7]
-        db = self.datavars[8]
-        stationid = self.datavars.get(15)
-
+        db = self.livedatadict.get('db')
         # convert parameter list to a dbselect sql format
-        parameterstring = 'time,'+parameter
-
-        # Test whether data is available at all with selected keys and dataid
-        li = sorted(db.select(parameterstring, dataid, expert='ORDER BY time DESC LIMIT {}'.format(int(coverage))))
-
-        if not len(li) > 0:
-            print("Parameter", parameterstring, dataid, coverage)
-            print("Did not find any data to display - aborting")
-            return
-        else:
-            valkeys = ['time']
-            valkeys = parameterstring.split(',')
-            for i,elem in enumerate(valkeys):
-                idx = DataStream().KEYLIST.index(elem)
-                if elem == 'time':
-                    try:
-                        self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S.%f") for el in li]
-                    except:
-                        self.array[idx] = [datetime.strptime(el[0],"%Y-%m-%d %H:%M:%S") for el in li]
-                else:
-                    try:
-                        self.array[idx] = [float(el[i]) for el in li]
-                    except:
-                        # non valid inputs or no numbers
-                        pass
-
-        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db, 15: stationid}
+        stream = db.get_lines(self.livedatadict.get('id'), int(self.livedatadict.get('coverage')) )
 
         self.figure.clear()
-        t1 = threading.Thread(target=self.timer, args=(1,self.t1_stop))
+        t1 = threading.Thread(target=self.live_timer, args=('marcos',self.t1_stop, stream))
         t1.start()
         # Display the plot
         self.canvas.draw()
-
-
-    @deprecated("Replaced by start_marcos_monitor")
-    def startMARTASMonitor(self, protocol, **kwargs):
-        self.start_martas_monitor(protocol, **kwargs)
 
 
     def start_martas_monitor(self, protocol, **kwargs):
@@ -558,82 +527,125 @@ class PlotPanel(scrolled.ScrolledPanel):
         PARAMETERS:
             kwargs:  - all plot args
         """
+        debug = True
+        values = []
+        dataid = self.livedatadict.get("id")
+        coverage = self.livedatadict.get("coverage")
+        keys = self.livedatadict.get("keys")
+        limit = self.livedatadict.get("limit")
+        martasaddress = self.livedatadict.get("address")
+        martastopic = self.livedatadict.get("topic")
+        martasport = self.livedatadict.get("port")
+        martasdelay = self.livedatadict.get("delay")
+        martasqos = self.livedatadict.get("qos")
+        martasuser = self.livedatadict.get("user")
+        martaspasswd = self.livedatadict.get("password")
 
-        dataid = self.datavars[0]
-        parameter = self.datavars[1]
-        period = self.datavars[2]
-        pad = self.datavars[3]
-        currentdate = self.datavars[4]
-        unitlist = self.datavars[5]
-        coverage = self.datavars[6]  # coverage
-        updatetime = self.datavars[7]
-        db = self.datavars[8]
-        martasaddress = self.datavars[9]  # coverage
-        martasport = self.datavars[10]
-        martasdelay = self.datavars[11]
-        martasuser = self.datavars[13]
-        martaspasswd = self.datavars[14]
-        martasstationid = self.datavars[15]
-        qos = self.datavars[16]
+        # start monitoring parameters
+        if global_mqttavailable:
+                sensordict = {}
 
-        # convert unitlist to [[],[]]
-        plist = parameter.split(',')
-        if len(unitlist) == len(plist):
-            for idx, el in enumerate(plist):
-                unitlist[idx] = [el,unitlist[idx]]
-            self.datavars[5] = unitlist
+                # Version 1 (valid for xxx)
+                # -------------------------
+                # The callback for when the client receives a CONNACK response from the server.
+                def on_connect(client, userdata, flags, reason_code): #, properties):
+                    # Subscribing in on_connect() means that if we lose the connection and
+                    # reconnect then subscriptions will be renewed.
+                    client.subscribe("{}/#".format(martastopic), martasqos)
 
-        """
-        if protocol == 'mqtt':
-            try:
-                import paho.mqtt.client as mqtt
-                #from magpy.collector import collectormethods as colsup
-                mqttimport = True
-            except:
-                mqttimport = False
-                dlg = wx.MessageDialog(self, "Could not import required packages!\n"
-                        "Make sure that the python package paho-mqtt is installed\n",
-                        "MARTAS monitor failed", wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                self.changeStatusbar("Using MQTT monitor failed ... Ready")
-                dlg.Destroy()
-            if mqttimport:
-                mqtt.Client.connected_flag=False
-                client = mqtt.Client()
+                # The callback for when a PUBLISH message is received from the server.
+                def on_message(client, userdata, msg):
+                    #if debug:
+                    #    print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+                    # create a result dictionary
+                    sensorcont = self.livedatadict.get("head")
+                    array = self.livedatadict.get("array")
+                    dataid = self.livedatadict.get("id")[:-5]
 
+                    sensorid = "{}".format(msg.topic).replace("{}/".format(martastopic),'')[:-5]
+                    content = "{}".format(msg.topic)[-4:]
+                    payload = "{}".format(msg.payload.decode())
+                    if dataid == sensorid: # only if current line corresponds to selected dataid
+                        if not sensordict.get(sensorid, {}) == {}:
+                            sensorcont = sensordict.get(sensorid)
+                        keys = sensorcont.get('SensorKeys','').split(',')
+                        multi = sensorcont.get('Multipliers','').split(',')
+                        pc = sensorcont.get('PackingCode','')
+                        if content == 'meta':
+                            if not keys:
+                                payloadlist1 = payload.split(sensorid)
+                                payloadlist2 = payloadlist1[1].split()
+                                sensorcont['SensorKeys'] = payloadlist2[0][1:-1]
+                                sensorcont['SensorElements'] = payloadlist2[1][1:-1]
+                                sensorcont['SensorUnits'] = payloadlist2[2][1:-1]
+                                sensorcont['Multipliers'] = payloadlist2[3][1:-1]
+                                sensorcont['PackingCode'] = payloadlist2[4]
+                                # TODO Create column Contents and Units
+                                keys = sensorcont.get('SensorKeys').split(',')
+                                els = sensorcont.get('SensorElements').split(',')
+                                uns = sensorcont.get('SensorUnits').split(',')
+                                collst, unitlst = [],[]
+                                for var in DataStream().KEYLIST[1:]:
+                                    adderc, adderu = '', ''
+                                    for i,el in enumerate(keys):
+                                        if el == var:
+                                            adderc = els[i]
+                                            adderu = uns[i]
+                                    collst.append(adderc)
+                                    unitlst.append(adderu)
+                                sensorcont['ColumnContents'] = ",".join(collst)
+                                sensorcont['ColumnUnits'] = ",".join(unitlst)
+                        elif content == 'dict':
+                            payloadlist = payload.split(',')
+                            for pl in payloadlist:
+                                plc = pl.replace("\n","").split(":")
+                                sensorcont[plc[0]] = plc[1].replace('-','')
+                        elif content == 'data' and len(keys) > 0:
+                            payloadlist = payload.split(';')
+                            for dataline in payloadlist:
+                                datalist = dataline.split(',')
+                                timel = [int(t) for t in datalist[:7]]
+                                array[0].append(datetime(*timel))
+                                if pc.endswith('6hL'):
+                                    sectimel = [int(t) for t in datalist[-7:]]
+                                    print ("Secondary time", sectimel)
+                                    pos = DataStream().KEYLIST.index("sectime")
+                                    array[pos].append(datetime(*sectimel))
+                                for i,k in enumerate(keys):
+                                    if not k == "sectime":
+                                        pos = DataStream().KEYLIST.index(k)
+                                        if k in DataStream().NUMKEYLIST:
+                                            array[pos].append(float(datalist[7+i])/float(multi[i]))
+                                        else:
+                                            array[pos].append(datalist[7+i])
+                            self.livedatadict["array"] = array
+                        self.livedatadict["head"] = sensorcont
+
+                mqttclient = mqtt.Client()
                 if not martasuser in ['',None,'None','-']:
                     #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
-                    client.username_pw_set(martasuser, password=martaspasswd)
+                    mqttclient.username_pw_set(martasuser, password=martaspasswd)  # defined on broker by mosquitto_passwd -c passwordfile user
+                mqttclient.on_connect = on_connect
+                mqttclient.on_message = on_message
 
-                client.on_connect = colsup.on_connect
-                client.on_message = colsup.on_message
-                try:
-                    client.connect(martasaddress, int(martasport), int(martasdelay))
-                except:
-                    dlg = wx.MessageDialog(self, "Connection to MQTT broker failed\n"
-                            "Check your internet connection or credentials\n",
-                            "Connection failed", wx.OK|wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    dlg.Destroy()
-                    return
-
-                client.subscribe("{}/#".format(martasstationid), qos)
+                if debug:
+                    print ("Connecting to:", martasaddress, int(martasport), int(martasdelay))
+                mqttclient.connect(martasaddress, int(martasport), int(martasdelay))
 
                 self.figure.clear()
-
-                t1 = threading.Thread(target=self.timer, args=(client,self.t1_stop))
+                t1 = threading.Thread(target=self.live_timer, args=(mqttclient,self.t1_stop, DataStream()))
                 t1.start()
-                client.loop_start()
+                mqttclient.loop_start()
                 # Display the plot
                 self.canvas.draw()
-        """
+
 
 
     @deprecated("Replaced by monitor_plot")
     def monitorPlot(self,array,**kwargs):
         self.monitor_plot(array, **kwargs)
 
-    def monitor_plot(self,array,**kwargs):
+    def monitor_plot(self, stream, **kwargs):
         """
         DEFINITION:
             embbed matplotlib figure in canvas for mointoring
@@ -642,83 +654,20 @@ class PlotPanel(scrolled.ScrolledPanel):
             kwargs:  - all plot args
         """
 
-        # Read persistent data variables
-        dataid = self.datavars[0]
-        parameter = self.datavars[1]
-        period = self.datavars[2]
-        pad = self.datavars[3]
-        currentdate = self.datavars[4]
-        unitlist = self.datavars[5]
-        coverage = self.datavars[6]  # coverage
-        updatetime = self.datavars[7]
-        db = self.datavars[8]
-        martasaddress = self.datavars.get(9)
-        martasport = self.datavars.get(10)
-        martasdelay = self.datavars.get(11)
-        martasprotocol = self.datavars.get(12)
-        martasuser = self.datavars.get(13)
-        martaspasswd = self.datavars.get(14)
-        martasstationid = self.datavars.get(15)
-        qos = self.datavars.get(16)
-
-        # convert parameter list to a dbselect sql format
-        parameterstring = 'time,'+parameter
-
+        self.stream = stream
+        keys = stream.variables()
+        title = self.livedatadict.get('id')
+        legend = False
+        if stream.header.get('DataPier',''):
+            legend = {"legendtext": [stream.header.get('DataPier')],"legendposition":"upper left","legendstyle":"shadow","plotnumber":0}
+        grid = True
         self.figure.clear()
         try:
             self.axes.clear()
         except:
             pass
-        dt = array[0]
-        self.figure.suptitle("Live Data of %s - %s" % (dataid, currentdate))
-        for idx,para in enumerate(parameterstring.split(',')):
-            i = DataStream().KEYLIST.index(para)
-            if not para.endswith('time') and len(array[i]) > 0:
-                #print (para, len(array[i]))
-                subind = int("{}1{}".format(len(parameterstring.split(','))-1,idx))
-                self.axes = self.figure.add_subplot(subind)
-                self.axes.grid(True)
-                rd = array[i]
-                #try:
-                l, = self.axes.plot_date(dt,rd,'b-')
-                #except:
-                #    array = [[] for el in DataStream().KEYLIST]
-                #l, = a.plot_date(dt,td,'g-')
-                plt.xlabel("Time")
-                plt.ylabel(r'{} [{}]'.format(unitlist[idx-1][0],unitlist[idx-1][1]))
-
-                # Get the minimum and maximum temperatures these are
-                # used for annotations and scaling the plot of data
-                min_val = np.min(rd)
-                max_val = np.max(rd)
-
-                # Add annotations for minimum and maximum temperatures
-                self.axes.annotate(r'Min: %0.1f' % (min_val),
-                    xy=(dt[rd.index(min_val)], min_val),
-                    xycoords='data', xytext=(20, -20),
-                    textcoords='offset points',
-                    bbox=dict(boxstyle="round", fc="0.8"),
-                    arrowprops=dict(arrowstyle="->",
-                    shrinkA=0, shrinkB=1,
-                    connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-
-                self.axes.annotate(r'Max: %0.1f' % (max_val),
-                    xy=(dt[rd.index(max_val)], max_val),
-                    xycoords='data', xytext=(20, 20),
-                    textcoords='offset points',
-                    bbox=dict(boxstyle="round", fc="0.8"),
-                    arrowprops=dict(arrowstyle="->",
-                    shrinkA=0, shrinkB=1,
-                    connectionstyle="angle,angleA=0,angleB=90,rad=10"))
-
-        # Set the axis limits to make the data more readable
-        #self.axes.axis([0,len(temps), min_t - pad,max_t + pad])
-
+        self.figure, self.axes = mp.tsplot(data=[stream], keys=[keys], title=title, grid=grid, legend=legend, autoscale=False, figure=self.figure)
         self.figure.canvas.draw_idle()
-
-        # Repack variables that need to be persistent between
-        # executions of this method
-        self.datavars = {0: dataid, 1: parameter, 2: period, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: updatetime, 8: db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol, 13: martasuser, 14: martaspasswd, 15: martasstationid, 16: qos}
 
 
     @deprecated("Replaced by gui_plot")
@@ -1160,8 +1109,6 @@ class MenuPanel(scrolled.ScrolledPanel):
         sizer.Add(nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.SetupScrolling()
-        #self.nb.RemovePage(4)
-        #self.stats_page.Hide()
 
 
 class MainFrame(wx.Frame):
@@ -1268,10 +1215,10 @@ class MainFrame(wx.Frame):
         self.baselinedictlst = [] # variable to hold info on loaded DI streams for baselinecorrection
         self.baselineidxlst = []
 
-
         self.active_id = 0
         self.active_baseid = 0
         self.active_didata = {}
+        self.active_live = ''    # can be MARCOS, MARTAS or empty
 
         # Menu Bar
         # --------------
@@ -1353,10 +1300,21 @@ class MainFrame(wx.Frame):
         analysisdict['flagtype'] = 3
         analysisdict['flagversion'] = '2.0'
         # monitor
-        analysisdict['martasscantime'] = '20'
         favoritemartas = {}
-        favoritemartas['conrad'] = 'https://cobs.zamg.ac.at'
-        favoritemartas['example'] = 'https://www.example.com'
+        favoritemartas['conrad'] = {'address' : 'cobs.zamg.ac.at',
+                                    'scantime' : 20,
+                                    'qos' : 1,
+                                    'topic' : 'all',
+                                    'port' : 1883,
+                                    'auth' : False}   # if auth = True provide user
+        favoritemartas['example'] = {'address' : 'www.example.com',
+                                    'scantime' : 20,
+                                    'qos' : 1,
+                                    'topic' : 'all',
+                                    'port' : 1883,
+                                    'auth' : True,
+                                    'user' : 'cobs',
+                                    'password' : 'secret'}
         analysisdict['favoritemartas'] = favoritemartas
         # DI analysis
         analysisdict['baselinedirect'] = False
@@ -1745,12 +1703,11 @@ class MainFrame(wx.Frame):
         #sys.stdout=redir
         #        Monitor Page
         # --------------------------
-        self.Bind(wx.EVT_BUTTON, self.onConnectMARCOSButton, self.menu_p.com_page.getMARCOSButton)
-        self.Bind(wx.EVT_BUTTON, self.onConnectMARTASButton, self.menu_p.com_page.getMARTASButton)
-        #self.Bind(wx.EVT_BUTTON, self.onConnectMQTTButton, self.menu_p.com_page.getMQTTButton)
-        self.Bind(wx.EVT_BUTTON, self.onStartMonitorButton, self.menu_p.com_page.startMonitorButton)
-        self.Bind(wx.EVT_BUTTON, self.onStopMonitorButton, self.menu_p.com_page.stopMonitorButton)
-        self.Bind(wx.EVT_BUTTON, self.onLogDataButton, self.menu_p.com_page.saveMonitorButton)
+        self.Bind(wx.EVT_BUTTON, self.live_onConnectMARCOSButton, self.menu_p.com_page.getMARCOSButton)
+        self.Bind(wx.EVT_BUTTON, self.live_onConnectMARTASButton, self.menu_p.com_page.getMARTASButton)
+        self.Bind(wx.EVT_BUTTON, self.live_onStartMonitorButton, self.menu_p.com_page.startMonitorButton)
+        self.Bind(wx.EVT_BUTTON, self.live_onStopMonitorButton, self.menu_p.com_page.stopMonitorButton)
+        self.Bind(wx.EVT_BUTTON, self.live_onSaveMonitorButton, self.menu_p.com_page.saveMonitorButton)
 
 
     def _db_connect(self, host, user, passwd, dbname, debug=False):
@@ -1781,7 +1738,6 @@ class MainFrame(wx.Frame):
             response = os.system("ping -c 1 -w2 {} > /dev/null 2>&1".format(host))
         else:
             response = 0
-
         if response == 0:
             try:
                 db = database.DataBank(host=host, user=user, password=passwd, database=dbname)
@@ -1799,7 +1755,7 @@ class MainFrame(wx.Frame):
             # enable MARCOS button
             self.menu_p.com_page.getMARCOSButton.Enable()
         else:
-            self.menu_p.rep_page.logMsg('- MySQL Database access failed.')
+            self.menu_p.rep_page.logMsg('- MySQL Database access to {} failed.'.format(dbname))
             self.changeStatusbar("Database connection failed")
             # disable MARCOS button
             self.menu_p.com_page.getMARCOSButton.Disable()
@@ -2034,6 +1990,8 @@ class MainFrame(wx.Frame):
         self.menu_p.ana_page.applyBCButton.Disable()       # activated if DataAbsInfo is present
 
         # Monitor
+        if not global_mqttavailable:
+            self.menu_p.com_page.getMARTASButton.Disable()
         self.menu_p.com_page.startMonitorButton.Disable()  # always
         self.menu_p.com_page.stopMonitorButton.Disable()   # always
         self.menu_p.com_page.saveMonitorButton.Disable()   # always
@@ -2238,10 +2196,7 @@ class MainFrame(wx.Frame):
         if self.guidict.get('experimental'):
             self.menu_p.fla_page.flagUltraButton.Enable()     # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
-
-        # ----------------------------------------
-        # absolutes page
-        #self.menu_p.abs_page.loadUSGSButton.Enable()      # always
+            self.menu_p.com_page.saveMonitorButton.Enable()   # if experimental
 
         # Selective fields
         # ----------------------------------------
@@ -2264,8 +2219,6 @@ class MainFrame(wx.Frame):
             self.menu_p.fla_page.flagDropButton.Enable()     # activated if annotation are present
             self.menu_p.fla_page.flagSaveButton.Enable()      # activated if annotation are present
             self.menu_p.fla_page.annotateCheckBox.Enable()    # activated if annotation are present
-            #if self.menu_p.fla_page.annotateCheckBox.GetValue():
-            #    self.menu_p.fla_page.annotateCheckBox.SetValue(True)
         if not formattype == 'MagPyDI' and not contenttype.startswith('MagPyDI'):
             self.menu_p.str_page.getGapsButton.Enable()    # activated if not DI data
         if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
@@ -2274,8 +2227,6 @@ class MainFrame(wx.Frame):
             self.menu_p.str_page.symbolRadioBox.SetStringSelection('point')
         if not absinfo == None:
             self.menu_p.ana_page.applyBCButton.Enable()       # activated if DataAbsInfo is present
-        #if n < 2000:
-        #    self.menu_p.str_page.symbolRadioBox.Enable()      # activated if less then 2000 points, active if DI data
         if not dataid == '' and self.magpystate.get('db'):
             self.menu_p.met_page.getDBButton.Enable()         # activated when DB is connected
             self.menu_p.met_page.putDBButton.Enable()         # activated when DB is connected
@@ -2292,7 +2243,6 @@ class MainFrame(wx.Frame):
                 self.menu_p.ana_page.deltafButton.Enable()    # activate if full vector present
 
             if not formattype == 'MagPyDI' and not contenttype.startswith('MagPyDI'):
-                #print ("Checking baseline info")
                 baselinelist = [key for key in self.baselinedict]
                 if len(baselinelist) > 0:
                     self.menu_p.ana_page.baselineButton.Enable()  # activate if baselinedata is existing
@@ -6166,7 +6116,7 @@ class MainFrame(wx.Frame):
                     print ("Some variables to test:")
 
                 #TODO diusedb
-                print (divario, discalar)
+                #print (divario, discalar)
                 absstream = di.absolute_analysis(absdata, divario, discalar, db=db, magrotation=magrotation,
                                                  annualmeans=dicont.get('diannualmeans'), expD=dicont.get('diexpD'),
                                                  expI=dicont.get('diexpI'), stationid=stationid,
@@ -6268,6 +6218,387 @@ class MainFrame(wx.Frame):
     # ##################################################################################################################
     # ####    Monitor Panel                                    #########################################################
     # ##################################################################################################################
+
+
+    def live_onConnectMARCOSButton(self, event):
+        """
+        DESCRIPTION
+            connect to live data from a MagPy database
+        :param event:
+        :return:
+        """
+        debug = False
+        pad = 5
+        keys = []
+        units = []
+        stationid = ''
+        dbname = self.magpystate.get('dbtuple')[3]
+        datainfoid = ''
+        utcnow = datetime.now(timezone.utc).replace(tzinfo=None)
+        sr = 1
+        currentdate = utcnow.strftime("%Y-%m-%d")
+        success = False
+
+        # active if database is connected
+        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+
+        def _dataAvailabilityCheck(db, datainfoidlist):
+            """
+            DESCRIPTION
+                internal method to check whether datatables for DataIDs are existing and contain valid data
+            :param db:
+            :param datainfoidlist:
+            :return:
+            """
+            existingdict = {}
+            if not len(datainfoidlist) > 0:
+                return datainfoidlist
+            for dataid in datainfoidlist:
+                # get the last 20 inputs and determine sampling rate
+                ar = db.select('time', dataid, expert="ORDER BY time DESC LIMIT 20")
+                if len(ar) > 0:
+                    timecol = [methods.testtime(el) for el in ar]
+                    samplingrate = np.abs((np.median(np.diff(timecol))).total_seconds())
+                    valid = False
+                    if timecol[0] > utcnow-timedelta(hours=1):
+                        valid = True
+                    existingdict[dataid] = {'last_time' : timecol[0], 'samplingrate' : samplingrate, 'valid' : valid}
+            return existingdict
+
+
+        self.menu_p.rep_page.logMsg('- Selecting MARCOS table for monitoring ...')
+        output = db.select('DataID,DataMinTime,DataMaxTime','DATAINFO')
+        datainfoidlist = [elem[0] for elem in output]
+        if debug:
+            print ("DATAINFO", datainfoidlist)
+
+        datainfodict = _dataAvailabilityCheck(db, datainfoidlist)
+
+        if not datainfodict:
+            dlg = wx.MessageDialog(self, "No data tables available!\n"
+                            "Please check your database.\n",
+                            "OpenDB", wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        # select table
+        dlg = LiveGetMARCOSDialog(None, title='Select table',datadict=datainfodict)
+        if dlg.ShowModal() == wx.ID_OK:
+            datainfoid = dlg.dataComboBox.GetValue()
+            dvals = db.select('SensorID,DataSamplingRate,ColumnContents,ColumnUnits,StationID','DATAINFO', 'DataID = "'+datainfoid+'"')
+            vals = dvals[0]
+            sensid= vals[0]
+            sr = datainfodict.get(datainfoid).get('samplingrate')
+            if vals[1]:
+                # use DATAINFO content for sampling rate
+                sr2 = float(vals[1].strip('sec'))
+            keys= vals[2].split(',')
+            units= vals[3].split(',')
+            stationid= vals[4]
+            success = True
+        dlg.Destroy()
+
+        if success:
+            # start monitoring parameters
+            period = float(self.menu_p.com_page.frequSlider.GetValue())
+            covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+            unitlist = []
+            for idx,key in enumerate(keys):
+               if not key == '':
+                   unitlist.append([key, units[idx]])
+            parameter = ','.join([DataStream().KEYLIST[idx+1] for idx,key in enumerate(keys) if not key=='' and DataStream().KEYLIST[idx+1] in DataStream().NUMKEYLIST])
+            coverage = int(covval/sr)
+            limit = period/sr
+            # assign values in plotpanels class
+            self.plot_p.livedatadict = { "id": datainfoid,              # dv 0
+                                         "keys": parameter,             # dv 1
+                                         "limit": limit,                # dv 2
+                                         "pad": pad,                    # dv 3
+                                         "currentdata": currentdate,    # dv 4
+                                         "units": unitlist,             # dv 5
+                                         "coverage": coverage,          # dv 6 (integer - amount of lines to read)
+                                         "period": period,              # dv 7
+                                         "db": db,                      # dv 8
+                                         "dbhost": self.magpystate.get('dbtuple')[0],              # new: for logging
+                                         "dbuser": self.magpystate.get('dbtuple')[1],              # new: for logging
+                                         "dbpwd": self.magpystate.get('dbtuple')[2],              # new: for logging
+                                         "dbname": dbname,              # new: for logging
+                                         "samplingrate": sr,            # new: for logging
+                                         "range": covval,            # new: timerange for data window
+                                         "stationid": stationid
+                                         }
+            # activate live in menupanels class
+            self.active_live = 'MARCOS'
+
+            self.menu_p.com_page.startMonitorButton.Enable()
+            self.menu_p.com_page.getMARTASButton.Disable()
+            self.menu_p.com_page.saveMonitorButton.Disable()   # TODO does not make sense for MARCOS, only for MARTAS
+            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(dbname))
+            self.menu_p.com_page.logMsg('Begin monitoring...')
+            self.menu_p.com_page.logMsg(' - Selected MARCOS database')
+            self.menu_p.com_page.logMsg(' - Table: {}'.format(datainfoid))
+            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+            self.menu_p.com_page.frequSlider.Enable()         # always
+
+
+    def live_onConnectMARTASButton(self, event):
+        """
+        DESCRIPTION
+            connect to live data from a MARTARS (MagPy Automatic Real Time Acquisition System)
+        :param event:
+        :return:
+        """
+        debug = True
+        success = False
+        martasaddress = ''
+        martasport = 1883
+        martastopic = 'all'
+        martasscan = 20
+        martasqos = 1
+        martasuser = ''
+        martaspasswd = ''
+        martasdelay = 60
+        pad = 5
+        utcnow = datetime.now(timezone.utc)
+        currentdate = utcnow.strftime("%Y-%m-%d")
+        oldopt = self.analysisdict.get('favoritemartas',[])
+        dlg = LiveSelectMARTASDialog(None, title='Select MARTAS', analysisdict=self.analysisdict)
+        if dlg.ShowModal() == wx.ID_OK:
+            martasaddress = dlg.addressTextCtrl.GetValue()
+            martasport = int(dlg.portTextCtrl.GetValue())
+            martasscan = int(dlg.scanTextCtrl.GetValue())
+            martasqos = int(dlg.qosComboBox.GetValue())
+            martastopic = dlg.topicTextCtrl.GetValue()
+            martasuser = dlg.userTextCtrl.GetValue()
+            martaspasswd = dlg.pwdTextCtrl.GetValue()
+            self.analysisdict['favoritemartas'] = dlg.favoritemartas
+            martasdelay = 60  # hard coded
+            martasprotocol = 'mqtt'
+            success = True
+            self.menu_p.rep_page.logMsg('- Selected MARTAS maschine ({},{}) for monitoring ...'.format(martasaddress,martasprotocol))
+        dlg.Destroy()
+
+        if success:
+            if martastopic in ['all','+','ALL']:
+                martastopic = '+'
+
+            # start monitoring parameters
+            if global_mqttavailable:
+                sensordict = {}
+
+                # Version 1 (valid for xxx)
+                # -------------------------
+                # The callback for when the client receives a CONNACK response from the server.
+                def on_connect(client, userdata, flags, reason_code): #, properties):
+                    self.menu_p.com_page.logMsg(f" - MARTAS: connected with result code {reason_code}")
+                    # Subscribing in on_connect() means that if we lose the connection and
+                    # reconnect then subscriptions will be renewed.
+                    client.subscribe("{}/#".format(martastopic), martasqos)
+
+                # The callback for when a PUBLISH message is received from the server.
+                def on_message(client, userdata, msg):
+                    if debug:
+                        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+                    # create a result dictionary
+                    sensorid = "{}".format(msg.topic).replace("{}/".format(martastopic),'')[:-5]
+                    content = "{}".format(msg.topic)[-4:]
+                    payload = "{}".format(msg.payload.decode())
+                    sensorcont = {}
+                    if not sensordict.get(sensorid, {}) == {}:
+                        sensorcont = sensordict.get(sensorid)
+                    if content == 'meta':
+                        payloadlist1 = payload.split(sensorid)
+                        payloadlist2 = payloadlist1[1].split()
+                        sensorcont['SensorKeys'] = payloadlist2[0][1:-1]
+                        sensorcont['SensorElements'] = payloadlist2[1][1:-1]
+                        sensorcont['SensorUnits'] = payloadlist2[2][1:-1]
+                        sensorcont['Multipliers'] = payloadlist2[3][1:-1]
+                        sensorcont['PackingCode'] = payloadlist2[4]
+                    elif content == 'dict':
+                        payloadlist = payload.split(',')
+                        for pl in payloadlist:
+                            plc = pl.replace("\n","").split(":")
+                            sensorcont[plc[0]] = plc[1].replace('-','')
+                    # get dict, meta and data
+                    sensordict[sensorid] = sensorcont
+
+                mqttclient = mqtt.Client()
+                if not martasuser in ['',None,'None','-']:
+                    #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
+                    mqttclient.username_pw_set(martasuser, password=martaspasswd)  # defined on broker by mosquitto_passwd -c passwordfile user
+                mqttclient.on_connect = on_connect
+                mqttclient.on_message = on_message
+
+                if debug:
+                    print ("Connecting to:", martasaddress, int(martasport), int(martasdelay))
+                mqttclient.connect(martasaddress, int(martasport), int(martasdelay))
+
+                loopcnt = 0
+                try:
+                    maxloop = martasscan*10
+                except:
+                    print ("Could not get scantime from options - using approx 20 seconds")
+                    maxloop = 200
+                self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))
+                proDlg = WaitDialog(None, "Scanning...", "Scanning for MQTT broadcasts.\nPlease wait....")
+                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
+                        loopcnt += 1
+                        mqttclient.loop(.1) #blocks for 100ms
+                        if loopcnt > 600:
+                            success = False
+                            break
+                proDlg.Destroy()
+
+                sensorlist = [key for key in sensordict]
+
+                if success and len(sensorlist) > 0:
+                    self.changeStatusbar("Scanning for MQTT broadcasts ... found sensor(s)")
+                    self.menu_p.com_page.startMonitorButton.Enable()
+                    self.menu_p.com_page.getMARTASButton.Disable()
+                    self.menu_p.com_page.saveMonitorButton.Enable()
+                    self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
+                    self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(martasaddress))
+                    self.menu_p.com_page.logMsg('Begin monitoring...')
+                    self.menu_p.com_page.logMsg(' - Selected MARTAS MQTT protocol')
+                    self.menu_p.com_page.coverageTextCtrl.Enable()    # always
+                    self.menu_p.com_page.frequSlider.Enable()         # always
+
+                    dlg = SelectFromListDialog(None, title='Select sensor', selectlist=sensorlist, name='Sensor')
+                    if dlg.ShowModal() == wx.ID_OK:
+                        sensorid = dlg.selectComboBox.GetValue()
+                    else:
+                        self.menu_p.com_page.getMARTASButton.Enable()
+                        self._initial_plot(self.active_id)
+                        sensorid = ''
+                    dlg.Destroy()
+
+                    if sensorid:
+                        self.menu_p.com_page.logMsg(' - selected Sensor: {}'.format(sensorid))
+                        sensorcont = sensordict.get(sensorid)
+
+                        parameter = sensorcont.get("SensorKeys")
+                        unitlist = sensorcont.get("SensorUnits")
+                        period = float(self.menu_p.com_page.frequSlider.GetValue())
+                        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+                        sr = 1
+                        coverage = covval/sr
+                        limit = period/sr
+                        datainfoid = sensorid+'_0001'
+
+                        self.plot_p.livedatadict = {"id": datainfoid,  # dv 0
+                                                    "keys": parameter,  # dv 1
+                                                    "limit": limit,  # dv 2
+                                                    "pad": pad,  # dv 3
+                                                    "currentdate": currentdate,  # dv 4
+                                                    "units": unitlist,  # dv 5
+                                                    "head": sensorcont,
+                                                    "array": [[] for el in DataStream().KEYLIST],
+                                                    "coverage": coverage,  # dv 6 (integer - amount of lines to read)
+                                                    "period": period,  # dv 7
+                                                    "address": martasaddress,  # dv 9
+                                                    "topic": martastopic,  # dv 9
+                                                    "port": martasport,  # dv 10
+                                                    "delay": 60,  # dv 11
+                                                    "user": martasuser,  # dv 13
+                                                    "password": martaspasswd,  # dv 14
+                                                    "qos": martasqos,  # dv 16
+                                                    "samplingrate": sr,  # new: for logging
+                                                    "range": covval,  # new: timerange for data window
+                                                    "stationid": sensorcont.get('StationID')
+                                                    }
+                        self.active_live = 'MARTAS'
+                    else:
+                        self.changeStatusbar("No SensorID selected ... canceling")
+                else:
+                    self.changeStatusbar("Scanning for MQTT broadcasts ... no sensor found")
+        else:
+            self.changeStatusbar("MARTAS connection canceled  ... ready")
+
+
+    def live_onStartMonitorButton(self, event):
+        """
+        DESCRIPTION
+            Start monitoring and live-streaming of data
+        :param event:
+        :return:
+        """
+        self._deactivate_controls()
+        self.MainMenu.EnableTop(0, False)
+        self.MainMenu.EnableTop(1, False)
+        self.MainMenu.EnableTop(2, False)
+        self.MainMenu.EnableTop(3, False)
+        self.MainMenu.EnableTop(4, False)
+        self.MainMenu.EnableTop(5, False)
+        self.menu_p.com_page.getMARTASButton.Disable()
+        self.menu_p.com_page.getMARCOSButton.Disable()
+        self.menu_p.com_page.saveMonitorButton.Disable()
+        self.menu_p.com_page.stopMonitorButton.Enable()
+
+        # assign live stream boundary conditions to livedatadict
+        period = float(self.menu_p.com_page.frequSlider.GetValue())
+        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
+        sr = self.plot_p.livedatadict.get('samplingrate',1.0)
+        self.plot_p.livedatadict['limit'] = period/sr
+        self.plot_p.livedatadict['coverage'] = covval/sr
+        self.plot_p.livedatadict['period'] = period
+
+        self.changeStatusbar("Running monitor ...")
+        # Obtain the last values from the data base with given dataid and limit
+        # A DB query for 10 min 10Hz data needs approx 0.3 sec
+        if  self.active_live == 'MARCOS':
+            self.plot_p.t1_stop.clear()
+            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
+            self.plot_p.start_marcos_monitor()
+            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.plot_p.livedatadict.get('dbname','')))
+        elif self.active_live == 'MARTAS':
+            self.plot_p.t1_stop.clear()
+            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
+            self.plot_p.start_martas_monitor(self.plot_p.livedatadict.get('protocol',''))
+            # MARTASmonitor calls subscribe2client  - output in temporary file (to start with) and access global array from storeData (move array to global)
+            self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
+            self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(self.plot_p.livedatadict.get('address','')))
+
+
+    def live_onStopMonitorButton(self, event):
+        self.plot_p.t1_stop.set()
+        self.menu_p.com_page.logMsg(' > Read cycle stopped')
+        self.menu_p.com_page.logMsg(' - {} disconnected'.format(self.active_live))
+        stream = self.plot_p.stream
+        # delete old array
+        streamid = self._initial_read(stream)
+        self._initial_plot(streamid)
+
+        self.menu_p.com_page.stopMonitorButton.Disable()
+        self.menu_p.com_page.saveMonitorButton.Disable()
+        self.MainMenu.EnableTop(0, True)
+        self.MainMenu.EnableTop(1, True)
+        self.MainMenu.EnableTop(2, True)
+        self.MainMenu.EnableTop(3, True)
+        self.MainMenu.EnableTop(4, True)
+        self.MainMenu.EnableTop(5, True)
+        self.menu_p.com_page.getMARTASButton.Enable()
+        self.menu_p.com_page.getMARCOSButton.Enable()
+        self.menu_p.com_page.saveMonitorButton.Enable()
+        self.menu_p.com_page.marcosLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.martasLabel.SetBackgroundColour((255,23,23))
+        self.menu_p.com_page.marcosLabel.SetValue('not connected')
+        self.menu_p.com_page.martasLabel.SetValue('not connected')
+        self.changeStatusbar("Ready")
+
+
+    def live_onSaveMonitorButton(self, event):
+        """
+        DESCRIPTION
+            Record MARTAS data streams to a CSV file.
+            This is a experimental method under development.
+        :param event:
+        :return:
+        """
+        print ("You would like to save data from MARTAS? Use the MARTAS package")
+        pass
 
 
 
@@ -6407,289 +6738,7 @@ class MainFrame(wx.Frame):
     # ------------------------------------------------------------------------------------------
 
 
-    def onConnectMARCOSButton(self, event):
-        # active if database is connected
-        # open dlg
-
-        # Check whether DB still available
-        self._check_db('minimal')
-
-        def dataAvailabilityCheck(db, datainfoidlist):
-            existinglist = []
-            if not len(datainfoidlist) > 0:
-                return datainfoidlist
-            for dataid in datainfoidlist:
-                ar = db.select('time', dataid, expert="ORDER BY time DESC LIMIT 10")
-                if len(ar) > 0:
-                    existinglist.append(dataid)
-            return existinglist
-
-
-        self.menu_p.rep_page.logMsg('- Selecting MARCOS table for monitoring ...')
-        output = self.db.select('DataID,DataMinTime,DataMaxTime','DATAINFO')
-        datainfoidlist = [elem[0] for elem in output]
-        datainfoidlist = dataAvailabilityCheck(self.db, datainfoidlist)
-
-        if len(datainfoidlist) < 1:
-            dlg = wx.MessageDialog(self, "No data tables available!\n"
-                            "please check your database\n",
-                            "OpenDB", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            dlg.Destroy()
-            return
-        # select table
-        sr = 1
-        dlg = AGetMARCOSDialog(None, title='Select table',datalst=datainfoidlist)
-        if dlg.ShowModal() == wx.ID_OK:
-            datainfoid = dlg.dataComboBox.GetValue()
-            vals = self.db.select('SensorID,DataSamplingRate,ColumnContents,ColumnUnits,StationID','DATAINFO', 'DataID = "'+datainfoid+'"')
-            vals = vals[0]
-            sensid= vals[0]
-            sr= float(vals[1].strip('sec'))
-            keys= vals[2].split(',')
-            units= vals[3].split(',')
-            stationid= vals[4]
-        else:
-            dlg.Destroy()
-            return
-        # get all parameters
-
-        pad = 5
-        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
-
-        # start monitoring parameters
-        period = float(self.menu_p.com_page.frequSlider.GetValue())
-        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
-        coverage = covval/sr
-        limit = period/sr
-        unitlist = []
-        for idx,key in enumerate(keys):
-           if not key == '':
-               unitlist.append([key, units[idx]])
-
-        parameter = ','.join([DataStream().KEYLIST[idx+1] for idx,key in enumerate(keys) if not key=='' and DataStream().KEYLIST[idx+1] in DataStream().NUMKEYLIST])
-
-        self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 15: stationid}
-        self.monitorSource='MARCOS'
-
-        success = True
-        if success:
-            self.menu_p.com_page.startMonitorButton.Enable()
-            self.menu_p.com_page.getMARTASButton.Disable()
-            #self.menu_p.com_page.getMQTTButton.Disable()
-            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
-            self.menu_p.com_page.logMsg('Begin monitoring...')
-            self.menu_p.com_page.logMsg(' - Selected MARCOS database')
-            self.menu_p.com_page.logMsg(' - Table: {}'.format(datainfoid))
-            self.menu_p.com_page.coverageTextCtrl.Enable()    # always
-            self.menu_p.com_page.frequSlider.Enable()         # always
-
-
-    def onConnectMARTASButton(self, event):
-
-        success = False
-        oldopt = self.options.get('favoritemartas',[])
-        dlg = SelectMARTASDialog(None, title='Select MARTAS',options=self.options)
-        if dlg.ShowModal() == wx.ID_OK:
-            martasaddress = dlg.addressComboBox.GetValue()
-            martasport = dlg.portTextCtrl.GetValue()
-            #martasdelay = dlg.delayTextCtrl.GetValue()
-            martasstationid = dlg.stationidTextCtrl.GetValue()
-            martasuser = dlg.userTextCtrl.GetValue()
-            martaspasswd = dlg.pwdTextCtrl.GetValue()
-            self.options['favoritemartas'] = dlg.favoritemartas
-            martasdelay = 60
-            martasprotocol = 'mqtt' # dlg.pwdTextCtrl.GetValue()
-            success = True
-            #if not oldopt == self.options['favoritemartas']:
-            saveini(self.options)
-            inipara, check = loadini()
-            self.initParameter(inipara)
-            dlg.Destroy()
-        else:
-            self.options['favoritemartas'] = dlg.favoritemartas
-            if not oldopt == self.options['favoritemartas']:
-                saveini(self.options)
-                inipara, check = loadini()
-                self.initParameter(inipara)
-            dlg.Destroy()
-            return
-
-        #if not oldopt == self.options['favoritemartas']:
-        #    saveini(self.options)
-        #    inipara, check = loadini()
-        #    self.initParameter(inipara)
-        self.menu_p.rep_page.logMsg('- Selected MARTAS maschine ({},{}) for monitoring ...'.format(martasaddress,martasprotocol))
-
-        pad = 5
-        currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
-        # start monitoring parameters
-        unitlist = []
-
-        # get header information from data stream
-        try:
-            import paho.mqtt.client as mqtt
-            #from magpy.collector import collectormethods as colsup
-            mqttimport = True
-        except:
-            mqttimport = False
-            dlg = wx.MessageDialog(self, "Could not import required packages!\n"
-                        "Make sure that the python package paho-mqtt is installed\n",
-                        "MARTAS monitor failed", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Using MQTT monitor failed ... Ready")
-            dlg.Destroy()
-        #print ("TEST", colsup.identifier)
-
-        if mqttimport:
-            client = mqtt.Client()
-
-            if not martasuser in ['',None,'None','-']:
-                #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
-                client.username_pw_set(martasuser, password=martaspasswd)  # defined on broker by mosquitto_passwd -c passwordfile user
-
-            #client.on_connect = colsup.on_connect
-            #client.on_message = colsup.on_message
-
-            #print (martasaddress)
-            #client.connect("192.168.178.84", 1883, 60)
-            try:
-                client.connect(martasaddress, int(martasport), int(martasdelay))
-            except:
-                dlg = wx.MessageDialog(self, "Connection to MQTT broker failed\n"
-                        "Check your internet connection or credentials\n",
-                        "Connection failed", wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
-                return
-            qos = 0
-            client.subscribe("{}/#".format(martasstationid), qos)
-
-            loopcnt = 0
-            success = True
-            try:
-                maxloop = int(self.options.get('martasscantime'))*10
-                #print ("Got data from init - remove this message ater 0.3.99", maxloop)
-            except:
-                print ("Could not get scantime from options - using approx 20 seconds")
-                maxloop = 200
-            self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))
-            try:
-                self.progress = wx.ProgressDialog("Scanning for MQTT broadcasts ...", "please wait", maximum=maxloop, parent=self, style=wx.PD_SMOOTH|wx.PD_AUTO_HIDE)
-                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
-                    loopcnt += 1
-                    client.loop(.1) #blocks for 100ms
-                    self.progress.Update(loopcnt)
-                    if loopcnt > 600:
-                        success = False
-                        break
-                self.progress.Destroy()
-            except:  # test fallback for MacOS
-                proDlg = WaitDialog(None, "Scanning...", "Scanning for MQTT broadcasts.\nPlease wait....")
-                while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
-                    loopcnt += 1
-                    client.loop(.1) #blocks for 100ms
-                    self.progress.Update(loopcnt)
-                    if loopcnt > 600:
-                        success = False
-                        break
-                proDlg.Destroy()
-
-            #print ("here", colsup.identifier)
-
-            if success: # and len(colsup.identifier) > 0:
-                self.changeStatusbar("Scanning for MQTT broadcasts ... found sensor(s)")
-                self.menu_p.com_page.startMonitorButton.Enable()
-                self.menu_p.com_page.getMARTASButton.Disable()
-                #self.menu_p.com_page.getMQTTButton.Disable()
-                self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
-                self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(martasaddress))
-                self.menu_p.com_page.logMsg('Begin monitoring...')
-                self.menu_p.com_page.logMsg(' - Selected MARTAS {} protocol'.format(martasprotocol))
-                self.menu_p.com_page.coverageTextCtrl.Enable()    # always
-                self.menu_p.com_page.frequSlider.Enable()         # always
-
-                sensorlist = []
-                for key in colsup.identifier:
-                    #print ("key", key)
-                    sensorid = key.split(':')[0]
-                    if not sensorid in sensorlist:
-                        sensorlist.append(sensorid)
-
-                dlg = SelectFromListDialog(None, title='Select sensor', selectlist=sensorlist, name='Sensor')
-                if dlg.ShowModal() == wx.ID_OK:
-                    sensorid = dlg.selectComboBox.GetValue()
-                else:
-                    self.menu_p.com_page.getMARTASButton.Enable()
-                    self.ActivateControls(self.plotstream)
-                    sensorid = sensorlist[0]
-
-                dlg.Destroy()
-
-                self.menu_p.com_page.logMsg(' - selected Sensor: {}'.format(sensorid))
-
-                pad = 5
-                currentdate = datetime.strftime(datetime.utcnow(),"%Y-%m-%d")
-                parameter = colsup.identifier.get(sensorid+':keylist')
-                parameter = ','.join(parameter)
-                unitlist = colsup.identifier.get(sensorid+':unitlist')
-                period = float(self.menu_p.com_page.frequSlider.GetValue())
-                covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
-                sr = 1
-                coverage = covval/sr
-                limit = period/sr
-                datainfoid = sensorid+'_0001'
-
-                self.plot_p.datavars = {0: datainfoid, 1: parameter, 2: limit, 3: pad, 4: currentdate, 5: unitlist, 6: coverage, 7: period, 8: self.db, 9: martasaddress, 10: martasport, 11: martasdelay, 12: martasprotocol, 13: martasuser, 14: martaspasswd, 15: martasstationid, 16: qos}
-                self.monitorSource='MARTAS'
-            else:
-                self.changeStatusbar("Scanning for MQTT broadcasts ... no sensor found")
-                #self.menu_p.com_page.mqttLabel.SetValue('unable to connect to {}'.format(martasaddress))
-
-
-    def onStartMonitorButton(self, event):
-        self.DeactivateAllControls()
-        self.MainMenu.EnableTop(0, False)
-        self.MainMenu.EnableTop(1, False)
-        self.MainMenu.EnableTop(2, False)
-        self.MainMenu.EnableTop(3, False)
-        self.MainMenu.EnableTop(4, False)
-        self.MainMenu.EnableTop(5, False)
-        self.menu_p.com_page.getMARTASButton.Disable()
-        self.menu_p.com_page.getMARCOSButton.Disable()
-        #self.menu_p.com_page.getMQTTButton.Disable()
-        self.menu_p.com_page.stopMonitorButton.Enable()
-        if self.options.get('experimental'):
-            self.menu_p.com_page.saveMonitorButton.Enable()   # if experimental
-
-        # start monitoring parameters
-        period = float(self.menu_p.com_page.frequSlider.GetValue())
-        covval = float(self.menu_p.com_page.coverageTextCtrl.GetValue())
-        sr = self.plot_p.datavars[7]/self.plot_p.datavars[2]
-        coverage = covval/sr
-        limit = period/sr
-        self.plot_p.datavars[2] = limit
-        self.plot_p.datavars[6] = coverage
-        self.plot_p.datavars[7] = period
-
-        self.changeStatusbar("Running monitor ...")
-        # Obtain the last values from the data base with given dataid and limit
-        # A DB query for 10 min 10Hz data needs approx 0.3 sec
-        if  self.monitorSource=='MARCOS':
-            self.plot_p.t1_stop.clear()
-            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
-            self.plot_p.startMARCOSMonitor()
-            self.menu_p.com_page.marcosLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.marcosLabel.SetValue('connected to {}'.format(self.options.get('dbname','')))
-        elif self.monitorSource=='MARTAS':
-            self.plot_p.t1_stop.clear()
-            self.menu_p.com_page.logMsg(' > Starting read cycle... {} sec'.format(period))
-            self.plot_p.startMARTASMonitor(self.plot_p.datavars.get(12))
-            # MARTASmonitor calls subscribe2client  - output in temporary file (to start with) and access global array from storeData (move array to global)
-            self.menu_p.com_page.martasLabel.SetBackgroundColour(wx.GREEN)
-            self.menu_p.com_page.martasLabel.SetValue('connected to {}'.format(self.plot_p.datavars.get(9)))
-
+    @deprecated("Not necessary any more")
     def _monitor2stream(self,array, db=None, dataid=None,header = {}):
         """
         DESCRIPTION:
@@ -6704,56 +6753,6 @@ class MainFrame(wx.Frame):
         stream = DataStream([LineStruct()],header,array)
         stream = stream.sorting()
         return stream
-
-    def onStopMonitorButton(self, event):
-        dataid = self.plot_p.datavars[0]
-        self.plot_p.t1_stop.set()
-        #self.plot_p.client.loop_stop()
-        self.menu_p.com_page.logMsg(' > Read cycle stopped')
-        self.menu_p.com_page.logMsg(' - {} disconnected'.format(self.monitorSource))
-        self.stream = self._monitor2stream(self.plot_p.array,db=self.db,dataid=dataid)
-        # delete old array
-        self.plot_p.array = [[] for el in DataStream().KEYLIST]
-        self.stream.header['StationID'] = self.plot_p.datavars.get(15)
-        self.stream.header['SensorID'] = self.plot_p.datavars.get(0)[:-5]
-        self.stream.header['DataID'] = self.plot_p.datavars.get(0)
-        self.plotstream = self.stream.copy()
-        currentstreamindex = len(self.streamlist)
-        self.streamlist.append(self.plotstream)
-        self.streamkeylist.append(self.plotstream._get_key_headers())
-        self.headerlist.append(self.plotstream.header)
-        self.currentstreamindex = currentstreamindex
-
-        self.menu_p.com_page.stopMonitorButton.Disable()
-        self.menu_p.com_page.saveMonitorButton.Disable()
-        self.ActivateControls(self.plotstream)
-        self.shownkeylist = self.UpdatePlotCharacteristics(self.plotstream)
-        self.plotoptlist.append(self.plotopt)
-        self.OnPlot(self.plotstream,self.shownkeylist)
-
-        self.MainMenu.EnableTop(0, True)
-        self.MainMenu.EnableTop(1, True)
-        self.MainMenu.EnableTop(2, True)
-        self.MainMenu.EnableTop(3, True)
-        self.MainMenu.EnableTop(4, True)
-        self.MainMenu.EnableTop(5, True)
-
-        self.menu_p.com_page.getMARTASButton.Enable()
-        self.menu_p.com_page.getMARCOSButton.Enable()
-        #self.menu_p.com_page.getMQTTButton.Enable()
-        self.menu_p.com_page.marcosLabel.SetBackgroundColour((255,23,23))
-        self.menu_p.com_page.martasLabel.SetBackgroundColour((255,23,23))
-        #self.menu_p.com_page.mqttLabel.SetBackgroundColour((255,23,23))
-        self.menu_p.com_page.marcosLabel.SetValue('not connected')
-        self.menu_p.com_page.martasLabel.SetValue('not connected')
-        #self.menu_p.com_page.mqttLabel.SetValue('not connected')
-        self.changeStatusbar("Ready")
-
-
-    def onLogDataButton(self, event):
-        # open dialog with pathname
-        # then use data_2_file method for binary writing
-        pass
 
 
     # TODO Clean this method up and make it consisting of modules

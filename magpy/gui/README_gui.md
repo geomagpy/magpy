@@ -515,6 +515,36 @@ txt file by using the **Save log** button.
 
 ### 4.7 The monitor panel
 
+The monitor panel gives you access to MagPy supported live data sources. Two data sources are
+supported. The first one is a [MARTAS](https://github.com/MARTAS) data acquisition unit which uses MQTT data 
+transmission and it is strongly recommended to read the MARTAS manual first. You can add individual MARTAS stations to
+a favorite list, each characterized by a unique name. Just input the parameters for the new MARTAS connection and press
+**Add to favorites**. A window will open and ask you for a shortcut for the new MARTAS favorite. The input will only be 
+stored permanently if you continue with **Open**. For MARTAS MQTT communication you need to know the access
+parameters of the machine. If authentication is required please also insert user name and password, if not you need to
+leave username empty. The basic 'example' input in the MARTAS
+selection list cannot be removed. After selecting a MARTAS connection, the given address will be scanned for to 
+specified scan time in order to detect MARTAS MQTT broadcasts. Meta information broadcasts are scanned 
+which by MARTAS default are send only sporadically, mostly every 10 seconds. Please adjust the scan time
+accordingly if required. After scanning you will get a selection window of available sensors on the respective MARTAS.
+Select the one of your choice and start monitoring. If you want to record such data properly with some protection 
+against sporadic disconnections you need to use the MARTAS package. For public usage, a test channel for MARTAS is
+available, providing access to real time data up to 10Hz resolution from a remote variometer
+station of the GeoSphere Austria. Please contact the Conrad Observatory, if you want to view this test channel.
+
+The second data source is MARCOS, which is part of the MARTAS package and refers to a sql database 
+collection system, thus using sql database queries on a real-time data base. Therefore
+the data content of the database has to be updated in real-time by any kind of uploading process. When connecting 
+to MARCOS, the currently available database (see **main menu** -> **Connect database**) is scanned for real-time 
+data tables. Select one of these tables and **Start Monitoring** to get visual live data.
+
+When **Stop monitoring** is pressed, the currently shown data set is converted to a static data set and can be analyzed
+as all other data sets.
+
+Real time access requires a proper installation of MARTAS/MARCOS. If you are interested in these features then checkout
+the MARTAS package on GitHUB.  
+
+
 ## 5. Application recipies for geomagnetic observatory data analysis
 
 ### 5.1 Daily review of data and flagging
