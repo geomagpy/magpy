@@ -500,7 +500,6 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
             currsec = newtime[-1]
             newtime.append(0.0)
             for i in range (0,30):
-                row = LineStruct()
                 line = fh.read(16)
                 data= struct.unpack('<3f2h', line)
                 microsec = i/10.

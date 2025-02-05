@@ -521,7 +521,8 @@ transmission and it is strongly recommended to read the MARTAS manual first. You
 a favorite list, each characterized by a unique name. Just input the parameters for the new MARTAS connection and press
 **Add to favorites**. A window will open and ask you for a shortcut for the new MARTAS favorite. The input will only be 
 stored permanently if you continue with **Open**. For MARTAS MQTT communication you need to know the access
-parameters of the machine. If authentication is required please also insert user name and password, if not you need to
+parameters of the machine. The address should be either the URL without https:// or the IP number of the station.
+If authentication is required please also insert user name and password, if not you need to
 leave username empty. The basic 'example' input in the MARTAS
 selection list cannot be removed. After selecting a MARTAS connection, the given address will be scanned for to 
 specified scan time in order to detect MARTAS MQTT broadcasts. Meta information broadcasts are scanned 

@@ -2400,7 +2400,7 @@ CALLED BY:
         return fstream
 
 
-    def compensation(self, skipdelta = False):
+    def compensation(self, skipdelta=False, debug=False):
         """
         DEFINITION:
             Method for magnetic variometer data:
@@ -2429,10 +2429,12 @@ CALLED BY:
             return self
 
         stream = self.copy()
-        logger.info("compensation: applying compensation field values to variometer data ...")
+        if debug:
+            logger.info("compensation: applying compensation field values to variometer data ...")
         deltas = stream.header.get('DataDeltaValues','')
         if not skipdelta and not deltas=='':
-            logger.info("compensation: applying delta values from header['DataDeltaValues'] first")
+            if debug:
+                logger.info("compensation: applying delta values from header['DataDeltaValues'] first")
             stream = stream.offset(deltas)
             stream.header['DataDeltaValuesApplied'] = 1
 
@@ -2446,7 +2448,8 @@ CALLED BY:
             offdict['y'] = -1*float(ycomp)*1000.
         if not float(zcomp)==0.:
             offdict['z'] = -1*float(zcomp)*1000.
-        logger.info(' -- applying compensation fields: x={}, y={}, z={}'.format(xcomp,ycomp,zcomp))
+        if debug:
+            logger.info(' -- applying compensation fields: x={}, y={}, z={}'.format(xcomp,ycomp,zcomp))
         if len(offdict) > 0:
             stream = stream.offset(offdict)
             stream.header['DataDeltaValuesApplied'] = 1

@@ -1130,8 +1130,6 @@ class OptionsInitDialog(wx.Dialog):
         self.stationidTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('defaultstation','WIC'),size=(160,30))
         self.experimentalLabel = wx.StaticText(self, label="Experimental methods",size=(160,30))
         self.experimentalCheckBox = wx.CheckBox(self, label="Activate", size=(160,30))
-        self.martasscantimeLabel = wx.StaticText(self, label="Scanning MARTAS [sec]",size=(160,30))
-        self.martasscantimeTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('martasscantime','20'),size=(160,30))
         self.baselinedirectLabel = wx.StaticText(self, label="Apply baseline",size=(160,30))
         self.baselinedirectCheckBox = wx.CheckBox(self, label="directly", size=(160,30))
         self.baselinedirectCheckBox.SetValue(self.analysisdict.get('baselinedirect',False))
@@ -1185,8 +1183,8 @@ class OptionsInitDialog(wx.Dialog):
                     (self.baselinedirectCheckBox, noOptions),
                     (self.experimentalLabel, noOptions),
                     (self.experimentalCheckBox, noOptions),
-                    (self.martasscantimeLabel, noOptions),
-                    (self.martasscantimeTextCtrl, noOptions),
+                    emptySpace,
+                    emptySpace,
                     emptySpace,
                     emptySpace,
                     (self.saveButton, dict(flag=wx.ALIGN_CENTER)),
