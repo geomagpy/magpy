@@ -3656,7 +3656,8 @@ class MainFrame(wx.Frame):
                     # 1 find year
                     if newname.find(year) >= 0:
                         newname = newname.replace(year, 'YEAR{}'.format(runtime), 1)
-                print (newname)
+                if debug:
+                    print (newname)
                 if coverage <= 31:
                     if newname.find(month) >= 0:
                         newname = newname.replace(month, 'MONTH{}'.format(runtime), 1)
@@ -3723,10 +3724,10 @@ class MainFrame(wx.Frame):
             newname = newname.replace("YEARb-MONTHb-DAYb", newend.strftime("%Y-%m-%d")).replace(
                 "YEARbMONTHbDAYb", newend.strftime("%Y%m%d")).replace(
                 "YEARbMONTHb", newend.strftime("%Y%m")).replace("YEARb", newend.strftime("%Y"))
-            stream = read(sourcepath)
+            stream = read(newname)
             self.magpystate['source'] = 'url'
             self.magpystate['filename'] = ''
-            self.magpystate['currentpath'] = sourcepath
+            self.magpystate['currentpath'] = newname
 
         if len(stream) > 0:
             streamid = self._initial_read(stream)
@@ -6706,6 +6707,7 @@ class MainFrame(wx.Frame):
         minutepath = ''
         secondpath = ''
         checkchoice = 'quick'
+        runit = False
 
         seconddata = 'None'
         iafpath = ''
@@ -6738,11 +6740,10 @@ class MainFrame(wx.Frame):
             config["secondpath"] = dlg.secondTextCtrl.GetValue()
             checkparameter = dlg.checkparameter
             config["laststep"] = dlg.laststep
-            success = 1
-        else:
-            dlg.Destroy()
-            return
-        if minutepath =='' and secondpath =='':
+            runit = True
+        dlg.Destroy()
+
+        if not runit or (config["minutepath"]=='' and config["secondpath"]==''):
             return
 
 
@@ -6751,10 +6752,10 @@ class MainFrame(wx.Frame):
         month = datetime(1900, randommonth, 1).strftime('%b')
         if checkchoice == 'quick':
             config["months"] = [randommonth]
-            result["report"] += "\nTest type: {} . Testing only randomly selected month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
+            results["report"] += "\nTest type: {} . Testing only randomly selected month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
         else:
             config["months"] = list(range(1,13))
-            result["report"] += "\nTest type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
+            results["report"] += "\nTest type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
 
         print (config, results)
         # run module1
