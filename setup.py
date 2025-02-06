@@ -13,6 +13,7 @@ install_requires=[
             "pymysql >= 0.6.0",
             "cdflib >= 0.3.0",
             "pexpect >= 3.1.0",
+            "emd >= 0.7.0",
             "pypubsub >= 4.0.0",
         ]
 

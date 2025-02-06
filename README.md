@@ -47,6 +47,7 @@ MagPy requires Python3.7 or newer. MagPy makes use of a number of modules of whi
 essential for its basic functionality: 
 numpy
 scipy
+emd : empirical mode decomposition for Sq (solar quiet) analysis and flagging
 matplotlib
 
 Optional but recommended python modules are:
@@ -56,7 +57,6 @@ pandas : timeseries manipulation (flagging and activity analysis)
 pymysql : mysql/mariaDB data base support
 paho-mqtt : realtime data access of MARTAS
 pysubpub :  realtime data access of MARTAS
-emd : empirical mode decomposition for Sq (solar quiet) analysis and flagging
 sklearn : AI flagging support and geomagnetic activity forcasts
 
 

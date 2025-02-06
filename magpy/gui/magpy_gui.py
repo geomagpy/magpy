@@ -23,7 +23,7 @@ from wx import FD_MULTIPLE as wxMULTIPLE
 
 
 #from magpy.stream import read
-import magpy.core.plot as mp
+from magpy.core import plot as mp
 #import magpy.absolutes as di
 from magpy.absolutes import *
 from magpy.core import methods

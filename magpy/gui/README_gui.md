@@ -63,6 +63,46 @@ github directory given above in folder magpy/examples/.
 
 ## 2. Installation
 
+### Linux installation
+
+Linux installations should be performed within a dedicated python environment:
+
+It is strongly recommended the use one of the following two options. The examples have been successfully tested on 
+Ubuntu 22.04 but should work in other architectures as well.
+
+The graphical user interface relies on GTK >= 3. So you will need to install 
+
+#### Option 1: Using a Conda/Anaconda environment
+
+- install [Anaconda]() according to the recommendations
+- open a terminal which should show a prompt starting with (base). If this is not the case, activate anaconda by typing "conda activate"
+- from the (base)user$ prompt, create a new conda environment called magpy
+
+         (base)user$ conda create -n magpy wxpython matplotlib numpy scipy
+
+- activate the new environment and install geomagpy plus one optional package for real-time monitoring
+
+         (base)user$ conda activate magpy
+         (magpy)user$ pip install geomagpy
+         (magpy)user$ pip install paho-mqtt 
+
+
+#### Option 2: Using a basic python venv environment
+
+- use virtualenv from system python of your machine
+- open a terminal 
+- from the (base)user$ prompt, create a new conda environment called magpy
+
+         (base)user$ conda create -n magpy wxpython matplotlib numpy scipy
+
+- activate the new environment and install geomagpy plus one optional package for real-time monitoring
+
+         (base)user$ conda activate magpy
+         (magpy)user$ pip install geomagpy
+         (magpy)user$ pip install paho-mqtt 
+
+
+within a python environments 
 Linux and MacOs: 
 1. install anaconda or miniconda
 2. conda create -n xmagpy wxpython
@@ -461,6 +501,12 @@ activity button is only active if geomagnetic components covering at least 3 day
 k index is solely calculated with the FMI method. Depending on the provided data eventually additional steps are
 automatically performed. The FMI method basically works with minute data resolution. If you have second resolution
 data, the filtering process is automatically performed using IAGA recommended filter options before k calculation.
+
+**Power** calculates power spectral density based on matplotlibs [PSD](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.psd.html) 
+method. You can modify the psd parameters using plot options. Please refer to the matplotib manual regarding a 
+description of the parameters. Defaults are NFFT = length of the data set, pad_to=NFFT, detrend='mean', and 
+scale_by_frequency=True. Calculated PSD's will not be part of the **memory**. If you want to go back to the original 
+time series, click on **Main menu**, **Access memory**, select the original plot and press **Plot**.
 
 4.4.12 Baseline
 The baseline method is only available if a basevalue data set has been opened previously and is still present in the memory. When now opening a variation time series, which is covered by the time range of available basevalues, the baseline button gets enabled. When pressing the baseline button you will be asked to provide fitting parameters for adopted baselines. This baseline will be calculated and a baseline correction function of the the time series will  be obtained. This function will not be applied directly but stored within the time series meta information. You can apply the adopted baseline be pressing on the now available button „Baseline Corr(ection)“ on the data panel. Exporting this data set now as PYCDF will export the adopted baseline function along with the data meta info. This way, uncorrected and corrected data is not separated any more. Extensive details and a complete walkthrough with hands-on examples for this method is provided in section 6.2.
