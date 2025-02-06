@@ -1558,6 +1558,94 @@ class StreamPlotOptionsDialog(wx.Dialog):
 # ####    Flagging Panel                                   #########################################################
 # ##################################################################################################################
 
+class FlaggingGroupsDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog for adding flag groups to the specific data flags
+    USED BY:
+        Stream Method: onFlagOutlier()
+    """
+    def __init__(self, parent, title, groups):
+        super(FlaggingGroupsDialog, self).__init__(parent=parent,
+            title=title, size=(600, 700))
+        fl = flagging.Flags()
+        self.groups = groups
+        self.existinggroups = []
+        if groups:
+            self.existinggroups = ["{} : {}".format(key,",".join(groups.get(key))) for key in groups]
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    # Widgets
+    def createControls(self):
+        # countvariables for specific header blocks
+        self.addgroupText = wx.StaticText(self,label="SensorID or SensorGroup")
+        self.addvariablesText = wx.StaticText(self,label="Variables")
+        self.addgroupTextCtrl = wx.TextCtrl(self, value="", size=(160,-1))
+        self.addvariablesTextCtrl = wx.TextCtrl(self, value="x,y,z,f", size=(160,-1))
+        self.groupsListBox = wx.ListBox(self, 26, wx.DefaultPosition, (160, 130), self.existinggroups, wx.LB_SINGLE)
+        self.addButton = wx.Button(self, label='Add')
+        self.removeButton = wx.Button(self, label='Remove')
+        self.okButton = wx.Button(self, wx.ID_OK, label='Finished')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+
+    def doLayout(self):
+        # A horizontal BoxSizer will contain the GridSizer (on the left)
+        # and the logger text control (on the right):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+
+        # Add the controls to the sizers:
+        # transform headerlist to an array with lines like cnts
+        contlst = []
+        contlst.append((self.addgroupText, noOptions))
+        contlst.append((self.addvariablesText, noOptions))
+        contlst.append((self.addgroupTextCtrl, expandOption))
+        contlst.append((self.addvariablesTextCtrl, expandOption))
+        contlst.append((self.groupsListBox, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.addButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.removeButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 2
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.addButton.Bind(wx.EVT_BUTTON, self.OnAddGroup)
+        self.removeButton.Bind(wx.EVT_BUTTON, self.OnRemoveGroups)
+
+    def OnAddGroup(self, e):
+        sens = self.addgroupTextCtrl.GetValue()
+        vars = self.addvariablesTextCtrl.GetValue()
+        if sens and vars:
+            newgroup = "{} : {}".format(sens, vars)
+            self.existinggroups.append(newgroup)
+            self.groupsListBox.Set(self.existinggroups)
+
+    def OnRemoveGroups(self, e):
+        idx = self.groupsListBox.GetSelection()
+        self.existinggroups = [el for i, el in enumerate(self.existinggroups) if not i == idx]
+        self.groupsListBox.Set(self.existinggroups)
+
+
 class FlagOutlierDialog(wx.Dialog):
     """
     DESCRIPTION
@@ -1650,7 +1738,7 @@ class FlagRangeDialog(wx.Dialog):
     USED BY:
         Stream Method: onFlagRange()
     """
-    def __init__(self, parent, title, stream, shownkeylist, keylist, labelid, operator, group, flagversion):
+    def __init__(self, parent, title, stream, shownkeylist, keylist, labelid, operator, groups, flagversion):
         super(FlagRangeDialog, self).__init__(parent=parent,
             title=title, size=(600, 600))
         fl = flagging.Flags()
@@ -1668,7 +1756,10 @@ class FlagRangeDialog(wx.Dialog):
         cftdict = fl.FLAGTYPE.get(flagversion)
         self.flagidlist = ["{}: {}".format(key,cftdict.get(key)) for key in cftdict]
         self.comment = ''
-        self.group = group
+        if isinstance(groups, dict):
+            self.groups = groups
+        else:
+            self.groups = {}
         #dt=wx.DateTimeFromTimeT(time.mktime(self.maxtime.timetuple()))
         self.ul = np.nanmax(self.stream.ndarray[KEYLIST.index(self.selectedkey)])
         self.ll = np.nanmin(self.stream.ndarray[KEYLIST.index(self.selectedkey)])
@@ -1713,7 +1804,7 @@ class FlagRangeDialog(wx.Dialog):
         self.OperatorText = wx.StaticText(self,label="Operator:")
         self.OperatorTextCtrl = wx.TextCtrl(self, value=self.operator,size=(200,-1))
         self.GroupText = wx.StaticText(self,label="Group:")
-        self.GroupTextCtrl = wx.TextCtrl(self, value=self.group,size=(200,-1))
+        self.GroupButton = wx.Button(self, label='Groups',size=(200,30))
         self.CommentText = wx.StaticText(self,label="Comment:")
         self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(160,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(160,30))
@@ -1787,7 +1878,7 @@ class FlagRangeDialog(wx.Dialog):
         contlst.append(emptySpace)
         #
         contlst.append((self.CommentTextCtrl, expandOption))
-        contlst.append((self.GroupTextCtrl, expandOption))
+        contlst.append((self.GroupButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
         contlst.append(emptySpace)
         #
@@ -1813,6 +1904,7 @@ class FlagRangeDialog(wx.Dialog):
     def bindControls(self):
         self.Bind(wx.EVT_RADIOBOX, self.OnChangeGroup, self.rangeRadioBox)
         self.Bind(wx.EVT_COMBOBOX, self.OnChangeSelection, self.SelectKeyComboBox)
+        self.GroupButton.Bind(wx.EVT_BUTTON, self.OnSelectGroups)
         self.LabelComboBox.Bind(wx.EVT_COMBOBOX, self.OnUpdateLabel)
 
     def OnUpdateLabel(self, event):
@@ -1869,6 +1961,18 @@ class FlagRangeDialog(wx.Dialog):
         self.LowerLimitTextCtrl.SetValue(str(self.ll))
         print (str(firstkey),ind, self.ul, self.ll)
 
+    def OnSelectGroups(self, e):
+        print ("Groups look like:", self.groups)
+        dlg = FlaggingGroupsDialog(None, title='Define flagging groups', groups=self.groups)
+        if dlg.ShowModal() == wx.ID_OK:
+            # get values from dlg
+            grouplist = dlg.existinggroups
+            for g in dlg.existinggroups:
+                gl = g.split(' : ')
+                self.groups[gl[0]] = gl[1].split(',')
+        dlg.Destroy()
+        print ("Groups now look like:", self.groups)
+
 
 class FlagSelectionDialog(wx.Dialog):
     """
@@ -1877,7 +1981,7 @@ class FlagSelectionDialog(wx.Dialog):
     USED BY:
         Stream Method: onFlagSelection()
     """
-    def __init__(self, parent, title, shownkeylist, keylist, labelid, operator, group, flagversion):
+    def __init__(self, parent, title, shownkeylist, keylist, labelid, operator, groups, flagversion):
         super(FlagSelectionDialog, self).__init__(parent=parent,
             title=title, size=(600, 800))
         fl = flagging.Flags()
@@ -1893,7 +1997,10 @@ class FlagSelectionDialog(wx.Dialog):
         self.flagidlist = ["{}: {}".format(key,cftdict.get(key)) for key in cftdict]
         self.comment = ''
         self.operator = operator
-        self.group = group
+        if isinstance(groups, dict):
+            self.groups = groups
+        else:
+            self.groups = {}
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -1912,7 +2019,7 @@ class FlagSelectionDialog(wx.Dialog):
         self.OperatorText = wx.StaticText(self,label="Operator:")
         self.OperatorTextCtrl = wx.TextCtrl(self, value=self.operator,size=(200,-1))
         self.GroupText = wx.StaticText(self,label="Group:")
-        self.GroupTextCtrl = wx.TextCtrl(self, value=self.group,size=(200,-1))
+        self.GroupButton = wx.Button(self, label='Groups',size=(200,30))
         self.CommentText = wx.StaticText(self,label="Comment:")
         self.CommentTextCtrl = wx.TextCtrl(self, value=self.comment,size=(200,-1))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply',size=(200,-1))
@@ -1941,7 +2048,7 @@ class FlagSelectionDialog(wx.Dialog):
         contlst.append((self.GroupText, noOptions))
         contlst.append((self.OperatorText, noOptions))
         contlst.append((self.CommentTextCtrl, expandOption))
-        contlst.append((self.GroupTextCtrl, expandOption))
+        contlst.append((self.GroupButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.OperatorTextCtrl, expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
@@ -1963,6 +2070,7 @@ class FlagSelectionDialog(wx.Dialog):
 
     def bindControls(self):
         self.LabelComboBox.Bind(wx.EVT_COMBOBOX, self.OnUpdateLabel)
+        self.GroupButton.Bind(wx.EVT_BUTTON, self.OnSelectGroups)
 
     def OnUpdateLabel(self, event):
         """
@@ -1978,6 +2086,17 @@ class FlagSelectionDialog(wx.Dialog):
             self.FlagIDComboBox.SetValue(self.flagidlist[4])
         else:
             self.FlagIDComboBox.SetValue(self.flagidlist[3])
+
+    def OnSelectGroups(self, e):
+        dlg = FlaggingGroupsDialog(None, title='Define flagging groups', groups=self.groups)
+        if dlg.ShowModal() == wx.ID_OK:
+            # get values from dlg
+            grouplist = dlg.existinggroups
+            for g in dlg.existinggroups:
+                gl = g.split(' : ')
+                self.groups[gl[0]] = gl[1].split(',')
+        dlg.Destroy()
+
 
 
 class FlagLoadDialog(wx.Dialog):
@@ -2046,6 +2165,7 @@ class FlagLoadDialog(wx.Dialog):
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadFile)
 
     def OnLoadDB(self, e):
+        #TODO check sensorid
         self.fl = self.db.flags_from_db(sensorid=self.sensorid, starttime=self.start, endtime=self.end)
         #self.fl = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
         dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
@@ -2060,7 +2180,7 @@ class FlagLoadDialog(wx.Dialog):
         if openFileDialog.ShowModal() == wx.ID_OK:
             flagname = openFileDialog.GetPath()
             try:
-                self.fl = flagging.load(flagname,sensorid=self.sensorid, begin=self.start, end=self.end)
+                self.fl = flagging.load(flagname, begin=self.start, end=self.end) #,sensorid=self.sensorid - removed sensorid for correct application of groups
             except:
                 self.fl = flagging.Flags()
             openFileDialog.Destroy()

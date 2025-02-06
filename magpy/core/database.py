@@ -211,22 +211,7 @@ REMOVED:
 
         self.db = mysql.connect(host=host, user=user, passwd=password, db=database)
 
-        self.DATAINFOKEYLIST = ['DataID', 'SensorID', 'StationID', 'ColumnContents', 'ColumnUnits', 'DataFormat',
-                                'DataMinTime', 'DataMaxTime', 'DataTimezone',
-                                'DataSamplingFilter', 'DataDigitalSampling', 'DataComponents', 'DataSamplingRate',
-                                'DataType',
-                                'DataDeltaReferencePier', 'DataDeltaReferenceEpoch', 'DataScaleX',
-                                'DataScaleY', 'DataScaleZ', 'DataScaleUsed', 'DataCompensationX',
-                                'DataCompensationY', 'DataCompensationZ', 'DataSensorOrientation',
-                                'DataSensorAzimuth', 'DataSensorTilt', 'DataAngularUnit', 'DataPier',
-                                'DataAcquisitionLatitude', 'DataAcquisitionLongitude', 'DataLocationReference',
-                                'DataElevation', 'DataElevationRef', 'DataFlagModification', 'DataAbsFunc',
-                                'DataAbsDegree', 'DataAbsKnots', 'DataAbsMinTime', 'DataAbsMaxTime', 'DataAbsDate',
-                                'DataRating', 'DataComments', 'DataSource', 'DataAbsFunctionObject',
-                                'DataDeltaValues', 'DataDeltaValuesApplied', 'DataTerms', 'DataReferences',
-                                'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
-                                'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc', 'DataRotationAlpha',
-                                'DataRotationBeta', 'DataAbsInfo', 'DataBaseValues', 'DataArchive']
+        self.DATAINFOKEYLIST = DataStream().DATAINFOKEYLIST
 
         self.DATAVALUEKEYLIST = ['CHAR(50) NOT NULL PRIMARY KEY', 'CHAR(50)', 'CHAR(50)', 'TEXT', 'TEXT', 'CHAR(30)',
                                  'DATETIME', 'DATETIME', 'CHAR(100)',
@@ -245,21 +230,9 @@ REMOVED:
                                  'CHAR(100)', 'CHAR(50)',
                                  'TEXT', 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'CHAR(50)']
 
-        self.SENSORSKEYLIST = ['SensorID', 'SensorName', 'SensorType', 'SensorSerialNum', 'SensorGroup',
-                               'SensorDataLogger',
-                               'SensorDataLoggerSerNum', 'SensorDataLoggerRevision', 'SensorDataLoggerRevisionComment',
-                               'SensorDescription', 'SensorElements', 'SensorKeys', 'SensorModule', 'SensorDate',
-                               'SensorRevision', 'SensorRevisionComment', 'SensorRevisionDate', 'SensorDynamicRange',
-                               'SensorTimestepAccuracy', 'SensorGroupDelay', 'SensorPassband', 'SensorAttenuation',
-                               'SensorRMSNoise', 'SensorSpectralNoise', 'SensorAbsoluteError', 'SensorOrthogonality',
-                               'SensorVerticality', 'SensorTCoeff', 'SensorElectronicsTCoeff', 'SensorAnalogSampling',
-                               'SensorResolution', 'SensorTime', 'SensorPicture', 'SensorManual']
+        self.SENSORSKEYLIST = DataStream().SENSORSKEYLIST
 
-        self.STATIONSKEYLIST = ['StationID', 'StationName', 'StationIAGAcode', 'StationInstitution', 'StationStreet',
-                                'StationCity', 'StationPostalCode', 'StationCountry', 'StationWebInfo',
-                                'StationEmail', 'StationDescription', 'StationK9', 'StationMeans', 'StationLongitude',
-                                'StationLatitude', 'StationLocationReference', 'StationElevation',
-                                'StationElevationRef', 'StationType', 'StationSince', 'StationUntil', 'StationPicture']
+        self.STATIONSKEYLIST = DataStream().STATIONSKEYLIST
 
         self.BASELINEKEYLIST = ['SensorID', 'MinTime', 'MaxTime', 'TmpMaxTime', 'BaseFunction', 'BaseDegree',
                                 'BaseKnots', 'BaseComment']

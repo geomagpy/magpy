@@ -250,7 +250,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
     def _match_groups(self, header, flag_sensor, flag_keys=None, flag_groups=None):
         """
         DESCRIPTION
-            check if sensorid/group from is matching to the current data stream
+            check if sensor, keys and group of the flagging object match header information of the current data stream
         VARIABLES
             header        (dict) the header of the current data stream
             flag_sensor   (string) sensorid of current flagdict

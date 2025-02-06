@@ -514,6 +514,41 @@ CALLED BY:
         self.NUMKEYLIST = self.KEYLIST[1:16]
         self.FLAGKEYLIST = self.KEYLIST[:16]
 
+        # KEYLISTS for headers
+        self.DATAINFOKEYLIST = ['DataID', 'SensorID', 'StationID', 'ColumnContents', 'ColumnUnits', 'DataFormat',
+                                'DataMinTime', 'DataMaxTime', 'DataTimezone',
+                                'DataSamplingFilter', 'DataDigitalSampling', 'DataComponents', 'DataSamplingRate',
+                                'DataType',
+                                'DataDeltaReferencePier', 'DataDeltaReferenceEpoch', 'DataScaleX',
+                                'DataScaleY', 'DataScaleZ', 'DataScaleUsed', 'DataCompensationX',
+                                'DataCompensationY', 'DataCompensationZ', 'DataSensorOrientation',
+                                'DataSensorAzimuth', 'DataSensorTilt', 'DataAngularUnit', 'DataPier',
+                                'DataAcquisitionLatitude', 'DataAcquisitionLongitude', 'DataLocationReference',
+                                'DataElevation', 'DataElevationRef', 'DataFlagModification', 'DataAbsFunc',
+                                'DataAbsDegree', 'DataAbsKnots', 'DataAbsMinTime', 'DataAbsMaxTime', 'DataAbsDate',
+                                'DataRating', 'DataComments', 'DataSource', 'DataAbsFunctionObject',
+                                'DataDeltaValues', 'DataDeltaValuesApplied', 'DataTerms', 'DataReferences',
+                                'DataPublicationLevel', 'DataPublicationDate', 'DataStandardLevel',
+                                'DataStandardName', 'DataStandardVersion', 'DataPartialStandDesc', 'DataRotationAlpha',
+                                'DataRotationBeta', 'DataAbsInfo', 'DataBaseValues', 'DataArchive']
+
+        self.SENSORSKEYLIST = ['SensorID', 'SensorName', 'SensorType', 'SensorSerialNum', 'SensorGroup',
+                               'SensorDataLogger',
+                               'SensorDataLoggerSerNum', 'SensorDataLoggerRevision', 'SensorDataLoggerRevisionComment',
+                               'SensorDescription', 'SensorElements', 'SensorKeys', 'SensorModule', 'SensorDate',
+                               'SensorRevision', 'SensorRevisionComment', 'SensorRevisionDate', 'SensorDynamicRange',
+                               'SensorTimestepAccuracy', 'SensorGroupDelay', 'SensorPassband', 'SensorAttenuation',
+                               'SensorRMSNoise', 'SensorSpectralNoise', 'SensorAbsoluteError', 'SensorOrthogonality',
+                               'SensorVerticality', 'SensorTCoeff', 'SensorElectronicsTCoeff', 'SensorAnalogSampling',
+                               'SensorResolution', 'SensorTime', 'SensorPicture', 'SensorManual']
+
+        self.STATIONSKEYLIST = ['StationID', 'StationName', 'StationIAGAcode', 'StationInstitution', 'StationStreet',
+                                'StationCity', 'StationPostalCode', 'StationCountry', 'StationWebInfo',
+                                'StationEmail', 'StationDescription', 'StationK9', 'StationMeans', 'StationLongitude',
+                                'StationLatitude', 'StationLocationReference', 'StationElevation',
+                                'StationElevationRef', 'StationType', 'StationSince', 'StationUntil', 'StationPicture']
+
+
         self.header = header if header else {}
         self.container = container if container else []
         if ndarray is None:

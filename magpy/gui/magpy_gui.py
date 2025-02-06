@@ -47,8 +47,6 @@ try:
 except:
     global_mqttavailable = False
 
-#from magpy.collector import collectormethods as colsup
-
 from magpy.gui.statisticspage import StatisticsPanel
 import glob, os, pickle, base64
 import platform # for system check to import WXAgg on Mac
@@ -57,7 +55,6 @@ import time #,thread
 import threading
 import hashlib
 import pathlib
-import locale
 from itertools import zip_longest
 
 import wx.py
@@ -4177,7 +4174,7 @@ class MainFrame(wx.Frame):
         labelid = self.analysisdict.get('labelid','002')
         operator = self.analysisdict.get('operator')
         self.flagversion = self.analysisdict.get('flagversion', '2.0')
-        group = ''
+        groups = {}
         print ("Sensor Group:", plotstream.header.get('SensorGroup',''))
 
         sensid = plotstream.header.get('SensorID','')
@@ -4203,12 +4200,13 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
         else:
             self.changeStatusbar("Flagging selection ...")
-            dlg = FlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, group=group, flagversion=self.flagversion)
+            dlg = FlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, groups=groups, flagversion=self.flagversion)
             if dlg.ShowModal() == wx.ID_OK:
                 keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
                 keys2flag = keys2flag.split(',')
                 keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
                 comment = dlg.CommentTextCtrl.GetValue()
+                groups = dlg.groups
                 flagid = dlg.FlagIDComboBox.GetValue()
                 flagid = int(flagid[0])
                 operator = dlg.OperatorTextCtrl.GetValue()
@@ -4340,7 +4338,7 @@ class MainFrame(wx.Frame):
 
         labelid = self.analysisdict.get('labelid','002')
         operator = self.analysisdict.get('operator')
-        groups = ''
+        groups = {}
         self.flagversion = self.analysisdict.get('flagversion', '2.0')
         efl = flagging.Flags()
         rfl = flagging.Flags()
@@ -4369,7 +4367,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
         else:
             self.changeStatusbar("Flagging range ...")
-            dlg = FlagRangeDialog(None, title='Stream: Flag range', stream=plotstream, shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, group=groups, flagversion=self.flagversion)
+            dlg = FlagRangeDialog(None, title='Stream: Flag range', stream=plotstream, shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, groups=groups, flagversion=self.flagversion)
             startdate=self.xlimits[0]
             enddate=self.xlimits[1]
             starttime = num2date(startdate).replace(tzinfo=None).strftime('%X')
@@ -4391,6 +4389,7 @@ class MainFrame(wx.Frame):
                 keys2flag = keys2flag.split(',')
                 keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
                 comment = dlg.CommentTextCtrl.GetValue()
+                groups = dlg.groups
                 flagid = dlg.FlagIDComboBox.GetValue()
                 flagid = int(flagid[0])
                 if flagtype == 'value':
@@ -4669,6 +4668,7 @@ class MainFrame(wx.Frame):
             oldfl = plotstream.header.get('DataFlags')
             if oldfl:
                 fl = oldfl.join(fl)
+            print ("Flags", fl)
             plotstream.header['DataFlags'] = fl
             self.changeStatusbar("Applying flags ... please be patient")
             self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(fl)))
@@ -4865,8 +4865,8 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
-        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-        fields = db.DATAINFOKEYLIST
+        #db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        fields = stream.DATAINFOKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
             dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
@@ -4893,8 +4893,8 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
-        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-        fields = db.SENSORSKEYLIST
+        #db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        fields = stream.SENSORSKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
             dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
@@ -4917,8 +4917,8 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
-        db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-        fields = db.STATIONSKEYLIST
+        #db, success = self._db_connect(*self.magpystate.get('dbtuple'))
+        fields = stream.STATIONSKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
             dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
