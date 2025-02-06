@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from magpy.stream import *
-import magpy.absolutes as di
+from magpy import absolutes as di
 from magpy.core import database
 
 import wx

@@ -42,7 +42,7 @@ from magpy.gui.analysispage import *
 from magpy.gui.monitorpage import *
 
 try:
-    import paho.mqtt.client as mqtt
+    from paho.mqtt import client as mqtt
     global_mqttavailable = True
 except:
     global_mqttavailable = False

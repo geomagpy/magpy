@@ -53,7 +53,7 @@ The graphical user interface XMagPy provides easy access to most routines offere
 underlying MagPy python package, which will hereinafter be referred to as the MagPy back-end. 
 Version numbers of graphical user interface XMagPy and the back-end are identical. Before starting with 
 XMagPy and using its functionality it is highly recommended to read the basic MagPy manual to be found 
-[here](https://github.com/geomagpy/magpy. 
+[here](https://github.com/geomagpy/magpy). 
 
 In the following we will focus solely on the front-end, the graphical user interface. For better
 readability we are using a number of conventions. Any reference to menu items, submenus, panels
@@ -63,7 +63,7 @@ github directory given above in folder magpy/examples/.
 
 ## 2. Installation
 
-### Linux installation
+### 2.1 Linux installation
 
 Linux installations should be performed within a dedicated python environment:
 
@@ -72,41 +72,54 @@ Ubuntu 22.04 but should work in other architectures as well.
 
 The graphical user interface relies on GTK >= 3. So you will need to install 
 
-#### Option 1: Using a Conda/Anaconda environment
+#### 2.1.1 Option 1: Using a conda/anaconda environment
 
-- install [Anaconda]() according to the recommendations
+- install [Anaconda]() according to its recommendations
 - open a terminal which should show a prompt starting with (base). If this is not the case, activate anaconda by typing "conda activate"
 - from the (base)user$ prompt, create a new conda environment called magpy
 
          (base)user$ conda create -n magpy wxpython matplotlib numpy scipy
 
+- this technique will create a pythion 3.7 environment using wxpython4.0.7.
 - activate the new environment and install geomagpy plus one optional package for real-time monitoring
 
          (base)user$ conda activate magpy
          (magpy)user$ pip install geomagpy
          (magpy)user$ pip install paho-mqtt 
 
-This technique will create a pythion 3.7 environment using wxpython4.0.7.
+- from the (magpy) environment you can now start xmagpy. 
 
-#### Option 2: Using a basic python venv environment
+         (magpy)user$ xmagpy
 
-- use virtualenv from system python of your machine
+- if you want to create symbol links please refer to the appendix
+
+#### 2.1.2 Option 2: Using a basic python virtual environment
+
+- use virtual env from system python of your machine
 - open a terminal 
 - from the user$ prompt, create a new virtual environment called magpy
 
-         user$ python -m venv ~/magpy
+         user$ python -m venv ~/env/magpy
 
 - activate the new environment and install geomagpy plus one optional package for real-time monitoring
 
-         user$ . magpy/bin/activate
+         user$ . env/magpy/bin/activate
 
-- Download the wxPython wheel fitting to your system and python versions from 
+- Download the wxPython wheel fitting to your system and python versions from https://extras.wxpython.org/wxPython4/extras/linux/gtk3/
 
          (magpy)user$ pip install ~/Downloads/wxPython...whl
          (magpy)user$ pip install geomagpy 
          (magpy)user$ pip install paho-mqtt 
 
-This technique was tested using Ubuntu22.04 with pythion 3.10 environment and wxPython4.2.2.
+This technique was tested using Ubuntu22.04 with a python 3.10 environment and wxPython4.2.2. The benefit of the second
+option are newest python and wx packages as well as the fact that no additional large python package needs to be 
+installed. The benefit of the first technique is that it is rather easy and, at least to my experience, works flawless.
+
+
+### 2.2 MacOS installation
+
+
+### 2.3 Windows installation
 
 
 ## 3. Main window and its menu bar
