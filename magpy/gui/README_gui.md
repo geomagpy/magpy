@@ -86,33 +86,27 @@ The graphical user interface relies on GTK >= 3. So you will need to install
          (magpy)user$ pip install geomagpy
          (magpy)user$ pip install paho-mqtt 
 
+This technique will create a pythion 3.7 environment using wxpython4.0.7.
 
 #### Option 2: Using a basic python venv environment
 
 - use virtualenv from system python of your machine
 - open a terminal 
-- from the (base)user$ prompt, create a new conda environment called magpy
+- from the user$ prompt, create a new virtual environment called magpy
 
-         (base)user$ conda create -n magpy wxpython matplotlib numpy scipy
+         user$ python -m venv ~/magpy
 
 - activate the new environment and install geomagpy plus one optional package for real-time monitoring
 
-         (base)user$ conda activate magpy
-         (magpy)user$ pip install geomagpy
+         user$ . magpy/bin/activate
+
+- Download the wxPython wheel fitting to your system and python versions from 
+
+         (magpy)user$ pip install ~/Downloads/wxPython...whl
+         (magpy)user$ pip install geomagpy 
          (magpy)user$ pip install paho-mqtt 
 
-
-within a python environments 
-Linux and MacOs: 
-1. install anaconda or miniconda
-2. conda create -n xmagpy wxpython
-    Will create a python 3.7.16 environment with working wxpython 4.0.4. 
-3. go to this environment
-    conda activate xmagpy
-4. install required conda packages
-    conda install numpy, scipy, matplotlib, pymysql
-5. install required pip packages
-    pip install cdflib, pyproj, emd, pypupsub
+This technique was tested using Ubuntu22.04 with pythion 3.10 environment and wxPython4.2.2.
 
 
 ## 3. Main window and its menu bar
