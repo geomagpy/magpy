@@ -1899,6 +1899,12 @@ class MainFrame(wx.Frame):
         self.menu_p.com_page.marcosLabel.SetValue('not connected')
         self.menu_p.com_page.martasLabel.SetValue('not connected')
 
+        # Additionally hide experimental stuff
+        self.menu_p.ana_page.spectrumButton.Hide()      # always
+        self.menu_p.com_page.saveMonitorButton.Hide()   # always
+        self.menu_p.fla_page.flagUltraButton.Hide()     # always
+
+
 
     @deprecated("Will be replaced by _activate_controls")
     def ActivateControls(self,stream):
@@ -2091,6 +2097,9 @@ class MainFrame(wx.Frame):
         # baseline related stuff and activity below
         self.menu_p.ana_page.powerButton.Enable()         # always
         if self.guidict.get('experimental'):
+            self.menu_p.ana_page.spectrumButton.Show()      # always
+            self.menu_p.com_page.saveMonitorButton.Hide()   # always
+            self.menu_p.fla_page.flagUltraButton.Show()     # always
             self.menu_p.fla_page.flagUltraButton.Enable()     # if experimental
             self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
             self.menu_p.com_page.saveMonitorButton.Enable()   # if experimental
@@ -2737,7 +2746,12 @@ class MainFrame(wx.Frame):
         message = "Awesome - its working"
         services = self.analysisdict.get('webservices',{})
         default = self.analysisdict.get('defaultservice','conrad')
-        #print (services, self.options)
+        if self.active_id:
+            startd = pydate2wxdate(self.datadict.get(self.active_id).get('start'))
+            endd = pydate2wxdate(self.datadict.get(self.active_id).get('end'))
+        else:
+            startd = wx.DateTime().Today()
+            endd = wx.DateTime().Today()
         if services == {}:
                 print ("OPEN a dialog which informs you on the non-existance of services")
                 msg = wx.MessageDialog(self, "No Webservices found!\n"
@@ -2755,7 +2769,7 @@ class MainFrame(wx.Frame):
                         dictionary[el] = replacedict[el]
             return dictionary
 
-        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default, validgroups=['magnetism','meteorology'])
+        dlg = ConnectWebServiceDialog(None, title='Connecting to a webservice', services=services, default=default, validgroups=['magnetism','meteorology'], startdate=startd, enddate=endd)
         if dlg.ShowModal() == wx.ID_OK:
             # Create URL from inputs
             stday = dlg.startDatePicker.GetValue()
@@ -2771,7 +2785,6 @@ class MainFrame(wx.Frame):
             if entime.endswith('AM') or entime.endswith('am'):
                 entime = datetime.strptime(entime,"%I:%M:%S %p").strftime("%H:%M:%S")
             if entime.endswith('pm') or entime.endswith('PM'):
-                #print ("ENDTime", entime, datetime.strptime(entime,"%I:%M:%S %p"))
                 entime = datetime.strptime(entime,"%I:%M:%S %p").strftime("%H:%M:%S")
             ed = datetime.fromtimestamp(enday.GetTicks()).strftime("%Y-%m-%d")
             end = datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
@@ -2803,15 +2816,19 @@ class MainFrame(wx.Frame):
                     mintime = additionaloptions.get('mintime',None)
                     if mintime:
                         if mintime in ['day','1d','DAY']:
+                            # If the following day is required as enddate and not 23:59:59
                             tdiff = (end-start).total_seconds()
-                            if tdiff <  86400:
-                                missing = 86400-tdiff
-                                newend = end + timedelta(0,missing)
+                            if not ((tdiff/86400).is_integer()):
+                                # If the following day is required as enddate and not 23:59:59
+                                mult = np.round((tdiff/86400),0)
+                                miss = mult*86400 - tdiff
+                                newend = end + timedelta(0,miss)
                                 # add missing seconds to endtime
                                 ed = newend.strftime("%Y-%m-%d")
                                 entime = newend.strftime("%H:%M:%S")
 
                 end_time = '&{}={}T{}Z'.format(defaultcommands.get('endtime'), ed,entime)
+                #print("END3", end_time)
 
                 url = (base + '?' + add_elem + obs_id + start_time + end_time + file_format +
                       elements + data_type + period + addgroup)

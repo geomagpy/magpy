@@ -186,16 +186,15 @@ class ConnectWebServiceDialog(wx.Dialog):
     Helper method to connect to edge
     Select shown keys
     """
-    def __init__(self, parent, title, services, default, validgroups, defaultstarttime=None):
+    def __init__(self, parent, title, services, default, validgroups, startdate=wx.DateTime().Today(), enddate=wx.DateTime().Today() ):
         super(ConnectWebServiceDialog, self).__init__(parent=parent,
             title=title, size=(400, 600))
         self.services = services
         self.default = default
         self.validgroups = validgroups
         defaultgroup = 'magnetism'
-        if not defaultstarttime:
-            defaultstarttime = wx.DateTime().Today()
-        self.defaultstartime = defaultstarttime
+        self.startdate = startdate
+        self.enddate = enddate
         self.servicelist = [el for el in services]
         if default in self.servicelist and len(self.servicelist) > 0:
             self.selectedservice = default
@@ -232,37 +231,25 @@ class ConnectWebServiceDialog(wx.Dialog):
         self.groupComboBox = wx.ComboBox(self, choices=self.grouplist,
             style=wx.CB_DROPDOWN, value=self.selectedgroup,size=(400,-1))
         self.obsIDLabel = wx.StaticText(self, label="Observatory ID:",size=(400,25))
-        #self.obsIDName = wx.TextCtrl(self, value="id=",size=(400,25))
         self.idComboBox = wx.ComboBox(self, choices=self.ids,
             style=wx.CB_DROPDOWN, value=self.ids[0],size=(400,-1))
-        #if self.selectedservice == 'conrad':
-        #    self.formatName = wx.TextCtrl(self, value="of=",size=(400,25))
-        #else:
-        #    self.formatName = wx.TextCtrl(self, value="format=",size=(400,25))
         self.formatLabel = wx.StaticText(self, label="Format: ",size=(400,25))
         self.formatComboBox = wx.ComboBox(self, choices=self.formats,
             style=wx.CB_DROPDOWN, value=self.formats[0],size=(400,-1))
-        #self.typeName = wx.TextCtrl(self, value="type=",size=(400,25))
         self.typeLabel = wx.StaticText(self, label="Type: ",size=(400,25))
         self.typeComboBox = wx.ComboBox(self, choices=self.types,
             style=wx.CB_DROPDOWN, value=self.types[0],size=(400,-1))
-        #self.sampleName = wx.TextCtrl(self, value="sampling_period=",size=(400,25))
         self.sampleLabel = wx.StaticText(self, label="Sampling Period (seconds):",size=(400,25))
         self.sampleComboBox = wx.ComboBox(self, choices=self.sampling,
             style=wx.CB_DROPDOWN, value=self.sampling[0],size=(400,-1))
-        #self.startName = wx.TextCtrl(self, value="starttime=",size=(400,25))
         self.startTimeLabel = wx.StaticText(self, label="Start Time: ",size=(400,25))
-        self.startDatePicker = wxDatePickerCtrl(self,dt=self.defaultstartime,size=(160,25))
+        self.startDatePicker = wxDatePickerCtrl(self,dt=self.startdate,size=(160,25))
         self.startTimePicker = wx.TextCtrl(self, value='00:00:00',size=(160,25))
-        #self.endName = wx.TextCtrl(self, value="endtime=",size=(400,25))
         self.endTimeLabel = wx.StaticText(self, label="End Time: ",size=(400,25))
-        self.endDatePicker = wxDatePickerCtrl(self,dt=wx.DateTime().Today(), size=(160,25))
+        self.endDatePicker = wxDatePickerCtrl(self,dt=self.enddate, size=(160,25))
         self.endTimePicker = wx.TextCtrl(self, value='23:59:59',size=(160,25))
-        #self.elementsName = wx.TextCtrl(self, value="elements=",size=(400,25))
         self.elementsLabel = wx.StaticText(self, label="Comma separated list of requested elements: ",size=(400,25))
         self.elementsTextCtrl = wx.TextCtrl(self, value='X,Y,Z,F',size=(400,25))
-        #self.generatedLabel = wx.StaticText(self, label="Generated URL:",size=(400,25))
-        #self.generatedTextCtrl = wx.StaticText(self, value="",size=(400,25))
         self.okButton = wx.Button(self, wx.ID_OK, label='Connect')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(400,25))
 
@@ -270,28 +257,6 @@ class ConnectWebServiceDialog(wx.Dialog):
     def bindControls(self):
         self.serviceComboBox.Bind(wx.EVT_COMBOBOX, self.updateService)
         self.groupComboBox.Bind(wx.EVT_COMBOBOX, self.updateGroup)
-        """
-        #self.baseTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
-        self.elementsTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
-        self.elementsName.Bind(wx.EVT_TEXT, self.onChange)
-        #self.endDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChange)
-        self.endName.Bind(wx.EVT_TEXT, self.onChange)
-        self.endTimePicker.Bind(wx.EVT_TEXT, self.onChange)
-        self.formatComboBox.Bind(wx.EVT_COMBOBOX, self.onChange)
-        self.formatComboBox.Bind(wx.EVT_TEXT, self.onChange)
-        self.formatName.Bind(wx.EVT_TEXT, self.onChange)
-        #self.generatedTextCtrl.Bind(wx.EVT_TEXT, self.onOverride)
-        self.idComboBox.Bind(wx.EVT_COMBOBOX, self.onChange)
-        self.idComboBox.Bind(wx.EVT_TEXT, self.onChange)
-        self.obsIDName.Bind(wx.EVT_TEXT, self.onChange)
-        self.sampleName.Bind(wx.EVT_TEXT, self.onChange)
-        self.sampleTextCtrl.Bind(wx.EVT_TEXT, self.onChange)
-        #self.startDatePicker.Bind(wx.EVT_DATE_CHANGED, self.onChange)
-        self.startName.Bind(wx.EVT_TEXT, self.onChange)
-        self.startTimePicker.Bind(wx.EVT_TEXT, self.onChange)
-        self.typeComboBox.Bind(wx.EVT_COMBOBOX, self.onChange)
-        self.typeComboBox.Bind(wx.EVT_TEXT, self.onChange)
-        """
 
 
     def doLayout(self):
