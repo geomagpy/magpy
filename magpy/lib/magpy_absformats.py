@@ -7,7 +7,7 @@ Written by Roman Leonhardt June 2012
 from magpy.stream import *
 # absolute data / DI
 from magpy.lib.format_abs_magpy import *
-import magpy.lib.format_autodif as autodif
+from magpy.lib import format_autodif as autodif
 
 def isAbsFormat(filename, format_type):
     if (format_type == "MAGPYABS"):
