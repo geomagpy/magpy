@@ -2165,10 +2165,9 @@ class FlagLoadDialog(wx.Dialog):
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadFile)
 
     def OnLoadDB(self, e):
-        #TODO check sensorid
-        self.fl = self.db.flags_from_db(sensorid=self.sensorid, starttime=self.start, endtime=self.end)
+        self.fl = self.db.flags_from_db(starttime=self.start, endtime=self.end) # sensorid=self.sensorid,
         #self.fl = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
-        dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
+        dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs for all sensors in this timerange\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
         self.Close(True)
@@ -2184,7 +2183,7 @@ class FlagLoadDialog(wx.Dialog):
             except:
                 self.fl = flagging.Flags()
             openFileDialog.Destroy()
-            dlg = wx.MessageDialog(self, "Flags for {} loaded from File!\nFound {} flag inputs\n".format(self.sensorid,len(self.fl)),"FLAGS obtained from File", wx.OK|wx.ICON_INFORMATION)
+            dlg = wx.MessageDialog(self, "Flags for {} loaded from File!\nFound a total of {} flag inputs in this timerange for all sensors\n".format(self.sensorid,len(self.fl)),"FLAGS obtained from File", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
         else:

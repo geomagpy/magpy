@@ -2379,7 +2379,7 @@ class MainFrame(wx.Frame):
         # ------------------------------
         if flags:
             fl = stream.header.get("DataFlags",{})
-            plotcont['patch'] = fl.create_patch()
+            plotcont['patch'] = fl.create_patch(stream)
             truelist = [True for el in shownkeys]
             plotcont['showpatch'] = [truelist]
             #plotcont['annotate'] = True                   # activate annotation - no -> manually
@@ -4157,7 +4157,7 @@ class MainFrame(wx.Frame):
             Flag all data within the zoomed region
         """
 
-        debug = True
+        debug = False
 
         datacont = self.datadict.get(self.active_id)
         streamid = self.active_id
@@ -4175,7 +4175,8 @@ class MainFrame(wx.Frame):
         operator = self.analysisdict.get('operator')
         self.flagversion = self.analysisdict.get('flagversion', '2.0')
         groups = {}
-        print ("Sensor Group:", plotstream.header.get('SensorGroup',''))
+        if debug:
+            print ("Sensor Group:", plotstream.header.get('SensorGroup',''))
 
         sensid = plotstream.header.get('SensorID','')
         dataid = plotstream.header.get('DataID','')
@@ -4668,7 +4669,8 @@ class MainFrame(wx.Frame):
             oldfl = plotstream.header.get('DataFlags')
             if oldfl:
                 fl = oldfl.join(fl)
-            print ("Flags", fl)
+            print ("Flags  CHECK DB group flagging", fl)
+
             plotstream.header['DataFlags'] = fl
             self.changeStatusbar("Applying flags ... please be patient")
             self.menu_p.rep_page.logMsg('- loaded flags: added {} flags'.format(len(fl)))
@@ -4865,7 +4867,6 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
-        #db, success = self._db_connect(*self.magpystate.get('dbtuple'))
         fields = stream.DATAINFOKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
@@ -4893,7 +4894,6 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
-        #db, success = self._db_connect(*self.magpystate.get('dbtuple'))
         fields = stream.SENSORSKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
@@ -4917,7 +4917,6 @@ class MainFrame(wx.Frame):
         """
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
-        #db, success = self._db_connect(*self.magpystate.get('dbtuple'))
         fields = stream.STATIONSKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
