@@ -1376,13 +1376,14 @@ columns towards x and then integrate. The correct scaling cannot be reconstructe
 
 ### 5.8 Extrapolation
 
-The extrapolation method `extrapolate` allows to extrapolate a  data set towards given start and end times. Several 
+The extrapolation method `extrapolate` allows to extrapolate a data set towards given start and end times. Several 
 different methods are available for extrapolation: The most simple extrapolation method, which was already available
 in MagPy 1.x is the duplication method (option: *method='old'*) which duplicates the first and last existing points 
 at given times. New methods starting form 2.0 are the *'spline'* technique following 
 [this](https://docs.scipy.org/doc/scipy/tutorial/interpolate/extrapolation_examples.html) approach, a *'linear'* 
 extrapolation and a *'fourier'* technique as described [here](https://gist.github.com/tartakynov/83f3cd8f44208a1856ce).
-Please note: the extrapolation method will remove any NaN columns and secondary time columns.
+Please note: the extrapolation method will remove all nnon-numerical columns, any NaN columns and secondary time columns
+as those cannot be extrapolated.
 
         data = read(example5)
         shortdata = data.trim(starttime='2018-08-29T09:00:00', endtime='2018-08-29T14:00:00')

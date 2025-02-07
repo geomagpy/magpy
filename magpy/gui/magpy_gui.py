@@ -4669,7 +4669,6 @@ class MainFrame(wx.Frame):
             oldfl = plotstream.header.get('DataFlags')
             if oldfl:
                 fl = oldfl.join(fl)
-            print ("Flags  CHECK DB group flagging", fl)
 
             plotstream.header['DataFlags'] = fl
             self.changeStatusbar("Applying flags ... please be patient")

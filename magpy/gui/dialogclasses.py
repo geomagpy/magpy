@@ -2167,7 +2167,7 @@ class FlagLoadDialog(wx.Dialog):
     def OnLoadDB(self, e):
         self.fl = self.db.flags_from_db(starttime=self.start, endtime=self.end) # sensorid=self.sensorid,
         #self.fl = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
-        dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs for all sensors in this timerange\n".format(self.sensorid,len(self.flaglist)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
+        dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs for all sensors in this timerange\n".format(self.sensorid,len(self.fl)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
         self.Close(True)
@@ -2256,7 +2256,7 @@ class FlagSaveDialog(wx.Dialog):
     def OnSaveDB(self, e):
         #print ("Saving", self.flaglist[0])
         self.db.flags_to_db(self.fl)
-        dlg = wx.MessageDialog(self, "Flags stored in connected DB!\nFLAGS table extended with {} inputs\n".format(len(self.flaglist)),"FLAGS added to DB", wx.OK|wx.ICON_INFORMATION)
+        dlg = wx.MessageDialog(self, "Flags stored in connected DB!\nFLAGS table extended with {} inputs\n".format(len(self.fl)),"FLAGS added to DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
         self.Close(True)
@@ -4145,8 +4145,14 @@ class LoadVarioScalarDialog(wx.Dialog):
         if self.db:
             self.variotables = self.checkDB(search='x,y,z')
             self.scalartables = self.checkDB(search='f')
-            self.defaultvariotable = self.variotables[0]
-            self.defaultscalartable = self.scalartables[0]
+            if len(self.variotables) > 0:
+                self.defaultvariotable = self.variotables[0]
+            else:
+                self.variotables = ['1', '2']
+            if len(self.scalartables) > 0:
+                self.defaultscalartable = self.scalartables[0]
+            else:
+                self.scalartables = ['3','4']
         else:
             self.variotables = ['1','2']
             self.scalartables = ['3','4']

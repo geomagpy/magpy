@@ -1851,7 +1851,7 @@ CALLED BY:
             if not endabs or endabs > np.max(absolutestream.ndarray[0]):
                 endabs = absolutestream.end()
         else:
-            print ("decrepated")
+            print ("deprecated")
             # 1) test whether absolutes are in the selected absolute data stream
             if absolutestream[0].time == 0 or absolutestream[0].time == float('nan'):
                 raise ValueError ("Baseline: Input stream needs to contain absolute data ")
@@ -1921,7 +1921,7 @@ CALLED BY:
         if extrapolate: # and not extradays == 0:
             if debug:
                 print (" baseline: Extrapolating ", bas.length()[0])
-            bas = bas.extrapolate(starttime=basestarttime,endtime=baseendtime)
+            bas = bas.extrapolate(starttime=basestarttime,endtime=baseendtime, debug=debug)
             # Now remove duplicates - if start and end are existing they are duplicated be extrapolate
             bas = bas.removeduplicates()
             if debug:
@@ -3008,8 +3008,9 @@ CALLED BY:
     def extrapolate(self, starttime, endtime, method='old', force=False, debug=False):
         """
         DESCRIPTION
-            Extrapolate all contents with a data stream towards given starttime and endtime.
-            Several different methods are available for extrapolation
+            Extrapolate all contents with a data stream towards given starttime and endtime.Important: this method
+            will remove any non-numerical columns from the resulting data set as those cannot be extrapolated.
+            Several different methods are available for extrapolation.
             Methods:
                old -- duplicates first and last point at given times
                spline -- see here https://docs.scipy.org/doc/scipy/tutorial/interpolate/extrapolation_examples.html
@@ -3057,11 +3058,16 @@ CALLED BY:
             print("extrapolate: raise error")
             return self
         if debug:
-            print(dist1, dist2, duration)
+            print("Time diffs between start and data in seconds", dist1, dist2, duration)
         st = self.copy()
         # do some cleanups for extrapolation
         st = st._drop_column('sectime')
         st = st._remove_nancolumns()
+        # Drop non-numerical columns as they cannot be extrapolated
+        vars = st.variables()
+        for var in vars:
+            if not var in st.NUMKEYLIST:
+                st = st._drop_column(var)
         samprate = st.samplingrate() * 1000000
 
         # get the average sampling rate of st

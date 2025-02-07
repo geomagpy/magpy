@@ -236,9 +236,10 @@ def readIAGA(filename, headonly=False, **kwargs):
                     stream.header["col-f"] = 'F'
                 #print ("VAR", varstr)
                 if varstr in ['dhzf','dhzg']:
-                    #stream.header["col-x"] = 'H'
-                    #stream.header["col-y"] = 'D'
-                    #stream.header["col-z"] = 'Z'
+                    # Please note: positions of D and H are exchanged while reading from data set below
+                    stream.header["col-x"] = 'H'
+                    stream.header["col-y"] = 'D'
+                    stream.header["col-z"] = 'Z'
                     stream.header["unit-col-y"] = 'deg'
                     stream.header['DataComponents'] = 'HDZF'
                 elif varstr in ['ehzf','ehzg']:
@@ -314,13 +315,17 @@ def readIAGA(filename, headonly=False, **kwargs):
                     array[3].append( float(row[5]) )
                 try:
                     if float(row[6]) < NOT_REPORTED:
+                        # dF = F(vector) - F(scalar) according to IM technical mamual
                         if varstr[-1]=='f':
                             array[4].append(float(elem[6]))
                         elif varstr[-1]=='g' and varstr=='xyzg':
                             array[4].append(np.sqrt(float(row[3])**2+float(row[4])**2+float(row[5])**2) - float(row[6]))
                             array[dfpos].append(float(row[6]))
-                        elif varstr[-1]=='g' and varstr in ['hdzg','dhzg','ehzg']:
+                        elif varstr[-1]=='g' and varstr in ['hdzg']:
                             array[4].append(np.sqrt(float(row[3])**2+float(row[5])**2) - float(row[6]))
+                            array[dfpos].append(float(row[6]))
+                        elif varstr[-1] == 'g' and varstr in ['dhzg', 'ehzg']:
+                            array[4].append(np.sqrt(float(row[4]) ** 2 + float(row[5]) ** 2) - float(row[6]))
                             array[dfpos].append(float(row[6]))
                         elif varstr[-1]=='g' and varstr in ['dhig']:
                             array[4].append(float(row[6]))
