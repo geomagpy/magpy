@@ -53,6 +53,7 @@ import platform
 | DefineScalarDialog     | 2.0.0   |                 |  level 2       |          | LoadDIDialog |
 | DISaveDialog           | 2.0.0   |                 |  level 2       |          | dip_onDISaveButton |
 | ParameterDictDialog    | 2.0.0   |                 |  level 2       |          | dip_onDIParameterButton |
+| FlaggingGroupsDialog |   2.0.0   |                 |  level 2       |          | FlagOutlier, FlagRange, FlagSelection |
 | FlagOutlierDialog    |   2.0.0   |                 |  level 2       |          | flag_onFlagOutlier |
 | FlagSelectionDialog  |   2.0.0   |                 |  level 2       |          | flag_onFlagSelection |
 | FlagRangeDialog      |   2.0.0   |                 |  level 1       |          | flag_onFlagRange |
@@ -1666,7 +1667,7 @@ class FlagOutlierDialog(wx.Dialog):
         self.currentlabelindex = [i for i, el in enumerate(self.labels) if el.startswith(labelid)][0]
         self.createControls()
         self.doLayout()
-        print (i for i, el in enumerate(self.labels) if el.startswith(labelid))
+        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -1682,6 +1683,7 @@ class FlagOutlierDialog(wx.Dialog):
         self.LabelText = wx.StaticText(self,label="Select label")
         self.LabelComboBox = wx.ComboBox(self, choices=self.labels,
             style=wx.CB_DROPDOWN, value=self.labels[self.currentlabelindex],size=(160,-1))
+        self.GroupButton = wx.Button(self, label='Groups',size=(200,30))
         self.okButton = wx.Button(self, wx.ID_OK, label='Apply')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         self.MarkAllCheckBox.SetValue(self.markall)
@@ -1710,7 +1712,7 @@ class FlagOutlierDialog(wx.Dialog):
         contlst.append(emptySpace)
         contlst.append((self.MarkText, noOptions))
         contlst.append((self.LabelComboBox, expandOption))
-        contlst.append(emptySpace)
+        contlst.append((self.GroupButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.MarkAllCheckBox, noOptions))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append(emptySpace)
@@ -1729,6 +1731,19 @@ class FlagOutlierDialog(wx.Dialog):
             boxSizer.Add(control, **options)
 
         self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.GroupButton.Bind(wx.EVT_BUTTON, self.OnSelectGroups)
+
+    def OnSelectGroups(self, e):
+        dlg = FlaggingGroupsDialog(None, title='Define flagging groups', groups=self.groups)
+        if dlg.ShowModal() == wx.ID_OK:
+            # get values from dlg
+            grouplist = dlg.existinggroups
+            for g in dlg.existinggroups:
+                gl = g.split(' : ')
+                self.groups[gl[0]] = gl[1].split(',')
+        dlg.Destroy()
 
 
 class FlagRangeDialog(wx.Dialog):
@@ -1962,7 +1977,7 @@ class FlagRangeDialog(wx.Dialog):
         print (str(firstkey),ind, self.ul, self.ll)
 
     def OnSelectGroups(self, e):
-        print ("Groups look like:", self.groups)
+        #print ("Groups look like:", self.groups)
         dlg = FlaggingGroupsDialog(None, title='Define flagging groups', groups=self.groups)
         if dlg.ShowModal() == wx.ID_OK:
             # get values from dlg
@@ -1971,7 +1986,7 @@ class FlagRangeDialog(wx.Dialog):
                 gl = g.split(' : ')
                 self.groups[gl[0]] = gl[1].split(',')
         dlg.Destroy()
-        print ("Groups now look like:", self.groups)
+        #print ("Groups now look like:", self.groups)
 
 
 class FlagSelectionDialog(wx.Dialog):
@@ -7572,13 +7587,15 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             layoutcheckids.append('(self.id{}CheckBox, noOptions)'.format(selid))
             layouttextids.append('(self.id{}TextCtrl, expandOption)'.format(selid))
             layoutbuttonids.append('(self.id{}KeyButton, expandOption)'.format(selid))
-            #self.bindkeys.append([selid,'self.id{}KeyButton.Bind(wx.EVT_BUTTON, partial( self.on_get_keys, activeid = selid ) )'.format(selid)])
-            self.bindkeys.append([selid,'self.id{}KeyButton.Bind(wx.EVT_BUTTON, lambda evt, activeid={}: self.on_get_keys(evt, activeid) )'.format(selid,selid)])
             exec('self.id{}CheckBox = wx.CheckBox(self, label="{}")'.format(selid,selid))
             exec('self.id{}TextCtrl = wx.TextCtrl(self, value="{}", size=(320,-1))'.format(selid,label))
             exec('self.id{}KeyButton = wx.Button(self,-1,"Keys: {}", size=(160,-1))'.format(selid, ",".join(shownkeys)))
             if selid == self.active:
-                exec('self.id{}CheckBox.SetValue(True)'.format(selid))
+                checkbox = getattr(self, "id{}CheckBox".format(selid))
+                checkbox.SetValue(True)
+                #exec('self.id{}CheckBox.SetValue(True)'.format(selid))
+            keybutton = getattr(self, "id{}KeyButton".format(selid))
+            keybutton.Bind(wx.EVT_BUTTON, lambda evt, activeid=selid: self.on_get_keys(evt, activeid))
             count += 1
         self.applyButton = wx.Button(self, wx.ID_OK,"Plot",size=(160,-1))
         self.plotButton = wx.Button(self, -1,"Plot nested",size=(160,-1))
