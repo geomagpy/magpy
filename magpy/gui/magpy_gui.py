@@ -6708,7 +6708,8 @@ class MainFrame(wx.Frame):
         results = { "report" : "## Report of MagPys data checking tool box\n based on MagPy version {}\n".format(magpyversion),
                     "warning" : [],
                     "errors" : [],
-                    "temporarydata" : DataStream(),
+                    "temporaryminutedata" : DataStream(),
+                    "temporaryseconddata" : DataStream(),
                     "grades" : { "step1" : 0,
                                  "step2" : 0,
                                  "step3" : 0,
@@ -6777,9 +6778,6 @@ class MainFrame(wx.Frame):
         #import checkdata
         #results = checkmodule1(config, results)
         # create/update a result dialog
-
-
-
 
 
     @deprecated("Apperently not used any more")

@@ -85,8 +85,11 @@ class AutoScaleY():
         self.timer.start()
 
     def change_y(self):
-        self.ax.set_ylim(self.ybounds)
-        self.ax.figure.canvas.draw()
+        #print ("HERE")
+        #print (self.ybounds)
+        if not any(np.isnan(np.array(self.ybounds))):
+            self.ax.set_ylim(self.ybounds)
+            self.ax.figure.canvas.draw()
 
 
 def testtimestep(variable):
