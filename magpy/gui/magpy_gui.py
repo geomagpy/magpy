@@ -6775,10 +6775,22 @@ class MainFrame(wx.Frame):
 
         print (config, results)
         # run module1
-        #import checkdata
-        #results = checkmodule1(config, results)
-        # create/update a result dialog
+        import checkdata
+        # Step 1
+        results = checkdata.check_minute_directory(config, results)
+        results = checkdata.check_second_directory(config, results)
+        for month in config.get('months'):
+            results = checkdata.read_month(config, results, month=month)
 
+        #report = checkdata.create_report(reportmsg, warningmsg, errormsg)
+        dlg = CheckDataReportDialog(None, title='Data check report', report=report,
+                                        rating=max(list(map(int, succlst))), step=list(map(str, succlst)),
+                                        laststep=laststep)
+        dlg.ShowModal()
+        #if dlg.moveon:
+        #    saveReport(dlg.contlabel, dlg.report)
+        dlg.Destroy()
+        self.changeStatusbar("Ready")
 
     @deprecated("Apperently not used any more")
     def onWebServiceParameter(self,event):
