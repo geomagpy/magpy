@@ -554,7 +554,7 @@ If the IMAGCDF archive contains contents referring to different time columns, th
 information about them. The select options allows you to specifically load lower resolution data 
 like scalar or temperature readings.
 
-        print(data.header.get('FileContents')
+        print(data.header.get('FileContents'))
         sdata = read('/path/to/IMAGCDF/*.cdf', select='scalar')
         tdata = read('/path/to/IMAGCDF/*.cdf', select='temperature')
 

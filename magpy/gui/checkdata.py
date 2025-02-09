@@ -226,10 +226,10 @@ def check_second_directory(config, results):
                         if int(dmon.month) == mon:
                             res_sec_dir["secdatacheck"] = extension
 
-        if secondsummary.get('cdf') >= 365:
+        if secondsummary.get('cdf',0) >= 365:
             res_sec_dir["report"].append(" - found correct number of ImagCDF data files")
             res_sec_dir["format"] = "IMAGCDF"
-        elif secondsummary.get('sec') >= 365:
+        elif secondsummary.get('sec',0) >= 365:
             res_sec_dir["format"] = "IAGA-2002"
             res_sec_dir["report"].append(" - found correct number of IAGA-2002 data files")
         elif not secondsummary.get('cdf') and not secondsummary.get('sec'):
@@ -390,10 +390,6 @@ def _delta_F_test(fdata, debug=True):
          fsamprate  : samplingrate of F
     """
     result = {}
-    dfmean = 0.
-    fsamprate = 1.
-    dfmedian = 0.
-    dfstdev = 0.
     # Get the f and df columns  and test for data existence
     ftest = fdata.copy()
     fcol = fdata._get_column('f')
@@ -438,7 +434,8 @@ def _delta_F_test(fdata, debug=True):
     result['dF mean'] = fmean
     result['dF median'] = fmedian
     result['dF stddev'] = fstd
-    print ("F result", result)
+    if debug:
+        print ("F result", result)
     return result
 
 
@@ -454,6 +451,18 @@ def consistency_test(config, results, month=1, debug=True):
     :param results:
     :return:
     """
+    if not results:
+        results = { "report" : [],
+                    "warnings" : [],
+                    "errors" : [],
+                    "temporaryminutedata" : DataStream(),
+                    "temporaryseconddata" : DataStream(),
+                    "grades" : { "step3" : 0
+                                 }
+                    }
+    grades = results.get('grades',{})
+    if grades.get("step3",0) <= 1:
+        grades["step3"] = 1
     res_cons_test = {}
     for resolution in ["minute", "second"]:
         if debug:
@@ -461,10 +470,15 @@ def consistency_test(config, results, month=1, debug=True):
         monthdict = results.get(month)
         logdict = monthdict.get(resolution)
         data = results.get('temporary{}data'.format(resolution))
+        print ("HERE")
         if logdict and data:
             logdict["report"].append("#### One-{} consistency test".format(resolution))
             # Testing F/G
             # read scalar data if applicable
+            print ("Consistency", logdict)
+            print(data.header.get('FileContents'))
+            #if logdict.get("Data format").find("CDF") > -1:
+            # read specific f data in case of IMAGCDF files
             # get data path and call command to read scalar data
             fdata = data.copy()
             fresult = _delta_F_test(fdata)
@@ -517,7 +531,8 @@ if __name__ == '__main__':
 
     import subprocess
     #config = {'mindatapath' : '/home/leon/GeoSphereCloud/Daten/CobsDaten/Yearbook2023/IAF', 'months' : [6]}
-    config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/LYC', 'secdatapath' : '/home/leon/Tmp/CheckData/second/LYC', 'months' : [6]}
+    #config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/LYC', 'secdatapath' : '/home/leon/Tmp/CheckData/second/LYC', 'months' : [6]}
+    config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/CNB', 'secdatapath' : '/home/leon/Tmp/CheckData/second/CNB', 'months' : [6]}
     results = {
         "report": "## Report of MagPys data checking tool box\n based on MagPy version {}\n".format(magpyversion),
         "warning": [],
@@ -543,7 +558,7 @@ if __name__ == '__main__':
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 result = check_second_directory(config, results)
-                #print ("SECOND", result)
+                print ("SECOND", result)
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['check_second_directory'] = (
                     "Version: {}: {}".format(magpyversion, (te - ts).total_seconds()))
@@ -565,22 +580,23 @@ if __name__ == '__main__':
                 """
                 # requires results
                 result = read_month(config, results, month=config.get('months')[0], debug=True)
+                print ("read DONE")
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
-                successes['read_month_minute'] = (
+                successes['read_month'] = (
                     "Version: {}: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
-                errors['read_month_minute'] = str(excep)
-                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with read_month_minute.")
+                errors['read_month'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with read_month.")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 # requires results
                 result = consistency_test(config, results, month=config.get('months')[0], debug=True)
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
-                successes['read_month_minute'] = (
+                successes['consistency_test'] = (
                     "Version: {}: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
-                errors['read_month_minute'] = str(excep)
-                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with read_month_minute.")
+                errors['consistency_test'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with consistency_test.")
 
             # If end of routine is reached... break.
             break
