@@ -345,6 +345,10 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             possvals.append('g')
         if key == 'f':
             possvals.append('s')
+        if key == 't1':
+            possvals.extend(['temperature 1','temperature1'])
+        if key == 't2':
+            possvals.extend(['temperature 2','temperature2'])
         for elem in datalist:
             try:
                 label = cdfdat.varattsget(elem).get('LABLAXIS').lower()

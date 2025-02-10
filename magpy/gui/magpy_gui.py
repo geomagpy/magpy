@@ -6699,14 +6699,14 @@ class MainFrame(wx.Frame):
         """
         # 1. open a dialog with two input directories: 1) for IAF minute data and 2) (optional) for IamgCDF sec data
         # 2. radio field with two selections (quick check, full check)
-        config = { "minutepath" : '',
-                   "secondpath" : '',
+        config = { "mindatapath" : '',
+                   "secdatapath" : '',
                    "months" : [],
                    "year" : 1777,
                    "laststep" : 7    # required to enable save report message when running a stepwise check
                    }
         results = { "report" : "## Report of MagPys data checking tool box\n based on MagPy version {}\n".format(magpyversion),
-                    "warning" : [],
+                    "warnings" : [],
                     "errors" : [],
                     "temporaryminutedata" : DataStream(),
                     "temporaryseconddata" : DataStream(),
@@ -6752,19 +6752,17 @@ class MainFrame(wx.Frame):
         dlg = CheckDefinitiveDataDialog(None, title='Checking defintive data')
         if dlg.ShowModal() == wx.ID_OK:
             checkchoice = dlg.checkchoice
-            config["minutepath"] = dlg.minuteTextCtrl.GetValue()
-            config["secondpath"] = dlg.secondTextCtrl.GetValue()
+            config["mindatapath"] = dlg.minuteTextCtrl.GetValue()
+            config["secdatapath"] = dlg.secondTextCtrl.GetValue()
             checkparameter = dlg.checkparameter
             config["laststep"] = dlg.laststep
             runit = True
         dlg.Destroy()
 
-        if not runit or (config["minutepath"]=='' and config["secondpath"]==''):
+        if not runit or (config["mindatapath"]=='' and config["secdatapath"]==''):
             return
 
-
         randommonth = np.random.randint(0, 13)
-        #rmonth = randint(1,11) ## Not 12 as this would unnecessarily complicate start and endtime selection
         month = datetime(1900, randommonth, 1).strftime('%b')
         if checkchoice == 'quick':
             config["months"] = [randommonth]
@@ -6779,8 +6777,12 @@ class MainFrame(wx.Frame):
         # Step 1
         results = checkdata.check_minute_directory(config, results)
         results = checkdata.check_second_directory(config, results)
+        print (results)
         for month in config.get('months'):
+            print ("Now running details for month", month)
             results = checkdata.read_month(config, results, month=month)
+            results = checkdata.consistency_test(config, results, month=month)
+            results = checkdata.content_test(config, results, month=month)
 
         #report = checkdata.create_report(reportmsg, warningmsg, errormsg)
         dlg = CheckDataReportDialog(None, title='Data check report', config=config,

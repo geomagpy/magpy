@@ -201,17 +201,17 @@ def check_minute_directory(config, results):
         elif not minutesummary.get('bin') and not minutesummary.get('min') and not minutesummary.get('cdf'):
             if grades.get("step1") <= 3:
                 grades["step1"] = 3
-            results["error"].append("Check minute directory: no data files found")
+            results["errors"].append("Check minute directory: no data files found")
         else:
             if grades.get("step1") <= 2:
                 grades["step1"] = 2
-            results["warning"].append("Check minute directory: incorrect amount of data files")
+            results["warnings"].append("Check minute directory: incorrect amount of data files")
         if minutesummary.get('blv',0) >= 1:
             res_min_dir["report"].append(" - found baseline data file")
         else:
             if grades.get("step1") <= 2:
                 grades["step1"] = 2
-            results["error"].append("Check minute directory: no baseline file")
+            results["errors"].append("Check minute directory: no baseline file")
         if minutesummary.get('dka',0) >= 1:
             res_min_dir["report"].append(" - found k-value DKA file")
         if minutesummary.get('png',0) >= 1:
@@ -267,7 +267,7 @@ def check_second_directory(config, results):
     elif not os.path.isdir(secondpath):
         # add some report to results
         res_sec_dir["report"].append(" failed - could not access one-second path: {}".format(secondpath))
-        results["error"].append("Check second directory: given data path not accessible")
+        results["errors"].append("Check second directory: given data path not accessible")
         if grades.get("step1") <= 3:
             grades["step1"] = 3
         results['second-data-directory'] = res_sec_dir
@@ -307,7 +307,7 @@ def check_second_directory(config, results):
         else:
             if grades.get("step1") <= 2:
                 grades["step1"] = 2
-            results["warning"].append("Check second directory: incorrect amount of data files")
+            results["warnings"].append("Check second directory: incorrect amount of data files")
 
     res_sec_dir["year"] = year
     results['grades'] = grades
@@ -481,12 +481,12 @@ def consistency_test(config, results, month=1, debug=True):
             # -----------------------------
             # read scalar data if applicable
             fc = data.header.get('FileContents',[])
-            logdict["Amount of scalar data"] = len(data)
+            logdict["amount of scalar data"] = len(data)
             if fc and len(fc) > 0:
-                logdict["report"].append(" - data set contains contents of variable lengths: {}".format(print(data.header.get('FileContents'))))
+                logdict["report"].append(" - data set contains contents of variable lengths: {}".format(data.header.get('FileContents')))
                 vlen = [el[0] for el in fc if el[1].find("Vector") >= 0]
                 slen = [el[0] for el in fc if el[1].find("Scalar") >= 0]
-                logdict["Amount of scalar data"] = slen[0]
+                logdict["amount of scalar data"] = slen[0]
                 if len(vlen) > 0 and len(slen) > 0 and not vlen[0] == slen[0]:
                     logdict["report"].append(" - found different amounts of scalar data N={} and variometer data N={}".format(slen[0], vlen[0]))
                     logdict["report"].append("   filtering both data sets and merging at equal time steps before delta F analysis")
@@ -494,7 +494,8 @@ def consistency_test(config, results, month=1, debug=True):
                     scalardata = read(logdict.get("Data path"), starttime=logdict.get("Data limits")[0], endtime=logdict.get("Data limits")[1], select="scalar")
                     scalardata = scalardata.filter()
                     vectordata = data.filter()
-                    data = merge_streams(scalardata,vectordata)
+                    data = merge_streams(vectordata,scalardata)
+                    print ("HERE - filtering and merging")
                     logdict["filtered"] = data.copy()
             #if logdict.get("Data format").find("CDF") > -1:
             # read specific f data in case of IMAGCDF files
@@ -502,13 +503,13 @@ def consistency_test(config, results, month=1, debug=True):
             fdata = data.copy()
             fresult = _delta_F_test(fdata)
             if fresult.get('dF test').startswith('no'):
-                logdict["Amount of scalar data"] = 0
+                logdict["amount of scalar data"] = 0
             else:
                 logdict["report"].append(" - delta F analysis: sampling rate = {:.0f} sec".format(fresult.get('F rate',0)))
                 logdict["report"].append(" - delta F analysis: obtained average dF={:.3f}, median dF={:.3f} and a standard deviation={:.3f}".format(fresult.get('dF mean'),fresult.get('dF median'),fresult.get('dF stddev')))
-                logdict["Average deltaF"] = fresult.get('dF mean')
-                logdict["Median deltaF"] = fresult.get('dF median')
-                logdict["Standard deviation deltaF"] = fresult.get('dF stddev')
+                logdict["average deltaF"] = fresult.get('dF mean')
+                logdict["median deltaF"] = fresult.get('dF median')
+                logdict["standard deviation deltaF"] = fresult.get('dF stddev')
                 if np.isnan(fresult.get('dF mean')):
                     results["warnings"].append("Consistency test: Month {}, {} resolution: invalid F data".format(month,resolution))
                     if grades.get("step3", 0) <= 2:
@@ -530,8 +531,7 @@ def consistency_test(config, results, month=1, debug=True):
             # -----------------------------
             if fc and len(fc) > 0:
                 tempdata = read(logdict.get("Data path"), starttime=logdict.get("Data limits")[0],
-                                  endtime=logdict.get("Data limits")[1], select="environment", debug=True)
-                print ("Temperature data TODO", tempdata)
+                                  endtime=logdict.get("Data limits")[1], select="temperature")
             else:
                 tempdata = data.copy()
             t1col = tempdata._get_column('t1')
@@ -647,16 +647,69 @@ def content_test(config, results, month=1, debug=True):
     monthdict = results.get(month)
     logdict = monthdict.get(resolution)
     # check if filtered data is available already
+    print (logdict)
     filtdata = logdict.get('filtered', DataStream())
     if not len(filtdata) > 0:
         data = results.get('temporary{}data'.format(resolution))
-        filtdata = data.filter()
+        if data and len(data) > 0:
+            filtdata = data.filter()
     # get one-minute data:
-    mindata = results.get('temporarymindata')
+    mindata = results.get('temporaryminutedata')
     if len(mindata) > 0 and len(filtdata) > 0:
         print ("Content test: Lengths of filtered data sets")
         print (len(mindata))
-        print (len(filtdata))
+        print (len(filtdata)) # filtered data might be shorter than mindata because of filterwindow
+        if len(mindata) == len(filtdata):
+            # remove first and last time step
+            diff = subtract_streams(filtdata, mindata, keys=['x', 'y', 'z'])
+            # drop the first time step - quick and dirty - remove if filtering has been checked
+            diff = diff.trim(starttime=diff.ndarray[0][1], endtime=diff.ndarray[0][-2])
+            xd, xdst = diff.mean('x', std=True)
+            yd, ydst = diff.mean('y', std=True)
+            zd, zdst = diff.mean('z', std=True)
+            try:
+                xa = diff.amplitude('x')
+                ya = diff.amplitude('y')
+                za = diff.amplitude('z')
+            except:
+                print("Problem determining amplitudes...")
+                xa = 0.00
+                ya = 0.00
+                za = 0.00
+            print("  -> amplitudes determined")
+            logdict['filtered vs minutedata: mean difference - x component'] = "{:.3} nT".format(xd)
+            logdict['filtered vs minutedata: mean difference - y component'] = "{:.3} nT".format(yd)
+            logdict['mean difference - z component'] = "{:.3} nT".format(zd)
+            logdict['stddev of difference - x component'] = "{:.3} nT".format(xdst)
+            logdict['stddev of difference - y component'] = "{:.3} nT".format(ydst)
+            logdict['stddev of difference - z component'] = "{:.3} nT".format(zdst)
+            logdict['amplitude of difference - x component'] = "{:.3} nT".format(xa)
+            logdict['amplitude of difference - y component'] = "{:.3} nT".format(ya)
+            logdict['amplitude of difference - z component'] = "{:.3} nT".format(za)
+            if debug:
+                print("  -> dictionary written")
+            if max(xd, yd, zd) > 0.3:
+                results["warnings"].append('Content check for month {}: one-minute and one-second data differ by more than 0.3 nT in monthly average'.format(month))
+            if max(xa, ya, za) < 0.12:
+                logdict[
+                    'report'].append(' - content check: excellent agreement between definitive one-minute and one-second data products')
+            elif max(xa, ya, za) <= 0.3:
+                logdict[
+                    'report'].append(' - content check: good agreement between definitive one-minute and one-second data products')
+            elif max(xa, ya, za) > 0.3 and max(xa, ya, za) <= 5:
+                logdict[
+                    'report'].append(' - content check: small differences in peak amplitudes between definitive one-minute and one-second data products observed')
+            elif max(xa, ya, za) > 5:
+                results["warnings"].append('Content check for month {}: Large amplitude differences between definitive one-minute and one-second data products'.format(month))
+            if np.isnan(sum([xd, yd, zd, xa, ya, za])):
+                logdict[
+                    'report'].append(' - content check: not conclusive as NAN values are found')
+            if debug:
+                print("  -> one-minute comparison finished")
+        else:
+            results["warnings"].append('Comparison with definitive one-minute: filtered and original data sets differ in length')
+    else:
+        logdict["report"].append(' - content check: comparison of filtered second and one-minute: one of the data sets is not available')
 
     monthdict[resolution] = logdict
     results[month] = monthdict
@@ -677,8 +730,8 @@ if __name__ == '__main__':
 
     import subprocess
     #config = {'mindatapath' : '/home/leon/GeoSphereCloud/Daten/CobsDaten/Yearbook2023/IAF', 'months' : [6]}
-    config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/LYC', 'secdatapath' : '/home/leon/Tmp/CheckData/second/LYC', 'months' : [6]}
-    #config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/CNB', 'secdatapath' : '/home/leon/Tmp/CheckData/second/CNB', 'months' : [6]}
+    #config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/LYC', 'secdatapath' : '/home/leon/Tmp/CheckData/second/LYC', 'months' : [6]}
+    config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/CNB', 'secdatapath' : '/home/leon/Tmp/CheckData/second/CNB', 'months' : [6]}
     results = {
         "report": "## Report of MagPys data checking tool box\n based on MagPy version {}\n".format(magpyversion),
         "warnings": [],
@@ -694,7 +747,7 @@ if __name__ == '__main__':
         while True:
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
-                result = check_minute_directory(config, results)
+                results = check_minute_directory(config, results)
                 #print ("MINUTE", result)
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['check_minute_directory'] = ("Version: {}: {}".format(magpyversion,(te-ts).total_seconds()))
@@ -703,7 +756,7 @@ if __name__ == '__main__':
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with check_minute_directory.")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
-                result = check_second_directory(config, results)
+                results = check_second_directory(config, results)
                 #print ("SECOND", result)
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['check_second_directory'] = (
@@ -725,7 +778,7 @@ if __name__ == '__main__':
                            }
                 """
                 # requires results
-                result = read_month(config, results, month=config.get('months')[0], debug=True)
+                results = read_month(config, results, month=config.get('months')[0], debug=True)
                 print ("read DONE")
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['read_month'] = (
@@ -736,14 +789,14 @@ if __name__ == '__main__':
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 # requires results
-                result = consistency_test(config, results, month=config.get('months')[0], debug=True)
+                results = consistency_test(config, results, month=config.get('months')[0], debug=True)
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['consistency_test'] = (
                     "Version: {}: {}".format(magpyversion, (te - ts).total_seconds()))
             except Exception as excep:
                 errors['consistency_test'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with consistency_test.")
-            result = content_test(config, results, month=config.get('months')[0], debug=True)
+            results = content_test(config, results, month=config.get('months')[0], debug=True)
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 # requires results

@@ -6680,13 +6680,17 @@ class CheckDataReportDialog(wx.Dialog):
             title=title, size=(600, 400))
         self.rating = np.max(list(map(int,step)))
         # Construct report from results
-        replist = []
-        replist.append(results.get("report"))
-        replist.append(results.get("errors"))
-        replist.append(results.get("warnings"))
+        #replist = []
+        print (results.get("report"))
+        replist = [results.get("report")]
+        replist.append("\nErrors:")
+        replist.extend(results.get("errors"))
+        replist.append("\nWarnings:")
+        replist.extend(results.get("warnings"))
         for month in config.get('months'):
             monthdir = results.get(month)
             print (monthdir)
+        #print (replist)
         self.report = "\n".join(replist)
         # Construct ratings from results
 
@@ -6695,7 +6699,8 @@ class CheckDataReportDialog(wx.Dialog):
         for el in grades:
             print (el)
         self.step = step
-        currentstep = (np.max([idx for idx, val in enumerate(step) if not val == '0']))+1
+        currentstep = 7
+        #currentstep = (np.max([idx for idx, val in enumerate(step) if not val == '0']))+1
         if laststep == currentstep:
             self.contlabel = 'Save'
         else:

@@ -558,7 +558,8 @@ like scalar or temperature readings.
         sdata = read('/path/to/IMAGCDF/*.cdf', select='scalar')
         tdata = read('/path/to/IMAGCDF/*.cdf', select='temperature')
 
-When writing IMAGCDF files MagPy is using np.nan as fill value for missing data. You can change that by providing a 
+You can also select a specific temperature column by using "select=temperature2". When writing IMAGCDF files MagPy is 
+using np.nan as fill value for missing data. You can change that by providing a 
 different fill value using the option fillvalue:
 
         data.write('/path/to/export/', format_type='IMAGCDF', fillvalue=99999.0)
