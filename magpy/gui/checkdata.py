@@ -5,16 +5,20 @@ checkdata contains methods to support geomagnetic data checking
 
 the following methods are contained:
 
-|class | method | since version | until version | runtime test | result verification | manual | *tested by |
-|----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
-|**core.methods** |  |          |               |              |  |  | |
-|    | check_minute_directory |  2.0.0 |              | yes           | yes          |        | |
-|    | convert_geo_coordinate | 2.0.0 |        | yes           | yes          |        | |
-|    | data_for_di     | 2.0.0 |               | yes*          | yes*         |        | absolutes |
-|    | dates_to_url    | 2.0.0 |               |               | yes          |        | |
-|    | deprecated      | 2.0.0 |               | --            | --           |        | |
-
+|class | method | since version | until version | runtime test | result verifi. | manual | *used by       |
+|----- | ------ | ------------- | ------------- | ------------ | -------------- | ------ | -------------- |
+|**core.methods** |  |          |               |              |              |        |   |
+|    | _delta_F_test    | 2.0.0 |               | yes          |              |        | consistency_test |
+|    | check_minute_directory |  2.0.0 |        | yes          |              |        |   |
+|    | convert_geo_coordinate | 2.0.0 |         | yes          |              |        |   |
+|    | read_month       | 2.0.0 |               | yes          |              |        |   |
+|    | consistency_test | 2.0.0 |               | yes          |              |        |   |
+|    | content_test     | 2.0.0 |               | --           | --           |        |   |
+|    | baseline_test    | 2.0.0 |               |              | yes          |        |   |
+|    | header_test      | 2.0.0 |               |              | yes          |        |   |
+|    | k_value_test     | 2.0.0 |               |              | yes          |        |   |
 """
+
 
 import sys
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
@@ -24,9 +28,73 @@ import os
 from datetime import datetime, timedelta, timezone
 from matplotlib.dates import date2num
 import glob
-from magpy.stream import read, DataStream, magpyversion
+from magpy.stream import read, DataStream, magpyversion, merge_streams, subtract_streams
 from magpy.core import methods
 from magpy.lib.magpy_formats import IAFBINMETA, IAGAMETA, IMAGCDFMETA
+
+
+def _delta_F_test(fdata, debug=True):
+    """
+    DESCRIPTION
+         Testing delta F values
+         One could also run the outlier method on delta F
+    CALLED BY
+         consistency_test
+    RETURNS
+         dfmean     : mean of delta F -> offset from zero might indicate baseline correction issue
+         dfmedian     : median of delta F -> difference of median and mean as indicator for outliers
+         dfstddev   : stddev of delta F -> large variance indicates spikes or uncompensated baseline components
+         fsamprate  : samplingrate of F
+    """
+    result = {}
+    # Get the f and df columns  and test for data existence
+    ftest = fdata.copy()
+    fcol = fdata._get_column('f')
+    dfcol = fdata._get_column('df')
+    if len(fcol) == 0 and len(dfcol) == 0:
+        if debug:
+            print (" No F or dF values found")
+        return {'dF mean' : 0., 'dF median' : 0., 'dF stddev' : 0., 'F rate': 0., 'dF test' : "no data"}
+    scal=''
+    msg = "data found: "
+    if len(dfcol) > 0:
+        if debug:
+            print (" dF values found")
+        scal = 'df'
+        msg += scal
+    if len(fcol) > 0:
+        if debug:
+            print (" F values found")
+        scal = 'f'
+        if msg.endswith('f'):
+            msg += ", "
+        msg += scal
+    result['dF test'] = msg
+    ftest = ftest._drop_nans(scal)
+    result['F rate'] = ftest.samplingrate()
+    if scal=='f':
+        if debug:
+            print (" F provided, calculating dF")
+        ftest = ftest.delta_f()
+
+    #TODO proper treatment of -S values in delta_f in MagPy
+    # or ignore: G is quality value for variometer data and
+    # should be provided for existing variometer values.
+    # If F(S) should be provided, an independent measurement with
+    # with eventually different sampling rate or data value at non-existing
+    # variometer data, then please provide it as S. G can be easily calculated
+    #quick workaround -> exclude large negative  values
+    ftest = ftest.extract('df',-15000,'>')
+
+    fmean, fstd = ftest.mean('df',std=True)
+    fmedian, fstd = ftest.mean('df',meanfunction='median',std=True)
+    result['dF mean'] = fmean
+    result['dF median'] = fmedian
+    result['dF stddev'] = fstd
+    if debug:
+        print ("F result", result)
+    return result
+
 
 def check_minute_directory(config, results):
     """
@@ -376,74 +444,11 @@ def read_month(config, results, month=1, debug=True):
     return results
 
 
-def _delta_F_test(fdata, debug=True):
-    """
-    DESCRIPTION
-         Testing delta F values
-         One could also run the outlier method on delta F
-    CALLED BY
-         consistency_test
-    RETURNS
-         dfmean     : mean of delta F -> offset from zero might indicate baseline correction issue
-         dfmedian     : median of delta F -> difference of median and mean as indicator for outliers
-         dfstddev   : stddev of delta F -> large variance indicates spikes or uncompensated baseline components
-         fsamprate  : samplingrate of F
-    """
-    result = {}
-    # Get the f and df columns  and test for data existence
-    ftest = fdata.copy()
-    fcol = fdata._get_column('f')
-    dfcol = fdata._get_column('df')
-    if len(fcol) == 0 and len(dfcol) == 0:
-        if debug:
-            print (" No F or dF values found")
-        return {'dF mean' : 0., 'dF median' : 0., 'dF stddev' : 0., 'F rate': 0., 'dF test' : "no data"}
-    scal=''
-    msg = "data found: "
-    if len(dfcol) > 0:
-        if debug:
-            print (" dF values found")
-        scal = 'df'
-        msg += scal
-    if len(fcol) > 0:
-        if debug:
-            print (" F values found")
-        scal = 'f'
-        if msg.endswith('f'):
-            msg += ", "
-        msg += scal
-    result['dF test'] = msg
-    ftest = ftest._drop_nans(scal)
-    result['F rate'] = ftest.samplingrate()
-    if scal=='f':
-        if debug:
-            print (" F provided, calculating dF")
-        ftest = ftest.delta_f()
-
-    #TODO proper treatment of -S values in delta_f in MagPy
-    # or ignore: G is quality value for variometer data and
-    # should be provided for existing variometer values.
-    # If F(S) should be provided, an independent measurement with
-    # with eventually different sampling rate or data value at non-existing
-    # variometer data, then please provide it as S. G can be easily calculated
-    #quick workaround -> exclude large negative  values
-    ftest = ftest.extract('df',-15000,'>')
-
-    fmean, fstd = ftest.mean('df',std=True)
-    fmedian, fstd = ftest.mean('df',meanfunction='median',std=True)
-    result['dF mean'] = fmean
-    result['dF median'] = fmedian
-    result['dF stddev'] = fstd
-    if debug:
-        print ("F result", result)
-    return result
-
-
 def consistency_test(config, results, month=1, debug=True):
     """
     DESCRIPTION
-         Testing internal consistency of each data set. This includes the completness of vector data,
-         dalta F values and ist offset, variation, auxiliary data like temperature, other resolution data
+         Testing internal consistency of each data set. This includes the completeness of vector data,
+         dalta F values and its offset, variation, auxiliary data like temperature, other resolution data
          like hours, k values.
          Consistency testing is done for each month directly after read month making use of temporary files.
 
@@ -463,57 +468,198 @@ def consistency_test(config, results, month=1, debug=True):
     grades = results.get('grades',{})
     if grades.get("step3",0) <= 1:
         grades["step3"] = 1
-    res_cons_test = {}
+    #res_cons_test = {}
     for resolution in ["minute", "second"]:
         if debug:
             print ("Running consistency test for resolution", resolution)
         monthdict = results.get(month)
         logdict = monthdict.get(resolution)
         data = results.get('temporary{}data'.format(resolution))
-        print ("HERE")
         if logdict and data:
             logdict["report"].append("#### One-{} consistency test".format(resolution))
             # Testing F/G
+            # -----------------------------
             # read scalar data if applicable
-            print ("Consistency", logdict)
-            print(data.header.get('FileContents'))
+            fc = data.header.get('FileContents',[])
+            logdict["Amount of scalar data"] = len(data)
+            if fc and len(fc) > 0:
+                logdict["report"].append(" - data set contains contents of variable lengths: {}".format(print(data.header.get('FileContents'))))
+                vlen = [el[0] for el in fc if el[1].find("Vector") >= 0]
+                slen = [el[0] for el in fc if el[1].find("Scalar") >= 0]
+                logdict["Amount of scalar data"] = slen[0]
+                if len(vlen) > 0 and len(slen) > 0 and not vlen[0] == slen[0]:
+                    logdict["report"].append(" - found different amounts of scalar data N={} and variometer data N={}".format(slen[0], vlen[0]))
+                    logdict["report"].append("   filtering both data sets and merging at equal time steps before delta F analysis")
+                    print (" extracting and filtering scalar data before delta F analysis")
+                    scalardata = read(logdict.get("Data path"), starttime=logdict.get("Data limits")[0], endtime=logdict.get("Data limits")[1], select="scalar")
+                    scalardata = scalardata.filter()
+                    vectordata = data.filter()
+                    data = merge_streams(scalardata,vectordata)
+                    logdict["filtered"] = data.copy()
             #if logdict.get("Data format").find("CDF") > -1:
             # read specific f data in case of IMAGCDF files
             # get data path and call command to read scalar data
             fdata = data.copy()
             fresult = _delta_F_test(fdata)
             if fresult.get('dF test').startswith('no'):
-                print ("no F data")
+                logdict["Amount of scalar data"] = 0
             else:
+                logdict["report"].append(" - delta F analysis: sampling rate = {:.0f} sec".format(fresult.get('F rate',0)))
+                logdict["report"].append(" - delta F analysis: obtained average dF={:.3f}, median dF={:.3f} and a standard deviation={:.3f}".format(fresult.get('dF mean'),fresult.get('dF median'),fresult.get('dF stddev')))
+                logdict["Average deltaF"] = fresult.get('dF mean')
+                logdict["Median deltaF"] = fresult.get('dF median')
+                logdict["Standard deviation deltaF"] = fresult.get('dF stddev')
                 if np.isnan(fresult.get('dF mean')):
-                    print ("warning - no data to evaluate")
+                    results["warnings"].append("Consistency test: Month {}, {} resolution: invalid F data".format(month,resolution))
+                    if grades.get("step3", 0) <= 2:
+                        grades["step3"] = 2
                 elif np.abs(fresult.get('dF mean')) >= 1.0:
-                    print ("warning - warning offset")
+                    results["warnings"].append("Consistency test: Month {}, {} resolution: average delta F differs strongly from zero".format(month,resolution))
+                    if grades.get("step3", 0) <= 2:
+                        grades["step3"] = 2
                 elif np.abs(fresult.get('dF mean')) < 0.01 and np.abs(fresult.get('dF stddev')) < 0.01:
-                    print ("warning - independence")
-                print ("Diff between mean and median", np.abs(fresult.get('dF mean') - fresult.get('dF median')))
-                if not np.isnan(fresult.get('dF mean')) and np.abs(fresult.get('dF mean') - fresult.get('dF median')) > 0.1:
-                    print ("waring - spikes")
+                    results["warnings"].append("Consistency test: Month {}, {} resolution: is F really independent from vector data?".format(month,resolution))
+                    if grades.get("step3", 0) <= 2:
+                        grades["step3"] = 2
+                #print ("Diff between mean and median", np.abs(fresult.get('dF mean') - fresult.get('dF median')))
+                if not np.isnan(fresult.get('dF mean')) and np.abs(fresult.get('dF mean') - fresult.get('dF median')) > 0.05:
+                    results["warnings"].append("Consistency test: Month {}, {} resolution: Median and Mean are significantly different. Check outliers".format(month,resolution))
+                    if grades.get("step3", 0) <= 2:
+                        grades["step3"] = 2
+            # Testing temperature
+            # -----------------------------
+            if fc and len(fc) > 0:
+                tempdata = read(logdict.get("Data path"), starttime=logdict.get("Data limits")[0],
+                                  endtime=logdict.get("Data limits")[1], select="environment", debug=True)
+                print ("Temperature data TODO", tempdata)
+            else:
+                tempdata = data.copy()
+            t1col = tempdata._get_column('t1')
+            t2col = tempdata._get_column('t2')
+            if len(t1col) > 0:
+                tdata = tempdata._drop_nans('t1')
+                t1mean, t1std = tdata.mean('t1', std=True)
+                logdict["report"].append(" - temperature analysis: average T1 {:.2f} +/- {:.2f} deg".format(t1mean, t1std))
+            if len(t2col) > 0:
+                tdata = tempdata._drop_nans('t2')
+                t2mean, t2std = tdata.mean('t2', std=True)
+                logdict["report"].append(" - temperature analysis: average T2 {:.2f} +/- {:.2f} deg".format(t2mean, t2std))
+            # Testing filtered contents
+            # -----------------------------
+            if logdict.get("Data format").find("IAF") > -1:
+                logdict["report"].append(
+                    " - testing hourly mean data in IAF")
+                #print ("CURRENT results", results)
+                hour_filter = data.filter(filter_type='flat',filter_width=timedelta(hours=1),resampleoffset=timedelta(minutes=30))
+                st = logdict.get("Data limits")[0]
+                et = logdict.get("Data limits")[1]
+                hour_data = read(logdict.get("Data path"), starttime=st, endtime=et, resolution="hour")
+                if len(hour_data) > 0:
+                    effectivedays = int(date2num(et) - date2num(st)) + 1
+                    expectedlength = 24*effectivedays
+                    if not len(hour_data) == expectedlength:
+                        results["warnings"].append(
+                            "Consistency test: Month {}, {} resolution: IAF hour data N={} differs from expected amount N={}".format(
+                                month,resolution,len(hour_data),expectedlength))
+                        if grades.get("step3", 0) <= 2:
+                            grades["step3"] = 2
+                    elif not len(hour_filter) == len(hour_data):
+                        logdict["report"].append(
+                            " - hourly data from IAF and filtered minute data differ in length, not affecting grade but please check")
+                    else:
+                        logdict["report"].append(
+                            " - extracted hourly data from IAF: found the expected amount of data")
+                    diffs = subtract_streams(hour_filter, hour_data)
+                    hourwarn = False
+                    if np.isnan(diffs.mean('x')) or np.abs(diffs.mean('x')) > 0.05:
+                        results["warnings"].append(
+                            "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in X={}".format(
+                                month,resolution,diffs.mean('x')))
+                        if grades.get("step3", 0) <= 2:
+                            grades["step3"] = 2
+                        hourwarn = True
+                    if np.isnan(diffs.mean('y')) or np.abs(diffs.mean('y')) > 0.05:
+                        results["warnings"].append(
+                            "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in Y={}".format(
+                                month,resolution,diffs.mean('y')))
+                        if grades.get("step3", 0) <= 2:
+                            grades["step3"] = 2
+                        hourwarn = True
+                    if np.isnan(diffs.mean('z')) or np.abs(diffs.mean('z')) > 0.05:
+                        results["warnings"].append(
+                            "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in Z={}".format(
+                                month,resolution,diffs.mean('z')))
+                        if grades.get("step3", 0) <= 2:
+                            grades["step3"] = 2
+                        hourwarn = True
+                    if np.isnan(diffs.mean('df')) or np.abs(diffs.mean('df')) > 0.05:
+                        # TODO if no df in hourly data than diff will np.nan - add that in the README
+                        results["warnings"].append(
+                            "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in dF={}".format(
+                                month,resolution,diffs.mean('df')))
+                        hourwarn = True
+                    if not hourwarn:
+                        logdict["report"].append(
+                            " - compared hourly data from IAF with filtered one-minute data: fine")
+                else:
+                    logdict["report"].append(
+                    " - could not extract hourly data from IAF")
+                    if grades.get("step3", 0) <= 3:
+                        grades["step3"] = 3
+                    results["errors"].append(
+                        "Consistency test: Month {}, {} resolution: Could not extract IAF hourly data".format(
+                            month, resolution))
+            print ("Consistency", logdict)
 
-    """
-    if np.isnan(fmean):
-        warningdict['F'] = 'mean delta F could not be determined - please check F/S/G values in cdf'
-        print (" Significant amount of F values could not be extracted - only NAN contained?")
-    if debug:
-        print (" mean delta F of {:.3f} with a std of {:.3f}".format(fmean,fstd))
-    logdict['delta F'] = "mean delta F of {:.3f} with a std of {:.3f}".format(fmean,fstd)
-    if np.abs(fmean) >= 1.0:
-        warningdict['F'] = 'mean delta F exceeds 1 nT'
-    if fstd >= 3.0:
-        issuedict['F'] = 'dF/G shows large scatter about mean'
-    if np.abs(fmean) < 0.01 and fstd < 0.01:
-        f1text = 'found'   # eventually not-independent
-    if np.abs(fmean) < 0.001 and fstd < 0.001:
-        f1text = 'found not-independend'
+        monthdict[resolution] = logdict
+        print (monthdict.get(resolution))
 
-    f2text = "{} {} with sampling period: {} sec\n".format(f1text,scal, fsamprate)
-    logdict['F'] = f2text
+    results[month] = monthdict
+
+    return results
+
+
+def content_test(config, results, month=1, debug=True):
     """
+    DESCRIPTION
+         Content test compares one-second and one-minute data. This step requires the availability of both data sets
+         and is skipped if such data is not available.
+         Content testing is done for each month directly and requires consistency tests before.
+
+    :param config:
+    :param results:
+    :return:
+    """
+    if not results:
+        results = { "report" : [],
+                    "warnings" : [],
+                    "errors" : [],
+                    "temporaryminutedata" : DataStream(),
+                    "temporaryseconddata" : DataStream(),
+                    "grades" : { "step4" : 0
+                                 }
+                    }
+    grades = results.get('grades',{})
+    if grades.get("step3",0) <= 1:
+        grades["step3"] = 1
+    # content test starts with one second
+    resolution = "second"
+    monthdict = results.get(month)
+    logdict = monthdict.get(resolution)
+    # check if filtered data is available already
+    filtdata = logdict.get('filtered', DataStream())
+    if not len(filtdata) > 0:
+        data = results.get('temporary{}data'.format(resolution))
+        filtdata = data.filter()
+    # get one-minute data:
+    mindata = results.get('temporarymindata')
+    if len(mindata) > 0 and len(filtdata) > 0:
+        print ("Content test: Lengths of filtered data sets")
+        print (len(mindata))
+        print (len(filtdata))
+
+    monthdict[resolution] = logdict
+    results[month] = monthdict
     return results
 
 
@@ -531,11 +677,11 @@ if __name__ == '__main__':
 
     import subprocess
     #config = {'mindatapath' : '/home/leon/GeoSphereCloud/Daten/CobsDaten/Yearbook2023/IAF', 'months' : [6]}
-    #config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/LYC', 'secdatapath' : '/home/leon/Tmp/CheckData/second/LYC', 'months' : [6]}
-    config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/CNB', 'secdatapath' : '/home/leon/Tmp/CheckData/second/CNB', 'months' : [6]}
+    config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/LYC', 'secdatapath' : '/home/leon/Tmp/CheckData/second/LYC', 'months' : [6]}
+    #config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/CNB', 'secdatapath' : '/home/leon/Tmp/CheckData/second/CNB', 'months' : [6]}
     results = {
         "report": "## Report of MagPys data checking tool box\n based on MagPy version {}\n".format(magpyversion),
-        "warning": [],
+        "warnings": [],
         "errors": [],
         "temporarydata": DataStream()
         }
@@ -558,7 +704,7 @@ if __name__ == '__main__':
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 result = check_second_directory(config, results)
-                print ("SECOND", result)
+                #print ("SECOND", result)
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['check_second_directory'] = (
                     "Version: {}: {}".format(magpyversion, (te - ts).total_seconds()))
@@ -597,6 +743,16 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['consistency_test'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with consistency_test.")
+            result = content_test(config, results, month=config.get('months')[0], debug=True)
+            try:
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
+                # requires results
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
+                successes['content_test'] = (
+                    "Version: {}: {}".format(magpyversion, (te - ts).total_seconds()))
+            except Exception as excep:
+                errors['content_test'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with content_test.")
 
             # If end of routine is reached... break.
             break

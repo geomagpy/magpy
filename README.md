@@ -551,7 +551,7 @@ The general IMAGCDF read command looks as follows
         data = read('/path/to/IMAGCDF/*.cdf')
 
 If the IMAGCDF archive contains contents referring to different time columns, then 'FileContents' will give you some
-information about them. The select options allows you to specifically load lower resolution data 
+information about them. The **select** options allows you to specifically load lower resolution data 
 like scalar or temperature readings.
 
         print(data.header.get('FileContents'))
@@ -603,8 +603,7 @@ ignored. This mode will give you an exact reproduction of the contained adopted 
 
 If you want to plot data and original adopted basevalues use
 
-        mp.tsplo    tcol = teststr
-t([basevalues,adoptedbase], [['dx','dy','dz']], symbols=[['o','o','o'],['-','-','-']])
+        mp.tsplot([basevalues,adoptedbase], [['dx','dy','dz']], symbols=[['o','o','o'],['-','-','-']])
 
 The meta information is accessible within the data header. MagPy is designed to be strongly related to underlying 
 instruments, as defined by SensorID's and PierID's. BLV files are strongly instrument related as the baseline is always

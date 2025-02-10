@@ -6675,12 +6675,25 @@ class CheckDataReportDialog(wx.Dialog):
         Dialog to show report of data check
     """
 
-    def __init__(self, parent, title, report, rating, step=['0','0','0','0','0','0','0'],laststep=7):
+    def __init__(self, parent, title, config, results, step=['0','0','0','0','0','0','0'],laststep=7):
         super(CheckDataReportDialog, self).__init__(parent=parent,
             title=title, size=(600, 400))
         self.rating = np.max(list(map(int,step)))
-        self.report = report
+        # Construct report from results
+        replist = []
+        replist.append(results.get("report"))
+        replist.append(results.get("errors"))
+        replist.append(results.get("warnings"))
+        for month in config.get('months'):
+            monthdir = results.get(month)
+            print (monthdir)
+        self.report = "\n".join(replist)
+        # Construct ratings from results
+
         self.laststep = laststep
+        grades = results.get("grades")
+        for el in grades:
+            print (el)
         self.step = step
         currentstep = (np.max([idx for idx, val in enumerate(step) if not val == '0']))+1
         if laststep == currentstep:
@@ -6694,14 +6707,14 @@ class CheckDataReportDialog(wx.Dialog):
 
 
     def putColor(self, rating, step):
-        if rating in ['1','2']:
+        if rating in ['1']:
             exec("self.step{}TextCtrl.SetBackgroundColour(wx.GREEN)".format(step))
-        elif rating in ['3','4']:
+        elif rating in ['2']:
             exec("self.step{}TextCtrl.SetBackgroundColour(wx.Colour(255,165,0))".format(step))
-        elif rating in ['5','6']:
+        elif rating in ['3']:
             exec("self.step{}TextCtrl.SetBackgroundColour(wx.RED)".format(step))
         else:
-            pass
+            exec("self.step{}TextCtrl.SetBackgroundColour(wx.BLUE)".format(step))
 
 
     # Widgets
@@ -6748,11 +6761,11 @@ class CheckDataReportDialog(wx.Dialog):
         for idx, rating in enumerate(self.step):
             self.putColor(rating, idx+1)
 
-        if self.rating in ['1','2',1,2]:
+        if self.rating in ['1',1]:
             self.ratingTextCtrl.SetBackgroundColour(wx.GREEN)
-        elif self.rating in ['3','4',3,4]:
+        elif self.rating in ['2',2]:
             self.ratingTextCtrl.SetBackgroundColour(wx.Colour(255,165,0))
-        elif self.rating in ['5','6',5,6]:
+        elif self.rating in ['3',3]:
             self.ratingTextCtrl.SetBackgroundColour(wx.RED)
         else:
             pass

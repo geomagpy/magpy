@@ -6783,8 +6783,8 @@ class MainFrame(wx.Frame):
             results = checkdata.read_month(config, results, month=month)
 
         #report = checkdata.create_report(reportmsg, warningmsg, errormsg)
-        dlg = CheckDataReportDialog(None, title='Data check report', report=report,
-                                        rating=max(list(map(int, succlst))), step=list(map(str, succlst)),
+        dlg = CheckDataReportDialog(None, title='Data check report', config=config,
+                                        results=results, step=list(map(str, succlst)),
                                         laststep=laststep)
         dlg.ShowModal()
         #if dlg.moveon:

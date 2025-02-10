@@ -3427,7 +3427,7 @@ CALLED BY:
             if v.ndim != 1:
                 logger.error("Filter: Only accepts 1 dimensional arrays.")
             if window_len<3:
-                logger.error("Filter: Window lenght defined by filter_width needs to cover at least three data points")
+                logger.error("Filter: Window length defined by filter_width needs to cover at least three data points")
 
             if debugmode:
                 print("Treating k:", key, v.size)
