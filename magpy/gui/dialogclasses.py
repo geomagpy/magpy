@@ -6678,27 +6678,38 @@ class CheckDataReportDialog(wx.Dialog):
     def __init__(self, parent, title, config, results, step=['0','0','0','0','0','0','0'],laststep=7):
         super(CheckDataReportDialog, self).__init__(parent=parent,
             title=title, size=(600, 400))
-        self.rating = np.max(list(map(int,step)))
         # Construct report from results
         #replist = []
         print (results.get("report"))
         replist = [results.get("report")]
-        replist.append("\nErrors:")
+        replist.append("\n## Errors")
         replist.extend(results.get("errors"))
-        replist.append("\nWarnings:")
+        replist.append("\n## Warnings")
         replist.extend(results.get("warnings"))
+        replist.append("\n## Detailed monthly report")
+        replist.extend(results.get("minute-data-directory").get('report'))
+        replist.extend(results.get("second-data-directory").get('report'))
         for month in config.get('months'):
-            monthdir = results.get(month)
-            print (monthdir)
+            monthdict = results.get(month)
+            replist.append("### Details for month {}".format(month))
+            minlist = monthdict.get('minute').get('report')
+            seclist = monthdict.get('second').get('report')
+            replist.extend(minlist)
+            replist.extend(seclist)
+        replist.extend(results.get("baseline-analysis").get('report'))
+        replist.extend(results.get("header-analysis").get('report'))
+
         #print (replist)
         self.report = "\n".join(replist)
         # Construct ratings from results
 
         self.laststep = laststep
         grades = results.get("grades")
+        step = []
         for el in grades:
-            print (el)
+            step.append(str(grades.get(el,0)))
         self.step = step
+        self.rating = np.max(list(map(int,step)))
         currentstep = 7
         #currentstep = (np.max([idx for idx, val in enumerate(step) if not val == '0']))+1
         if laststep == currentstep:

@@ -2717,7 +2717,7 @@ CALLED BY:
         - stream:       (DataStream) Differentiated data stream, x values in dx, etc..
 
     EXAMPLE:
-        stream = stream.differentiate(keys=['f'],put2keys=['df'])
+        stream = stream.derivative(keys=['f'],put2keys=['df'])
 
     APPLICATION:
         """

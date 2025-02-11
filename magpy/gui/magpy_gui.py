@@ -1754,24 +1754,25 @@ class MainFrame(wx.Frame):
             Mouse event for flagging
             Right click will remove flag patches and corresponding flags from the current flaglist
         """
-        data = self.datadict.get(self.active_id).get('dataset')
-        fl = data.header.get('DataFlags', flagging.Flags())
-        if not event.inaxes or not fl: #or not event.dblclick:
-            return
-        else:
-            pickX, pickY = event.xdata, event.ydata
-            time = num2date(pickX).replace(tzinfo=None)
-            if event.button is MouseButton.MIDDLE:
-                # TODO open a window with flag data to be modified
-                print("clicked left", pickX, pickY, time)
-                ids = [fid for fid in fl.flagdict if
-                                   fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
-            if event.button is MouseButton.RIGHT:
-                ids = [fid for fid in fl.flagdict if fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
-                newfl = fl.drop(parameter='flagid', values=ids)
-                data.header['DataFlags'] = newfl
-                self._initial_plot(self.active_id, keepplotdict=True)
-                self.menu_p.fla_page.flagAcceptButton.Enable()
+        if self.active_id:
+            data = self.datadict.get(self.active_id).get('dataset')
+            fl = data.header.get('DataFlags', flagging.Flags())
+            if not event.inaxes or not fl: #or not event.dblclick:
+                return
+            else:
+                pickX, pickY = event.xdata, event.ydata
+                time = num2date(pickX).replace(tzinfo=None)
+                if event.button is MouseButton.MIDDLE:
+                    # TODO open a window with flag data to be modified
+                    print("clicked left", pickX, pickY, time)
+                    ids = [fid for fid in fl.flagdict if
+                                       fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
+                if event.button is MouseButton.RIGHT:
+                    ids = [fid for fid in fl.flagdict if fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
+                    newfl = fl.drop(parameter='flagid', values=ids)
+                    data.header['DataFlags'] = newfl
+                    self._initial_plot(self.active_id, keepplotdict=True)
+                    self.menu_p.fla_page.flagAcceptButton.Enable()
 
 
     @deprecated("Will be replaced by _deactivate_controls")
@@ -6771,18 +6772,34 @@ class MainFrame(wx.Frame):
             config["months"] = list(range(1,13))
             results["report"] += "\nTest type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
 
-        print (config, results)
         # run module1
         import checkdata
         # Step 1
         results = checkdata.check_minute_directory(config, results)
         results = checkdata.check_second_directory(config, results)
-        print (results)
         for month in config.get('months'):
             print ("Now running details for month", month)
             results = checkdata.read_month(config, results, month=month)
             results = checkdata.consistency_test(config, results, month=month)
             results = checkdata.content_test(config, results, month=month)
+        results = checkdata.baseline_check(config, results)
+        results = checkdata.header_test(config, results)
+        results = checkdata.k_value_test(config, results)
+
+        # plots
+        blvd = results.get('baseline-analysis').get('data')
+        kdiff = results.get('k-value-analysis').get('diffdata')
+        kdata = results.get('k-value-analysis').get('data')
+        if len(blvd) > 0:
+            streamid = self._initial_read(kdata)
+            self._initial_plot(streamid)
+        if len(kdata) > 0:
+            streamid = self._initial_read(kdata)
+            self._initial_plot(streamid)
+        if len(kdiff) > 0:
+            kdiff.header['col-var1'] = 'delta K (reported - fmi)'
+            streamid = self._initial_read(kdiff)
+            self._initial_plot(streamid)
 
         #report = checkdata.create_report(reportmsg, warningmsg, errormsg)
         dlg = CheckDataReportDialog(None, title='Data check report', config=config,
@@ -6792,6 +6809,7 @@ class MainFrame(wx.Frame):
         #if dlg.moveon:
         #    saveReport(dlg.contlabel, dlg.report)
         dlg.Destroy()
+
         self.changeStatusbar("Ready")
 
     @deprecated("Apperently not used any more")

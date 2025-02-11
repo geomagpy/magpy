@@ -128,7 +128,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             else:
                 return {}
         else:
-            print ("readIMAGCDF: Could  not interpret flagging ruleset or flagging object is empty")
+            if debug:
+                print ("readIMAGCDF: Could  not interpret flagging ruleset or flagging object is empty")
             logger.warning("readIMAGCDF: Could  not interpret Ruleset")
             return {}
 
@@ -138,7 +139,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     if debug:
         print ("Reading ImagCDF with cdflib")
 
-    if select:
+    if select and debug:
         print ("Only data associated with {} time column will be extracted".format(select))
 
     for att in cdfdat.globalattsget():
@@ -296,8 +297,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                         referencetimecol = na
                         pos = idx
             else:
-                print("readIMAGCDF: Time columns of different length. Choosing only longest. Use option select")
-                print("             and check header FileContents for available contents")
+                if debug:
+                    print("readIMAGCDF: Time columns of different length. Choosing only longest. Use option select")
+                    print("             and check header FileContents for available contents")
                 timecol = tllist[tl.index(max(tl))][1]
                 referencetimecol = timecol
             if not timecol:
