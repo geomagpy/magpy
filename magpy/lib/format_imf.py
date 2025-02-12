@@ -527,6 +527,8 @@ def readIAF(filename, headonly=False, **kwargs):
                 array[pos] = np.asarray(ar)
         return np.asarray(array,dtype=object)
 
+    headers['DataFormat'] = 'IAF'
+
     if resolution in ['day','days','Day','Days','DAY','DAYS']:
         ndarray = data2array([xd,yd,zd,fd],keystr.split(','),min(datelist),sr=86400)
         headers['DataSamplingRate'] = '86400 sec'
@@ -538,7 +540,7 @@ def readIAF(filename, headonly=False, **kwargs):
         ndarray = data2array([k],['var1'],min(datelist)+timedelta(minutes=90),sr=10800)
         headers['DataSamplingRate'] = '10800 sec'
         headers['DataFormat'] = 'MagPyK'
-        headers['col-var1'] = "k"
+        headers['col-var1'] = "K"
     else:
         logger.debug("Key and minimum: {} {}".format(keystr, min(datelist)))
         ndarray = data2array([x,y,z,f],keystr.split(','),min(datelist),sr=60)
@@ -547,7 +549,6 @@ def readIAF(filename, headonly=False, **kwargs):
     stream = DataStream(header=headers, ndarray=ndarray)
     #if 'df' in keystr:
     #    stream = stream.f_from_df()
-    stream.header['DataFormat'] = 'IAF'
 
     return stream
 

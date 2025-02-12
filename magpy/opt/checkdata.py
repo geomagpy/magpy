@@ -362,12 +362,12 @@ def read_month(config, results, month=1, debug=False):
             enddate = datetime(enddate.year, enddate.month, 1)
             if ext:  # found data
                 if debug:
-                    print (" - loading from directory:", os.path.join(datapath, "*"+ext))
+                    print (" - loading from directory:", os.path.join(datapath, "{}{}".format('*',ext)))
                 logdict['Data path'] = os.path.join(datapath, "*"+ext)
-                data = read(os.path.join(datapath, "*"+ext), starttime=startdate, endtime=enddate)
+                data = read(os.path.join(datapath, "{}{}".format('*',ext)), starttime=startdate, endtime=enddate)
                 if not len(data) > 0:
                     # eventually start and endtime could not be identified in filename like for IAF, so read all and trim
-                    data = read(os.path.join(datapath, "*" + ext))
+                    data = read(os.path.join(datapath, "{}{}".format('*',ext)))
                     data = data.trim(starttime=startdate, endtime=enddate)
                 # get month and year
                 if not len(data) > 0:
@@ -377,6 +377,7 @@ def read_month(config, results, month=1, debug=False):
                         grades["step2"] = 3
                 else:
                     results['temporary{}data'.format(resolution)] = data
+                    logdict['data'] = data
                     logdict["report"].append(" - data for month {} successfully loaded ".format(month))
                     cntbefore = len(data)
                     data = data.get_gaps()
@@ -470,6 +471,7 @@ def consistency_test(config, results, month=1, debug=False):
                                  }
                     }
     grades = results.get('grades',{})
+    monthdict = {}
     if grades.get("step2",0) <= 1:
         grades["step2"] = 1
     #res_cons_test = {}
@@ -664,7 +666,7 @@ def content_test(config, results, month=1, debug=False):
         if len(mindata) == len(filtdata):
             # remove first and last time step
             diff = subtract_streams(filtdata, mindata, keys=['x', 'y', 'z'])
-            logdict["diffdata"] = diff
+            logdict['diffdata'] = diff
             # drop the first time step - quick and dirty - remove if filtering has been checked
             diff = diff.trim(starttime=diff.ndarray[0][1], endtime=diff.ndarray[0][-2])
             xd, xdst = diff.mean('x', std=True)
@@ -1001,6 +1003,7 @@ def k_value_test(config, results, debug=False):
     path = config.get('mindatapath')
     if path and ext and mindict.get('format') == 'IAF':
         korgdata = read(os.path.join(path,"{}{}".format('*',ext)), resolution='k')
+        print ("HEADER", korgdata.header)
         korgvals = korgdata._get_column('var1')
         k_test["report"].append(" - found {} K values in IAF data set".format(len(korgvals)))
         if len(korgvals) > 0:
@@ -1027,11 +1030,14 @@ def k_value_test(config, results, debug=False):
         kdata_found = True
         if len(korgvals) > 0:
             korgdata = korgdata.trim(kdata.start(), kdata.end()+timedelta(seconds=kdata.samplingrate()))
-            print (len(korgdata), len(kdata))
-            print (korgdata)
+            if debug:
+                print ("original data and calculated")
+                print (len(korgdata), len(kdata))
+                print (korgdata)
             kdiff = subtract_streams(korgdata, kdata)
             km, ks = kdiff.mean('var1', std=True, percentage=1)
-            print (km, ks)
+            if debug:
+                print ("K difference mean and std", km, ks)
             karr = np.nanmax(np.abs(np.diff(kdiff._get_column('var1'))))
             if karr > 1 and np.abs(km) > 0.05 and ks > 0.2: # arbitrary thresholds
                 k_test["report"].append(

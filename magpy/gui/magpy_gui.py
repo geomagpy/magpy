@@ -6716,16 +6716,12 @@ class MainFrame(wx.Frame):
         checkchoice = 'quick'
         runit = False
 
-        seconddata = 'None'
-        iafpath = ''
-        blvpath = ''
-        dkapath = ''
-        yearmeanpath = ''
-        reportmsg = ''
-        errormsg = ''
-        warningmsg = ''
-        year = 1777
-
+        mindata = DataStream()
+        secdata = DataStream()
+        diffdata = DataStream()
+        blvd = DataStream()
+        kdata = DataStream()
+        kdiff = DataStream()
 
         self.changeStatusbar("Checking data ... ")
 
@@ -6738,8 +6734,9 @@ class MainFrame(wx.Frame):
 
         # A) open a dialog to obtain testing parameters and paths
         succlst = ['0','0','0','0','0','0','0']
+        checkparameter = []
         success = 6  # integer from 1 to 6 - 1 everything perfect, 6 bad
-        laststep = 7 # used to switch from continue to save
+        laststep = 5 # used to switch from continue to save - remove
         dlg = CheckDefinitiveDataDialog(None, title='Checking defintive data')
         if dlg.ShowModal() == wx.ID_OK:
             checkchoice = dlg.checkchoice
@@ -6754,7 +6751,6 @@ class MainFrame(wx.Frame):
             return
 
         randommonth = np.random.randint(0, 13)
-        month = datetime(1900, randommonth, 1).strftime('%b')
         if checkchoice == 'quick':
             config["months"] = [randommonth]
             results["report"] += "\nTest type: {} . Testing only randomly selected month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
@@ -6767,23 +6763,39 @@ class MainFrame(wx.Frame):
         # Step 1
         results = checkdata.check_minute_directory(config, results)
         results = checkdata.check_second_directory(config, results)
-        for month in config.get('months'):
-            self.changeStatusbar("Checking data for month {} ... please wait".format(month))
-            results = checkdata.read_month(config, results, month=month)
-            results = checkdata.consistency_test(config, results, month=month)
-            results = checkdata.content_test(config, results, month=month)
-        self.changeStatusbar("Checking data - baseline test")
-        results = checkdata.baseline_check(config, results)
-        self.changeStatusbar("Checking data - header test")
-        results = checkdata.header_test(config, results)
-        self.changeStatusbar("Checking data - K value test")
-        results = checkdata.k_value_test(config, results)
+        if checkparameter.get('step2'):
+            for month in config.get('months'):
+                self.changeStatusbar("Checking data for month {} ... please wait".format(month))
+                results = checkdata.read_month(config, results, month=month)
+                mindata = results.get(month).get('minute',{}).get('data', DataStream())
+                secdata = results.get(month).get('second',{}).get('data', DataStream())
+                results = checkdata.consistency_test(config, results, month=month)
+                results = checkdata.content_test(config, results, month=month)
+                diffdata = results.get(month).get('second',{}).get('diffdata', DataStream())
+        if checkparameter.get('step3'):
+            self.changeStatusbar("Checking data - baseline test")
+            results = checkdata.baseline_check(config, results)
+            blvd = results.get('baseline-analysis').get('data')
+        if checkparameter.get('step4'):
+            self.changeStatusbar("Checking data - header test")
+            results = checkdata.header_test(config, results)
+        if checkparameter.get('step5'):
+            self.changeStatusbar("Checking data - K value test")
+            results = checkdata.k_value_test(config, results)
+            kdiff = results.get('k-value-analysis').get('diffdata')
+            kdata = results.get('k-value-analysis').get('data')
 
         # plots
         self.changeStatusbar("Checking data - plotting")
-        blvd = results.get('baseline-analysis').get('data')
-        kdiff = results.get('k-value-analysis').get('diffdata')
-        kdata = results.get('k-value-analysis').get('data')
+        if mindata and len(mindata) > 0:
+            streamid = self._initial_read(mindata)
+            self._initial_plot(streamid)
+        if secdata and len(secdata) > 0:
+            streamid = self._initial_read(secdata)
+            self._initial_plot(streamid)
+        if diffdata and len(diffdata) > 0:
+            streamid = self._initial_read(diffdata)
+            self._initial_plot(streamid)
         if blvd and len(blvd) > 0:
             streamid = self._initial_read(blvd)
             self._initial_plot(streamid)
@@ -6797,12 +6809,20 @@ class MainFrame(wx.Frame):
 
         #report = checkdata.create_report(reportmsg, warningmsg, errormsg)
         dlg = CheckDataReportDialog(None, title='Data check report', config=config,
-                                        results=results, step=list(map(str, succlst)),
-                                        laststep=laststep)
+                                        results=results, laststep=laststep)
         dlg.ShowModal()
         if dlg.moveon:
-            print (dlg.report)
-            #saveReport(dlg.contlabel, dlg.report)
+            report = dlg.report
+            savename = ''
+            saveFileDialog = wx.FileDialog(self, "Save As", self.guidict.get('dirname'), "",
+                                           "markdown report (*.md)|*.md|text file (*.txt)|*.txt",
+                                           wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+            if saveFileDialog.ShowModal() == wx.ID_OK:
+                savename = saveFileDialog.GetPath()
+            saveFileDialog.Destroy()
+            if savename:
+                with open(savename, 'w') as pf:
+                    pf.write(report)
         dlg.Destroy()
 
         self.changeStatusbar("Ready")

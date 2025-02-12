@@ -6573,8 +6573,8 @@ class CheckDefinitiveDataDialog(wx.Dialog):
         self.checkOptionsButton = wx.Button(self, label='Specify check options',size=(160,30))
         self.checkButton = wx.Button(self, wx.ID_OK, label='Run check', size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
-        self.note1Label = wx.StaticText(self, label="*quick: 4 min with second data",size=(160,30))
-        self.note2Label = wx.StaticText(self, label="*full: 50 min with second data",size=(160,30))
+        self.note1Label = wx.StaticText(self, label="*quick: ~40 secs with 1second data",size=(160,30))
+        self.note2Label = wx.StaticText(self, label="*full: ~10 min with 1second data",size=(160,30))
 
         self.minuteTextCtrl.Disable()
         self.secondTextCtrl.Disable()
@@ -6675,7 +6675,7 @@ class CheckDataReportDialog(wx.Dialog):
         Dialog to show report of data check
     """
 
-    def __init__(self, parent, title, config, results, step=['0','0','0','0','0','0','0'],laststep=5):
+    def __init__(self, parent, title, config, results, laststep=5):
         super(CheckDataReportDialog, self).__init__(parent=parent,
             title=title, size=(600, 400))
         # Construct report from results
@@ -6685,21 +6685,20 @@ class CheckDataReportDialog(wx.Dialog):
         replist.append("\n## Warnings\n")
         replist.extend(results.get("warnings"))
         replist.append("\n## 1. Files and directories")
-        replist.extend(results.get("minute-data-directory").get('report'))
-        replist.extend(results.get("second-data-directory").get('report'))
+        replist.extend(results.get("minute-data-directory",{}).get('report'))
+        replist.extend(results.get("second-data-directory",{}).get('report'))
         replist.append("\n## 2. Contents and consistency - monthly report")
         for month in config.get('months'):
-            monthdict = results.get(month)
+            monthdict = results.get(month,{})
             replist.append("### 2.{a} Details for month {a}".format(a=month))
-            minlist = monthdict.get('minute').get('report')
-            seclist = monthdict.get('second').get('report')
+            minlist = monthdict.get('minute',{}).get('report',[])
+            seclist = monthdict.get('second',{}).get('report',[])
             replist.extend(minlist)
             replist.extend(seclist)
-        replist.extend(results.get("baseline-analysis").get('report'))
-        replist.extend(results.get("header-analysis").get('report'))
-        replist.extend(results.get("k-value-analysis").get('report'))
+        replist.extend(results.get("baseline-analysis",{}).get('report',[]))
+        replist.extend(results.get("header-analysis",{}).get('report',[]))
+        replist.extend(results.get("k-value-analysis",{}).get('report',[]))
 
-        #print (replist)
         self.report = "\n".join(replist)
         # Construct ratings from results
 
@@ -6867,6 +6866,10 @@ class CheckDataSelectDialog(wx.Dialog):
         self.step5CheckBox.SetValue(self.checkparameter.get('step5'))
 
         self.step1CheckBox.Disable()
+        self.step2CheckBox.Disable()
+        self.step3CheckBox.Disable()
+        self.step4CheckBox.Disable()
+        self.bindControls()
 
 
     def doLayout(self):
@@ -6910,17 +6913,46 @@ class CheckDataSelectDialog(wx.Dialog):
                 [(gridSizer, dict(border=5, flag=wx.ALL))]:
             mainSizer.Add(control, **options)
 
-        #mainSizer.Add(self.sourceLabel, 0, wx.ALIGN_LEFT | wx.ALL, 3)
-
         self.SetSizerAndFit(mainSizer)
 
 
     def bindControls(self):
-        #self.closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        pass
+        self.step5CheckBox.Bind(wx.EVT_CHECKBOX, self.on_step5)
+        self.step4CheckBox.Bind(wx.EVT_CHECKBOX, self.on_step4)
+        self.step3CheckBox.Bind(wx.EVT_CHECKBOX, self.on_step3)
 
-    #def OnClose(self, e):
-    #    self.Close(True)
+    def on_step5(self, e):
+        self.step2CheckBox.Disable()
+        self.step3CheckBox.Disable()
+        self.step4CheckBox.Disable()
+        self.step2CheckBox.SetValue(True)
+        self.step3CheckBox.SetValue(True)
+        self.step4CheckBox.SetValue(True)
+        if self.step5CheckBox.GetValue():
+            self.step4CheckBox.Disable()
+        else:
+            self.step4CheckBox.Enable()
+
+    def on_step4(self, e):
+        self.step2CheckBox.Disable()
+        self.step3CheckBox.Disable()
+        self.step5CheckBox.Enable()
+        self.step2CheckBox.SetValue(True)
+        self.step3CheckBox.SetValue(True)
+        if self.step4CheckBox.GetValue():
+            self.step3CheckBox.Disable()
+        else:
+            self.step3CheckBox.Enable()
+
+    def on_step3(self, e):
+        self.step2CheckBox.Disable()
+        self.step4CheckBox.Enable()
+        self.step5CheckBox.Enable()
+        self.step2CheckBox.SetValue(True)
+        if self.step3CheckBox.GetValue():
+            self.step2CheckBox.Disable()
+        else:
+            self.step2CheckBox.Enable()
 
 
 class CheckOpenLogDialog(wx.Dialog):
