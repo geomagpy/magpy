@@ -77,7 +77,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     newdatalist = []
     tllist = []
     flags = {}
-    referencetimecol = None
+    referencetimecol = []
     indexarray = np.asarray([])
     cdfversion=0.9
 
@@ -287,6 +287,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if not max(tl) == min(tl):
             if debug:
                 print (" Found multiple time columns in file with different lengths")
+                print (tllist)
             timecol = None
             pos = -1
             if select:
@@ -294,17 +295,24 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     nam = na.lower()
                     if nam.find(select.lower()) > -1:
                         timecol = na
-                        referencetimecol = na
+                        referencetimecol = [na]
                         pos = idx
             else:
                 if debug:
                     print("readIMAGCDF: Time columns of different length. Choosing only longest. Use option select")
                     print("             and check header FileContents for available contents")
-                timecol = tllist[tl.index(max(tl))][1]
-                referencetimecol = timecol
+                    # get list with max length
+                maxlenlist = [el[1] for el in tllist if el[0] == max(tl)]
+                if 'GeomagneticVectorTimes' in maxlenlist:
+                    timecol = 'GeomagneticVectorTimes'
+                elif 'GeomagneticTimes' in maxlenlist:
+                    timecol = 'GeomagneticTimes'
+                else:
+                    timecol = maxlenlist[0]
+                referencetimecol = maxlenlist
             if not timecol:
                 timecol = tllist[tl.index(max(tl))][1]
-                referencetimecol = timecol
+                referencetimecol = [timecol]
             newdatalist.append(['time',timecol])
             if debug:
                 print (" selected primary time column: {}".format(timecol))
@@ -409,7 +417,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             if elem[0] in NUMKEYLIST:
                 timedepend = cdfdat.varattsget(elem[1]).get('DEPEND_0')
                 if referencetimecol:
-                    if timedepend == referencetimecol:
+                    if timedepend in referencetimecol:
                         fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
                         if np.isnan(fillval):
                             # if it is nan than the following replace wont work anyway
@@ -419,7 +427,6 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                         ind = KEYLIST.index(elem[0])
                         headers['col-' + elem[0]] = cdfdat.varattsget(elem[1]).get('LABLAXIS').lower()
                         headers['unit-col-' + elem[0]] = cdfdat.varattsget(elem[1]).get('UNITS')
-
                         array[ind] = ar
                 else:
                     fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
@@ -1208,10 +1215,12 @@ if __name__ == '__main__':
         try:
             ts = datetime.now(timezone.utc).replace(tzinfo=None)
             # Testing general IMAGCDF
+            print ("A")
             test1 = read(example4)
             test1.write("/tmp", format_type='IMAGCDF', scalar=None, environment=None)  # , debug=True)
             option = None
-            test1rep = read('/tmp/wic_2018*', select=option)  # , debug=True)
+            print ("B")
+            test1rep = read('/tmp/wic_2024*', select=option)  # , debug=True)
             di = dictdiff(test1.header, test1rep.header)
             if not di.get('added') == {} and not di.get('removed') == {}:
                 # raise Exception("ERROR within data validity test")
@@ -1221,7 +1230,8 @@ if __name__ == '__main__':
             test2 = test2.delta_f()
             test2 = test2._drop_column('f')
             test2.write("/tmp", format_type='IMAGCDF', scalar=None, environment=None)  # , debug=True)
-            test2rep = read('/tmp/wic_2018*', select=option)  # , debug=True)
+            print ("C")
+            test2rep = read('/tmp/wic_2024*', select=option)  # , debug=True)
             if not test2rep.header.get('DataComponents') == 'XYZG':
                 # raise Exception("ERROR within data validity test")
                 print("ERROR within data validity test")
@@ -1236,6 +1246,7 @@ if __name__ == '__main__':
             test1 = test1._drop_column('t2')
             test1.header['StationInstitution'] = ['Institute1', 'Institute2']
             test1.write("/tmp", format_type='IMAGCDF', scalar=test3, environment=test3)  # , debug=True)
+            print ("C")
             test3rep = read('/tmp/wic_2018*', select=option)  # , debug=True)
             print(test3rep.header.get('FileContents'))
             fc = test3rep.header.get('FileContents')
@@ -1243,11 +1254,12 @@ if __name__ == '__main__':
                 for el in fc:
                     if el[1].find('Scalar') >= 0:
                         print("Reading Scalar")
-                        scalar = read('/tmp/wic_2018*', select='scalar')
+                        scalar = read('/tmp/wic_2024*', select='scalar')
                     if el[1].find('Temperature') >= 0:
                         print("Reading Temperature")
-                        temperature = read('/tmp/wic_2018*', select='temperature')
+                        temperature = read('/tmp/wic_2024*', select='temperature')
             if not len(test3rep.header.get('FileContents')) == 3:
+                print (test3rep.header.get('FileContents'))
                 # raise Exception("ERROR within data validity test")
                 print("ERROR within data validity test")
             di = dictdiff(test1.header, test3rep.header)

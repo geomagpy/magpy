@@ -6574,7 +6574,7 @@ class CheckDefinitiveDataDialog(wx.Dialog):
         self.checkButton = wx.Button(self, wx.ID_OK, label='Run check', size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
         self.note1Label = wx.StaticText(self, label="*quick: ~40 secs with 1second data",size=(160,30))
-        self.note2Label = wx.StaticText(self, label="*full: ~10 min with 1second data",size=(160,30))
+        self.note2Label = wx.StaticText(self, label="*full: ~7 min with 1second data",size=(160,30))
 
         self.minuteTextCtrl.Disable()
         self.secondTextCtrl.Disable()

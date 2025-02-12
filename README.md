@@ -551,7 +551,8 @@ The general IMAGCDF read command looks as follows
         data = read('/path/to/IMAGCDF/*.cdf')
 
 If the IMAGCDF archive contains contents referring to different time columns, then 'FileContents' will give you some
-information about them. The **select** options allows you to specifically load lower resolution data 
+information about them. Please note that MagPy will read all time columns with similar maximum length if you do not 
+specify a specific time column. The **select** options allows you to specifically load lower resolution data 
 like scalar or temperature readings.
 
         print(data.header.get('FileContents'))

@@ -297,7 +297,7 @@ def check_second_directory(config, results):
                         if int(dmon.month) == mon:
                             res_sec_dir["secdatacheck"] = extension
 
-        if secondsummary.get('cdf',0) >= 365:
+        if secondsummary.get('cdf',0) == 12 or secondsummary.get('cdf',0) >= 365:
             res_sec_dir["report"].append(" - found correct number of ImagCDF data files")
             res_sec_dir["format"] = "IMAGCDF"
         elif secondsummary.get('sec',0) >= 365:
@@ -493,7 +493,7 @@ def consistency_test(config, results, month=1, debug=False):
                 vlen = [el[0] for el in fc if el[1].find("Vector") >= 0]
                 slen = [el[0] for el in fc if el[1].find("Scalar") >= 0]
                 logdict["amount of scalar data"] = slen[0]
-                if len(vlen) > 0 and len(slen) > 0 and not vlen[0] == slen[0]:
+                if len(vlen) > 0 and len(slen) > 0: # and not vlen[0] == slen[0]:  might have the same lengths
                     logdict["report"].append(" - found different amounts of scalar data N={} and variometer data N={}".format(slen[0], vlen[0]))
                     logdict["report"].append("   filtering both data sets and merging at equal time steps before delta F analysis")
                     if debug:
