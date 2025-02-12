@@ -7,10 +7,6 @@ sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 
 import wx
 
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-from matplotlib.backends.backend_wx import NavigationToolbar2Wx
-from matplotlib.figure import Figure
-
 from pubsub import pub
 
 # wx 4.x
@@ -25,10 +21,6 @@ from wx import FD_MULTIPLE as wxMULTIPLE
 #from magpy.stream import read
 from magpy.core import plot as mp
 #import magpy.absolutes as di
-from magpy.absolutes import *
-from magpy.core import methods
-from magpy.core import database
-from magpy.core import flagging
 from magpy.core import activity
 from magpy.version import __version__
 from magpy.gui.streampage import *
@@ -6706,7 +6698,7 @@ class MainFrame(wx.Frame):
                    "year" : 1777,
                    "laststep" : 7    # required to enable save report message when running a stepwise check
                    }
-        results = { "report" : "## Report of MagPys data checking tool box\n based on MagPy version {}\n".format(magpyversion),
+        results = { "report" : "# Report of MagPys data checking tool box\n\n based on MagPy version {}\n".format(magpyversion),
                     "warnings" : [],
                     "errors" : [],
                     "temporaryminutedata" : DataStream(),
@@ -6715,9 +6707,7 @@ class MainFrame(wx.Frame):
                                  "step2" : 0,
                                  "step3" : 0,
                                  "step4" : 0,
-                                 "step5" : 0,
-                                 "step6" : 0,
-                                 "step7" : 0
+                                 "step5" : 0
                                  }
                     }
 
@@ -6773,30 +6763,34 @@ class MainFrame(wx.Frame):
             results["report"] += "\nTest type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
 
         # run module1
-        import checkdata
+        from magpy.opt import checkdata
         # Step 1
         results = checkdata.check_minute_directory(config, results)
         results = checkdata.check_second_directory(config, results)
         for month in config.get('months'):
-            print ("Now running details for month", month)
+            self.changeStatusbar("Checking data for month {} ... please wait".format(month))
             results = checkdata.read_month(config, results, month=month)
             results = checkdata.consistency_test(config, results, month=month)
             results = checkdata.content_test(config, results, month=month)
+        self.changeStatusbar("Checking data - baseline test")
         results = checkdata.baseline_check(config, results)
+        self.changeStatusbar("Checking data - header test")
         results = checkdata.header_test(config, results)
+        self.changeStatusbar("Checking data - K value test")
         results = checkdata.k_value_test(config, results)
 
         # plots
+        self.changeStatusbar("Checking data - plotting")
         blvd = results.get('baseline-analysis').get('data')
         kdiff = results.get('k-value-analysis').get('diffdata')
         kdata = results.get('k-value-analysis').get('data')
-        if len(blvd) > 0:
+        if blvd and len(blvd) > 0:
+            streamid = self._initial_read(blvd)
+            self._initial_plot(streamid)
+        if kdata and len(kdata) > 0:
             streamid = self._initial_read(kdata)
             self._initial_plot(streamid)
-        if len(kdata) > 0:
-            streamid = self._initial_read(kdata)
-            self._initial_plot(streamid)
-        if len(kdiff) > 0:
+        if kdiff and len(kdiff) > 0:
             kdiff.header['col-var1'] = 'delta K (reported - fmi)'
             streamid = self._initial_read(kdiff)
             self._initial_plot(streamid)
@@ -6806,8 +6800,9 @@ class MainFrame(wx.Frame):
                                         results=results, step=list(map(str, succlst)),
                                         laststep=laststep)
         dlg.ShowModal()
-        #if dlg.moveon:
-        #    saveReport(dlg.contlabel, dlg.report)
+        if dlg.moveon:
+            print (dlg.report)
+            #saveReport(dlg.contlabel, dlg.report)
         dlg.Destroy()
 
         self.changeStatusbar("Ready")

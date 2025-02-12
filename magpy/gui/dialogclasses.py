@@ -6552,10 +6552,10 @@ class CheckDefinitiveDataDialog(wx.Dialog):
             title=title, size=(400, 600))
         self.checkchoices = ['quick','full']
         self.checkchoice = 'quick'
-        self.laststep = 7
+        self.laststep = 5
         self.minutedirname = ''
         self.seconddirname = ''
-        self.checkparameter = {'step2':True, 'step3':True, 'step4':True, 'step5':True, 'step6':True, 'step7':True }  # modified by checkOptions
+        self.checkparameter = {'step2':True, 'step3':True, 'step4':True, 'step5':True }  # modified by checkOptions
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -6675,29 +6675,29 @@ class CheckDataReportDialog(wx.Dialog):
         Dialog to show report of data check
     """
 
-    def __init__(self, parent, title, config, results, step=['0','0','0','0','0','0','0'],laststep=7):
+    def __init__(self, parent, title, config, results, step=['0','0','0','0','0','0','0'],laststep=5):
         super(CheckDataReportDialog, self).__init__(parent=parent,
             title=title, size=(600, 400))
         # Construct report from results
-        #replist = []
-        print (results.get("report"))
         replist = [results.get("report")]
-        replist.append("\n## Errors")
+        replist.append("\n## Errors\n")
         replist.extend(results.get("errors"))
-        replist.append("\n## Warnings")
+        replist.append("\n## Warnings\n")
         replist.extend(results.get("warnings"))
-        replist.append("\n## Detailed monthly report")
+        replist.append("\n## 1. Files and directories")
         replist.extend(results.get("minute-data-directory").get('report'))
         replist.extend(results.get("second-data-directory").get('report'))
+        replist.append("\n## 2. Contents and consistency - monthly report")
         for month in config.get('months'):
             monthdict = results.get(month)
-            replist.append("### Details for month {}".format(month))
+            replist.append("### 2.{a} Details for month {a}".format(a=month))
             minlist = monthdict.get('minute').get('report')
             seclist = monthdict.get('second').get('report')
             replist.extend(minlist)
             replist.extend(seclist)
         replist.extend(results.get("baseline-analysis").get('report'))
         replist.extend(results.get("header-analysis").get('report'))
+        replist.extend(results.get("k-value-analysis").get('report'))
 
         #print (replist)
         self.report = "\n".join(replist)
@@ -6710,12 +6710,9 @@ class CheckDataReportDialog(wx.Dialog):
             step.append(str(grades.get(el,0)))
         self.step = step
         self.rating = np.max(list(map(int,step)))
-        currentstep = 7
+        currentstep = 5
         #currentstep = (np.max([idx for idx, val in enumerate(step) if not val == '0']))+1
-        if laststep == currentstep:
-            self.contlabel = 'Save'
-        else:
-            self.contlabel = 'Continue'
+        self.contlabel = 'Save'
         self.moveon = False
         self.createControls()
         self.doLayout()
@@ -6746,33 +6743,18 @@ class CheckDataReportDialog(wx.Dialog):
         self.step3TextCtrl = wx.TextCtrl(self, value=self.step[2], size=(30,30))
         self.step4TextCtrl = wx.TextCtrl(self, value=self.step[3], size=(30,30))
         self.step5TextCtrl = wx.TextCtrl(self, value=self.step[4], size=(30,30))
-        self.step6TextCtrl = wx.TextCtrl(self, value=self.step[5], size=(30,30))
-        self.step7TextCtrl = wx.TextCtrl(self, value=self.step[6], size=(30,30))
-        self.step1Label = wx.StaticText(self, label="Step 1",size=(80,30))
-        self.step2Label = wx.StaticText(self, label="Step 2",size=(80,30))
-        self.step3Label = wx.StaticText(self, label="Step 3",size=(80,30))
-        self.step4Label = wx.StaticText(self, label="Step 4",size=(80,30))
-        self.step5Label = wx.StaticText(self, label="Step 5",size=(80,30))
-        self.step6Label = wx.StaticText(self, label="Step 6",size=(80,30))
-        self.step7Label = wx.StaticText(self, label="Step 7",size=(80,30))
+        self.step1Label = wx.StaticText(self, label="Files",size=(110,30))
+        self.step2Label = wx.StaticText(self, label="Contents",size=(110,30))
+        self.step3Label = wx.StaticText(self, label="Baseline",size=(110,30))
+        self.step4Label = wx.StaticText(self, label="Header",size=(110,30))
+        self.step5Label = wx.StaticText(self, label="K values",size=(110,30))
 
-        #self.reportTextCtrl.Disable()
-        #self.step1TextCtrl.Disable()
-        #self.step2TextCtrl.Disable()
-        #self.step3TextCtrl.Disable()
-        #self.step4TextCtrl.Disable()
-        #self.step5TextCtrl.Disable()
-        #self.step6TextCtrl.Disable()
-        #self.step7TextCtrl.Disable()
-        #self.ratingTextCtrl.Disable()
         self.ratingTextCtrl.SetEditable(False)
         self.step1TextCtrl.SetEditable(False)
         self.step2TextCtrl.SetEditable(False)
         self.step3TextCtrl.SetEditable(False)
         self.step4TextCtrl.SetEditable(False)
         self.step5TextCtrl.SetEditable(False)
-        self.step6TextCtrl.SetEditable(False)
-        self.step7TextCtrl.SetEditable(False)
 
         for idx, rating in enumerate(self.step):
             self.putColor(rating, idx+1)
@@ -6821,16 +6803,12 @@ class CheckDataReportDialog(wx.Dialog):
                  (self.step3TextCtrl, expandOption),
                  (self.step4TextCtrl, expandOption),
                  (self.step5TextCtrl, expandOption),
-                 (self.step6TextCtrl, expandOption),
-                 (self.step7TextCtrl, expandOption),
                  (self.step1Label, noOptions),
                  (self.step2Label, noOptions),
                  (self.step3Label, noOptions),
                  (self.step4Label, noOptions),
-                 (self.step5Label, noOptions),
-                 (self.step6Label, noOptions),
-                 (self.step7Label, noOptions)]
-        cols = 7
+                 (self.step5Label, noOptions)]
+        cols = 5
         rows = int(np.ceil(len(contlist)/float(cols)))
         gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
         # Add the controls to the sizers:
@@ -6874,15 +6852,11 @@ class CheckDataSelectDialog(wx.Dialog):
     # Widgets
     def createControls(self):
         self.selectLabel = wx.StaticText(self, label="Choose steps to be used in data checking:",size=(400,30))
-
         self.step1CheckBox = wx.CheckBox(self, label="Step 1: directories and existance of files (obligatory)",size=(400,30))
-        self.step2CheckBox = wx.CheckBox(self, label="Step 2: file access and basic header information",size=(400,30))
-        self.step3CheckBox = wx.CheckBox(self, label="Step 3: data content and consistency of primary source",size=(400,30))
-        self.step4CheckBox = wx.CheckBox(self, label="Step 4: secondary source and consistency with primary",size=(400,30))
-        self.step5CheckBox = wx.CheckBox(self, label="Step 5: basevalues and adopted baseline variation",size=(400,30))
-        self.step6CheckBox = wx.CheckBox(self, label="Step 6: yearly means, consistency of meta information",size=(400,30))
-        self.step7CheckBox = wx.CheckBox(self, label="Step 7: activity indicies",size=(400,30))
-
+        self.step2CheckBox = wx.CheckBox(self, label="Step 2: file access, consistency and data contents",size=(400,30))
+        self.step3CheckBox = wx.CheckBox(self, label="Step 3: basevalues and adopted baseline variation",size=(400,30))
+        self.step4CheckBox = wx.CheckBox(self, label="Step 4: yearly means, consistency of meta information",size=(400,30))
+        self.step5CheckBox = wx.CheckBox(self, label="Step 5: activity indicies",size=(400,30))
         self.continueButton = wx.Button(self, wx.ID_OK, label='OK', size=(160,30))
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
 
@@ -6891,8 +6865,6 @@ class CheckDataSelectDialog(wx.Dialog):
         self.step3CheckBox.SetValue(self.checkparameter.get('step3'))
         self.step4CheckBox.SetValue(self.checkparameter.get('step4'))
         self.step5CheckBox.SetValue(self.checkparameter.get('step5'))
-        self.step6CheckBox.SetValue(self.checkparameter.get('step6'))
-        self.step7CheckBox.SetValue(self.checkparameter.get('step7'))
 
         self.step1CheckBox.Disable()
 
@@ -6912,9 +6884,7 @@ class CheckDataSelectDialog(wx.Dialog):
                  (self.step2CheckBox, noOptions),
                  (self.step3CheckBox, noOptions),
                  (self.step4CheckBox, noOptions),
-                 (self.step5CheckBox, noOptions),
-                 (self.step6CheckBox, noOptions),
-                 (self.step7CheckBox, noOptions)]
+                 (self.step5CheckBox, noOptions)]
         # A GridSizer will contain the other controls:
         cols = 1
         rows = int(np.ceil(len(contlist)/float(cols)))

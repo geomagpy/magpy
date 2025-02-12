@@ -7,8 +7,8 @@ the following methods are contained:
 
 |class | method | since version | until version | runtime test | result verifi. | manual | *used by       |
 |----- | ------ | ------------- | ------------- | ------------ | -------------- | ------ | -------------- |
-|**core.methods** |  |          |               |              |              |        |   |
-|    | _delta_F_test    | 2.0.0 |               | yes          |              |        | consistency_test |
+|**opt.checkdata** |  |          |               |              |              |        |   |
+|    | _delta_F_test    | 2.0.0 |               | yes          |              |        |   |
 |    | check_minute_directory |  2.0.0 |        | yes          |              |        |   |
 |    | convert_geo_coordinate | 2.0.0 |         | yes          |              |        |   |
 |    | read_month       | 2.0.0 |               | yes          |              |        |   |
@@ -16,12 +16,12 @@ the following methods are contained:
 |    | content_test     | 2.0.0 |               | yes          |              |        |   |
 |    | baseline_check   | 2.0.0 |               | yes          |              |        |   |
 |    | header_test      | 2.0.0 |               | yes          |              |        |   |
-|    | k_value_test     | 2.0.0 |               |              |              |        |   |
+|    | k_value_test     | 2.0.0 |               | yes          |              |        |   |
 """
 
 
 import sys
-sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
+sys.path.insert(1, '//')  # should be magpy2
 
 import numpy as np
 import os
@@ -348,7 +348,7 @@ def read_month(config, results, month=1, debug=False):
         res_dir = results.get('{}-data-directory'.format(resolution))
         datapath = config.get('{}datapath'.format(resolution[:3]))
         logdict = {}
-        logdict["report"] = ["\n#### 2.{}.{} One-{} read test\n".format(index+1, month, resolution)]
+        logdict["report"] = ["\n#### 2.{}.{} One-{} read test\n".format(month, index+1, resolution)]
         if res_dir:
             if debug:
                 print(" - {} available: continuing".format(resolution))
@@ -428,8 +428,8 @@ def read_month(config, results, month=1, debug=False):
                         if value == '':
                             results["warnings"].append("Read test for {} data, month {}: no meta information for {}".format(resolution, month, head))
                             headfailure = True
-                            if grades.get("step1") <= 2:
-                                grades["step1"] = 2
+                            if grades.get("step2") <= 2:
+                                grades["step2"] = 2
                     if not headfailure:
                         logdict["report"].append(" - all header elements present - did not check contents however")
 
@@ -466,12 +466,12 @@ def consistency_test(config, results, month=1, debug=False):
                     "errors" : [],
                     "temporaryminutedata" : DataStream(),
                     "temporaryseconddata" : DataStream(),
-                    "grades" : { "step3" : 0
+                    "grades" : { "step2" : 0
                                  }
                     }
     grades = results.get('grades',{})
-    if grades.get("step3",0) <= 1:
-        grades["step3"] = 1
+    if grades.get("step2",0) <= 1:
+        grades["step2"] = 1
     #res_cons_test = {}
     for index, resolution in enumerate(["minute", "second"]):
         if debug:
@@ -480,7 +480,7 @@ def consistency_test(config, results, month=1, debug=False):
         logdict = monthdict.get(resolution)
         data = results.get('temporary{}data'.format(resolution))
         if logdict and data:
-            logdict["report"].append("\n#### 2.{}.{} One-{} consistency test\n".format(index+3, month, resolution))
+            logdict["report"].append("\n#### 2.{}.{} One-{} consistency test\n".format(month, index+3, resolution))
             # Testing F/G
             # -----------------------------
             # read scalar data if applicable
@@ -516,21 +516,21 @@ def consistency_test(config, results, month=1, debug=False):
                 logdict["standard deviation deltaF"] = fresult.get('dF stddev')
                 if np.isnan(fresult.get('dF mean')):
                     results["warnings"].append("Consistency test: Month {}, {} resolution: invalid F data".format(month,resolution))
-                    if grades.get("step3", 0) <= 2:
-                        grades["step3"] = 2
+                    if grades.get("step2", 0) <= 2:
+                        grades["step2"] = 2
                 elif np.abs(fresult.get('dF mean')) >= 1.0:
                     results["warnings"].append("Consistency test: Month {}, {} resolution: average delta F differs strongly from zero".format(month,resolution))
-                    if grades.get("step3", 0) <= 2:
-                        grades["step3"] = 2
+                    if grades.get("step2", 0) <= 2:
+                        grades["step2"] = 2
                 elif np.abs(fresult.get('dF mean')) < 0.01 and np.abs(fresult.get('dF stddev')) < 0.01:
                     results["warnings"].append("Consistency test: Month {}, {} resolution: is F really independent from vector data?".format(month,resolution))
-                    if grades.get("step3", 0) <= 2:
-                        grades["step3"] = 2
+                    if grades.get("step2", 0) <= 2:
+                        grades["step2"] = 2
                 #print ("Diff between mean and median", np.abs(fresult.get('dF mean') - fresult.get('dF median')))
                 if not np.isnan(fresult.get('dF mean')) and np.abs(fresult.get('dF mean') - fresult.get('dF median')) > 0.05:
                     results["warnings"].append("Consistency test: Month {}, {} resolution: Median and Mean are significantly different. Check outliers".format(month,resolution))
-                    if grades.get("step3", 0) <= 2:
-                        grades["step3"] = 2
+                    if grades.get("step2", 0) <= 2:
+                        grades["step2"] = 2
             # Testing temperature
             # -----------------------------
             if fc and len(fc) > 0:
@@ -565,8 +565,8 @@ def consistency_test(config, results, month=1, debug=False):
                         results["warnings"].append(
                             "Consistency test: Month {}, {} resolution: IAF hour data N={} differs from expected amount N={}".format(
                                 month,resolution,len(hour_data),expectedlength))
-                        if grades.get("step3", 0) <= 2:
-                            grades["step3"] = 2
+                        if grades.get("step2", 0) <= 2:
+                            grades["step2"] = 2
                     elif not len(hour_filter) == len(hour_data):
                         logdict["report"].append(
                             " - hourly data from IAF and filtered minute data differ in length, not affecting grade but please check")
@@ -579,22 +579,22 @@ def consistency_test(config, results, month=1, debug=False):
                         results["warnings"].append(
                             "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in X={}".format(
                                 month,resolution,diffs.mean('x')))
-                        if grades.get("step3", 0) <= 2:
-                            grades["step3"] = 2
+                        if grades.get("step2", 0) <= 2:
+                            grades["step2"] = 2
                         hourwarn = True
                     if np.isnan(diffs.mean('y')) or np.abs(diffs.mean('y')) > 0.05:
                         results["warnings"].append(
                             "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in Y={}".format(
                                 month,resolution,diffs.mean('y')))
-                        if grades.get("step3", 0) <= 2:
-                            grades["step3"] = 2
+                        if grades.get("step2", 0) <= 2:
+                            grades["step2"] = 2
                         hourwarn = True
                     if np.isnan(diffs.mean('z')) or np.abs(diffs.mean('z')) > 0.05:
                         results["warnings"].append(
                             "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in Z={}".format(
                                 month,resolution,diffs.mean('z')))
-                        if grades.get("step3", 0) <= 2:
-                            grades["step3"] = 2
+                        if grades.get("step2", 0) <= 2:
+                            grades["step2"] = 2
                         hourwarn = True
                     if np.isnan(diffs.mean('df')) or np.abs(diffs.mean('df')) > 0.05:
                         # TODO if no df in hourly data than diff will np.nan - add that in the README
@@ -608,8 +608,8 @@ def consistency_test(config, results, month=1, debug=False):
                 else:
                     logdict["report"].append(
                     " - could not extract hourly data from IAF")
-                    if grades.get("step3", 0) <= 3:
-                        grades["step3"] = 3
+                    if grades.get("step2", 0) <= 3:
+                        grades["step2"] = 3
                     results["errors"].append(
                         "Consistency test: Month {}, {} resolution: Could not extract IAF hourly data".format(
                             month, resolution))
@@ -638,12 +638,12 @@ def content_test(config, results, month=1, debug=False):
                     "errors" : [],
                     "temporaryminutedata" : DataStream(),
                     "temporaryseconddata" : DataStream(),
-                    "grades" : { "step4" : 0
+                    "grades" : { "step2" : 0
                                  }
                     }
     grades = results.get('grades',{})
-    if grades.get("step4",0) <= 1:
-        grades["step4"] = 1
+    if grades.get("step2",0) <= 1:
+        grades["step2"] = 1
     # content test starts with one second
     resolution = "second"
     monthdict = results.get(month)
@@ -694,8 +694,8 @@ def content_test(config, results, month=1, debug=False):
                 print("  -> dictionary written")
             if max(xd, yd, zd) > 0.3:
                 results["warnings"].append('Content check for month {}: one-minute and one-second data differ by more than 0.3 nT in monthly average'.format(month))
-                if grades.get("step4", 0) <= 2:
-                    grades["step4"] = 2
+                if grades.get("step2", 0) <= 2:
+                    grades["step2"] = 2
             if max(xa, ya, za) < 0.12:
                 logdict[
                     'report'].append(' - content check: excellent agreement between definitive one-minute and one-second data products')
@@ -707,8 +707,8 @@ def content_test(config, results, month=1, debug=False):
                     'report'].append(' - content check: small differences in peak amplitudes between definitive one-minute and one-second data products observed')
             elif max(xa, ya, za) > 5:
                 results["warnings"].append('Content check for month {}: Large amplitude differences between definitive one-minute and one-second data products'.format(month))
-                if grades.get("step4", 0) <= 2:
-                    grades["step4"] = 2
+                if grades.get("step2", 0) <= 2:
+                    grades["step2"] = 2
             if np.isnan(sum([xd, yd, zd, xa, ya, za])):
                 logdict[
                     'report'].append(' - content check: not conclusive as NAN values are found')
@@ -716,8 +716,8 @@ def content_test(config, results, month=1, debug=False):
                 print("  -> one-minute comparison finished")
         else:
             results["warnings"].append('Comparison with definitive one-minute: filtered and original data sets differ in length')
-            if grades.get("step4", 0) <= 2:
-                grades["step4"] = 2
+            if grades.get("step2", 0) <= 2:
+                grades["step2"] = 2
     else:
         logdict["report"].append(' - content check: comparison of filtered second and one-minute: one of the data sets is not available')
 
@@ -750,13 +750,13 @@ def baseline_check(config, results, debug=False):
                                  }
                     }
     grades = results.get('grades',{})
-    grades["step5"] = 0
+    grades["step3"] = 0
     baselinecheck = {}
     mindict = results.get('minute-data-directory',{})
     baselinecheck["report"] = ["\n## 3. One-minute collection - baseline analysis\n"]
     if mindict and len(mindict.get('blvdatacheck',[])) > 0:
         # Do the test
-        grades["step5"] = 1
+        grades["step3"] = 1
         bll = mindict.get('blvdatacheck',[])
         basefile = bll[0]
         if len(bll) > 1:
@@ -787,8 +787,8 @@ def baseline_check(config, results, debug=False):
             baselinecheck["report"].append(" - minor variations between repeated basevalue measurements")
         if means.mean('dx', percentage=1) > 3.0 or means.mean('dz', percentage=1) > 3.0:
             results["warnings"].append('Baseline analysis: found relatively large variations between repeated basevalue measurements')
-            if grades.get("step5") <= 2:
-                grades["step5"] = 2
+            if grades.get("step3") <= 2:
+                grades["step3"] = 2
         fmeans = blvdata._drop_nans('df')
         baselinecheck["report"].append(" - average delta F mean for the whole year is: {:.2f}{}".format(
             fmeans.mean('df', percentage=1),unitf))
@@ -806,8 +806,8 @@ def baseline_check(config, results, debug=False):
                 baselinecheck["report"].append(" - minor deviations between adopted baseline and basevalues")
             if resDIx > 0.5 or resDIz > 0.5:
                 results["warnings"].append('Baseline analysis: large deviations between adopted baseline and basevalues')
-                if grades.get("step5") <= 2:
-                    grades["step5"] = 2
+                if grades.get("step3") <= 2:
+                    grades["step3"] = 2
             # overall baseline variation
             # get maximum and minimum of the function for x and z
             amplitude = blvdata.func2stream(func, mode='values', keys=['dx', 'dy', 'dz'])
@@ -858,7 +858,7 @@ def header_test(config, results, debug=False):
                                  }
                     }
     grades = results.get('grades',{})
-    grades["step6"] = 1
+    grades["step4"] = 1
     blvdata = DataStream()
     yearmeandata = DataStream()
     headercheck = {}
@@ -913,14 +913,19 @@ def header_test(config, results, debug=False):
         yearfmean = np.sqrt(yearmeanx * yearmeanx + yearmeany * yearmeany + yearmeanz * yearmeanz)
         headercheck["report"].append(" - yearmean file readable: contains data from {} to {}".format(yearmeandata.start().year,yearmeandata.end().year))
 
-    headercheck["report"].append(" - H means: BLV {:.1f}nT, {}: {:.1f}nT, YEARMEAN: {:.1f}nT".format(blvhmean, mindict.get("format",'IAF'), minhmean, yearhmean))
-    headercheck["report"].append(" - F means: BLV {:.1f}nT, {}: {:.1f}nT, YEARMEAN: {:.1f}nT".format(blvfmean, mindict.get("format",'CRAP'), minfmean, yearfmean))
-    maxdiff = np.nanmax(np.abs(np.diff(np.array([yearhmean, blvhmean, minhmean]))))
-    averagediff = np.nanmean(np.diff(np.array([yearhmean, blvhmean, minhmean])))
-    if maxdiff >= 0.5 and averagediff >= 0.1:
-        results["warnings"].append('Header analysis: significant differences in yearly mean values of BLV, YEARMEAN and One-minute data.')
-        if grades.get("step6") <= 2:
-            grades["step6"] = 2
+    if not all(np.isnan(np.array([yearhmean, blvhmean, minhmean]))):
+        headercheck["report"].append(
+            " - H means: BLV {:.1f}nT, {}: {:.1f}nT, YEARMEAN: {:.1f}nT".format(blvhmean, mindict.get("format", 'IAF'),
+                                                                                minhmean, yearhmean))
+        headercheck["report"].append(
+            " - F means: BLV {:.1f}nT, {}: {:.1f}nT, YEARMEAN: {:.1f}nT".format(blvfmean, mindict.get("format", 'IAF'),
+                                                                                minfmean, yearfmean))
+        maxdiff = np.nanmax(np.abs(np.diff(np.array([yearhmean, blvhmean, minhmean]))))
+        averagediff = np.nanmean(np.diff(np.array([yearhmean, blvhmean, minhmean])))
+        if maxdiff >= 0.5 and averagediff >= 0.1:
+            results["warnings"].append('Header analysis: significant differences in yearly mean values of BLV, YEARMEAN and One-minute data.')
+            if grades.get("step4") <= 2:
+                grades["step4"] = 2
 
     secdata = results.get("temporaryseconddata", DataStream())
     primaryheader = secdata.header
@@ -943,14 +948,14 @@ def header_test(config, results, debug=False):
                 else:
                     if key in ['DataAcquisitionLatitude', 'DataAcquisitionLongitude', 'DataElevation']:
                         results["warnings"].append('Header analysis: differences in header information for {}'.format(key.replace("Data",'').replace("Station",'')))
-                        if grades.get("step6") <= 2:
-                            grades["step6"] = 2
+                        if grades.get("step4") <= 2:
+                            grades["step4"] = 2
                     else:
                         headercheck["report"].append(" - different header contents for {}, {}".format(key.replace("Data",'').replace("Station",''), vals))
     else:
         results["errors"].append('Header analysis: could neither access one-second nor one-minute header information')
-        if grades.get("step6") <= 3:
-            grades["step6"] = 3
+        if grades.get("step4") <= 3:
+            grades["step4"] = 3
 
     results['header-analysis'] = headercheck
     return results
@@ -974,14 +979,16 @@ def k_value_test(config, results, debug=False):
                     "errors" : [],
                     "temporaryminutedata" : DataStream(),
                     "temporaryseconddata" : DataStream(),
-                    "grades" : { "step4" : 0
+                    "grades" : { "step5" : 0
                                  }
                     }
     grades = results.get('grades',{})
-    grades["step7"] = 1
+    grades["step5"] = 1
     korgdata = DataStream()
     kdkadata = DataStream()
     k_test = {}
+    kdata_found = False
+    korgvals = []
 
     k_test["report"] = ["\n## 5. Testing activity indices in files and comparing to K (FMI)\n"]
 
@@ -994,14 +1001,18 @@ def k_value_test(config, results, debug=False):
     path = config.get('mindatapath')
     if path and ext and mindict.get('format') == 'IAF':
         korgdata = read(os.path.join(path,"{}{}".format('*',ext)), resolution='k')
-        k_test["report"].append(" - found {} K values in IAF data set".format(len(korgdata)))
-        k_test["data"] = korgdata
+        korgvals = korgdata._get_column('var1')
+        k_test["report"].append(" - found {} K values in IAF data set".format(len(korgvals)))
+        if len(korgvals) > 0:
+            k_test["data"] = korgdata
+        kdata_found = True
     # get k values from dka if available
     dka = mindict.get('dkacheck',[])
     if len(dka) > 0:
         kdkadata = read(dka[0])
         k_test["report"].append(" - found {} K values in separate DKA file".format(len(kdkadata)))
-        if len(korgdata) > 0:
+        kdata_found = True
+        if len(korgvals) > 0:
             kdiff = subtract_streams(korgdata, kdkadata)
             karr = np.nanmax(np.abs(np.diff(kdiff._get_column('var1'))))
             if karr < 0.1:
@@ -1013,17 +1024,21 @@ def k_value_test(config, results, debug=False):
     if len(data) > 0:
         from magpy.core import activity
         kdata = activity.K_fmi(data, K9_limit=data.header.get('StationK9', 500), longitude=data.header.get('DataAcquisitionLongitude', 15.0))
-        if len(korgdata) > 0:
+        kdata_found = True
+        if len(korgvals) > 0:
             korgdata = korgdata.trim(kdata.start(), kdata.end()+timedelta(seconds=kdata.samplingrate()))
+            print (len(korgdata), len(kdata))
+            print (korgdata)
             kdiff = subtract_streams(korgdata, kdata)
-            km, ks = kdiff.mean('var1', std=True)
+            km, ks = kdiff.mean('var1', std=True, percentage=1)
+            print (km, ks)
             karr = np.nanmax(np.abs(np.diff(kdiff._get_column('var1'))))
             if karr > 1 and np.abs(km) > 0.05 and ks > 0.2: # arbitrary thresholds
                 k_test["report"].append(
                     " - Reported K values in IAF and recalculated from FMI differ.")
                 results["warnings"].append(
                     'K analysis: observed differences between K values and redetermined FMI K values .')
-                grades["step7"] = 2
+                grades["step5"] = 2
             elif karr <= 1 and np.abs(km) < 0.01 and ks < 0.1:
                 k_test["report"].append(
                     " - Reported K values in IAF correspond very well to FMI calculation.")
@@ -1031,6 +1046,9 @@ def k_value_test(config, results, debug=False):
                 k_test["report"].append(
                     " - Reported K values in IAF are similar to FMI calculation.")
             k_test["diffdata"] = kdiff
+
+    if not kdata_found:
+        k_test["report"].append(" - no K values available.")
 
     results['k-value-analysis'] = k_test
     return results
@@ -1053,7 +1071,7 @@ if __name__ == '__main__':
     #config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/LYC', 'secdatapath' : '/home/leon/Tmp/CheckData/second/LYC', 'months' : [6]}
     #config = {'mindatapath' : '/home/leon/Tmp/CheckData/minute/CNB', 'secdatapath' : '/home/leon/Tmp/CheckData/second/CNB', 'months' : [6]}
     results = {
-        "report": "## Report of MagPys data checking tool box\n based on MagPy version {}\n".format(magpyversion),
+        "report": "# Report of MagPys data checking tool box\n based on MagPy version {}\n".format(magpyversion),
         "warnings": [],
         "errors": [],
         "temporarydata": DataStream()
