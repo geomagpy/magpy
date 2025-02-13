@@ -622,7 +622,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             plotdict : all visualization parameter
             sharey : limit shownkeys to a single input to share y axis for multiple diagrams
         """
-        debug = True
+        debug = False
 
         streams = []
         keys = []
@@ -640,6 +640,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         grid = False
         patch = {}
         annotate = False
+        dateformatter = None
         alpha = 0.5
         ylabelposition = None
         yscale = None
@@ -668,6 +669,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             alpha=plotcont.get('alpha')
             ylabelposition=None
             yscale=None
+            dateformatter=plotcont.get('dateformatter', None)
             functionfmt="r-"
             #xinds=[None]
             #xlabelposition=None,
@@ -682,7 +684,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         if debug:
             print (keys,colors,symbols,timecolumn,errorbars,yranges,fill,padding,functions)
             print (title,legend,grid,annotate,alpha,ylabelposition,yscale,functionfmt)
-            print (showpatch, streamids) #,patch)
+            print (showpatch, dateformatter, streamids) #,patch)
 
         # Declare and register callbacks
         def on_xlims_change(axes):
@@ -702,8 +704,8 @@ class PlotPanel(scrolled.ScrolledPanel):
         self.figure, self.axes = mp.tsplot(data=streams, keys=keys, timecolumn=timecolumn, yranges=yranges, padding=padding,
               symbols=symbols, colors=colors, title=title, legend=legend, grid=grid, patch=patch, annotate=annotate,
               fill=fill, showpatch=showpatch, errorbars=errorbars, functions=functions, functionfmt=functionfmt,
-              ylabelposition=ylabelposition, yscale=yscale, alpha=alpha, figure=self.figure)
-        #xrange=None, xinds=[None],  xlabelposition=None, dateformatter=None, force=False, width=10, height=4,
+              ylabelposition=ylabelposition, yscale=yscale, dateformatter=dateformatter, alpha=alpha, figure=self.figure)
+        #xrange=None, xinds=[None],  xlabelposition=None, force=False, width=10, height=4,
 
         self.axlist = self.figure.axes
 
@@ -1191,6 +1193,26 @@ class MainFrame(wx.Frame):
         analysisdict['labelid'] = '002'
         analysisdict['flagtype'] = 3
         analysisdict['flagversion'] = '2.0'
+        analysisdict['flaglabel'] = {'000': 'normal',
+                          '001': 'lightning strike',
+                          '002': 'spike',
+                          '012': 'pulsation pc 2',
+                          '013': 'pulsation pc 3',
+                          '014': 'pulsation pc 4',
+                          '015': 'pulsation pc 5',
+                          '016': 'pulsation pi 2',
+                          '020': 'ssc geomagnetic storm',
+                          '021': 'geomagnetic storm',
+                          '022': 'crochete',
+                          '030': 'earthquake',
+                          '050': 'vehicle passing above',
+                          '051': 'nearby moving disturbing source',
+                          '052': 'nearby static disturbing source',
+                          '053': 'train',
+                          '070': 'switch',
+                          '090': 'unknown disturbance',
+                          '099': 'unlabeled signature'
+                          }
         # monitor
         favoritemartas = {}
         favoritemartas['example'] = {'address' : 'www.example.com',
@@ -2066,6 +2088,10 @@ class MainFrame(wx.Frame):
         self.menu_p.fla_page.FlagIDComboBox.Enable()      # always
         self.menu_p.fla_page.LabelComboBox.Enable()       # always
         self.menu_p.fla_page.flagmodButton.Enable()       # always
+        # update choices frm stored label list
+        flaglabel = self.analysisdict.get('flaglabel')
+        labels = ["{}: {}".format(key, flaglabel.get(key)) for key in flaglabel]
+        self.menu_p.fla_page.LabelComboBox.SetItems(labels)
 
         # ----------------------------------------
         # meta page
@@ -3402,6 +3428,12 @@ class MainFrame(wx.Frame):
             self.analysisdict['fitdegree'] = dlg.fitdegreeTextCtrl.GetValue()
             self.analysisdict['fitknotstep'] = dlg.fitknotstepTextCtrl.GetValue()
             self.analysisdict['baselinedirect'] = dlg.baselinedirectCheckBox.GetValue()
+            flaglabels = dlg.flaglabelTextCtrl.GetValue()
+            try:
+                # Try to convert flaglabels into a dictionary
+                self.analysisdict['flaglabel'] = json.loads(flaglabels)
+            except:
+                pass
 
             # get stationlist - if defaultstation is not in stationlist then create station content
             stationid = self.analysisdict.get('defaultstation','')
@@ -3460,21 +3492,22 @@ class MainFrame(wx.Frame):
             Change options
         """
         if self.active_id:
-            dlg = StreamPlotOptionsDialog(None, title='Plot Options:',optdict=self.plotopt)
+            plotcont = self.plotdict.get(self.active_id)
+            dlg = OptionsPlotDialog(None, title='Plot Options:',optdict=plotcont)
             if dlg.ShowModal() == wx.ID_OK:
-                for elem in self.plotopt:
-                    if not elem in ['function']:
+                for elem in plotcont:
+                    if not elem in ['functions']:
                         val = eval('dlg.'+elem+'TextCtrl.GetValue()')
                         if val in ['False','True','None'] or val.startswith('[') or val.startswith('{'):
                             val = eval(val)
-                        if elem in ['opacity','bartrange']:
+                        if elem in ['opacity','alpha']:
                             val = float(val)
-                        if not val == self.plotopt[elem]:
-                            self.plotopt[elem] = val
+                        if not val == plotcont[elem]:
+                            plotcont[elem] = val
             dlg.Destroy()
 
-            self.ActivateControls(self.plotstream)
-            self.OnPlot(self.plotstream,self.shownkeylist)
+            self.plotdict[self.active_id] = plotcont
+            self._initial_plot(self.active_id, keepplotdict=True)
 
 
     # ##################################################################################################################
@@ -4194,7 +4227,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
         else:
             self.changeStatusbar("Flagging selection ...")
-            dlg = FlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, groups=groups, flagversion=self.flagversion)
+            dlg = FlagSelectionDialog(None, title='Stream: Flag Selection', shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, groups=groups, flagversion=self.flagversion, flaglabel=self.analysisdict.get('flaglabel'))
             if dlg.ShowModal() == wx.ID_OK:
                 keys2flag = dlg.AffectedKeysTextCtrl.GetValue()
                 keys2flag = keys2flag.split(',')
@@ -4281,7 +4314,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
 
         # Open Dialog and return the parameters threshold, keys, timerange
-        dlg = FlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange, labelid=labelid, operator=operator, markall=markall)
+        dlg = FlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange, labelid=labelid, operator=operator, markall=markall, flaglabel=self.analysisdict.get('flaglabel'))
         if dlg.ShowModal() == wx.ID_OK:
             threshold = dlg.ThresholdTextCtrl.GetValue()
             timerange = dlg.TimerangeTextCtrl.GetValue()
@@ -4361,7 +4394,7 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
         else:
             self.changeStatusbar("Flagging range ...")
-            dlg = FlagRangeDialog(None, title='Stream: Flag range', stream=plotstream, shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, groups=groups, flagversion=self.flagversion)
+            dlg = FlagRangeDialog(None, title='Stream: Flag range', stream=plotstream, shownkeylist=shownkeys, keylist=keys, labelid=labelid, operator=operator, groups=groups, flagversion=self.flagversion, flaglabel=self.analysisdict.get('flaglabel'))
             startdate=self.xlimits[0]
             enddate=self.xlimits[1]
             starttime = num2date(startdate).replace(tzinfo=None).strftime('%X')

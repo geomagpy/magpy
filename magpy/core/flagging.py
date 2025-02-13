@@ -143,7 +143,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
 
     """
 
-    def __init__(self, flagdict=None):
+    def __init__(self, flagdict=None, flaglabel={}):
         """
         Description
             currently supports two flagging containers (list and dict)
@@ -211,7 +211,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         # 080-089 : (0) data treatment notations
         # 090-    : (0,1,2,3,4) yet to be classified
         # Flagids of the labels
-        self.FLAGLABEL = {'000': 'normal',
+        if not flaglabel:
+            self.FLAGLABEL = {'000': 'normal',
                           '001': 'lightning strike',
                           '002': 'spike',
                           '012': 'pulsation pc 2',
@@ -231,6 +232,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                           '090': 'unknown disturbance',
                           '099': 'unlabeled signature'
                           }
+        else:
+            self.FLAGLABEL = flaglabel
 
     def __str__(self):
         return str(self.flagdict)
