@@ -59,6 +59,9 @@ import platform
 | FlagRangeDialog      |   2.0.0   |                 |  level 1       |          | flag_onFlagRange |
 | FlagLoadDialog       |   2.0.0   |                 |  level 1       |          | flag_onFlagLoad |
 | FlagSaveDialog       |   2.0.0   |                 |  level 1       |          | flag_onFlagSave |
+| CheckDefinitiveDataDialog | 2.0.0   |              |  level 2       |          |            |
+| CheckDataReportDialog |  2.0.0   |                 |  level 2       |          |            |
+| CheckDataSelectDialog |  2.0.0   |                 |  level 2       |          |            |
 
 
 runtime test:
