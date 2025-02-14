@@ -2149,7 +2149,7 @@ class FlagOutlierDialog(wx.Dialog):
     USED BY:
         Stream Method: onFlagOutlier()
     """
-    def __init__(self, parent, title, threshold, timerange, markall, labelid, operator, flaglabel):
+    def __init__(self, parent, title, threshold, timerange, markall, labelid, operator, groups, flaglabel):
         super(FlagOutlierDialog, self).__init__(parent=parent,
             title=title, size=(600, 700))
         fl = flagging.Flags(None,flaglabel)
@@ -2158,6 +2158,10 @@ class FlagOutlierDialog(wx.Dialog):
         self.markall = markall
         self.labelid = labelid
         self.operator = operator
+        if isinstance(groups, dict):
+            self.groups = groups
+        else:
+            self.groups = {}
         self.labels = ["{}: {}".format(key, fl.FLAGLABEL.get(key)) for key in fl.FLAGLABEL]
         self.currentlabelindex = [i for i, el in enumerate(self.labels) if el.startswith(labelid)][0]
         self.createControls()
@@ -2426,13 +2430,38 @@ class FlagRangeDialog(wx.Dialog):
         """
         label = self.LabelComboBox.GetStringSelection()
         labelid = label[:3]
-        print ("Changed label to", labelid)
         if 10 <= int(labelid) < 50:
             self.FlagIDComboBox.SetValue(self.flagidlist[4])
         else:
             self.FlagIDComboBox.SetValue(self.flagidlist[3])
 
     def SetValue(self):
+        self.UpperLimitTextCtrl.Disable()
+        self.LowerLimitTextCtrl.Disable()
+        self.SelectKeyComboBox.Disable()
+        self.LowerTimeText.Enable()
+        self.UpperTimeText.Enable()
+        self.startFlagDatePicker.Enable()
+        self.startFlagTimePicker.Enable()
+        self.endFlagDatePicker.Enable()
+        self.endFlagTimePicker.Enable()
+        self.UpperLimitTextCtrl.SetValue(str(self.ul))
+        self.LowerLimitTextCtrl.SetValue(str(self.ll))
+
+
+    def OnChangeGroup(self, e):
+        val = self.rangeRadioBox.GetStringSelection()
+        if str(val) == 'time':
+            self.UpperLimitTextCtrl.Disable()
+            self.LowerLimitTextCtrl.Disable()
+            self.SelectKeyComboBox.Disable()
+            self.LowerTimeText.Enable()
+            self.UpperTimeText.Enable()
+            self.startFlagDatePicker.Enable()
+            self.startFlagTimePicker.Enable()
+            self.endFlagDatePicker.Enable()
+            self.endFlagTimePicker.Enable()
+        elif str(val) == 'value':
             self.UpperLimitTextCtrl.Enable()
             self.LowerLimitTextCtrl.Enable()
             self.SelectKeyComboBox.Enable()
@@ -2445,23 +2474,6 @@ class FlagRangeDialog(wx.Dialog):
             self.UpperLimitTextCtrl.SetValue(str(self.ul))
             self.LowerLimitTextCtrl.SetValue(str(self.ll))
 
-
-    def OnChangeGroup(self, e):
-        val = self.rangeRadioBox.GetStringSelection()
-        print ("Change group", val)
-        if str(val) == 'time':
-            self.UpperLimitTextCtrl.Disable()
-            self.LowerLimitTextCtrl.Disable()
-            self.SelectKeyComboBox.Disable()
-            self.LowerTimeText.Enable()
-            self.UpperTimeText.Enable()
-            self.startFlagDatePicker.Enable()
-            self.startFlagTimePicker.Enable()
-            self.endFlagDatePicker.Enable()
-            self.endFlagTimePicker.Enable()
-        elif str(val) == 'value':
-            self.SetValue()
-
     def OnChangeSelection(self, e):
         firstkey = self.SelectKeyComboBox.GetValue()
         ind = KEYLIST.index(firstkey)
@@ -2469,7 +2481,6 @@ class FlagRangeDialog(wx.Dialog):
         self.ll = np.nanmin(self.stream.ndarray[ind])
         self.UpperLimitTextCtrl.SetValue(str(self.ul))
         self.LowerLimitTextCtrl.SetValue(str(self.ll))
-        print (str(firstkey),ind, self.ul, self.ll)
 
     def OnSelectGroups(self, e):
         #print ("Groups look like:", self.groups)

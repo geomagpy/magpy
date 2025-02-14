@@ -717,3 +717,29 @@ Fitting: if fits are applied to a data set and afterwards the amount of shown co
 columns are selected again the fitting curves will be visible again. The reason is that plotting depends on lists of keys,
 and lists for symbols, colors, padding and functions, which all depend on the key list. Possible solutions: do not use lists 
 but dictionaries. Well.... in a major future version.
+
+### 7.2 Testing procedure of the graphical user interface
+
+Unlike the backend which come with two code testing features, runtime tests and verification tests, such tests are 
+difficult to implement to cover issues with the graphical part. Runtime tests are used to check for general failures of
+individual modules. These tests are included into every module and can be run with "python module.py" (i.e. python
+stream.py). Such tests need to be performed whenever modules are modified to make sure that changes do not break up the 
+overall functionality. Modules from magpy/gui are however not supported by such runtime tests. Same applies for
+verification tests ( magpy/tests/verification.py) which based on unittest ascertains that the tested methods perform as 
+expected and return correct results. The underlying methods of XMagPy are tested thoroughly therefore, but nut the 
+graphical applications. To check those the following test scheme is performed with every major release:
+
+Linux environment:
+
+1. Open file example 1 (TODO replace by 2023 data set)
+2. Open file example 2
+3. Go to memory and access data set 1
+4. Flag panel: flag_outlier and assign group "magnetism"
+5. Zoom into one flag and show details
+6. Press right mousebutton to remove this flag
+7. Zoom in again and use Flag Selection with some "Geomagnetic Storm" flag, use group "magnetism" again
+8. Zoom into another part, use FlagRange -> time, no group
+9. Zoom into another part, use FlagRange -> value, selected values, add group "dummy"
+10. Flag minimum only in one component
+11. Flag maximum only in one component
+12. 

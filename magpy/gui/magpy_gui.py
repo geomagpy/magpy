@@ -68,18 +68,18 @@ Major methods:              major_method
 | class          |  method  |  since version  |  until vers |  runtime test  |  calls  | manual  |  used by |
 | -------------- |  ------  |  -------------  |  ---------- |  ------------  |  -----  |---------|  ---------- |
 |  RedirectText  |          |          2.0.0  |             |            |             | -       |  core.activity |
-|  PlotPanel     |  __init__  |        2.0.0  |             | level 1    |             |         | |
-|  PlotPanel     |  __do_layout  |     2.0.0  |             | level 1    |             |         | |
-|  PlotPanel     |  live_timer   |     2.0.0  |             | level 1    |             |      | |
+|  PlotPanel     |  __init__  |        2.0.0  |             | level 2    |             |         | |
+|  PlotPanel     |  __do_layout  |     2.0.0  |             | level 2    |             |         | |
+|  PlotPanel     |  live_timer   |     2.0.0  |             | level 2    |             |      | |
 |  PlotPanel     |  _live_update_marcos | 2.0.0  |          | level 1    |             |      | |
 |  PlotPanel     |  _live_update_martas | 2.0.0  |          | level 2    |             |      | |
 |  PlotPanel     |  start_martas_monitor | 2.0.0  |         | level 2    |             |      | |
 |  PlotPanel     |  start_marcos_monitor | 2.0.0  |         | level 1    |             |      | |
 |  PlotPanel     |  monitor_plot  |    2.0.0  |             | level 1    |             |      | |
-|  PlotPanel     |  gui_plot  |        2.0.0  |             | level 1    |               |      | |
-|  PlotPanel     |  power_plot  |      2.0.0  |             | level 1    |               |      | |
+|  PlotPanel     |  gui_plot  |        2.0.0  |             | level 2    |               |      | |
+|  PlotPanel     |  power_plot  |      2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  spec_plot  |       2.0.0  |             | level 0    |               |      | |
-|  PlotPanel     |  initial_plot  |    2.0.0  |             | level 1    |               |      | |
+|  PlotPanel     |  initial_plot  |    2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  link_rep  |        2.0.0  |             |            |               |      | |
 |  PlotPanel     |  link_rep  |        2.0.0  |             |            |               |      | |
 |  PlotPanel     |  AnnoteFinder  |    2.0.0  |             |            |               |      | |
@@ -89,27 +89,26 @@ Major methods:              major_method
 |  PlotPanel     |  AF.finder  |       2.0.0  |             |            |               |      | |
 |  PlotPanel     |  AF.draw  |         2.0.0  |             |            |               |      | |
 |  MenuPanel     | __init__  |         2.0.0  |             |            |               |      | |
-|  MainFrame     | __init__  |         2.0.0  |             | level 1    |               |        |    |
-|  MainFrame     | __set_properties |  2.0.0  |             | level 1    |               |        | init   |
-|  MainFrame     | _get_default_initialization |  2.0.0  |  | level 1    |               |        | init   |
-|  MainFrame     | _set_plot_parameter |  2.0.0  |          | level 1    |               |        | init   |
-|  MainFrame     | _create_menu_bar |  2.0.0  |             | level 1    |               |        | init   |
-|  MainFrame     | _bind_controls  |   2.0.0  |             | level 1    |               |        | init   |
-|  MainFrame     | _db_connect  |      2.0.0  |             | level 1    |               |        | init, db_, file_db |
+|  MainFrame     | __init__  |         2.0.0  |             | level 2    |               |        |    |
+|  MainFrame     | __set_properties |  2.0.0  |             | level 2    |               |        | init   |
+|  MainFrame     | _get_default_initialization |  2.0.0  |  | level 2    |               |        | init   |
+|  MainFrame     | _set_plot_parameter |  2.0.0  |          | level 2    |               |        | init   |
+|  MainFrame     | _create_menu_bar |  2.0.0  |             | level 2    |               |        | init   |
+|  MainFrame     | _bind_controls  |   2.0.0  |             | level 2    |               |        | init   |
+|  MainFrame     | _db_connect  |      2.0.0  |             | level 2    |               |        | init, db_, file_db |
 |  MainFrame     | _determine_decimals  | 2.0.0  |          | level 2    |               |        | onMean, onMax, onMin |
-|  MainFrame     | _deactivate_controls |  2.0.0  |         | level 1    |               |        | init, file_on_open |
-|  MainFrame     | _activate_controls |  2.0.0  |           | level 1    |               |        | init, file_on_open |
-|  MainFrame     | _initial_read  |    2.0.0  |             | level 1    |               |        | file_on_open  |
-|  MainFrame     | _initial_plot  |    2.0.0  |             | level 1    |               |        | file_on_open  |
-|  MainFrame     | _update_plot  |     2.0.0  |             | level 1    |               |        | file_on_open  |
-|  MainFrame     | _do_plot  |         2.0.0  |             | level 1    |               |        | file_on_open  |
-|  MainFrame     | _update_cursor_status |  2.0.0  |        | level 1    |               |        |   |
+|  MainFrame     | _deactivate_controls |  2.0.0  |         | level 2    |               |        | init, file_on_open |
+|  MainFrame     | _activate_controls |  2.0.0  |           | level 2    |               |        | init, file_on_open |
+|  MainFrame     | _initial_read  |    2.0.0  |             | level 2    |               |        | file_on_open  |
+|  MainFrame     | _initial_plot  |    2.0.0  |             | level 2    |               |        | file_on_open  |
+|  MainFrame     | _update_plot  |     2.0.0  |             | level 2    |               |        | file_on_open  |
+|  MainFrame     | _do_plot  |         2.0.0  |             | level 2    |               |        | file_on_open  |
+|  MainFrame     | _update_cursor_status |  2.0.0  |        | level 2    |               |        |   |
 |  MainFrame     | _update_flags_onclick |  2.0.0  |        | level 0    |               |        |   |
-|  MainFrame     | _open_stream  |     2.0.0  |             | level 0    |               |        | file_on_open  |
+|  MainFrame     | _open_stream  |     2.0.0  |             | level 2    |               |        | file_on_open  |
 |  MainFrame     | _update_statistics | 2.0.0  |            | level 0    |               |        | _do_plot  |
 |  MainFrame     | changeStatusbar  |  2.0.0  |             | level 2    |               |        | everywhere  |
 |  MainFrame     | file_on_open_file  | 2.0.0  |            | level 2    |               | 3.2    |   |
-|  MainFrame     | file_on_open_dir  | 1.0.0  |  removed    | level 1    |               | 3.2    |   |
 |  MainFrame     | file_on_open_url  | 2.0.0  |             | level 2    |               | 3.2    |   |
 |  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 1    |               | 3.2    |   |
 |  MainFrame     | file_on_open_db  |  2.0.0  |             | level 2    |               | 3.2    |   |
@@ -119,8 +118,9 @@ Major methods:              major_method
 |  MainFrame     | db_on_init  |       2.0.0  |             | level 2    |               | 3.3    |   |
 |  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               | 3.4    |   |
 |  MainFrame     | memory_select |     2.0.0  |             | level 1    |               | 3.5    |   |
+|  MainFrame     | ---- |      2.0.0  |             | level 2    |               | 3.7    |   |
 |  MainFrame     | options_init |      2.0.0  |             | level 2    |               | 3.7    |   |
-|  MainFrame     | options_plot   |    2.0.0  |             |            |               | 3.7    |   |
+|  MainFrame     | options_plot   |    2.0.0  |             | level 1    |               | 3.7    |   |
 |  MainFrame     | options_di   |      2.0.0  |             | level 2    |               | 3.7    |   |
 |  MainFrame     | help_about  |       2.0.0  |             | level 2    |               | 3.8    |   |
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               | 3.8    |   |
@@ -141,7 +141,9 @@ Major methods:              major_method
 |  MainFrame     | flag_onFlagClear  | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | flag_onFlagDrop   | 2.0.0  |             | level 2    |               |        |   |
 |  MainFrame     | flag_onFlagAccept   | 2.0.0  |           | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagRange  | 2.0.0  |             | level 1    |               |        |   |
+|  MainFrame     | flag_onFlagRange  | 2.0.0  |             | level 2    |               |        |   |
+|  MainFrame     | flag_onFlagMax    | 2.0.0  |            | level 1    |               |        |   |
+|  MainFrame     | flag_onFlagMin    | 2.0.0  |            | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagLoad   | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagSave   | 2.0.0  |             | level 1    |               |        |   |
 |  MainFrame     | flag_onFlagDetails | 2.0.0  |       | level 0    |               |        |   |
@@ -1368,8 +1370,8 @@ class MainFrame(wx.Frame):
         self.fileMenu = wx.Menu()
         self.fileOpen = wx.MenuItem(self.fileMenu, 101, "&Open File...\tCtrl+O", "Open file", wx.ITEM_NORMAL)
         self.fileMenu.Append(self.fileOpen)
-        self.dirOpen = wx.MenuItem(self.fileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
-        self.fileMenu.Append(self.dirOpen)
+        #self.dirOpen = wx.MenuItem(self.fileMenu, 102, "Select &Directory...\tCtrl+D", "Select an existing directory", wx.ITEM_NORMAL)
+        #self.fileMenu.Append(self.dirOpen)
         self.fileMenu.AppendSeparator()
         self.webServiceOpen = wx.MenuItem(self.fileMenu, 103, "Open &WebService...\tCtrl+W", "Get webservice data", wx.ITEM_NORMAL)
         self.fileMenu.Append(self.webServiceOpen)
@@ -1501,7 +1503,7 @@ class MainFrame(wx.Frame):
         """
         # BindingControls on the menu
         # File menu
-        self.Bind(wx.EVT_MENU, self.file_on_open_dir, self.dirOpen)
+        #self.Bind(wx.EVT_MENU, self.file_on_open_dir, self.dirOpen)
         self.Bind(wx.EVT_MENU, self.file_on_open_file, self.fileOpen)
         self.Bind(wx.EVT_MENU, self.file_on_open_url, self.webOpen)
         self.Bind(wx.EVT_MENU, self.file_on_open_webservice, self.webServiceOpen)
@@ -2598,63 +2600,6 @@ class MainFrame(wx.Frame):
                 "OpenFile", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             self.changeStatusbar("Loading file failed ... Ready")
-            dlg.Destroy()
-
-    @deprecated("OpenDir will be removed")
-    def file_on_open_dir(self, event):
-        """
-        DESCRIPTION
-            Open a directory wioth many files.
-            Eventually fremove this method.
-            Replace by a "get filelist in directory" during Openfile. And create a open next and open previous
-            method which loads the next file (or replaces date in file/url/db with next dates.
-        CALLS:
-            _open_stream
-        :param event:
-        :return:
-        """
-        stream = DataStream()
-        success = False
-        dialog = wx.DirDialog(None, "Choose a directory:", self.magpystate.get('currentpath'),
-                              style=wx.DD_DEFAULT_STYLE | wx.DD_NEW_DIR_BUTTON)
-        if dialog.ShowModal() == wx.ID_OK:
-            filelist = glob.glob(os.path.join(dialog.GetPath(), '*'))
-            self.magpystate['currentpath'] = dialog.GetPath()  # modify self.last_dir
-            files = sorted(filelist)
-            try:
-                oldest = methods.extract_date_from_string(files[0])[0]
-                old = wx.DateTime.FromDMY(day=oldest.day, month=oldest.month - 1, year=oldest.year)
-                newest = methods.extract_date_from_string(files[-1])[0]
-                newest = newest + timedelta(days=1)
-                new = wx.DateTime.FromDMY(day=newest.day, month=newest.month - 1, year=newest.year)
-                self.menu_p.str_page.pathTextCtrl.SetValue(dialog.GetPath())
-                self.menu_p.str_page.fileTextCtrl.SetValue("*")
-                success = True
-            except:
-                success = False
-            # self.changeStatusbar("Loading data ...")
-        dialog.Destroy()
-
-        if success:
-            stream = self._open_stream(path=self.magpystate.get('currentpath'), mintime=old, maxtime=new, extension='*')
-            self.menu_p.rep_page.logMsg(
-                '{}: found {} data points'.format(self.magpystate.get('currentpath'), len(stream.ndarray[0])))
-
-            if success:
-                stream = stream._remove_nancolumns()
-
-            if success:
-                self.magpystate['source'] = 'dir'
-                self.magpystate['filename'] = ''
-                streamid = self._initial_read(stream)
-                if streamid:  # will create a new input into datadict
-                    self._initial_plot(streamid)
-        else:
-            dlg = wx.MessageDialog(self, "Could not identify appropriate files in directory!\n"
-                                         "please check and/or try OpenFile\n",
-                                   "OpenDirectory", wx.OK | wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Loading from directory failed ... Ready")
             dlg.Destroy()
 
 
@@ -4237,7 +4182,6 @@ class MainFrame(wx.Frame):
                 flagid = dlg.FlagIDComboBox.GetValue()
                 flagid = int(flagid[0])
                 operator = dlg.OperatorTextCtrl.GetValue()
-                groups = dlg.GroupTextCtrl.GetValue()
                 labelid = dlg.LabelComboBox.GetValue()
 
                 above = min(self.ylimits)
@@ -4293,6 +4237,7 @@ class MainFrame(wx.Frame):
         plotcont = self.plotdict.get(self.active_id)
         keys = plotcont.get('shownkeys')
         sr = datacont.get("samplingrate")
+        groups = {}
 
         timerange = float(sr) * self.analysisdict.get('timerange',60.0) # in seconds
         threshold = self.analysisdict.get('threshold',4.0)
@@ -4314,18 +4259,19 @@ class MainFrame(wx.Frame):
             dlg.Destroy()
 
         # Open Dialog and return the parameters threshold, keys, timerange
-        dlg = FlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange, labelid=labelid, operator=operator, markall=markall, flaglabel=self.analysisdict.get('flaglabel'))
+        dlg = FlagOutlierDialog(None, title='Stream: Flag outlier', threshold=threshold, timerange=timerange, labelid=labelid, operator=operator, markall=markall, groups=groups, flaglabel=self.analysisdict.get('flaglabel'))
         if dlg.ShowModal() == wx.ID_OK:
             threshold = dlg.ThresholdTextCtrl.GetValue()
             timerange = dlg.TimerangeTextCtrl.GetValue()
             markall = dlg.MarkAllCheckBox.GetValue()
             label = dlg.LabelComboBox.GetValue()
             operator = dlg.OperatorTextCtrl.GetValue()
+            groups = dlg.groups
             try:
                 threshold = float(threshold)
                 timerange = float(timerange)
                 labelid = label[:3]
-                ofl = flagging.flag_outlier(plotstream, keys=keys, timerange=timerange, threshold=threshold, labelid=labelid, markall=markall)
+                ofl = flagging.flag_outlier(plotstream, keys=keys, timerange=timerange, threshold=threshold, groups=groups, labelid=labelid, markall=markall)
                 if fl:
                     ofl = fl.join(ofl)
                 self.menu_p.rep_page.logMsg('- flagged outliers: added {} flags'.format(len(ofl)))
@@ -4416,6 +4362,8 @@ class MainFrame(wx.Frame):
                 keys2flag = keys2flag.split(',')
                 keys2flag = [el for el in keys2flag if el in DataStream().KEYLIST]
                 comment = dlg.CommentTextCtrl.GetValue()
+                label = dlg.LabelComboBox.GetValue()
+                labelid = label[:3]
                 groups = dlg.groups
                 flagid = dlg.FlagIDComboBox.GetValue()
                 flagid = int(flagid[0])
@@ -4440,11 +4388,10 @@ class MainFrame(wx.Frame):
                      else:
                          flagval = False
                      if flagval:
-                         #print ("Above , Below:", above, below)
                          rfl = flagging.flag_range(plotstream, keys=[keys], flagtype=flagid, labelid=labelid,
                                                    operator=operator,
                                                    groups=groups, text=comment, keystoflag=keys2flag,
-                                                   starttime=starttime, endtime=endtime, above=above, below=below)
+                                                   above=above, below=below)
                          if fl:
                              rfl = fl.join(rfl)
                          self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(rfl)))
@@ -4550,12 +4497,13 @@ class MainFrame(wx.Frame):
         plotcont = self.plotdict.get(self.active_id)
         shownkeys = plotcont.get('shownkeys')
 
-        labelid = self.menu_p.fla_page.LabelComboBox.GetValue()
+        label = self.menu_p.fla_page.LabelComboBox.GetValue()
+        labelid = label[:3]
         operator = self.analysisdict.get('operator')
         groups = ''
         self.flagversion = self.analysisdict.get('flagversion', '2.0')
         efl = flagging.Flags()
-        mfl = flagging.Flags()
+        nfl = flagging.Flags()
 
         # Get current flagging object from data header
         plotstream = stream.copy()
@@ -4566,8 +4514,8 @@ class MainFrame(wx.Frame):
         if sensid == '' and not dataid == '':
             sensid = dataid[:-5]
 
-        if fl: # and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Flagging information in already associated with the data set. Keep them \n YES \n or drop them  \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+        if fl:
+            dlg = wx.MessageDialog(self, 'Flags are already associated with the data set.\nKeep them and append new flags (YES) or remove them before adding new flags (NO)', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
             if dlg.ShowModal() == wx.ID_NO:
                 fl = efl
             dlg.Destroy()
@@ -4593,9 +4541,10 @@ class MainFrame(wx.Frame):
                                                operator=operator,
                                                groups=groups, text=comment, keystoflag=keys[idx],
                                                starttime=starttime, endtime=endtime)
-                    mfl = mfl.join(nfl)
-        if mfl:
-            plotstream.header['DataFlags'] = mfl
+                    if fl:
+                        nfl = fl.join(nfl)
+        if nfl:
+            plotstream.header['DataFlags'] = nfl
             # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
             # and update plot will create patches
             streamid = self._initial_read(plotstream)
@@ -4616,12 +4565,13 @@ class MainFrame(wx.Frame):
         plotcont = self.plotdict.get(self.active_id)
         shownkeys = plotcont.get('shownkeys')
 
-        labelid = self.menu_p.fla_page.LabelComboBox.GetValue()
+        label = self.menu_p.fla_page.LabelComboBox.GetValue()
+        labelid = label[:3]
         operator = self.analysisdict.get('operator')
         groups = ''
         self.flagversion = self.analysisdict.get('flagversion', '2.0')
         efl = flagging.Flags()
-        mfl = flagging.Flags()
+        nfl = flagging.Flags()
 
         # Get current flagging object from data header
         plotstream = stream.copy()
@@ -4632,8 +4582,8 @@ class MainFrame(wx.Frame):
         if sensid == '' and not dataid == '':
             sensid = dataid[:-5]
 
-        if fl: # and len(self.flaglist)>0:
-            dlg = wx.MessageDialog(self, 'Flagging information in already associated with the data set. Keep them \n YES \n or drop them  \n NO', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
+        if fl:
+            dlg = wx.MessageDialog(self, 'Flags are already associated with the data set.\nKeep them and append new flags (YES) or remove them before adding new flags (NO)', 'Flags', wx.YES_NO | wx.ICON_QUESTION)
             if dlg.ShowModal() == wx.ID_NO:
                 fl = efl
             dlg.Destroy()
@@ -4659,9 +4609,10 @@ class MainFrame(wx.Frame):
                                                operator=operator,
                                                groups=groups, text=comment, keystoflag=keys[idx],
                                                starttime=starttime, endtime=endtime)
-                    mfl = mfl.join(nfl)
-        if mfl:
-            plotstream.header['DataFlags'] = mfl
+                    if fl:
+                        nfl = fl.join(nfl)
+        if nfl:
+            plotstream.header['DataFlags'] = nfl
             # adding flags will lead to a new streamid, initial read will set datacont['flags'] to True
             # and update plot will create patches
             streamid = self._initial_read(plotstream)

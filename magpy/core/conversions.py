@@ -11,14 +11,14 @@ the following methods are contained:
 |class | method | since version | until version | runtime test | result verification | manual | *tested by |
 |----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
 |**core.conversions** |  |        |             |              |  |  | |
-|    | obspytomagpy      |  2.0.0 |             |              |  |  | |
-|    | pandas2magpy      |  2.0.0 |             |              |  |  | |
+|    | obspy2magpy       |  2.0.0 |             | no           |  |  | |
+|    | pandas2magpy      |  2.0.0 |             | no           |  |  | |
 
 """
 
 from magpy.stream import DataStream
 import numpy as np
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 KEYLIST = DataStream().KEYLIST
 
@@ -39,6 +39,11 @@ def obspy2magpy(opstream, keydict=None):
     EXAMPLE:
         mpst = obspy2magpy(opst, keydict={'nn.e6046.11.p0': 'x', 'nn.e6046.11.p1': 'y'})
     """
+    try:
+        import obspy
+    except:
+        print ("obspy not available - aborting")
+        return DataStream()
     array = [[] for key in KEYLIST]
     mpstream = DataStream()
     if not keydict:
@@ -102,7 +107,11 @@ def pandas2magpy(dataframe,sensorid="RADONWBV_9500_0001", columns=[], units=[], 
     DESCRIPTION
         Converts pandas dataframe into a magpy datastream structure
     """
-    import pandas as pd
+    try:
+        import pandas as pd
+    except:
+        print ("pandas not available - aborting")
+        return DataStream()
     array = dataframe.to_numpy()
     if not columns:
         columns = list(dataframe.columns)
@@ -126,5 +135,43 @@ def pandas2magpy(dataframe,sensorid="RADONWBV_9500_0001", columns=[], units=[], 
             st.header[uni] = units[idx]
         ar[idx] = el
     st.ndarray = np.asarray(ar,dtype=object)
-    #st = drop_nans(st,'time')
     return st
+
+
+if __name__ == '__main__':
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: Conversion MODULE")
+    print("THIS IS A TEST RUN OF THE MAGPY.CORE CONVERSION MODULE.")
+    print("All main methods will be tested. This may take a while.")
+    print("If errors are encountered they will be listed at the end.")
+    print("Otherwise True will be returned")
+    print("----------------------------------------------------------")
+    print()
+
+    errors = {}
+
+    try:
+        # Load or constrict a pandas data frame and convetr it to MagPy
+        pass
+    except Exception as excep:
+        errors['pandas2magpy'] = str(excep)
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing pandas2magpy.")
+    try:
+        # Load or construct a obspy data frame and convert it to MagPy
+        pass
+    except Exception as excep:
+        errors['obspy2magpy'] = str(excep)
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing obspy2magpy.")
+
+    print()
+    print("----------------------------------------------------------")
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(str(errors.keys()))
+        print()
+        print("Exceptions thrown:")
+        for item in errors:
+            print("{} : errormessage = {}".format(item, errors.get(item)))
