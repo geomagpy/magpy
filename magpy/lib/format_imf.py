@@ -676,8 +676,10 @@ def writeIAF(datastr, filename, **kwargs):
             print(" -> no K9 value provided for Station: using 500nT as default")
         if not datastream.header.get('DataAcquisitionLongitude', None):
             print(" -> no Longitude provided for Station: using 15E as default")
-        kvals = K_fmi(datastream, K9_limit=datastream.header.get('StationK9', 500),
-                          longitude=datastream.header.get('DataAcquisitionLongitude', 15))
+        kvals = K_fmi(datastream, K9_limit=float(datastream.header.get('StationK9', 500)),
+                          longitude=float(datastream.header.get('DataAcquisitionLongitude', 15)))
+
+    #print ("HERE", datastream.header)
 
     for i in range(tdiff):
         dayar = datastream._select_timerange(starttime=t0+i,endtime=t0+i+1)
@@ -773,7 +775,11 @@ def writeIAF(datastr, filename, **kwargs):
                     value = 0
                 else:
                     value = datastream.header.get(elem,'')
-
+                if isinstance(value, (list,tuple)):
+                    if len(value)>0:
+                        value = value[0]
+                    else:
+                        value = ''
                 if not is_number(value):
                     if len(value) < 4:
                         value = value.ljust(4)
@@ -782,7 +788,7 @@ def writeIAF(datastr, filename, **kwargs):
                 head.append(value)
                 reqinfotmp = [el for el in reqinfotmp if not el==elem]
             except:
-                print("Check header content: could not interprete header information")
+                print("Check header content: could not interpret header information")
                 print("  --  critical information error in data header: {}  --".format(elem))
                 print("  ---------------------------------------------------")
                 print(" Please provide: StationIAGAcode, DataAcquisitionLatitude, ")

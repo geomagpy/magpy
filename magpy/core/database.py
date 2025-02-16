@@ -2404,7 +2404,7 @@ REMOVED:
 
             columns = rows.T
             array = [[] for el in stream.KEYLIST]
-            if columns:
+            if len(columns) > 0:
                 for idx,key in enumerate(keys):
                     pos = stream.KEYLIST.index(key)
                     if not False in checkEqual3(columns[idx]):

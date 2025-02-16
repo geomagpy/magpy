@@ -475,18 +475,27 @@ At present (MagPy1.0) you can change between different modification types (selec
 The meta data panel gives you an overview about all meta information connected to the currently active data set. This
 meta information is usually obtained from the data file. If a database is connected, and you have information for
 DataID, SensorID and/or StationID within your database, you can extend that information with database contents
-(**Get from DB**). This is useful for exporting data e.g. when converting IAGA-2002 to ImagCDF. 
+(**Get from DB**). This is useful for exporting data e.g. when converting IAGA-2002 to ImagCDF. The buttons
+**Get from DB** and **Write to DB** are only available if a DataID is provided for the data set.
 
 You can always modify or extend meta information when clicking on the buttons for data related, sensor related or 
 station related meta information. 
 
 As an example the input sheet for station related information is shown in figure 4.3.2. Here you will see several 
-field which can be filled with your information. The field names are self explaining and will be automatically 
-converted to obligatory field names when exporting specific formats like ImagCDF. Numbers in parenthesis behind some
+fields which can be filled with your information. The field names are self explaining and will be automatically 
+converted to obligatory field names when exporting specific formats like IMAGCDF. Numbers in parenthesis behind some
 field names indicate that this information has to be provided for the corresponding output
 (1 → INTERMAGNET Archive Format IAF, 2 → IAGA 2002 format, 3→ ImagCDF).
 
 Figure 4.3.2: Input sheet for station related information. 
+
+Please use the button **Write to DB** only if you are absolutely sure that you know what you are doing. **Write to DB**
+will replace any existing data from the database with key:value pairs you provided. This means that also empty fields
+are written to the database and will replace any existing data.
+
+>[!IMPORTANT]
+> It is strongly recommended to perform write operations to the database not from XMagPy but use backend methods.
+
 
 ### 4.4 The analysis panel
 
@@ -528,13 +537,13 @@ of the smoothed time series at new intervals. The default filter parameters will
 resolution of the time series and will correspond to IAGA/INTERMAGNET recommended filter parameters.
 The filter dialog allows you to select an appropriate filter window. Detailed descriptions of all possible filter 
 windows can be found elsewhere e.g. python signal analysis. You further define a window length, a sampling interval in
-seconds and eventually an offset for the window center. 0.0 as shown above will center the window on the minute.
+seconds and eventually an offset for the window center. 0.0 as shown above will center the window on the second/minute/hour.
 Furthermore you have to select a preferred missing data treatment. By default, the IAGA recommended method will be
 used, which means that filtering will be performed if more than 90% of data is available within the filtering window.
-Please note the filter weight are always determined analytically and therefore missing data is correctly accounted for
-when applying the filter window. Interpolation as missing data treatment will interpolate missing data if more than
-90% of data is available. If less than 90% is present than this window will not be filtered. Conservative treatment
-will not perform any filtering if already one data point is missing within the filter window.  
+**Interpolation** will interplolate mssing data if more then 90% of data is available before filtering. **Conservative**
+will not calculate a filtered value if any data is missing.
+Please note: filter weights are always determined analytically and therefore missing data is correctly accounted for
+when applying the filter window.   
 
 **Offset** allows you to define a certain offset in time or component for either the whole time series or the selected
 (zoomed) time window.  Figure 4.4.7 shows an example of an offset within a time series and the offset dialog to correct
@@ -825,4 +834,10 @@ Linux environment:
 37. export example1 in all possible format with provided options
 38. export as ImagCDF with scalar data from example2
 39. filter to minute and use those export options
-40. 
+40. go to meta -> change i.e. SensorDescription and export to PYCDF
+41. reload the files and check
+42. clear memory
+43. database tests -> Database -> Connect DB
+44. Load data set from database
+45. Open example2 and go to meta
+46. Change SensorDescription and write to DB

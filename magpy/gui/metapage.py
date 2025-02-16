@@ -92,8 +92,6 @@ class MetaPage(wx.Panel):
                  (self.putDBButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
-                 (self.head3Label, noOptions),
-                  emptySpace,
                   emptySpace,
                   emptySpace]:
             gridSizer.Add(control, **options)
@@ -106,6 +104,7 @@ class MetaPage(wx.Panel):
 
         mainSizer.Add(boxSizer, 1, wx.EXPAND)
 
+        mainSizer.Add(self.head3Label, 0, 0)
         mainSizer.Add(self.MetaDataButton, 0, wx.ALIGN_LEFT | wx.ALL, 3)
         mainSizer.Add(self.dataTextCtrl, 0, wx.ALIGN_LEFT | wx.ALL, 3)
         mainSizer.Add(self.MetaSensorButton, 0, wx.ALIGN_LEFT | wx.ALL, 3)

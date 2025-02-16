@@ -1198,7 +1198,7 @@ CALLED BY:
         else:
             pass
         res = DataStream(header=self.header,ndarray=np.asarray(array,dtype=object))
-        if list(set(arraylengths))[0] == 0 and len(set(arraylengths)) == 1:
+        if not arraylengths or (list(set(arraylengths))[0] == 0 and len(set(arraylengths)) == 1):
             # only empty data columns remaining in stream
             res = DataStream()
         return res

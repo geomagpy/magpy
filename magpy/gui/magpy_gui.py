@@ -130,7 +130,7 @@ Major methods:              major_method
 |  MainFrame     | d_get_adjacent_stream | 2.0.0  |         | level 2    |               | 4.1    |   |
 |  MainFrame     | d_onNextButton |    2.0.0  |             | level 2    |               | 4.1    | get_adjacent  |
 |  MainFrame     | d_onPreviousButton |  2.0.0  |           | level 2    |               | 4.1    | get_adjacent  |
-|  MainFrame     | d_onTrimButton |    2.0.0  |             | level 1    |               | 4.1    |   |
+|  MainFrame     | d_onTrimButton |    2.0.0  |             | level 2    |               | 4.1    |   |
 |  MainFrame     | d_onSelectButton |  2.0.0  |             | level 2    |               | 4.1    |   |
 |  MainFrame     | d_onDropButton |    2.0.0  |             | level 2    |               | 4.1    |   |
 |  MainFrame     | d_onExtractButton | 2.0.0  |             | level 2    |               | 4.1    |   |
@@ -148,11 +148,11 @@ Major methods:              major_method
 |  MainFrame     | flag_onFlagLoad   | 2.0.0  |             | level 2    |               | 4.2    |   |
 |  MainFrame     | flag_onFlagSave   | 2.0.0  |             | level 2    |               | 4.2    |   |
 |  MainFrame     | flag_onFlagDetails | 2.0.0  |            | level 2    |               | 4.2    |   |
-|  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
-|  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
-|  MainFrame     | m_onDataButton |    2.0.0  |             | level 1    |               | 4.3    |   |
-|  MainFrame     | m_onSensorButton |  2.0.0  |             | level 1    |               | 4.3    |   |
-|  MainFrame     | m_onStationButton | 2.0.0  |             | level 1    |               | 4.3    |   |
+|  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 2    |               | 4.3    |   |
+|  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 2    |               | 4.3    |   |
+|  MainFrame     | m_onDataButton |    2.0.0  |             | level 2    |               | 4.3    |   |
+|  MainFrame     | m_onSensorButton |  2.0.0  |             | level 2    |               | 4.3    |   |
+|  MainFrame     | m_onStationButton | 2.0.0  |             | level 2    |               | 4.3    |   |
 |  MainFrame     | a_onDerivativeButton | 2.0.0  |          | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onDeltaFButton  | 2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onRotationButton | 2.0.0  |            | level 2    |               | 4.4    |   |
@@ -160,12 +160,12 @@ Major methods:              major_method
 |  MainFrame     | a_onMaxButton |     2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onMinButton |     2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onFitButton    |  2.0.0  |             | level 2    |               | 4.4    |   |
-|  MainFrame     | a_onFilterButton |  2.0.0  |             | level 1    |               | 4.4    |   |
-|  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 1    |               | 4.4    |   |
-|  MainFrame     | a_onOffsetButton |  2.0.0  |             | level 1    |               | 4.4    |   |
-|  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onFilterButton |  2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onOffsetButton |  2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onResampleButton |  2.0.0  |           | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onActivityButton |  2.0.0  |           | level 2    |               | 4.4    |   |
-|  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onDailyMeansButton | 2.0.0  |          | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onApplyBCButton | 2.0.0  |             | level 2    |               | 4.4    |   |
@@ -182,8 +182,8 @@ Major methods:              major_method
 |  MainFrame     | live_onConnectMARTAS |   2.0.0  |        | level 0    |               |        |   |
 |  MainFrame     | live_onStartMonitor |   2.0.0  |         | level 1    |               |        |   |
 |  MainFrame     | live_onStopMonitor |   2.0.0  |          | level 2    |               |        |   |
-|  -          |  read_dict  |          2.0.0  |             | level 1    |               |        |   |
-|  -          |  save_dict  |          2.0.0  |             | level 1    |               |        |   |
+|  -          |  read_dict  |          2.0.0  |             | level 2    |               |        |   |
+|  -          |  save_dict  |          2.0.0  |             | level 2    |               |        |   |
 |  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
 |  -          |  loadobj    |          1.0.0  |             |            |               |        |   |
 |  -          |  pydate2wxdate  |      2.0.0  |             | level 1    |               |        |   |
@@ -2494,12 +2494,10 @@ class MainFrame(wx.Frame):
                 # assume Database
                 try:
                     self.changeStatusbar("Loading data ... please be patient")
-                    #db = path[0]
                     db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-                    #print ("HEEERRRR", db)
                     stream = db.read(path[1], starttime=start, endtime=end)
                 except:
-                    print ("Reading failed")
+                    print("Reading failed")
 
             loadDlg.Destroy()
             return stream
@@ -4870,10 +4868,10 @@ class MainFrame(wx.Frame):
             self.menu_p.rep_page.logMsg(" - failed to add meta information to DB")
         else:
             dlg = wx.MessageDialog(self, "Please confirm!\n"
-                            "I want to replace the Meta information\nfrom the DB with data provided.\n","Confirm", wx.YES_NO |wx.ICON_INFORMATION)
+                            "You are going to replace exitsing meta information\nfrom the DB with data provided.\nThis will also erase any existing data\nyou have not provided!\n","Confirm", wx.YES_NO |wx.ICON_INFORMATION)
             if dlg.ShowModal() == wx.ID_YES:
                 db, success = self._db_connect(*self.magpystate.get('dbtuple'))
-                db.dict_to_fields(stream.header)
+                db.dict_to_fields(stream.header, mode='replace')
                 self.menu_p.rep_page.logMsg(" - added meta information for {} to DB".format(dataid))
             self._activate_controls(self.active_id)
 
@@ -5311,8 +5309,8 @@ class MainFrame(wx.Frame):
 
         if len(stream) > 0:
             plotstream = stream.copy()
-            k9_limit = plotstream.header.get("StationK9", 500)
-            long = plotstream.header.get("DataAcquisitionLongitude", 15.0)
+            k9_limit = float(plotstream.header.get("StationK9", 500))
+            long = float(plotstream.header.get("DataAcquisitionLongitude", 15.0))
             self.menu_p.rep_page.logMsg(" - determining K with K9 limit {} at lonitude {:.2f}".format(k9_limit, long))
             k = activity.K_fmi(plotstream, K9_limit=k9_limit, longitude=long, debug=False)
             streamid = self._initial_read(k)

@@ -152,8 +152,11 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                     value = value[0]
         except:
             pass
-        if not att in HEADTRANSLATE:
-            attname = 'Data'+att
+        if not att in HEADTRANSLATE: # exclude magpy types
+            if not att.startswith("Station") and not att.startswith("Sensor") and not att.startswith("Column"):
+                attname = 'Data'+att
+            else:
+                attname = att
         else:
             attname = HEADTRANSLATE[att]
         headers[attname] = value
