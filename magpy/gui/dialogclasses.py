@@ -341,6 +341,7 @@ class ConnectWebServiceDialog(wx.Dialog):
             self.selectedgroup = selectg
         parameter = self.services.get(self.selectedservice).get(self.selectedgroup)
 
+        print (parameter)
         self.ids = parameter.get('ids')
         self.types = parameter.get('type')
         self.formats = parameter.get('format')
@@ -368,6 +369,51 @@ class ConnectWebServiceDialog(wx.Dialog):
 
     def updateGroup(self, event):
         self.getGroup()
+
+
+class LoadSelectDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Used in case of ImagCDF files and various conteined data resolutions.
+        Select the data set of your choice in a Combo Box
+    """
+
+    def __init__(self, parent, title, filecontents):
+        super(LoadSelectDialog, self).__init__(parent=parent,
+            title=title, size=(400, 600))
+        self.select = ['default: all data with largest amount']
+        for f in filecontents:
+            self.select.append("{}: Amount={}".format(f[1],f[0]))
+        self.createControls()
+        self.doLayout()
+
+    # Widgets
+    def createControls(self):
+        self.selectComboBox = wx.ComboBox(self, choices=self.select,
+            style=wx.CB_DROPDOWN, value=self.select[0],size=(300,-1))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Load',size=(160,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
+
+    def doLayout(self):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        elemlist = [(self.selectComboBox, expandOption),
+                 (self.okButton, dict(flag=wx.ALIGN_CENTER)),
+                 (self.closeButton, dict(flag=wx.ALIGN_CENTER))]
+        # A GridSizer will contain the other controls:
+        cols = 1
+        rows = int(np.ceil(len(elemlist)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+        # Add the controls to the sizers:
+        for control, options in elemlist:
+            gridSizer.Add(control, **options)
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+        self.SetSizerAndFit(boxSizer)
+
 
 
 class LoadDataDialog(wx.Dialog):
@@ -2602,7 +2648,7 @@ class FlagSelectionDialog(wx.Dialog):
         """
         label = self.LabelComboBox.GetStringSelection()
         labelid = label[:3]
-        print ("Changed label to", labelid)
+        #print ("Changed label to", labelid)
         if 10 <= int(labelid) < 50:
             self.FlagIDComboBox.SetValue(self.flagidlist[4])
         else:
@@ -2866,8 +2912,13 @@ class FlagDetailsDialog(wx.Dialog):
             parameter = dlg.parameterComboBox.GetValue()
             value = dlg.valueTextCtrl.GetValue()
             newvalue = dlg.newvalueTextCtrl.GetValue()
-
-            #self.newfl = self.fl.flaglistmod(mode=select, flaglist=self.fl, parameter=parameter, value=value, newvalue=newvalue) #, starttime=None, endtime=None)
+            if select == 'select':
+                newfl = self.fl.select(parameter=parameter, values=newvalue)
+            elif select == 'replace':
+                newfl = self.fl.replace(parameter=parameter, values=value, newvalue=newvalue)
+            else:
+                newfl = self.fl.drop(parameter=parameter, values=newvalue)
+            self.newfl = newfl
             self.stats = self.newfl.stats(intensive=True, output='string')
             self.mod = True
             self.statsTextCtrl.SetValue(self.stats)
@@ -2890,6 +2941,7 @@ class FlagModDialog(wx.Dialog):
                           'probabilities', 'stationid', 'validity', 'operator']
         self.createControls()
         self.doLayout()
+        self.bindControls()
 
     # Widgets
     def createControls(self):
@@ -2901,8 +2953,8 @@ class FlagModDialog(wx.Dialog):
                  style=wx.CB_DROPDOWN, value=self.select[0],size=(160,-1))
         self.parameterComboBox = wx.ComboBox(self, choices=self.parameter,
                  style=wx.CB_DROPDOWN, value=self.parameter[0],size=(160,-1))
-        self.valueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
-        self.newvalueTextCtrl = wx.TextCtrl(self,value="",size=(160,-1))
+        self.valueTextCtrl = wx.TextCtrl(self,size=(160,-1))
+        self.newvalueTextCtrl = wx.TextCtrl(self,size=(160,-1))
         self.okButton = wx.Button(self, wx.ID_OK, label='OK')
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
         self.valueTextCtrl.Disable()
@@ -2955,7 +3007,6 @@ class FlagModDialog(wx.Dialog):
             update fields accoring to select
         """
         select = self.selectComboBox.GetStringSelection()
-        print (select)
         if select == 'replace':
             self.valueTextCtrl.Enable()
 

@@ -74,7 +74,7 @@ class StatisticsPage(wx.Panel):
             valueText += '|-----------------------{}'.format(key) + \
                     '-----------------------|\n'.format(key)
             for t, val in zip(times, teststream.ndarray[KEYLIST.index(key)]):
-                line = '     {}: {}\n'.format(num2date(t), val)
+                line = '     {}: {}\n'.format(t, val)
                 valueText += line
         return valueText
 

@@ -574,7 +574,7 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                 mid = np.round(len(keys[idx]) / 2, 0) - 1
                 if i < len(keys[idx]) - 1 and len(keys[idx]) > 3: #and separate
                     plt.xticks(color='w')
-                if i > 0:
+                if idx+i > 0:
                     ax.sharex(axs[0])
                 #plt.tight_layout()
 

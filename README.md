@@ -750,7 +750,7 @@ Getting Index data from the GFZ Potsdam:
 
         data=read('https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp')
 
-The following options are available:
+Checkout the GFZ site for possible options.
 
 Getting *kp* data from the GFZ Potsdam (old variant):
 

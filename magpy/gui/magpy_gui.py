@@ -67,15 +67,15 @@ Major methods:              major_method
 
 | class          |  method  |  since version  |  until vers |  runtime test  |  calls  | manual  |  used by |
 | -------------- |  ------  |  -------------  |  ---------- |  ------------  |  -----  |---------|  ---------- |
-|  RedirectText  |          |          2.0.0  |             |            |             | -       |  core.activity |
-|  PlotPanel     |  __init__  |        2.0.0  |             | level 2    |             |         | |
-|  PlotPanel     |  __do_layout  |     2.0.0  |             | level 2    |             |         | |
-|  PlotPanel     |  live_timer   |     2.0.0  |             | level 2    |             |      | |
-|  PlotPanel     |  _live_update_marcos | 2.0.0  |          | level 1    |             |      | |
-|  PlotPanel     |  _live_update_martas | 2.0.0  |          | level 2    |             |      | |
-|  PlotPanel     |  start_martas_monitor | 2.0.0  |         | level 2    |             |      | |
-|  PlotPanel     |  start_marcos_monitor | 2.0.0  |         | level 1    |             |      | |
-|  PlotPanel     |  monitor_plot  |    2.0.0  |             | level 1    |             |      | |
+|  RedirectText  |          |          2.0.0  |             | level 2    |              |       |  core.activity, di analysis |
+|  PlotPanel     |  __init__  |        2.0.0  |             | level 2    |              |       | |
+|  PlotPanel     |  __do_layout  |     2.0.0  |             | level 2    |              |       | |
+|  PlotPanel     |  live_timer   |     2.0.0  |             | level 2    |              |       | |
+|  PlotPanel     |  _live_update_marcos | 2.0.0  |          | level 1    |              |       | |
+|  PlotPanel     |  _live_update_martas | 2.0.0  |          | level 2    |              |       | |
+|  PlotPanel     |  start_martas_monitor | 2.0.0  |         | level 2    |              |       | |
+|  PlotPanel     |  start_marcos_monitor | 2.0.0  |         | level 1    |              |       | |
+|  PlotPanel     |  monitor_plot  |    2.0.0  |             | level 1    |              |       | |
 |  PlotPanel     |  gui_plot  |        2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  power_plot  |      2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  spec_plot  |       2.0.0  |             | level 0    |               |      | |
@@ -104,21 +104,22 @@ Major methods:              major_method
 |  MainFrame     | _update_plot  |     2.0.0  |             | level 2    |               |        | file_on_open  |
 |  MainFrame     | _do_plot  |         2.0.0  |             | level 2    |               |        | file_on_open  |
 |  MainFrame     | _update_cursor_status |  2.0.0  |        | level 2    |               |        |   |
-|  MainFrame     | _update_flags_onclick |  2.0.0  |        | level 0    |               |        |   |
+|  MainFrame     | _update_flags_onclick |  2.0.0  |        | level 2    | TODO: middle button |        |   |
 |  MainFrame     | _open_stream  |     2.0.0  |             | level 2    |               |        | file_on_open  |
-|  MainFrame     | _update_statistics | 2.0.0  |            | level 0    |               |        | _do_plot  |
+|  MainFrame     | _update_statistics | 2.0.0  |            | level 2    |               |        | _do_plot  |
 |  MainFrame     | changeStatusbar  |  2.0.0  |             | level 2    |               |        | everywhere  |
 |  MainFrame     | file_on_open_file  | 2.0.0  |            | level 2    |               | 3.2    |   |
 |  MainFrame     | file_on_open_url  | 2.0.0  |             | level 2    |               | 3.2    |   |
-|  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 1    |               | 3.2    |   |
+|  MainFrame     | file_on_open_webservice | 2.0.0  |       | level 2    |               | 3.2    |   |
 |  MainFrame     | file_on_open_db  |  2.0.0  |             | level 2    |               | 3.2    |   |
-|  MainFrame     | file_on_export |    2.0.0  |             | level 1    |               | 3.2    |   |
-|  MainFrame     | file_on_quit  |     2.0.0  |             | level 1    |               | 3.2    |   |
+|  MainFrame     | file_on_export |    2.0.0  |             | level 2    |               | 3.2    |   |
+|  MainFrame     | file_on_quit  |     2.0.0  |             | level 2    |               | 3.2    |   |
 |  MainFrame     | db_on_connect  |    2.0.0  |             | level 2    |               | 3.3    |   |
 |  MainFrame     | db_on_init  |       2.0.0  |             | level 2    |               | 3.3    |   |
 |  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               | 3.4    |   |
-|  MainFrame     | memory_select |     2.0.0  |             | level 1    |               | 3.5    |   |
-|  MainFrame     | ---- |      2.0.0  |             | level 2    |               | 3.7    |   |
+|  MainFrame     | memory_select |     2.0.0  |             | level 2    |               | 3.5    |   |
+|  MainFrame     | memory_clear |      2.0.0  |             | level 2    |               | 3.5    |   |
+|  MainFrame     | xxx |      2.0.0  |             | level 2    |               | 3.6    |   |
 |  MainFrame     | options_init |      2.0.0  |             | level 2    |               | 3.7    |   |
 |  MainFrame     | options_plot   |    2.0.0  |             | level 1    |               | 3.7    |   |
 |  MainFrame     | options_di   |      2.0.0  |             | level 2    |               | 3.7    |   |
@@ -131,22 +132,22 @@ Major methods:              major_method
 |  MainFrame     | d_onPreviousButton |  2.0.0  |           | level 2    |               | 4.1    | get_adjacent  |
 |  MainFrame     | d_onTrimButton |    2.0.0  |             | level 1    |               | 4.1    |   |
 |  MainFrame     | d_onSelectButton |  2.0.0  |             | level 2    |               | 4.1    |   |
-|  MainFrame     | d_onDropButton |    2.0.0  |             | level 1    |               | 4.1    |   |
-|  MainFrame     | d_onExtrcatButton | 2.0.0  |             | level 1    |               | 4.1    |   |
+|  MainFrame     | d_onDropButton |    2.0.0  |             | level 2    |               | 4.1    |   |
+|  MainFrame     | d_onExtractButton | 2.0.0  |             | level 2    |               | 4.1    |   |
 |  MainFrame     | d_onGetGapsButton | 2.0.0  |             | level 2    |               | 4.1    |   |
-|  MainFrame     | d_onStatusButton |  2.0.0  |             | level 1    |               | 4.1    |   |
-|  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagOutlier | 2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagSelection | 2.0.0  |          | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagClear  | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagDrop   | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagAccept   | 2.0.0  |           | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagRange  | 2.0.0  |             | level 2    |               |        |   |
-|  MainFrame     | flag_onFlagMax    | 2.0.0  |            | level 1    |               |        |   |
-|  MainFrame     | flag_onFlagMin    | 2.0.0  |            | level 1    |               |        |   |
-|  MainFrame     | flag_onFlagLoad   | 2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | flag_onFlagSave   | 2.0.0  |             | level 1    |               |        |   |
-|  MainFrame     | flag_onFlagDetails | 2.0.0  |       | level 0    |               |        |   |
+|  MainFrame     | d_onStatusButton |  2.0.0  |             | level 2    |               | 4.1    |   |
+|  MainFrame     | flag_onAnnotateCheckBox | 2.0.0  |       | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagOutlier | 2.0.0  |            | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagSelection | 2.0.0  |          | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagClear  | 2.0.0  |             | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagDrop   | 2.0.0  |             | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagAccept   | 2.0.0  |           | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagRange  | 2.0.0  |             | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagMax    | 2.0.0  |             | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagMin    | 2.0.0  |             | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagLoad   | 2.0.0  |             | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagSave   | 2.0.0  |             | level 2    |               | 4.2    |   |
+|  MainFrame     | flag_onFlagDetails | 2.0.0  |            | level 2    |               | 4.2    |   |
 |  MainFrame     | m_onGetDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
 |  MainFrame     | m_onPutDBButton |   2.0.0  |             | level 1    |               | 4.3    |   |
 |  MainFrame     | m_onDataButton |    2.0.0  |             | level 1    |               | 4.3    |   |
@@ -163,12 +164,12 @@ Major methods:              major_method
 |  MainFrame     | a_onSmoothButton |  2.0.0  |             | level 1    |               | 4.4    |   |
 |  MainFrame     | a_onOffsetButton |  2.0.0  |             | level 1    |               | 4.4    |   |
 |  MainFrame     | a_onResampleButton |  2.0.0  |           | level 1    |               | 4.4    |   |
-|  MainFrame     | a_onActivityButton |  2.0.0  |           | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onActivityButton |  2.0.0  |           | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 1    |               | 4.4    |   |
 |  MainFrame     | a_onDailyMeansButton | 2.0.0  |          | level 2    |               | 4.4    |   |
-|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 1    |               | 4.4    |   |
-|  MainFrame     | a_onApplyBCButton | 2.0.0  |             | level 1    |               | 4.4    |   |
-|  MainFrame     | a_onPowerButton |   2.0.0  |             | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onApplyBCButton | 2.0.0  |             | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onPowerButton |   2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onSpectrogramButton | 2.0.0  |         | level 0    |               |        |   |
 |  MainFrame     | di_onLoadDIButton |  2.0.0  |            | level 2    |               | 4.5,5.2 |   |
 |  MainFrame     | di_onDefineVarioScalar |  2.0.0  |       | level 2    |               | 4.5,5.2  |   |
@@ -187,16 +188,13 @@ Major methods:              major_method
 |  -          |  loadobj    |          1.0.0  |             |            |               |        |   |
 |  -          |  pydate2wxdate  |      2.0.0  |             | level 1    |               |        |   |
 |  -          |  wxdate2pydate  |      2.0.0  |             | level 1    |               |        |   |
-|             |    |  2.0.0  |               |            |               |        |   |
-|             |    |  2.0.0  |               |            |               |        |   |
-|             |    |  2.0.0  |               |            |               |        |   |
 
 
 runtime test:
 - : not tested
-level 0 : runs on linux without throwing an error
-level 1 : basic working tests
-level 2 : all options tested
+level 0 : implemented and not affecting overall functionality, no tests or not running
+level 1 : basic tests performed on linux
+level 2 : all options/possibilities tested on linux
 level 3 : level 2 also on Mac and Windows (level2w or level2m as temporary)
 
 * all tests are performed with the suggested configuration of the install recommendation
@@ -1091,6 +1089,7 @@ class MainFrame(wx.Frame):
         self.magpystate['currentpath'] = self.guidict.get('dirname')
         self.magpystate['filename'] = ''
         self.magpystate['source'] = ''
+        self.magpystate['select'] = None # select contains IMAGCDF time column i.e. scalar
 
         # REMOVE
         self.streamlist = []
@@ -1264,8 +1263,8 @@ class MainFrame(wx.Frame):
         bookmarks = {}
         bookmarks['WDC'] = 'ftp://ftp.nmh.ac.uk/wdc/obsdata/hourval/single_year/2011/fur2011.wdc'
         bookmarks[
-            'Conrad'] = 'http://www.conrad-observatory.at/zamg/index.php/downloads-en/category/13-definite2015?download=66:wic-2015-0000-pt1m-4'
-        bookmarks['GFZ Kp'] = 'http://www-app3.gfz-potsdam.de/kp_index/qlyymm.tab'
+            'DST index'] = 'https://wdc.kugi.kyoto-u.ac.jp/dst_realtime/202411/dst2411.for.request'
+        bookmarks['GFZ Kp'] = 'https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp'
         analysisdict['bookmarks'] = bookmarks
         webservices = {}
         cobsws = {'magnetism': {'address': 'https://cobs.zamg.ac.at/gsa/webservice/query.php',
@@ -1277,14 +1276,15 @@ class MainFrame(wx.Frame):
                                 },
                   'meteorology': {'address': 'https://cobs.zamg.ac.at/gsa/webservice/query.php',
                                   'format': ['ascii', 'json', 'csv'],
-                                  'ids': ['WIC', 'SGO'],
+                                  'ids': ['SGO'],
                                   'sampling': ['60'],
+                                  'elements': 'T,rh,pressure,rain,snow',
                                   'type': ['adjusted']
                                   },
                   'commands': {'format': 'of'}
                   }
         usgsws = {'magnetism': {'address': 'https://geomag.usgs.gov/ws/data/',
-                                'format': ['iaga2002', 'json'],
+                                'format': ['iaga2002'],
                                 'ids': ['BOU', 'BDT', 'TST', 'BRW', 'BRT', 'BSL', 'CMO', 'CMT', 'DED', 'DHT', 'FRD',
                                         'FRN', 'GUA', 'HON', 'NEW', 'SHU', 'SIT', 'SJG', 'TUC', 'USGS', 'BLC', 'BRD',
                                         'CBB', 'EUA', 'FCC', 'IQA', 'MEA', 'OTT', 'RES', 'SNK', 'STJ', 'VIC', 'YKC',
@@ -1307,7 +1307,7 @@ class MainFrame(wx.Frame):
                               'ids': ['WIC', 'ABK', 'AIA', 'API', 'ARS', 'ASC', 'ASP', 'BDV', 'BEL', 'BFE', 'BFO',
                                       'CKI', 'CNB', 'CNH', 'CPL', 'CSY', 'CTA', 'CYG', 'DOU', 'ESK', 'EY2', 'EYR',
                                       'FUR', 'GAN', 'GCK', 'GNA', 'GNG', 'GZH', 'HAD', 'HBK', 'HER', 'HLP', 'HRN',
-                                      'HUA', 'HYB', 'IRT', 'ISK', 'IZN', 'JCO', 'KDU', 'KEP', 'KHB', 'KIV', 'KMH',
+                                      'HUA', 'HYB', 'IRT', 'ISK', 'IZN', 'JCO', 'KDU', 'KEP', 'KHB', 'KIV', 'KMH', 'KOU',
                                       'LER', 'LON', 'LRM', 'LVV', 'LYC', 'MAB', 'MAW', 'MCQ', 'MGD', 'MZL', 'NCK',
                                       'NGK', 'NUR', 'NVS', 'ORC', 'PAG', 'PEG', 'PET', 'PIL', 'PST', 'SBA', 'SBL',
                                       'SOD', 'SON', 'THY', 'TSU', 'UPS', 'VAL', 'WMQ', 'WNG', 'YAK'],
@@ -1785,7 +1785,11 @@ class MainFrame(wx.Frame):
                                        fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
                 if event.button is MouseButton.RIGHT:
                     ids = [fid for fid in fl.flagdict if fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
+                    # set validity to 'd': to be deleted during cleanups
+                    selfl = fl.select(parameter='flagid', values=ids)
                     newfl = fl.drop(parameter='flagid', values=ids)
+                    newin = selfl.replace(parameter='validity', value='', newvalue='d')
+                    newfl = newfl.join(newin)
                     data.header['DataFlags'] = newfl
                     self._initial_plot(self.active_id, keepplotdict=True)
                     self.menu_p.fla_page.flagAcceptButton.Enable()
@@ -2538,13 +2542,18 @@ class MainFrame(wx.Frame):
         success = False
         filelist = []
         pathlist = []
+        select=None
+        notyetselected = True
         # Testing
         message = "Yeah - working fine\n"
-        debug = True
+        debug = False
         # Extract currently used directory from magpy state
         current_directory = self.magpystate.get('currentpath')
+        # if empty (previous DB access) or url then get the defaultpath  from guidict
+        if not current_directory or current_directory.find("://") > 0:
+            current_directory = self.guidict.get('dirname')
 
-        # Open the file dialig
+            # Open the file dialig
         dlg = wx.FileDialog(self, "Choose a file", current_directory, "", "*.*", wxMULTIPLE)
         answer = dlg.ShowModal()
         if answer == wx.ID_OK:
@@ -2566,7 +2575,24 @@ class MainFrame(wx.Frame):
                 self.magpystate['currentpath'] = elem[0]
                 filelist.append(elem[1])
                 self.changeStatusbar(path)
-                tmp = read(path)
+                tmp = read(path, select=select)
+                if tmp.header.get('FileContents') and elem[1].endswith('cdf') and notyetselected:
+                    # for IMAGCDF allow the selection of specific low reslution data
+                    if debug:
+                        print ("File Contents", tmp.header.get('FileContents'))
+                    seldlg = LoadSelectDialog(None, title='Select resolution', filecontents=tmp.header.get('FileContents'))
+                    answer = seldlg.ShowModal()
+                    if answer == wx.ID_OK:
+                        selected = seldlg.selectComboBox.GetValue()
+                        separate = selected.split(':')[0]
+                        if separate == 'default':
+                            pass
+                        else:
+                            select = separate.replace("Geomagnetic",'').replace("Times",'').lower()
+                            tmp = read(path, select=select)
+                    seldlg.Destroy()
+                    #open a select dialog with other time coverage
+                    notyetselected = False
                 self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
                 stream.extend(tmp.container,tmp.header,tmp.ndarray)
             stream=stream.sorting()
@@ -2590,6 +2616,7 @@ class MainFrame(wx.Frame):
         # plot data
         if success:
             self.magpystate['source'] = 'file'
+            self.magpystate['select'] = select
             # remember filepath
             self.guidict['dirname'] = self.magpystate['currentpath']
             streamid = self._initial_read(stream)
@@ -2704,6 +2731,7 @@ class MainFrame(wx.Frame):
         stream = DataStream()
         success = False
         url = ''
+        stationid = ''
         message = "Awesome - its working"
         services = self.analysisdict.get('webservices',{})
         default = self.analysisdict.get('defaultservice','conrad')
@@ -2761,6 +2789,7 @@ class MainFrame(wx.Frame):
                     addgroup = '&{}={}'.format(defaultcommands.get('group'), dlg.groupComboBox.GetValue())
                 else:
                     addgroup = ''
+                stationid = dlg.idComboBox.GetValue()
                 obs_id = '{}={}'.format( defaultcommands.get('id'), dlg.idComboBox.GetValue())
                 start_time = '&{}={}T{}Z'.format(defaultcommands.get('starttime'), sd,sttime)
                 file_format = '&{}={}'.format(defaultcommands.get('format'), dlg.formatComboBox.GetValue())
@@ -2830,10 +2859,16 @@ class MainFrame(wx.Frame):
         except:
                 pass
 
-        if success:
+        if success and len(stream) > 0:
             stream = stream._remove_nancolumns()
-        if len(stream.length()) < 2 and stream.length()[0] < 2:
+            if not stream.header.get("StationID"):
+                stream.header["StationID"] = stationid
+        if len(stream.length()) < 2 and len(stream) < 2:
             message = "No data found"
+            #dlg = wx.MessageDialog(self, "No data found\n",
+            #            "Open webservice", wx.OK|wx.ICON_INFORMATION)
+            #dlg.ShowModal()
+            #dlg.Destroy()
             success = False
 
         if success:
@@ -3028,7 +3063,7 @@ class MainFrame(wx.Frame):
                         exportparameter[el] = None
                     elif el in ['kvals','scalar','environment','diff'] and exportoptions.get(el):
                         # get the dataset of the selected streamid
-                        selstreamid = int(exportoptions.get(el))
+                        selstreamid = exportoptions.get(el)
                         datacont = self.datadict.get(selstreamid)
                         exportparameter[el] = datacont.get('dataset')
                     else:
@@ -3261,9 +3296,12 @@ class MainFrame(wx.Frame):
                     plotids.append(elem)
                     plotkeys.append(plotcont.get("shownkeys"))
                     activeid = elem
+            print (plotids)
             if len(plotids) > 1:
                 #  deactivate all Meta; Analysis methods
                 self._deactivate_controls()
+            elif not plotids:
+                plotids = [self.active_id]
             else:
                 self._deactivate_controls()
                 self._activate_controls(activeid)
@@ -3272,6 +3310,8 @@ class MainFrame(wx.Frame):
         else:
             mod = dlg.panel.modify
             selids = dlg.panel.selectedids
+            if not selids:
+                mod = False
             if mod == True:
                 result = dlg.panel.result
                 if len(result) > 0:
@@ -3590,7 +3630,7 @@ class MainFrame(wx.Frame):
             get_adjacent_stream
         """
 
-        self.get_adjacent_stream(mode='next', debug=True)
+        self.get_adjacent_stream(mode='next', debug=False)
 
 
     def get_adjacent_stream(self, mode='next', debug=False):
@@ -3685,6 +3725,7 @@ class MainFrame(wx.Frame):
             self.magpystate['filename'] = sourcename
             self.magpystate['currentpath'] = ''
         elif source == 'file':
+            select = self.magpystate.get('select',None)
             sourcename = sourcename.split(',')
             if isinstance(sourcename, (list,tuple)):
                 sourcename = sourcename[0].strip()
@@ -3696,7 +3737,7 @@ class MainFrame(wx.Frame):
                 "YEARa", "*")
             if debug:
                 print ("FILE - next, previous:", newname, newstart.strftime("%Y-%m-%d"), newend)
-            stream = read(os.path.join(sourcepath,newname),newstart.strftime("%Y-%m-%d"),newend.strftime("%Y-%m-%d"))
+            stream = read(os.path.join(sourcepath,newname),newstart.strftime("%Y-%m-%d"),newend.strftime("%Y-%m-%d"),select=select)
             self.magpystate['source'] = 'file'
             self.magpystate['filename'] = sourcename
             self.magpystate['currentpath'] = sourcepath
@@ -3979,6 +4020,7 @@ class MainFrame(wx.Frame):
                             extractedstream = extractedstream.sorting()
                             extractedstream = extractedstream.get_gaps()
                 extractedstream.header["SensorID"] = "extracted-{}".format(extractedstream.header.get("SensorID"))
+                self.menu_p.rep_page.logMsg('Extract: selected specific data')
                 streamid = self._initial_read(extractedstream)
                 self._initial_plot(streamid)
                 self.changeStatusbar("Ready")
@@ -4182,7 +4224,8 @@ class MainFrame(wx.Frame):
                 flagid = dlg.FlagIDComboBox.GetValue()
                 flagid = int(flagid[0])
                 operator = dlg.OperatorTextCtrl.GetValue()
-                labelid = dlg.LabelComboBox.GetValue()
+                label = dlg.LabelComboBox.GetValue()
+                labelid = label[:3]
 
                 above = min(self.ylimits)
                 below = max(self.ylimits)
@@ -4770,8 +4813,8 @@ class MainFrame(wx.Frame):
                 self.menu_p.rep_page.logMsg('Flags have been modified: ')
                 stream.header['DataFlags'] = dlg.newfl
                 self.menu_p.rep_page.logMsg('- applied {} modified flags'.format(len(dlg.newfl)))
-                #self.ActivateControls(self.plotstream)
-                #self.OnPlot(self.plotstream,self.shownkeylist)
+                streamid = self._initial_read(stream)
+                self._initial_plot(streamid)
             else:
                 pass
         dlg.Destroy()
@@ -5202,7 +5245,7 @@ class MainFrame(wx.Frame):
                 val = dlg.offsetRadioBox.GetStringSelection()
                 if str(val) == 'all':
                     toffset = dlg.timeshiftTextCtrl.GetValue()
-                    if not plotstream._is_number(toffset):
+                    if not methods.is_number(toffset):
                         toffset = 0
                     if not float(toffset) == 0:
                         offsetdict['time'] = timedelta(seconds=float(toffset))

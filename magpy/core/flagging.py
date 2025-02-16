@@ -454,13 +454,15 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
 
     def add(self, sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000', label='',
             comment='', groups=None, probabilities=None, stationid='', validity='', operator='', color='',
-            modificationtime=None, flagversion='2.0', debug=False):
+            modificationtime=None, flagversion='2.0', minimumtimediff=0.5, debug=False):
         """
         DESCRIPTION
             Create a flagging dictionary input oot of given information
             Each flag will be defined by a unqiue flagID which is constructed
             from sensorid,starttime,endtime,",".join(components),flagtype,labelid
             if you want to add a flag with identical information use overwrite?
+        PARAMETER:
+            minimumtimediff: if starttime and endtime are identical add/subtract this timediff in seconds
         """
         # check validity of information
         if not sensorid or not starttime or not endtime or not components:
@@ -477,6 +479,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         if not isinstance(endtime, datetime):
             print("create_flag: endtime could not be interpreted as datetime  - aborting")
             return {}
+        if starttime == endtime:
+            starttime = starttime-timedelta(seconds=minimumtimediff)
+            endtime = endtime+timedelta(seconds=minimumtimediff)
         if not isinstance(components, (list, tuple)):
             print("create_flag: components need to be a list  - aborting")
             return {}
@@ -576,6 +581,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             flagcont = flagdict[d]
             # test, if sensorid is fitting or sensorid/group is part of groups
             valid, comps = self._match_groups(data.header, flagcont.get('sensorid'), flag_keys=flagcont.get('components'), flag_groups=flagcont.get('groups'))
+            # test validity parameter for d or h
+            if flagcont.get('validity') in ['d','h']:
+                valid = False
             if debug:
                 print (valid, comps, flagcont.get('groups'))
             if valid:
@@ -648,6 +656,8 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             comps = flagdict[d].get('components',DataStream().KEYLIST)
             if data:
                 valid, comps = self._match_groups(data.header, flagdict[d].get('sensorid'), flag_keys=comps, flag_groups=flagdict[d].get('groups'))
+            if flagdict[d].get('validity') in ['d','h']:
+                valid = False
             if valid:
                 cont['components'] = comps
                 cont['start'] = flagdict[d].get('starttime', None)
@@ -994,34 +1004,35 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             fl = db2flaglist(db,'all')
             fl.stats()
         """
-
+        outputt = ''
         if level:
             intensive=True
         flaglist = np.asarray(self._list(
             ['starttime', 'endtime', 'flagtype', 'labelid', 'sensorid', 'modificationtime', 'flagversion', 'stationid',
              'groups', 'operator'])).T
-        verl = Counter(flaglist[7])
-        vers = verl.keys()
-        outputt = '##########################################\n'
-        outputt += '           Flaglist statistics            \n'
-        outputt += '##########################################\n'
-        for v in vers:
-            outputt += ('Flagging version: {}, Total:  {}\n'.format(v, verl[v]))
-        outputt += '\n Total contents: {}\n'.format(len(self.flagdict))
-        outputt += '-------------------------------------------\n'
-        sensl = Counter(flaglist[5])
-        sens = sensl.keys()
-        for s in sens:
-            outputt += (' SensorID: {}, Total:  {}\n'.format(s, sensl[s]))
-            if intensive:
-                # bylabel
-                # get indices of all data belonging to this sensorid/group
-                inds = np.where(flaglist[5] == s)
-                sellabid = flaglist[4][inds]
-                labl = Counter(sellabid)
-                labs = labl.keys()
-                for l in labs:
-                    outputt += ('     LabelID: {} - {}, Total:  {}\n'.format(l, self.FLAGLABEL.get(l), labl[l]))
+        if len(flaglist) > 0:
+            verl = Counter(flaglist[7])
+            vers = verl.keys()
+            outputt = '##########################################\n'
+            outputt += '           Flaglist statistics            \n'
+            outputt += '##########################################\n'
+            for v in vers:
+                outputt += ('Flagging version: {}, Total:  {}\n'.format(v, verl[v]))
+            outputt += '\n Total contents: {}\n'.format(len(self.flagdict))
+            outputt += '-------------------------------------------\n'
+            sensl = Counter(flaglist[5])
+            sens = sensl.keys()
+            for s in sens:
+                outputt += (' SensorID: {}, Total:  {}\n'.format(s, sensl[s]))
+                if intensive:
+                    # bylabel
+                    # get indices of all data belonging to this sensorid/group
+                    inds = np.where(flaglist[5] == s)
+                    sellabid = flaglist[4][inds]
+                    labl = Counter(sellabid)
+                    labs = labl.keys()
+                    for l in labs:
+                        outputt += ('     LabelID: {} - {}, Total:  {}\n'.format(l, self.FLAGLABEL.get(l), labl[l]))
         if output == 'stdout':
             print(outputt)
         else:

@@ -150,9 +150,10 @@ data go to menu **File** in the main menu bar.
 
 Most users will access data files on a local or connected file system. To do this use **Open File** in the **File** menu.
 This will open a standard file selection menu for your operating system. Locate the file you want to open. 
-No further selections are necessary. If the format type is supported, MagPy will identify it and open the data. 
+In most cases no further selections are necessary. In case of an IMAGCDF file which contains different time columns
+a pop-up dialog will ask you which time column related data set should be loaded. If the format type is supported, 
+MagPy will identify it and open the data. 
 Multiple selections are possible. Currently supported file formats can be found in menu **Help**, **Read Formats...**.
-
 
 #### 3.2.2 Accessing Webservices
 
@@ -195,24 +196,36 @@ is showing up.
 
 Figure 3.3.1: Export data window.
 
-Within the export data window you can select the destination path. In dependency of the selected format, file name 
-eventual prerequisites are constructed. Please note, that some file formats require specific meta information. 
-A number of file formats also allow a more complex storage protocol. Please use the button **Export Option** within the 
-**Export Data** dialog to few these additional option which are different for the respective export formats. 
+Within the export data window you can select the destination path. In dependency of the selected format, eventual file
+name prerequisites are constructed. Please note, that some file formats require specific meta information. Please refer
+to the official format descriptions i.e. at [INTERMAGET](https://www.intermagnet.org/data-donnee/formatdata-eng.php). 
+A number of file formats also allow for a more complex storage protocol. Please use the button **Export Option** within
+the **Export Data** dialog to view these additional options. Please note that several data formats have specific 
+options to be selected here. 
 
-As an example we will load variation data in one
-second resolution, , : Just load for example your IAGA-2002 one second data for one month 
-and then export it to ImagCDF. For correct outputs you have to add ImagCDF specific meta information before exporting as shown in 4.3. As a plot will be generated when opening one month of one second data, this will need some time. If you have a large amount of data to be converted it is advisable to use the MagPy back-end‘s read/write methods or the MagPy command line application mpconvert (see appendix 8.3.  
+Assuming a data set in one second resolution which you want to export to [IMAGCDF]()
+you will have several additional options, to define output content. First of all correct IMAGCDF outputs require
+specific meta information before exporting which you can add to your data set as shown in section [4.3](#43-the-meta-panel).
+When you then export your data set and use the **Export options** button, the selection menu will look like as shown in
+Figure 3.3.2. For IMAGCDF the file name is predefined. Possible general options are **coverage**, **write mode** and 
+**create subdirectories**. If choosing the **create subdirectories** option, the data set will be stored in specified 
+subdirectories consisting either of year (Y), year and a further subdirectory month (Ym) or year and a daily 
+subdirectory with day-of-the-year number (Yj). In case of IMAGCDF, you can add flagging information into the data set,
+which is experimental and not yet officially approved by INTERMAGNET. You can also define the missing value parameter.
+In IMAGCDF you can additionally add data sets with for example different sampling rates for scalar and/or 
+environmental data. These data sets need to have been opened before. Then you can select the corresponding
+data sets ID (see [3.5](#35-memory)) to be added.
 
-Please note that not all export formats make sense for all data types. Here it is assumed that the user knows about 
-benefits and drawbacks of specific well known geomagnetic data formats. Details on these geomagnetic data formats and
-their contents as well as meta information requirements can be found here:
-https://www.intermagnet.org/data-donnee/formatdata-eng.php
-There are also three MagPy specific output formats which can be used for archiving and storage. PYCDF is based on
-NasaCDF and can hold basically any meta information you define. It is specifically designed to save flagging
-information and adopted baselines along with raw data, to allow for a single file storage (and thus reconstruction)
-of all analysis steps typically used in geomagnetic data analysis. PYSTR is a comma separated ascii text file which
-supports all basic meta information. PYASCII is a semi-colon separated ASCIItext file which focuses on data.  
+Please note that not all export formats make sense depending on your data type. Here it is assumed that the user knows
+about benefits and drawbacks of specific well known geomagnetic data formats. In case you do not know yet which format 
+to choose I strongly recommend one of MagPy's internal format as they will contain all meta information and data
+contents so that you do not loose and information unintentionally. 
+There are three MagPy specific output formats which can be used for archiving and storage. PYCDF is based on the 
+Common Data Format, specifically NasaCDF, and can hold basically any meta information you define. It is specifically 
+designed to save flagging information and adopted baselines along with raw data, to allow for a single file storage
+(and thus reconstruction) of all analysis steps typically used in geomagnetic data analysis. PYSTR is a comma separated
+ascii text file which supports all basic meta information. PYASCII is a semi-colon separated ASCIItext file which 
+only contains data and will drop most of the meta information.
 
 
 #### 3.2.5 Quit
@@ -250,11 +263,42 @@ meta information into the database.
 
 ### 3.4 DI 
 
+The DI data menu item allows for opening the **DI input sheet**. This option will open a dialog window which 
+corresponds to a typical DI measurement input sheet as it it used for example in Niemegk, Conrad, and many other 
+observatories (figure 3.4.1). If you have loaded DI data already into the memory (see section [4.5](#45-the-di-panel)) 
+you will find a drop down list on the upper left, which gives you access to this data. 
+
+Figure 3.4.1: The Input sheet for DI data.
+
+The input sheet allows you to load already existing data or to fill-in any new measurement data and store it. If it is 
+used for data input it is recommended to create a template file with recurring meta information and load the template 
+first. At present you can save the data sheets to local files only. Saving will create an ASCII text file with complete
+information (see appendix). The input sheet can also be modified in order to reflect different measurement orders, 
+amount of individual measurements and usage of scale value tests. If you are not using the residual method, just 
+leave 0 as input value there. The input sheet is modified within the general options menu as described in 
+section [3.7](#37-options).
+
+The fields of the input sheet should be widely self-explaining for anybody experienced in DI measurements. As mentioned
+already, the input sheet supports residual and zero measurements. If you are using residual measurements it is
+necessary to consider the orientation of the fluxgate probe on the theodolite i.e. whether it is inline or opposite to
+the optical direction. 
+If you are performing F measurements at the same pier prior to or after the DI measurement you can type them in as
+well. Alternatively you can upload any supported F data file e.g. of a GSM19 system. You can load example6a.txt or
+example6b.txt into the input sheet to get an impression on how to fill in parameters.
+
+When saving DI data to a file, the file name will automatically be generated from date and time of the first
+measurement, from the name of the pier and the station code. The file is an ASCII text file. If an identical file name
+is already existing you can either overwrite it or save the data as “alternative”. This second option will
+add one-second to the time in the file name (not to the data itself). Such alternative data might be used, if you have
+measured two different azimuth marks. Type in all data for the primary azimuth mark, save it, change the azimuth values
+to the second mark and save again as alternative.
+
 ### 3.5 Memory
 
-The main menu item **Memory** provides gives you access to previously opened/modified data sets and allows for some 
-multiple data operations. The dialog as shown in figure 3.5.1 will give you access to all data sets and working states
-in the memory. They are characterized by a unique ID which is constructed from data characteristics. Shown data columns
+The main menu item **Memory** provides access to previously opened/modified data sets and allows for some 
+multiple data operations when selecting **Access data memory**. The dialog as shown in figure 3.5.1 will give you 
+access to all data sets and working states in the memory. They are characterized by a unique ID which is constructed 
+from data characteristics. Shown data columns
 (keys) can be modified. On the right side you will see a number of operations:
 
 **Plot** will activate and show the selected plot. If multiple plots are selected all of them will be shown above each 
@@ -271,6 +315,9 @@ primary source. You can only merge two data sets at once.
 
 **Combine** will join two time series and fill non-existing columns. If data is already existing, they remain
 untouched. 
+
+You can reset the current memory, keeping only the currently active data set by going to main menu item **Memory** 
+and selecting **Clear memory**.
 
 ### 3.6 Specials
 
@@ -336,16 +383,23 @@ Finally, you can activate the **Continuous statistics** panel below the main fra
 The flag panel contains methods for flagging data, as well as possibilities to store and load such information. Please 
 note that flags are always connected to a specific SensorID which is related to and obtained from the data source. 
 Every flag is defined by a number of parameters of which the flagtype defines whether data has to be removed for 
-definitive analysis or not. A label and its labelid provides information about the flag reason. Observers can comment 
-the flag and actual operator who issued the flag can be given. Further details are found in the general manual.
+definitive analysis or not. A label and its labelid provide information about the flag reason. Observers can comment 
+the flag and the actual operator who added the flag should be provided. In case of automatic flags the operator is named
+"MagPy". Further details are found in the general manual.
 The main flagging functions are accessible by buttons: **Flag outlier** will scan the time series for outliers (4.2.1). 
 **Flag selection** will mark currently selected data enlarged by zoom. To use this method you zoom into a specific plot 
 area (see 3.3) and then press the **Flag selection** button. This is the most common method for regular data flagging. 
 **Flag range** allows for defining either a value or a time range to be flagged. If you just want to flag maxima or minima
 within the time series, you firstly select the component(s), label and flag ID, and then use the **Flag maximum** or 
 **Flag minimum button**. Flags can either be saved within a connected data base (which I would recommend) or into a 
-data file. The flag file supports two formats, pickle, a binary structure, or json, an ASCII structure, of which I 
+data file. Flags are visualized by colored patches. Flag types to be removed for definitive data are colored in red,
+light red for automatic flags and dark red for observer decisions. Green colors indicate flags to be kept. If you move
+the mouse over a flag patch, the associated information is displayed in the lower text window of the flag panel. A
+right click with the mouse will remove the flag. 
+The flag file supports two formats, pickle, a binary structure, or json, an ASCII structure, of which I 
 recommend the latter. **Drop flagged** will remove flagged data with a 'remove data' flagtype and replace them by NaN.
+Please note, the flag patches will still be shown in the diagram, so that you can easily locate already removed data
+sequences.
 **Clear flags** deletes all current flagging information, keeping all data unchanged. 
 
 #### 4.2.1 Flag outlier
@@ -742,4 +796,33 @@ Linux environment:
 9. Zoom into another part, use FlagRange -> value, selected values, add group "dummy"
 10. Flag minimum only in one component
 11. Flag maximum only in one component
-12. 
+12. Save flags 
+13. Clear flags
+14. Load flags and some drop flags with right click
+15. Save flags and clear, reload and check, both with DB and file
+16. Open flag details and select only specific labels
+17. Select example 2 from memory and apply flags from file/DB
+18. Group flags will be shown
+19. open memory and select example1, clear flags
+20. Go to analysis page, calculate means and not mean for H/X
+21. Go to offset and subtract mean from column x
+22. data panel, select, only x column
+23. Open Webservice and load nearby observatory (i.e. BDV) for the same time range
+24. repeat 20-22 with this data set
+25. Options -> plot options -> replace color gray by blue
+26. Memory -> activate both data sets and Plot (nested)
+27. Memory -> activate both data sets and Plot, test zoom
+28. Memory -> clear memory
+28. Open webservice and test every possible option once
+29. Test URLs
+30. Clear memory
+31. Open example1
+32. Open statistics
+33. extract data points from example1
+34. drop and select columns
+35. load example2
+36. go back to example1
+37. export example1 in all possible format with provided options
+38. export as ImagCDF with scalar data from example2
+39. filter to minute and use those export options
+40. 
