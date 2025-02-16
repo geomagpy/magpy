@@ -70,7 +70,9 @@ def _delta_F_test(fdata, debug=False):
             msg += ", "
         msg += scal
     result['dF test'] = msg
+    #print (ftest)
     ftest = ftest._drop_nans(scal)
+    #print (ftest)
     result['F rate'] = ftest.samplingrate()
     if scal=='f':
         if debug:
@@ -86,8 +88,8 @@ def _delta_F_test(fdata, debug=False):
     #quick workaround -> exclude large negative  values
     ftest = ftest.extract('df',-15000,'>')
 
-    fmean, fstd = ftest.mean('df',std=True)
-    fmedian, fstd = ftest.mean('df',meanfunction='median',std=True)
+    fmean, fstd = ftest.mean('df',std=True, percentage=1)
+    fmedian, fstd = ftest.mean('df',meanfunction='median',std=True, percentage=1)
     result['dF mean'] = fmean
     result['dF median'] = fmedian
     result['dF stddev'] = fstd
@@ -124,7 +126,7 @@ def check_minute_directory(config, results):
     minutepath = config.get('mindatapath')
     months = config.get('months')
     stationid = "XXX"
-    year = 1777
+    year = None
     grades = results.get('grades',{})
     res_min_dir = {}
     if grades.get("step1",0) <= 1:
@@ -135,6 +137,7 @@ def check_minute_directory(config, results):
     res_min_dir["mindatacheck"] = ""
     res_min_dir["blvdatacheck"] = []
     res_min_dir["yearmeancheck"] = []
+    res_min_dir["readmecheck"] = []
     res_min_dir["dkacheck"] = []
 
     if not minutepath:
@@ -189,6 +192,7 @@ def check_minute_directory(config, results):
                             res_min_dir["mindatacheck"] = extension
             if fname.lower() == 'readme':
                 res_min_dir["report"].append(" - found README file for IMO: {}".format(extension.replace(".",'')))
+                res_min_dir["readmecheck"].append(fn)
             if fname.lower() == 'yearmean':
                 res_min_dir["yearmeancheck"].append(fn)
                 stationid = extension.replace(".","").upper()
@@ -212,14 +216,25 @@ def check_minute_directory(config, results):
         if minutesummary.get('blv',0) >= 1:
             res_min_dir["report"].append(" - found baseline data file")
         else:
-            if grades.get("step1") <= 2:
-                grades["step1"] = 2
+            if grades.get("step1") <= 3:
+                grades["step1"] = 3
             results["errors"].append("Check minute directory: no baseline file")
         if minutesummary.get('dka',0) >= 1:
             res_min_dir["report"].append(" - found k-value DKA file")
         if minutesummary.get('png',0) >= 1:
             res_min_dir["report"].append(" - auxiliary files are present")
+        if not len(res_min_dir.get("yearmeancheck")) > 0:
+            if grades.get("step1") <= 3:
+                grades["step1"] = 3
+            results["errors"].append("Check minute directory: no yearmean file")
+        if not len(res_min_dir.get("readmecheck")) > 0:
+            if grades.get("step1") <= 3:
+                grades["step1"] = 3
+            results["errors"].append("Check minute directory: no readme file")
 
+    if not year:
+        print ("Warning - year could not be obtained")
+        year = 1777
     res_min_dir["year"] = year
     res_min_dir["stationid"] = stationid
     results['grades'] = grades
@@ -365,6 +380,9 @@ def read_month(config, results, month=1, debug=False):
                     print (" - loading from directory:", os.path.join(datapath, "{}{}".format('*',ext)))
                 logdict['Data path'] = os.path.join(datapath, "*"+ext)
                 data = read(os.path.join(datapath, "{}{}".format('*',ext)), starttime=startdate, endtime=enddate)
+                if debug:
+                    print (" - got {} datapoints".format(len(data)))
+                    print (os.path.join(datapath, "{}{}".format('*',ext)), startdate ,enddate)
                 if not len(data) > 0:
                     # eventually start and endtime could not be identified in filename like for IAF, so read all and trim
                     data = read(os.path.join(datapath, "{}{}".format('*',ext)))
@@ -598,12 +616,12 @@ def consistency_test(config, results, month=1, debug=False):
                         if grades.get("step2", 0) <= 2:
                             grades["step2"] = 2
                         hourwarn = True
-                    if np.isnan(diffs.mean('df')) or np.abs(diffs.mean('df')) > 0.05:
-                        # TODO if no df in hourly data than diff will np.nan - add that in the README
-                        results["warnings"].append(
-                            "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in dF={}".format(
-                                month,resolution,diffs.mean('df')))
-                        hourwarn = True
+                    #if np.isnan(diffs.mean('df')) or np.abs(diffs.mean('df')) > 0.05:
+                    #    # TODO if no df in hourly data than diff will np.nan - add that in the README
+                    #    results["warnings"].append(
+                    #        "Consistency test: Month {}, {} resolution: IAF hour data differs from filtered minute data. Difference in dF={}".format(
+                    #            month,resolution,diffs.mean('df')))
+                    #    hourwarn = True
                     if not hourwarn:
                         logdict["report"].append(
                             " - compared hourly data from IAF with filtered one-minute data: fine")
@@ -949,7 +967,7 @@ def header_test(config, results, debug=False):
                     headercheck["report"].append(" - contents for {} are consistent".format(key.replace("Data",'').replace("Station",'')))
                 else:
                     if key in ['DataAcquisitionLatitude', 'DataAcquisitionLongitude', 'DataElevation']:
-                        results["warnings"].append('Header analysis: differences in header information for {}'.format(key.replace("Data",'').replace("Station",'')))
+                        results["warnings"].append('Header analysis: differences in header information for {}, {}'.format(key.replace("Data",'').replace("Station",''), vals))
                         if grades.get("step4") <= 2:
                             grades["step4"] = 2
                     else:
@@ -1003,7 +1021,8 @@ def k_value_test(config, results, debug=False):
     path = config.get('mindatapath')
     if path and ext and mindict.get('format') == 'IAF':
         korgdata = read(os.path.join(path,"{}{}".format('*',ext)), resolution='k')
-        print ("HEADER", korgdata.header)
+        if debug:
+            print ("HEADER", korgdata.header)
         korgvals = korgdata._get_column('var1')
         k_test["report"].append(" - found {} K values in IAF data set".format(len(korgvals)))
         if len(korgvals) > 0:

@@ -841,3 +841,5 @@ Linux environment:
 44. Load data set from database
 45. Open example2 and go to meta
 46. Change SensorDescription and write to DB
+47. Test all analysis methods on example1
+48. Run check data on 

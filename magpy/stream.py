@@ -6952,7 +6952,9 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headon
                     stp = DataStream([],{},np.array([[] for ke in KEYLIST]))
                     logger.warning("read: File {} could not be read. Skipping ...".format(filename))
                 if len(stp) > 0 or len(stp.ndarray[0]) > 0:   # important - otherwise header is going to be deleted
-                    st.extend(stp.container,stp.header,stp.ndarray)
+                    st = join_streams(st,stp)
+                    #st.extend(stp.container,stp.header,stp.ndarray) # extend will not import columns
+                    # when reading with * of which one file has an empty column
 
             #del stp
 
@@ -7238,15 +7240,15 @@ def join_streams(stream_a,stream_b, **kwargs):
         if len(sa.ndarray[idx]) > 0 and len(sb.ndarray[idx]) > 0:
             array[idx] = np.concatenate((sa.ndarray[idx],sb.ndarray[idx]))
         elif not len(sa.ndarray[idx]) > 0 and  len(sb.ndarray[idx]) > 0:
-            if idx < len(stream_a.NUMKEYLIST):
-                fill = float('nan')
+            if idx <= len(stream_a.NUMKEYLIST):
+                fill = np.nan
             else:
                 fill = '-'
             arraya = np.asarray([fill]*len(sa.ndarray[0]))
             array[idx] = np.concatenate((arraya,sb.ndarray[idx]))
         elif len(sa.ndarray[idx]) > 0 and not len(sb.ndarray[idx]) > 0:
-            if idx < len(stream_a.NUMKEYLIST):
-                fill = float('nan')
+            if idx <= len(stream_a.NUMKEYLIST):
+                fill = np.nan
             else:
                 fill = '-'
             arrayb = np.asarray([fill]*len(sb.ndarray[0]))

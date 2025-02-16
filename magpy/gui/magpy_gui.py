@@ -82,13 +82,13 @@ Major methods:              major_method
 |  PlotPanel     |  initial_plot  |    2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  link_rep  |        2.0.0  |             |            |               |      | |
 |  PlotPanel     |  link_rep  |        2.0.0  |             |            |               |      | |
-|  PlotPanel     |  AnnoteFinder  |    2.0.0  |             |            |               |      | |
-|  PlotPanel     |  AF.__init__  |     2.0.0  |             |            |               |      | |
-|  PlotPanel     |  AF.distance  |     2.0.0  |             |            |               |      | |
-|  PlotPanel     |  AF.__call__  |     2.0.0  |             |            |               |      | |
-|  PlotPanel     |  AF.finder  |       2.0.0  |             |            |               |      | |
-|  PlotPanel     |  AF.draw  |         2.0.0  |             |            |               |      | |
-|  MenuPanel     | __init__  |         2.0.0  |             |            |               |      | |
+|  PlotPanel     |  AnnoteFinder  |    2.0.0  |             | d          |               |      | |
+|  PlotPanel     |  AF.__init__  |     2.0.0  |             | d          |               |      | |
+|  PlotPanel     |  AF.distance  |     2.0.0  |             | d          |               |      | |
+|  PlotPanel     |  AF.__call__  |     2.0.0  |             | d          |               |      | |
+|  PlotPanel     |  AF.finder  |       2.0.0  |             | d          |               |      | |
+|  PlotPanel     |  AF.draw  |         2.0.0  |             | d          |               |      | |
+|  MenuPanel     | __init__  |         2.0.0  |             | level 2    |               |      | |
 |  MainFrame     | __init__  |         2.0.0  |             | level 2    |               |        |    |
 |  MainFrame     | __set_properties |  2.0.0  |             | level 2    |               |        | init   |
 |  MainFrame     | _get_default_initialization |  2.0.0  |  | level 2    |               |        | init   |
@@ -119,7 +119,7 @@ Major methods:              major_method
 |  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               | 3.4    |   |
 |  MainFrame     | memory_select |     2.0.0  |             | level 2    |               | 3.5    |   |
 |  MainFrame     | memory_clear |      2.0.0  |             | level 2    |               | 3.5    |   |
-|  MainFrame     | xxx |      2.0.0  |             | level 2    |               | 3.6    |   |
+|  MainFrame     | spec_check_data |   2.0.0  |             | level 1    |               | 3.-    |   |
 |  MainFrame     | options_init |      2.0.0  |             | level 2    |               | 3.7    |   |
 |  MainFrame     | options_plot   |    2.0.0  |             | level 1    |               | 3.7    |   |
 |  MainFrame     | options_di   |      2.0.0  |             | level 2    |               | 3.7    |   |
@@ -1529,7 +1529,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.help_write_formats, self.HelpWriteFormatsItem)
         self.Bind(wx.EVT_MENU, self.help_open_log, self.HelpLogFileSelect)
         # Specials menu
-        self.Bind(wx.EVT_MENU, self.OnCheckDefinitiveData, self.CheckDefinitiveDataSelect)
+        self.Bind(wx.EVT_MENU, self.spec_check_data, self.CheckDefinitiveDataSelect)
         # BindingControls on the panels
         #       Stream Page
         # ------------------------
@@ -3388,6 +3388,156 @@ class MainFrame(wx.Frame):
     # ##################################################################################################################
     # ####    Specials Menu Bar                                #########################################################
     # ##################################################################################################################
+
+
+    def spec_check_data(self, event):
+        """
+        Definition:
+            Tool set for data checking. Organized in a step wise application:
+            Step 1: directories and existance of files (obligatory)
+            Step 2: file access and basic header information
+            Step 3: data content and consistency of primary source
+            Step 4: checking secondary source and consistency with primary
+            Step 5: basevalues and adopted baseline variation
+            Step 6: yearly means, consistency of meta information
+            Step 7: acitivity indicies
+        """
+        # 1. open a dialog with two input directories: 1) for IAF minute data and 2) (optional) for IamgCDF sec data
+        # 2. radio field with two selections (quick check, full check)
+        config = { "mindatapath" : '',
+                   "secdatapath" : '',
+                   "months" : [],
+                   "year" : 1777,
+                   "laststep" : 7    # required to enable save report message when running a stepwise check
+                   }
+        results = { "report" : "# Report of MagPys data checking tool box\n\n based on MagPy version {}\n".format(magpyversion),
+                    "warnings" : [],
+                    "errors" : [],
+                    "temporaryminutedata" : DataStream(),
+                    "temporaryseconddata" : DataStream(),
+                    "grades" : { "step1" : 0,
+                                 "step2" : 0,
+                                 "step3" : 0,
+                                 "step4" : 0,
+                                 "step5" : 0
+                                 }
+                    }
+
+        minutepath = ''
+        secondpath = ''
+        checkchoice = 'quick'
+        runit = False
+
+        mindata = DataStream()
+        secdata = DataStream()
+        diffdata = DataStream()
+        blvd = DataStream()
+        kdata = DataStream()
+        kdiff = DataStream()
+
+        self.changeStatusbar("Checking data ... ")
+
+        # Module way...
+        # set up modules which return testing parameters.
+        # each module is fed with a configuration and previous results dictionary
+        # and returns a modified results dictionary, including grade and report
+        # modules are in a separate *.py file and contain unittest stuff
+        # Module 1 - random month check
+
+        # A) open a dialog to obtain testing parameters and paths
+        succlst = ['0','0','0','0','0','0','0']
+        checkparameter = []
+        success = 6  # integer from 1 to 6 - 1 everything perfect, 6 bad
+        laststep = 5 # used to switch from continue to save - remove
+        dlg = CheckDefinitiveDataDialog(None, title='Checking defintive data')
+        if dlg.ShowModal() == wx.ID_OK:
+            checkchoice = dlg.checkchoice
+            config["mindatapath"] = dlg.minuteTextCtrl.GetValue()
+            config["secdatapath"] = dlg.secondTextCtrl.GetValue()
+            checkparameter = dlg.checkparameter
+            config["laststep"] = dlg.laststep
+            runit = True
+        dlg.Destroy()
+
+        if not runit or (config["mindatapath"]=='' and config["secdatapath"]==''):
+            return
+
+        randommonth = np.random.randint(1, 13)
+        if checkchoice == 'quick':
+            config["months"] = [randommonth]
+            results["report"] += "\nTest type: {} . Testing only randomly selected month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
+        else:
+            config["months"] = list(range(1,13))
+            results["report"] += "\nTest type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
+
+        # run module1
+        from magpy.opt import checkdata
+        # Step 1
+        results = checkdata.check_minute_directory(config, results)
+        results = checkdata.check_second_directory(config, results)
+        if checkparameter.get('step2'):
+            for month in config.get('months'):
+                self.changeStatusbar("Checking data for month {} ... please wait".format(month))
+                results = checkdata.read_month(config, results, month=month, debug=False)
+                mindata = results.get(month).get('minute',{}).get('data', DataStream())
+                secdata = results.get(month).get('second',{}).get('data', DataStream())
+                results = checkdata.consistency_test(config, results, month=month)
+                results = checkdata.content_test(config, results, month=month)
+                diffdata = results.get(month).get('second',{}).get('diffdata', DataStream())
+        if checkparameter.get('step3'):
+            self.changeStatusbar("Checking data - baseline test")
+            results = checkdata.baseline_check(config, results)
+            blvd = results.get('baseline-analysis').get('data')
+        if checkparameter.get('step4'):
+            self.changeStatusbar("Checking data - header test")
+            results = checkdata.header_test(config, results)
+        if checkparameter.get('step5'):
+            self.changeStatusbar("Checking data - K value test")
+            results = checkdata.k_value_test(config, results)
+            kdiff = results.get('k-value-analysis').get('diffdata')
+            kdata = results.get('k-value-analysis').get('data')
+
+        # plots
+        self.changeStatusbar("Checking data - plotting")
+        if mindata and len(mindata) > 0:
+            streamid = self._initial_read(mindata)
+            self._initial_plot(streamid)
+        if secdata and len(secdata) > 0:
+            streamid = self._initial_read(secdata)
+            self._initial_plot(streamid)
+        if diffdata and len(diffdata) > 0:
+            streamid = self._initial_read(diffdata)
+            self._initial_plot(streamid)
+        if blvd and len(blvd) > 0:
+            streamid = self._initial_read(blvd)
+            self._initial_plot(streamid)
+        if kdata and len(kdata) > 0:
+            streamid = self._initial_read(kdata)
+            self._initial_plot(streamid)
+        if kdiff and len(kdiff) > 0:
+            kdiff.header['col-var1'] = 'delta K (reported - fmi)'
+            streamid = self._initial_read(kdiff)
+            self._initial_plot(streamid)
+
+        #report = checkdata.create_report(reportmsg, warningmsg, errormsg)
+        dlg = CheckDataReportDialog(None, title='Data check report', config=config,
+                                        results=results, laststep=laststep)
+        dlg.ShowModal()
+        if dlg.moveon:
+            report = dlg.report
+            savename = ''
+            saveFileDialog = wx.FileDialog(self, "Save As", self.guidict.get('dirname'), "",
+                                           "markdown report (*.md)|*.md|text file (*.txt)|*.txt",
+                                           wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+            if saveFileDialog.ShowModal() == wx.ID_OK:
+                savename = saveFileDialog.GetPath()
+            saveFileDialog.Destroy()
+            if savename:
+                with open(savename, 'w') as pf:
+                    pf.write(report)
+        dlg.Destroy()
+
+        self.changeStatusbar("Ready")
 
 
     # ##################################################################################################################
@@ -6702,155 +6852,6 @@ class MainFrame(wx.Frame):
         stream = stream.sorting()
         return stream
 
-
-    def OnCheckDefinitiveData(self, event):
-        """
-        Definition:
-            Tool set for data checking. Organized in a step wise application:
-            Step 1: directories and existance of files (obligatory)
-            Step 2: file access and basic header information
-            Step 3: data content and consistency of primary source
-            Step 4: checking secondary source and consistency with primary
-            Step 5: basevalues and adopted baseline variation
-            Step 6: yearly means, consistency of meta information
-            Step 7: acitivity indicies
-        """
-        # 1. open a dialog with two input directories: 1) for IAF minute data and 2) (optional) for IamgCDF sec data
-        # 2. radio field with two selections (quick check, full check)
-        config = { "mindatapath" : '',
-                   "secdatapath" : '',
-                   "months" : [],
-                   "year" : 1777,
-                   "laststep" : 7    # required to enable save report message when running a stepwise check
-                   }
-        results = { "report" : "# Report of MagPys data checking tool box\n\n based on MagPy version {}\n".format(magpyversion),
-                    "warnings" : [],
-                    "errors" : [],
-                    "temporaryminutedata" : DataStream(),
-                    "temporaryseconddata" : DataStream(),
-                    "grades" : { "step1" : 0,
-                                 "step2" : 0,
-                                 "step3" : 0,
-                                 "step4" : 0,
-                                 "step5" : 0
-                                 }
-                    }
-
-        minutepath = ''
-        secondpath = ''
-        checkchoice = 'quick'
-        runit = False
-
-        mindata = DataStream()
-        secdata = DataStream()
-        diffdata = DataStream()
-        blvd = DataStream()
-        kdata = DataStream()
-        kdiff = DataStream()
-
-        self.changeStatusbar("Checking data ... ")
-
-        # Module way...
-        # set up modules which return testing parameters.
-        # each module is fed with a configuration and previous results dictionary
-        # and returns a modified results dictionary, including grade and report
-        # modules are in a separate *.py file and contain unittest stuff
-        # Module 1 - random month check
-
-        # A) open a dialog to obtain testing parameters and paths
-        succlst = ['0','0','0','0','0','0','0']
-        checkparameter = []
-        success = 6  # integer from 1 to 6 - 1 everything perfect, 6 bad
-        laststep = 5 # used to switch from continue to save - remove
-        dlg = CheckDefinitiveDataDialog(None, title='Checking defintive data')
-        if dlg.ShowModal() == wx.ID_OK:
-            checkchoice = dlg.checkchoice
-            config["mindatapath"] = dlg.minuteTextCtrl.GetValue()
-            config["secdatapath"] = dlg.secondTextCtrl.GetValue()
-            checkparameter = dlg.checkparameter
-            config["laststep"] = dlg.laststep
-            runit = True
-        dlg.Destroy()
-
-        if not runit or (config["mindatapath"]=='' and config["secdatapath"]==''):
-            return
-
-        randommonth = np.random.randint(0, 13)
-        if checkchoice == 'quick':
-            config["months"] = [randommonth]
-            results["report"] += "\nTest type: {} . Testing only randomly selected month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
-        else:
-            config["months"] = list(range(1,13))
-            results["report"] += "\nTest type: {} . Header and readability check for month: {}\n".format(checkchoice, datetime(1900, randommonth, 1).strftime('%B'))
-
-        # run module1
-        from magpy.opt import checkdata
-        # Step 1
-        results = checkdata.check_minute_directory(config, results)
-        results = checkdata.check_second_directory(config, results)
-        if checkparameter.get('step2'):
-            for month in config.get('months'):
-                self.changeStatusbar("Checking data for month {} ... please wait".format(month))
-                results = checkdata.read_month(config, results, month=month)
-                mindata = results.get(month).get('minute',{}).get('data', DataStream())
-                secdata = results.get(month).get('second',{}).get('data', DataStream())
-                results = checkdata.consistency_test(config, results, month=month)
-                results = checkdata.content_test(config, results, month=month)
-                diffdata = results.get(month).get('second',{}).get('diffdata', DataStream())
-        if checkparameter.get('step3'):
-            self.changeStatusbar("Checking data - baseline test")
-            results = checkdata.baseline_check(config, results)
-            blvd = results.get('baseline-analysis').get('data')
-        if checkparameter.get('step4'):
-            self.changeStatusbar("Checking data - header test")
-            results = checkdata.header_test(config, results)
-        if checkparameter.get('step5'):
-            self.changeStatusbar("Checking data - K value test")
-            results = checkdata.k_value_test(config, results)
-            kdiff = results.get('k-value-analysis').get('diffdata')
-            kdata = results.get('k-value-analysis').get('data')
-
-        # plots
-        self.changeStatusbar("Checking data - plotting")
-        if mindata and len(mindata) > 0:
-            streamid = self._initial_read(mindata)
-            self._initial_plot(streamid)
-        if secdata and len(secdata) > 0:
-            streamid = self._initial_read(secdata)
-            self._initial_plot(streamid)
-        if diffdata and len(diffdata) > 0:
-            streamid = self._initial_read(diffdata)
-            self._initial_plot(streamid)
-        if blvd and len(blvd) > 0:
-            streamid = self._initial_read(blvd)
-            self._initial_plot(streamid)
-        if kdata and len(kdata) > 0:
-            streamid = self._initial_read(kdata)
-            self._initial_plot(streamid)
-        if kdiff and len(kdiff) > 0:
-            kdiff.header['col-var1'] = 'delta K (reported - fmi)'
-            streamid = self._initial_read(kdiff)
-            self._initial_plot(streamid)
-
-        #report = checkdata.create_report(reportmsg, warningmsg, errormsg)
-        dlg = CheckDataReportDialog(None, title='Data check report', config=config,
-                                        results=results, laststep=laststep)
-        dlg.ShowModal()
-        if dlg.moveon:
-            report = dlg.report
-            savename = ''
-            saveFileDialog = wx.FileDialog(self, "Save As", self.guidict.get('dirname'), "",
-                                           "markdown report (*.md)|*.md|text file (*.txt)|*.txt",
-                                           wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
-            if saveFileDialog.ShowModal() == wx.ID_OK:
-                savename = saveFileDialog.GetPath()
-            saveFileDialog.Destroy()
-            if savename:
-                with open(savename, 'w') as pf:
-                    pf.write(report)
-        dlg.Destroy()
-
-        self.changeStatusbar("Ready")
 
     @deprecated("Apperently not used any more")
     def onWebServiceParameter(self,event):
