@@ -65,8 +65,8 @@ Methods bound to elements:  on_incredible_button
 Major methods:              major_method
 
 
-| class          |  method  |  since version  |  until vers |  runtime test  |  calls  | manual  |  used by |
-| -------------- |  ------  |  -------------  |  ---------- |  ------------  |  -----  |---------|  ---------- |
+| class          |  method  |  since version  |  until vers |  runtime test  |  comment | manual  |  used by |
+| -------------- |  ------  |  -------------  |  ---------- |  ------------  |  ------  |---------|  ------- |
 |  RedirectText  |          |          2.0.0  |             | level 2    |              |       |  core.activity, di analysis |
 |  PlotPanel     |  __init__  |        2.0.0  |             | level 2    |              |       | |
 |  PlotPanel     |  __do_layout  |     2.0.0  |             | level 2    |              |       | |
