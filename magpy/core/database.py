@@ -2418,7 +2418,12 @@ REMOVED:
                     elif key in stream.NUMKEYLIST:
                         array[pos] = np.asarray(columns[idx], dtype=np.float64)
                     elif key.endswith('time'):
-                        array[pos] = np.asarray(columns[idx], dtype=datetime)
+                        if isinstance(columns[idx][0], basestring):
+                            # old db format
+                            temp = np.asarray([testtime(el) for el in columns[idx]]).astype(datetime)
+                            array[pos] = np.asarray(temp, dtype=datetime)
+                        else:
+                            array[pos] = np.asarray(columns[idx], dtype=datetime)
                     else:
                         array[pos] = np.asarray(columns[idx], dtype=object)
                     # consider nan elemenets - done

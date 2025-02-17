@@ -71,11 +71,11 @@ Major methods:              major_method
 |  PlotPanel     |  __init__  |        2.0.0  |             | level 2    |              |       | |
 |  PlotPanel     |  __do_layout  |     2.0.0  |             | level 2    |              |       | |
 |  PlotPanel     |  live_timer   |     2.0.0  |             | level 2    |              |       | |
-|  PlotPanel     |  _live_update_marcos | 2.0.0  |          | level 1    |              |       | |
+|  PlotPanel     |  _live_update_marcos | 2.0.0  |          | level 2    |              |       | |
 |  PlotPanel     |  _live_update_martas | 2.0.0  |          | level 2    |              |       | |
 |  PlotPanel     |  start_martas_monitor | 2.0.0  |         | level 2    |              |       | |
-|  PlotPanel     |  start_marcos_monitor | 2.0.0  |         | level 1    |              |       | |
-|  PlotPanel     |  monitor_plot  |    2.0.0  |             | level 1    |              |       | |
+|  PlotPanel     |  start_marcos_monitor | 2.0.0  |         | level 2    |              |       | |
+|  PlotPanel     |  monitor_plot  |    2.0.0  |             | level 2    |              |       | |
 |  PlotPanel     |  gui_plot  |        2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  power_plot  |      2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  spec_plot  |       2.0.0  |             | level 0    |               |      | |
@@ -119,7 +119,7 @@ Major methods:              major_method
 |  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               | 3.4    |   |
 |  MainFrame     | memory_select |     2.0.0  |             | level 2    |               | 3.5    |   |
 |  MainFrame     | memory_clear |      2.0.0  |             | level 2    |               | 3.5    |   |
-|  MainFrame     | spec_check_data |   2.0.0  |             | level 1    |               | 3.-    |   |
+|  MainFrame     | spec_check_data |   2.0.0  |             | level 2    |               | 3.6    |   |
 |  MainFrame     | options_init |      2.0.0  |             | level 2    |               | 3.7    |   |
 |  MainFrame     | options_plot   |    2.0.0  |             | level 1    |               | 3.7    |   |
 |  MainFrame     | options_di   |      2.0.0  |             | level 2    |               | 3.7    |   |
@@ -167,7 +167,7 @@ Major methods:              major_method
 |  MainFrame     | a_onActivityButton |  2.0.0  |           | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onDailyMeansButton | 2.0.0  |          | level 2    |               | 4.4    |   |
-|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 2    |               | 4.4    |   |
+|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 1    |               | 4.4    |   |
 |  MainFrame     | a_onApplyBCButton | 2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onPowerButton |   2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onSpectrogramButton | 2.0.0  |         | level 0    |               |        |   |
@@ -177,15 +177,15 @@ Major methods:              major_method
 |  MainFrame     | di_onDIParameter |   2.0.0  |            | level 2    |               | 4.5,5.2  |   |
 |  MainFrame     | di_onSaveDI    |    2.0.0  |             | level 2    |               | 4.5,5.2  |   |
 |  MainFrame     | di_onClearDI   |    2.0.0  |             | level 2    |               | 4.5,5.2  |   |
-|  MainFrame     | r_onSaveLogButton |  2.0.0  |            | level 2    |               |        |   |
-|  MainFrame     | live_onConnectMARCOS |   2.0.0  |        | level 1    |               |        |   |
-|  MainFrame     | live_onConnectMARTAS |   2.0.0  |        | level 0    |               |        |   |
-|  MainFrame     | live_onStartMonitor |   2.0.0  |         | level 1    |               |        |   |
-|  MainFrame     | live_onStopMonitor |   2.0.0  |          | level 2    |               |        |   |
+|  MainFrame     | r_onSaveLogButton |  2.0.0  |            | level 2    |               | 4.6    |   |
+|  MainFrame     | live_onConnectMARCOS |   2.0.0  |        | level 2    |               | 4.7    |   |
+|  MainFrame     | live_onConnectMARTAS |   2.0.0  |        | level 1    | auth not tested | 4.7    |   |
+|  MainFrame     | live_onStartMonitor |   2.0.0  |         | level 2    |               | 4.7    |   |
+|  MainFrame     | live_onStopMonitor |   2.0.0  |          | level 2    |               | 4.7    |   |
 |  -          |  read_dict  |          2.0.0  |             | level 2    |               |        |   |
 |  -          |  save_dict  |          2.0.0  |             | level 2    |               |        |   |
-|  -          |  saveobj    |          1.0.0  |             |            |               |        |   |
-|  -          |  loadobj    |          1.0.0  |             |            |               |        |   |
+|  -          |  saveobj    |          1.0.0  |             | d          |               |        |   |
+|  -          |  loadobj    |          1.0.0  |             | d          |               |        |   |
 |  -          |  pydate2wxdate  |      2.0.0  |             | level 1    |               |        |   |
 |  -          |  wxdate2pydate  |      2.0.0  |             | level 1    |               |        |   |
 
@@ -257,7 +257,7 @@ def save_dict(mydict, path=None, debug=False):
         return False
     return True
 
-
+@deprecated("Replaced by func_to_file in module methods")
 def saveobj(obj, filename):
     """
     DESCRIPTION
@@ -268,6 +268,7 @@ def saveobj(obj, filename):
         pickle.dump(obj,f,pickle.HIGHEST_PROTOCOL)
 
 
+@deprecated("Replaced by func_from_file in module methods")
 def loadobj(filename):
     """
     DESCRIPTION
@@ -375,6 +376,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         :param stop_event:
         :return:
         """
+
         debug = False
         while(not stop_event.is_set()):
             if client == 'marcos':
@@ -427,6 +429,7 @@ class PlotPanel(scrolled.ScrolledPanel):
         debug=False
         samplingrate = 1
         ar = self.livedatadict.get('array')
+        #print (ar)
         if len(ar[0]) > 0:
             try:
                 timecol = [el for el in ar[0]]
@@ -5273,7 +5276,7 @@ class MainFrame(wx.Frame):
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
         plotcont = self.plotdict.get(self.active_id)
-        keys = plotcont.get('shownkeys')
+        shownkeys = plotcont.get('shownkeys')
         dir = self.guidict.get('dirname')
         if len(stream) > 0:
             plotstream = stream.copy()
@@ -5290,6 +5293,7 @@ class MainFrame(wx.Frame):
                 fitfunc = params['fitfuncname']
                 knotstep = str(params['knotstep'])
                 fitdegree = str(params['fitdegree'])
+                plotcont = dlg.plotcont
                 # Update defaults
                 self.analysisdict['fitfunction'] = fitfunc
                 self.analysisdict['fitknotstep'] = knotstep
@@ -5297,7 +5301,7 @@ class MainFrame(wx.Frame):
                 self.menu_p.rep_page.logMsg('Fitting with %s, %s, %s' % (
                         params['fitfuncname'], params['knotstep'], params['fitdegree']))
                 funckeys = []
-                for elem in keys:
+                for elem in shownkeys:
                     if eval('dlg.{}CheckBox.GetValue()'.format(elem)):
                         funckeys.append(elem)
                 func = plotstream.fit(keys=funckeys,
@@ -5306,7 +5310,7 @@ class MainFrame(wx.Frame):
                             starttime=params['starttime'],
                             endtime=params['endtime'])
                 funclist = []
-                for key in keys:
+                for key in shownkeys:
                     funclist.append([func])
                 if params['fitfunc'] == 'none':
                     plotcont['functions'] = []
@@ -5329,16 +5333,21 @@ class MainFrame(wx.Frame):
                 parameter = dlg.fitparameter
                 if parameter:
                     funclist = []
+                    funcl = []
                     for key in parameter:
                         params=parameter[key]
-                        funclist.append(self.plotstream.fit(keys=keys,
+                        #print (params['keys'], type(params['keys']))
+                        func = plotstream.fit(keys=params['keys'],
                             fitfunc=params['fitfunc'],
                             fitdegree=params['fitdegree'], knotstep=params['knotstep'],
                             starttime=params['starttime'],
-                            endtime=params['endtime']))
+                            endtime=params['endtime'], debug=True)
+                        funcl.append(func)
+                    for ke in shownkeys:
+                        funclist.append(funcl)
                     plotcont['functions'] = funclist
-                    self.plotdict[self.active_id] = plotcont
-                    self._initial_plot(self.active_id, keepplotdict=True)
+                self.plotdict[self.active_id] = plotcont
+                self._initial_plot(self.active_id, keepplotdict=True)
 
             dlg.Destroy()
             self.menu_p.rep_page.logMsg('- data fitted')

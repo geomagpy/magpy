@@ -25,23 +25,23 @@ import platform
 
 | class          |  since version  |  until version  |  runtime test  |  manual  |  used by |
 | -------------- |  -------------  |  -------------  |  ------------  | -------- |  ---------- |
-| OpenWebAddressDialog |    2.0.0  |                 |  level 1       |          | file_on_open_url |
-| ConnectWebServiceDialog | 2.0.0  |                 |  level 1       |          | file_on_open_webservice |
-| LoadDataDialog |          2.0.0  |                 |  level 1       |          | _open_stream      |
-| ExportDataDialog |        2.0.0  |                 |  level 1       |          | file_export_data  |
-| ExportModifyNameDialog |  2.0.0  |                 |  level 1       |          | ExportDataDialog  |
-| DatabaseConnectDialog |   2.0.0  |                 |  level 1       |          | db_on_connect |
-| OptionsInitDialog |       2.0.0  |                 |  level 1       |          | options_init |
+| OpenWebAddressDialog |    2.0.0  |                 |  level 2       |          | file_on_open_url |
+| ConnectWebServiceDialog | 2.0.0  |                 |  level 2       |          | file_on_open_webservice |
+| LoadDataDialog |          2.0.0  |                 |  level 2       |          | _open_stream      |
+| ExportDataDialog |        2.0.0  |                 |  level 2       |          | file_export_data  |
+| ExportModifyNameDialog |  2.0.0  |                 |  level 2       |          | ExportDataDialog  |
+| DatabaseConnectDialog |   2.0.0  |                 |  level 2       |          | db_on_connect |
+| OptionsInitDialog |       2.0.0  |                 |  level 2       |          | options_init |
 | OptionsDIDialog |         2.0.0  |                 |  level 2       |          | options_di |
-| OptionsPlotDialog |       2.0.0  |                 |  level 0       |          | options_plot |
+| OptionsPlotDialog |       2.0.0  |                 |  level 1       |          | options_plot |
 | MultiStreamPanel |        2.0.0  |                 |  level 2       |          | memory_select |
 | InputSheetDialog |       2.0.0   |                 |  level 1       |          | di_input_sheet |
 | SettingsPanel |          2.0.0   |                 |  level 1       |          | InputSheetDialog |
 | AnalysisBaselineDialog | 2.0.0   |                 |  level 1       |          | ana_onBaselineButton |
 | AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | ana_onRotationButton |
-| AnalysisFitDialog      | 2.0.0   |                 |  level 2       |          | ana_onFitButton |
+| AnalysisFitDialog      | 2.0.0   |                 |  level 1       |          | ana_onFitButton |
 | AnalysisFilterDialog   | 2.0.0   |                 |  level 2       |          | ana_onFilterButton |
-| AnalysisOffsetDialog   | 2.0.0   |                 |  level 1       |          | ana_onOffsetButton |
+| AnalysisOffsetDialog   | 2.0.0   |                 |  level 2       |          | ana_onOffsetButton |
 | AnalysisResampleDialog | 2.0.0   |                 |  level 2       |          | ana_onOffsetButton |
 | LoadDIDialog           | 2.0.0   |                 |  level 2       |          | dip_onLoadDIButton |
 | SetAzimuthDialog       | 2.0.0   |                 |  level 2       |          | dip_onDIAnanlysis |
@@ -55,9 +55,9 @@ import platform
 | FlaggingGroupsDialog |   2.0.0   |                 |  level 2       |          | FlagOutlier, FlagRange, FlagSelection |
 | FlagOutlierDialog    |   2.0.0   |                 |  level 2       |          | flag_onFlagOutlier |
 | FlagSelectionDialog  |   2.0.0   |                 |  level 2       |          | flag_onFlagSelection |
-| FlagRangeDialog      |   2.0.0   |                 |  level 1       |          | flag_onFlagRange |
-| FlagLoadDialog       |   2.0.0   |                 |  level 1       |          | flag_onFlagLoad |
-| FlagSaveDialog       |   2.0.0   |                 |  level 1       |          | flag_onFlagSave |
+| FlagRangeDialog      |   2.0.0   |                 |  level 2       |          | flag_onFlagRange |
+| FlagLoadDialog       |   2.0.0   |                 |  level 2       |          | flag_onFlagLoad |
+| FlagSaveDialog       |   2.0.0   |                 |  level 2       |          | flag_onFlagSave |
 | CheckDefinitiveDataDialog | 2.0.0   |              |  level 2       |          |            |
 | CheckDataReportDialog |  2.0.0   |                 |  level 2       |          |            |
 | CheckDataSelectDialog |  2.0.0   |                 |  level 2       |          |            |
@@ -3150,7 +3150,7 @@ class AnalysisFitDialog(wx.Dialog):
                                        wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
         openFileDialog.ShowModal()
         fitname = openFileDialog.GetPath()
-        self.plotcont['functions'] = methods.func_from_file(fitname,debug=False)
+        self.fitparameter = methods.func_from_file(fitname,debug=False)
         openFileDialog.Destroy()
         self.Close(True)
         self.Destroy()
@@ -3169,8 +3169,11 @@ class AnalysisFitDialog(wx.Dialog):
             savename = savename+extensions[extind]
 
         saveFileDialog.Destroy()
-        if self.plotcont.get('functions',False):
-            methods.func_to_file(self.plotcont.get('functions'),savename,debug=False)
+        if len(self.plotcont.get('functions',[])) > 0:
+            # plotcont functions contain all functions asociated to each plotted key
+            # for saveing we only store one layer
+            savefunc = self.plotcont.get('functions')[0] # only for first key
+            methods.func_to_file(savefunc,savename,debug=False)
         self.Close(True)
         self.Destroy()
 

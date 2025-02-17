@@ -321,7 +321,45 @@ and selecting **Clear memory**.
 
 ### 3.6 Specials
 
-TODO
+XMagPy comes with a module to check the validity of definitive data in comparison to INTERMAGENT standards. Although
+these methods can also be used by official data checkers, the main purpose however is to provide an easy testing 
+environment for all users to check their data sets before submitting them to INTERMAGNET. For non-INTERMAGNET 
+observatories, the testing routines are helpful for data consistency checks and provide the possibility to identify 
+critical deviation values relative to the IM standard. 
+Please note, successfully passing the definitive check routines does not automatically indicate, that your data is 
+acceptable for IM. Further tests and final decision is always the duty of an official data checker. Using MagPy’s  
+definitive data check, however, will dramatically reduce the work load of the voluntary IM data checkers, as most 
+typically occurring problems are tested, and therefore, all sides will benefit.
+
+To access the data checking routine go to  **Main menu**, **Specials** and click on **Check definitive data**.
+
+This will open a basic input dialog. You can choose source data to be checked and some options. You can provide data 
+in minute resolution and data in second resolution. Acceptable data sources for one-minute data are IAF or IAGA-2002 
+collections for one-minute and IMAGCDF or IAGA-2002 archives for one-second data. If both data sets are provided 
+please make sure that they are from the same year. As source you define a directory which contains the INTERMAGNET
+requested data structure for definitive data submission. If you just want to test either minute or second data, 
+please leave the other source field empty. Two check types are possible, quick and full. For the quick test a single, 
+randomly selected month will be tested. For full analysis, the validity tests will be performed for all months of one
+year. You can also specify check options. By default all possible tests as shown below will be run. Unlike in XmagPy1.x
+, all checks will now performed without any further interaction and a final report will be presented. 
+The final report window will automatically pop up when finished, giving you a summary of the check results. 
+The color and rating helps to guide your eye and eventually indicate points which need your attention. Orange or red 
+colors do not necessarily indicate that the data is not ready for IM submission.
+
+The report window will contain some details on each performed check. It will also contain explanations if problems
+occurred. Warnings (orange) and errors (red) are found at the top of the report window. 
+You can save the summary to a markdown file. In summary the following checks are performed at each step:
+
+1. Step 1: Test whether selected directories are existing and they contain expected data files (amount and types) for definitive data submission
+
+2. Step 2: For each month (or the randomly selected one in case of quick) the data sets from the selected source will be opened. The data is tested for consitency and completeness
+
+3. Step 3: Now the basevalue (BLV) file will be opened and also shown in the plotting area. The adopted baseline will also be checked. The quality analysis starts with an average periodicity, i.e. how often have measurements been performed. If several measurements are performed each day, then the average intra-day deviation of measurements is analyzed. Afterwards the residuals between  adopted baseline and basevalues are calculated. Finally the amplitude of the adopted baseline is determined. If any of these parameters exceeds 5 nT than a warning message is issued. The report contains all numerical values. When accessing the BLV plot later, you can also select the delta F component there, providing information on the F baseline.
+
+4. Step 4: Meta information and header content from all provided data sets is now checked. Besides the data files (IAF, IAGA, ImagCDF) also the BLV and yearly mean files are investigated. All header information will be listed in the report. If differences of identically expected information is found, then a special notification will be created. Some notifications are uncritical as e.g. IAF only contains abbreviations of institute names whereas other format contain the full name. Sometime you might run into problems with this test, as MagPy tries to open and interpret a yearly mean file which actually is free form. You can test that before by just opening the yearmean file alone. You might want to disable step 6 if you have problems. 
+ 
+5. Step 5: An overview about k values as contained in the IAF data file is shown.
+
 
 ### 3.7 Options
 
@@ -841,5 +879,5 @@ Linux environment:
 44. Load data set from database
 45. Open example2 and go to meta
 46. Change SensorDescription and write to DB
-47. Test all analysis methods on example1
-48. Run check data on 
+47. Test all analysis methods on example1 and use report panel to save report
+48. Run check data on a number of examples and save report

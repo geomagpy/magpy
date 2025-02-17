@@ -3515,6 +3515,7 @@ CALLED BY:
         knotstep = kwargs.get('knotstep')
         starttime = kwargs.get('starttime')
         endtime = kwargs.get('endtime')
+        debug = kwargs.get('debug')
         if not fitfunc:
             fitfunc = 'spline'
         if not fitdegree:
@@ -3537,11 +3538,11 @@ CALLED BY:
 
         functionkeylist = {}
 
-        ndtype = True
+        if debug:
+            print ("Running fit", len(self), keys)
         if not len(self.ndarray[0]) > 0:
             return self
 
-        #tok = True
         fitstream = self.copy()
         if not defaulttime == 2: # TODO if applied to full stream, one point at the end is missing
             fitstream = fitstream.trim(starttime=starttime, endtime=endtime)
@@ -3549,6 +3550,8 @@ CALLED BY:
         sv = 0
         ev = 0
         for key in keys:
+            if debug:
+                print ("Fitting key", key)
             tmpst = fitstream._drop_nans(key)
             t = tmpst.ndarray[0]
             nt,sv,ev = normalize(t)
@@ -3611,7 +3614,7 @@ CALLED BY:
             else:
                 logger.warning('Fit: function not valid')
                 return
-            exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
+            exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)') # TODO remove exec
             exec('functionkeylist["f'+key+'"] = f'+key)
 
         #if tok:

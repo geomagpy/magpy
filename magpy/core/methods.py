@@ -828,7 +828,10 @@ def func_from_file(functionpath,debug=False):
                 # Convert dates in dictionary to datetime objects
                 for (key,value) in dct.items():
                     try:
-                        value = float(value)
+                        if isinstance(value, (list,tuple)):
+                            value = value
+                        else:
+                            value = float(value)
                     except:
                         try:
                             value = str(value)
@@ -892,9 +895,11 @@ def func_to_file(funcparameter,functionpath,debug=False):
             else:
                 funct = funcparameter
             if debug:
-                print ("Found list/single function")
+                print ("Found list/single function", funct)
             funcres = {}
             for idx, func in enumerate(funct):
+                if debug:
+                    print ("funcs", func)
                 #func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime]
                 if len(func) >= 9:
                     funcdict = {"keys":func[8], "fitfunc":func[3],"fitdegree":func[4], "knotstep":func[5], "starttime":func[6],"endtime":func[7], "functionlist":"dropped", "sv":func[1], "ev":func[2]}
