@@ -3731,7 +3731,6 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.parameterLabel = wx.StaticText(self, label="Fit parameter:",size=(190,30))
         self.parameterTextCtrl = wx.TextCtrl(self, value=self.parameterstring,size=(550,120),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
-        self.parameterButton = wx.Button(self, label='Add new',size=(190,30))
         self.clearButton = wx.Button(self, label='Delete all',size=(190,30))
         self.loadButton = wx.Button(self, label='Load ...',size=(190,30))
         self.saveButton = wx.Button(self, label='Save ...',size=(190,30))
@@ -3797,17 +3796,32 @@ class AnalysisBaselineDialog(wx.Dialog):
             fitname = openFileDialog.GetPath()
             basedict = func_from_file(fitname,debug=False)
             openFileDialog.Destroy()
+            for bid in basedict:
+                basecont = basedict.get(bid)
+                self.baselinedict[bid] = basecont
+                # coverage of all basevalue data
+                st = basecont.get('startdate')
+                et = basecont.get('enddate')
+                line = "{}: {}_{}_{}".format(str(bid), basecont.get('filename'), st.strftime("%Y%m%d"),
+                                             et.strftime("%Y%m%d"))
+                self.absstreamlist.append(line)
+
             self.parameterTextCtrl.Clear()
-            print ("LOADED", basedict)
+            #print ("LOADED", basedict)
             keys = [key for key in basedict]
             if keys and len(keys) > 0:
                 mainkey = keys[0]
-                self.baselinedict[mainkey] = basedict.get(mainkey)
+                choice = [el for el in self.absstreamlist if el.startswith(str(mainkey))][0]
                 self.active_baseid = mainkey
+                self.absstreamComboBox.SetItems(self.absstreamlist)
+                self.absstreamComboBox.SetValue(choice)
                 self.parameterstring = self.create_fitparameterstring(self.active_baseid)
                 self.parameterTextCtrl.SetValue(self.parameterstring)
+                self.clearButton.Enable()
+                self.saveButton.Enable()
         else:
             openFileDialog.Destroy()
+        self.OnUpdate(e)
 
 
     def OnSave(self, e):

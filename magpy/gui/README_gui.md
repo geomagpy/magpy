@@ -616,8 +616,19 @@ description of the parameters. Defaults are NFFT = length of the data set, pad_t
 scale_by_frequency=True. Calculated PSD's will not be part of the **memory**. If you want to go back to the original 
 time series, click on **Main menu**, **Access memory**, select the original plot and press **Plot**.
 
-4.4.12 Baseline
-The baseline method is only available if a basevalue data set has been opened previously and is still present in the memory. When now opening a variation time series, which is covered by the time range of available basevalues, the baseline button gets enabled. When pressing the baseline button you will be asked to provide fitting parameters for adopted baselines. This baseline will be calculated and a baseline correction function of the the time series will  be obtained. This function will not be applied directly but stored within the time series meta information. You can apply the adopted baseline be pressing on the now available button „Baseline Corr(ection)“ on the data panel. Exporting this data set now as PYCDF will export the adopted baseline function along with the data meta info. This way, uncorrected and corrected data is not separated any more. Extensive details and a complete walkthrough with hands-on examples for this method is provided in section 6.2.
+**Baseline** is only available if a DI data set has been opened previously, an adopted baseline has been fitted and is 
+still present in the memory. When now opening a variation time series, which is covered by the time range of available
+basevalues, the baseline button gets enabled. When pressing the baseline button you can select the previously fitted
+adopted baseline or choose from several previously obtained fits. The different fits are identified by a unique ID.
+Associated fitting parameters are shown in the baseline dialog. for adopted baselines. You can also save and load 
+specific baseline functions to files. 
+By default, when adopting a baseline towards your data set, this function will not be applied directly but stored
+within the time series meta information. You can apply the adopted baseline be pressing on the now available button 
+**Baseline Correction** on the analysis panel. Exporting the data set before correction as PYCDF will export the 
+adopted baseline function along with the data meta info. This way, uncorrected and corrected data is not separated 
+any more. Extensive details and a complete walkthrough with hands-on examples for this method is provided below.
+If you would like to apply baselines with single clicks, the go to the **main menu**, **Options** and use
+**basic options**. Here you can activate the direct application of baseline without extending the meta information first. 
 
 **Power** will plot the power spectral density based on the matplotlib psd method for the selected components. You can
 zoom etc. If you want to return to the original plot access the **Memory**. Parameters for the PSD plot can be changed
@@ -880,4 +891,14 @@ Linux environment:
 45. Open example2 and go to meta
 46. Change SensorDescription and write to DB
 47. Test all analysis methods on example1 and use report panel to save report
-48. Run check data on a number of examples and save report
+48. Test save and load methods for fit 
+49. Run check data on a number of examples and save report
+50. Run marcos and martas monitoring with different data sources (TODO: test authenticitation)
+51. Baseline analysis: Load DI files from files and analyse, save report
+52. Load DI files and analyse with changed parameters
+53. Test various source for vario and scalar data
+54. Test various sources for DI data
+55. Fit adopted baselines
+56. Apply baselines to data, test load and save methods
+57. Test baseline adoptions with direct baseline (basic options)
+58. Test options menus

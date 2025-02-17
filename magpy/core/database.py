@@ -2180,7 +2180,7 @@ REMOVED:
         return stream.sorting()
 
 
-    def get_pier(self, pierid, rp, value='deltaF', year=None, dic='DeltaDictionary'):
+    def get_pier(self, pierid, rp, value='deltaF', year=None, dic='DeltaDictionary', debug=False):
         """
         DEFINITION:
             Gets values from DeltaDictionary of the PIERS table
@@ -2206,7 +2206,8 @@ REMOVED:
 
         row = cursor.fetchone()
         if not row:
-            print(" get_pier: No data found for your selection")
+            if debug:
+                print(" get_pier: No data found for your selection")
             return 0.0
         else:
             row = row[0]

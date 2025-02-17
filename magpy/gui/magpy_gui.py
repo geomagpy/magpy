@@ -5730,8 +5730,10 @@ class MainFrame(wx.Frame):
             # returns a pointer to the selected baseline parameters
             fitparameters = dlg.fitparameters
             baseid = dlg.active_baseid
+            self.baselinedict = dlg.baselinedict
             self.active_baseid = baseid
             absstreamid = self.baselinedict.get(baseid).get("streamid")
+            absstreamid = str(int(absstreamid))
             absstream = self.datadict.get(absstreamid).get("dataset")
 
             baselinefunclist = []   # will hold a list of iundividual functions obtained by stream.baseline

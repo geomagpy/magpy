@@ -3571,6 +3571,16 @@ removed:
 
 ### A10 - other modules - all methods, overview with runtime and verification tests
 
+### A11 - Updating an existing MagPy1.x database to be compatible with MagPy2.x
+
+- MagPy2.x uses datetime columns for times
+- MagPy2.x changed the flagging contents based on new ID assignments
+- MagPy2.x changes the DI contents based on new ID assignments
+- ets
+
+MagPy2.x can read all previous contents. In order to add new data it is necessary to update the database tables for 
+supporting the new data types.
+
    [magpy-git]: <https://github.com/geomagpy/magpy>
    [magpy_win]: <http://www.conrad-observatory.at>
    [epsg]: <https://www.epsg-registry.org/>
