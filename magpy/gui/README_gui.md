@@ -276,7 +276,9 @@ first. At present you can save the data sheets to local files only. Saving will 
 information (see appendix). The input sheet can also be modified in order to reflect different measurement orders, 
 amount of individual measurements and usage of scale value tests. If you are not using the residual method, just 
 leave 0 as input value there. The input sheet is modified within the general options menu as described in 
-section [3.7](#37-options).
+section [3.7](#37-options). At the moment a maximum of two repeated measurements for each position are possible. We are 
+aware of the request of some observatories to extend this amount. This requires a lot of coding and is therefore 
+postponed to a future major version. Changed DI options are connected to the observatory code (Station ID). 
 
 The fields of the input sheet should be widely self-explaining for anybody experienced in DI measurements. As mentioned
 already, the input sheet supports residual and zero measurements. If you are using residual measurements it is
@@ -363,16 +365,27 @@ You can save the summary to a markdown file. In summary the following checks are
 
 ### 3.7 Options
 
-The **Options** menu provides access to two submenus for basic initialization parameters and global
-DI analysis parameters. Within the basic initialization parameters you can specify the default 
+The **Options** menu provides access to three submenus for basic initialization parameters, plot options and global
+DI analysis parameters. Within **basic options** initialization parameters you can specify the default 
 observatory code, default paths for loading and saving data as well as default parameters for 
-fitting. The special parameters **Apply baseline** affects the way how baseline corrections are performed.
+fitting.
+
+>[!NOTE]
+> The default observatory code is also changed when opening/analyzing DI data related to another observatory.
+
+The special parameters **Apply baseline** affects the way how baseline corrections are performed.
 By default XMagPy will not apply conduct a baseline correction after its calculation but just store the correction
 function in the data sets header. The user has to actively apply this correction as described in section 
-[5.2](#5-application-recipies-for-geomagnetic-observatory-data-analysis). You can however skip this step and apply the 
-baseline correction directly. XMagPy might contain some *hidden* **experimental methods** which can be activated here 
-as well. Please be careful as hidden methods are under current development and might not work correctly yet. The 
-significance of the scanning time for MARTAS real time data connections is described in section 4.
+[4.4](#44-the-analysis-panel) **Baseline**. You can however skip this step and apply the 
+baseline correction directly. Depending on its development stage, XMagPy might contain some *hidden* **experimental 
+methods** which can be activated here as well. Please use these experimental methods with care as they are under
+current development, might not work correctly yet and might even break current analyses. 
+
+The plot options menu allows you to modify the appearance of the data plots. Changes will be applied to the currently 
+active plot and stored along with its ID in the memory. The plot options menu is directly using optional inputs for the
+plotting function as defined in the general manual, summarized in section 4. This requires the provision of values, 
+lists and dictionaries in a very stringent format. There will be a number of examples provided in section
+[5](#5-application-recipies-for-geomagnetic-observatory-data-analysis) of this manual. 
 
 The DI initialization parameter option is useful, if you want to use MagPy‘s DI input sheets, as you
 can change the layout here (Figure xx). The text-edit provides the order of measurements as
@@ -431,9 +444,15 @@ area (see 3.3) and then press the **Flag selection** button. This is the most co
 within the time series, you firstly select the component(s), label and flag ID, and then use the **Flag maximum** or 
 **Flag minimum button**. Flags can either be saved within a connected data base (which I would recommend) or into a 
 data file. Flags are visualized by colored patches. Flag types to be removed for definitive data are colored in red,
-light red for automatic flags and dark red for observer decisions. Green colors indicate flags to be kept. If you move
-the mouse over a flag patch, the associated information is displayed in the lower text window of the flag panel. A
-right click with the mouse will remove the flag. 
+light red for automatic flags and dark red for observer decisions. Green colors indicate flags to be kept. 
+
+Mouse operations assist the flagging methods. If you move the mouse over a flag patch, the associated information is 
+displayed in the lower text window of the flag panel. A right click with the mouse will remove the flag. If you press 
+the middle mouse button a window will open allowing you to redefine flagging information. Modified or dropped flags will
+actually not be removed by XMagPy. Dropped flags will still be kept in the memory associated with a "delete" validity 
+parameter. Modified flags will be kept with a "hide" validity parameter. When saving, these data sets will be stored 
+with their currently applied validity parameter. At the moment the **Accept** button will not change this behavior.
+
 The flag file supports two formats, pickle, a binary structure, or json, an ASCII structure, of which I 
 recommend the latter. **Drop flagged** will remove flagged data with a 'remove data' flagtype and replace them by NaN.
 Please note, the flag patches will still be shown in the diagram, so that you can easily locate already removed data
@@ -856,7 +875,7 @@ Linux environment:
 11. Flag maximum only in one component
 12. Save flags 
 13. Clear flags
-14. Load flags and some drop flags with right click
+14. Load flags and some drop flags with right click, modify with middle click
 15. Save flags and clear, reload and check, both with DB and file
 16. Open flag details and select only specific labels
 17. Select example 2 from memory and apply flags from file/DB
@@ -902,3 +921,4 @@ Linux environment:
 56. Apply baselines to data, test load and save methods
 57. Test baseline adoptions with direct baseline (basic options)
 58. Test options menus
+59. Test the DI input menu including all submenus

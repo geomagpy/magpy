@@ -33,13 +33,13 @@ import platform
 | DatabaseConnectDialog |   2.0.0  |                 |  level 2       |          | db_on_connect |
 | OptionsInitDialog |       2.0.0  |                 |  level 2       |          | options_init |
 | OptionsDIDialog |         2.0.0  |                 |  level 2       |          | options_di |
-| OptionsPlotDialog |       2.0.0  |                 |  level 1       |          | options_plot |
+| OptionsPlotDialog |       2.0.0  |                 |  level 2       |          | options_plot |
 | MultiStreamPanel |        2.0.0  |                 |  level 2       |          | memory_select |
-| InputSheetDialog |       2.0.0   |                 |  level 1       |          | di_input_sheet |
-| SettingsPanel |          2.0.0   |                 |  level 1       |          | InputSheetDialog |
-| AnalysisBaselineDialog | 2.0.0   |                 |  level 1       |          | ana_onBaselineButton |
+| InputSheetDialog |       2.0.0   |                 |  level 2       |          | di_input_sheet |
+| SettingsPanel |          2.0.0   |                 |  level 2       |          | InputSheetDialog |
+| AnalysisBaselineDialog | 2.0.0   |                 |  level 2       |          | ana_onBaselineButton |
 | AnalysisRotationDialog | 2.0.0   |                 |  level 2       |          | ana_onRotationButton |
-| AnalysisFitDialog      | 2.0.0   |                 |  level 1       |          | ana_onFitButton |
+| AnalysisFitDialog      | 2.0.0   |                 |  level 2       |          | ana_onFitButton |
 | AnalysisFilterDialog   | 2.0.0   |                 |  level 2       |          | ana_onFilterButton |
 | AnalysisOffsetDialog   | 2.0.0   |                 |  level 2       |          | ana_onOffsetButton |
 | AnalysisResampleDialog | 2.0.0   |                 |  level 2       |          | ana_onOffsetButton |
@@ -2186,6 +2186,184 @@ class FlaggingGroupsDialog(wx.Dialog):
         idx = self.groupsListBox.GetSelection()
         self.existinggroups = [el for i, el in enumerate(self.existinggroups) if not i == idx]
         self.groupsListBox.Set(self.existinggroups)
+
+class FlagModificationDialog(wx.Dialog):
+    """
+    DESCRIPTION
+        Dialog with all flagging parameters for the selected flag.
+        Allows for editing the parameters
+        sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000', label='',
+            comment='', groups=None, probabilities=None, stationid='', validity='', operator='', color='',
+            modificationtime=None, flagversion='2.0', minimumtimediff
+    USED BY:
+        Stream Method: _update_flags_onclick()
+    """
+    def __init__(self, parent, title, flagobject, flag):
+        super(FlagModificationDialog, self).__init__(parent=parent, title=title, size=(600, 700))
+        self.validityselect = ['','h : hide','d : delete']
+        labelid = flag.get('labelid')
+        validity = flag.get('validity')
+        valsel = self.validityselect[0]
+        if validity == 'd':
+            valsel = self.validityselect[2]
+        elif validity == 'h':
+            valsel = self.validityselect[1]
+        self.valsel = valsel
+        self.groups = flag.get('groups')
+        self.grouplabel = 'Define groups'
+        if self.groups:
+            self.grouplabel = ",".join([k for k in self.groups])
+        self.flag = flag
+        self.labels = ["{}: {}".format(key, flagobject.FLAGLABEL.get(key)) for key in flagobject.FLAGLABEL]
+        self.currentlabelindex = [i for i, el in enumerate(self.labels) if el.startswith(labelid)][0]
+        #print (flagobject.FLAGTYPE)
+        cftdict = flagobject.FLAGTYPE.get(flag.get('flagversion'))
+        self.flagidlist = ["{}: {}".format(key,cftdict.get(key)) for key in cftdict]
+        flagtype = self.flag.get('flagtype')
+        self.flagtypeselect = [el for el in  self.flagidlist if el.startswith(str(flagtype))][0]
+        self.createControls()
+        self.doLayout()
+        self.bindControls()
+
+    def createControls(self):
+        try:
+            stda = wx.DateTime.FromDMY(day=self.flag.get('starttime').day,month=self.flag.get('starttime').month-1,year=self.flag.get('starttime').year)
+            edda = wx.DateTime.FromDMY(day=self.flag.get('endtime').day,month=self.flag.get('endtime').month-1,year=self.flag.get('endtime').year)
+        except:
+            stda = wx.DateTimeFromDMY(day=self.flag.get('starttime').day,month=self.flag.get('starttime').month-1,year=self.flag.get('starttime').year)
+            edda = wx.DateTimeFromDMY(day=self.flag.get('endtime').day,month=self.flag.get('endtime').month-1,year=self.flag.get('endtime').year)
+        # countvariables for specific header blocks
+        self.sensoridText = wx.StaticText(self,label="SensorID:")
+        self.starttimeText = wx.StaticText(self,label="Starttime:")
+        self.endtimeText = wx.StaticText(self,label="Endtime:")
+        self.componentsText = wx.StaticText(self,label="Components:")
+        self.flagidText = wx.StaticText(self,label="Flagtype:")
+        self.labelText = wx.StaticText(self,label="Label:")
+        self.commentText = wx.StaticText(self,label="Comment:")
+        self.operatorText = wx.StaticText(self,label="Operator:")
+        self.groupsText = wx.StaticText(self,label="Groups:")
+        self.validityText = wx.StaticText(self,label="Validity:")
+        self.stationidText = wx.StaticText(self,label="StationID:")
+        self.colorText = wx.StaticText(self,label="Color:")
+        self.probabilitiesText = wx.StaticText(self,label="Probabilities:")
+        self.sensoridTextCtrl = wx.TextCtrl(self, value=self.flag.get('sensorid'),size=(160,30))
+        self.startFlagDatePicker = wxDatePickerCtrl(self, dt=stda,size=(160,30))
+        self.startFlagTimePicker = wx.TextCtrl(self, value=self.flag.get('starttime').strftime('%X'),size=(160,30))
+        self.endFlagDatePicker = wxDatePickerCtrl(self, dt=edda,size=(160,30))
+        self.endFlagTimePicker = wx.TextCtrl(self, value=self.flag.get('endtime').strftime('%X'),size=(160,30))
+        self.componentsTextCtrl = wx.TextCtrl(self, value=",".join(self.flag.get('components',[])),size=(160,30))
+        self.commentTextCtrl = wx.TextCtrl(self, value=self.flag.get('comment',''), size=(160, 30))
+        self.operatorTextCtrl = wx.TextCtrl(self, value=self.flag.get('operator',''), size=(160, 30))
+        self.stationidTextCtrl = wx.TextCtrl(self, value=self.flag.get('stationid',''), size=(160, 30))
+        self.colorTextCtrl = wx.TextCtrl(self, value=self.flag.get('color',''), size=(160, 30))
+        self.probabilitiesTextCtrl = wx.TextCtrl(self, value=self.flag.get('probability',''), size=(160, 30))
+        self.flagidComboBox = wx.ComboBox(self, choices=self.flagidlist,
+            style=wx.CB_DROPDOWN, value=self.flagtypeselect,size=(160,-1))
+        self.labelComboBox = wx.ComboBox(self, choices=self.labels,
+            style=wx.CB_DROPDOWN, value=self.labels[self.currentlabelindex],size=(160,-1))
+        self.validityComboBox = wx.ComboBox(self, choices=self.validityselect,
+            style=wx.CB_DROPDOWN, value=self.valsel,size=(160,-1))
+        self.groupsButton = wx.Button(self, label=self.grouplabel,size=(200,30))
+        self.okButton = wx.Button(self, wx.ID_OK, label='Update flag')
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel')
+        self.sensoridTextCtrl.Disable()
+        self.probabilitiesTextCtrl.Disable()
+
+    def doLayout(self):
+        boxSizer = wx.BoxSizer(orient=wx.HORIZONTAL)
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+        contlst = []
+        contlst.append((self.sensoridText, noOptions))
+        contlst.append((self.stationidText, noOptions))
+        contlst.append((self.componentsText, noOptions))
+        contlst.append((self.commentText, noOptions))
+        contlst.append((self.sensoridTextCtrl, expandOption))
+        contlst.append((self.stationidTextCtrl, expandOption))
+        contlst.append((self.componentsTextCtrl, expandOption))
+        contlst.append((self.commentTextCtrl, expandOption))
+        #
+        contlst.append((self.starttimeText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.endtimeText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.startFlagDatePicker, expandOption))
+        contlst.append((self.startFlagTimePicker, expandOption))
+        contlst.append((self.endFlagDatePicker, expandOption))
+        contlst.append((self.endFlagTimePicker, expandOption))
+        #
+        contlst.append((self.labelText, noOptions))
+        contlst.append((self.flagidText, noOptions))
+        contlst.append((self.operatorText, noOptions))
+        contlst.append((self.groupsText, noOptions))
+        contlst.append((self.labelComboBox, expandOption))
+        contlst.append((self.flagidComboBox, expandOption))
+        contlst.append((self.operatorTextCtrl, expandOption))
+        contlst.append((self.groupsButton, dict(flag=wx.ALIGN_CENTER)))
+        #
+        contlst.append((self.validityText, noOptions))
+        contlst.append(emptySpace)
+        contlst.append((self.colorText, noOptions))
+        contlst.append((self.probabilitiesText, noOptions))
+        contlst.append((self.validityComboBox, expandOption))
+        contlst.append(emptySpace)
+        contlst.append((self.colorTextCtrl, expandOption))
+        contlst.append((self.probabilitiesTextCtrl, expandOption))
+        #
+        contlst.append(emptySpace)
+        contlst.append(emptySpace)
+        contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
+        contlst.append((self.closeButton, dict(flag=wx.ALIGN_CENTER)))
+
+        # A GridSizer will contain the other controls:
+        cols = 4
+        rows = int(np.ceil(len(contlst)/float(cols)))
+        gridSizer = wx.FlexGridSizer(rows=rows, cols=cols, vgap=10, hgap=10)
+
+        for control, options in contlst:
+            gridSizer.Add(control, **options)
+
+        for control, options in \
+                [(gridSizer, dict(border=5, flag=wx.ALL))]:
+            boxSizer.Add(control, **options)
+
+        self.SetSizerAndFit(boxSizer)
+
+    def bindControls(self):
+        self.groupsButton.Bind(wx.EVT_BUTTON, self.OnSelectGroups)
+        self.labelComboBox.Bind(wx.EVT_COMBOBOX, self.OnUpdateLabel)
+
+    def OnSelectGroups(self, e):
+        dlg = FlaggingGroupsDialog(None, title='Define flagging groups', groups=self.groups)
+        if dlg.ShowModal() == wx.ID_OK:
+            # get values from dlg
+            grouplist = dlg.existinggroups
+            for g in dlg.existinggroups:
+                gl = g.split(' : ')
+                self.groups[gl[0]] = gl[1].split(',')
+        dlg.Destroy()
+        self.grouplabel = 'Define groups'
+        if self.groups:
+            self.grouplabel = ",".join([k for k in self.groups])
+        self.groupsButton.SetLabel(self.grouplabel)
+
+    def OnUpdateLabel(self, event):
+        """
+        DESCRIPTION
+            update flagtype according to labelid
+        :param e:
+        :return:
+        """
+        label = self.labelComboBox.GetStringSelection()
+        labelid = label[:3]
+        #print ("Changed label to", labelid)
+        if 10 <= int(labelid) < 50:
+            self.flagidComboBox.SetValue(self.flagidlist[4])
+        else:
+            self.flagidComboBox.SetValue(self.flagidlist[3])
+
+
 
 
 class FlagOutlierDialog(wx.Dialog):
@@ -5419,7 +5597,7 @@ class InputSheetDialog(wx.Dialog):
         InputDialog for DI data
     """
 
-    def __init__(self, parent, title, path, distation, diparameters, cdate, datapath, distruct):
+    def __init__(self, parent, title, path, distation, diparameters, cdate, datapath, distruct, height, width):
         style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
         super(InputSheetDialog, self).__init__(parent=parent,
             title=title, style=style) #size=(1000, 800),
@@ -5431,6 +5609,7 @@ class InputSheetDialog(wx.Dialog):
         layout['double'] = diparameters.get('double')
         layout['order'] = diparameters.get('order').split(',')
         # diparameters contains a list of all opened/available DI files for this stationID
+        print ("LAYOUT", layout)
 
         self.cdate = cdate
         self.units = ['degree','gon']
@@ -5438,7 +5617,7 @@ class InputSheetDialog(wx.Dialog):
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         # Add Settings Panel
         self.panel = SettingsPanel(self, cdate, path, distation, diparameters, layout, datapath, distruct )
-        self.panel.SetInitialSize((850, 400))
+        self.panel.SetInitialSize((height, width))
         self.mainSizer.Add(self.panel, 1, wx.EXPAND | wx.ALL, 10)
         # Add Save/Cancel Buttons
         self.createWidgets()
@@ -5925,6 +6104,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
     def __init__(self, parent, cdate, path, distation, diparameters, layout, datapath, distruct):
         scrolledpanel.ScrolledPanel.__init__(self, parent, -1, size=(-1, -1))  #size=(950, 750)
         #self.ShowFullScreen(True)
+        debug = False
         self.cdate = cdate
         self.path = path
         self.layout = layout
@@ -5940,11 +6120,20 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         self.distruct = distruct
         self.datapath = datapath
 
-        # TODO Chech this code
         self.didict = distruct
         self.diline2datalist(distruct)
-        print ("distruct", distruct)
-        print ("distruct", self.dichoices)
+        if debug:
+            print ("distruct", distruct)
+            print ("distruct", self.dichoices)
+        print ("SETTING LAYOUT", layout)
+        if self.layout.get('double', True) in ["False", False]:
+            self.layout['double'] = False
+        else:
+            self.layout['double'] = True
+        if self.layout.get('scalevalue', True) in ["False", False]:
+            self.layout['scalevalue'] = False
+        else:
+            self.layout['scalevalue'] = True
 
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
         self.createWidgets()
@@ -6118,12 +6307,50 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         else:
             self.memdataComboBox.SetValue(self.dichoices[0])
 
-        if not self.layout['double'] == 'False':
-            #self.SD2TimeTextCtrl.Hide()
-            #self.SD2AngleTextCtrl.Hide()
-            #self.SD2GCTextCtrl.Hide()
-            #self.SD2ResidualTextCtrl.Hide()
-            pass
+        if not self.layout.get('scalevalue', True):
+            self.SCLabel.Hide()
+            self.SCTimeTextCtrl.Hide()
+            self.SCGCTextCtrl.Hide()
+            self.SCAngleTextCtrl.Hide()
+            self.SCResidualTextCtrl.Hide()
+
+        if not self.layout.get('double', True):
+            self.AmireDown2TextCtrl.Hide()
+            self.AmireUp2TextCtrl.Hide()
+            self.BmireUp2TextCtrl.Hide()
+            self.BmireDown2TextCtrl.Hide()
+            self.EU2TimeTextCtrl.Hide()
+            self.EU2AngleTextCtrl.Hide()
+            self.EU2GCTextCtrl.Hide()
+            self.EU2ResidualTextCtrl.Hide()
+            self.WU2TimeTextCtrl.Hide()
+            self.WU2AngleTextCtrl.Hide()
+            self.WU2GCTextCtrl.Hide()
+            self.WU2ResidualTextCtrl.Hide()
+            self.ED2TimeTextCtrl.Hide()
+            self.ED2AngleTextCtrl.Hide()
+            self.ED2GCTextCtrl.Hide()
+            self.ED2ResidualTextCtrl.Hide()
+            self.WD2TimeTextCtrl.Hide()
+            self.WD2AngleTextCtrl.Hide()
+            self.WD2GCTextCtrl.Hide()
+            self.WD2ResidualTextCtrl.Hide()
+            self.NU2TimeTextCtrl.Hide()
+            self.NU2GCTextCtrl.Hide()
+            self.NU2AngleTextCtrl.Hide()
+            self.NU2ResidualTextCtrl.Hide()
+            self.SU2TimeTextCtrl.Hide()
+            self.SU2GCTextCtrl.Hide()
+            self.SU2AngleTextCtrl.Hide()
+            self.SU2ResidualTextCtrl.Hide()
+            self.ND2TimeTextCtrl.Hide()
+            self.ND2GCTextCtrl.Hide()
+            self.ND2AngleTextCtrl.Hide()
+            self.ND2ResidualTextCtrl.Hide()
+            self.SD2TimeTextCtrl.Hide()
+            self.SD2GCTextCtrl.Hide()
+            self.SD2AngleTextCtrl.Hide()
+            self.SD2ResidualTextCtrl.Hide()
 
         # Add scale check
         self.FLabel = wx.StaticText(self, label="F:",size=(160,-1))
@@ -6214,7 +6441,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blMU = []
         blMU.append((self.AmireUpLabel, noOptions))
         blMU.append((self.AmireUp1TextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blMU.append((self.AmireUp2TextCtrl, expandOption))
         else:
             blMU.append(emptySpace)
@@ -6223,7 +6450,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blMD = []
         blMD.append((self.AmireDownLabel, noOptions))
         blMD.append((self.AmireDown1TextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blMD.append((self.AmireDown2TextCtrl, expandOption))
         else:
             blMD.append(emptySpace)
@@ -6243,7 +6470,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blEU.append((self.EU1AngleTextCtrl, expandOption))
         blEU.append((self.EU1GCTextCtrl, expandOption))
         blEU.append((self.EU1ResidualTextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blEU.append(emptySpace)
             blEU.append((self.EU2TimeTextCtrl, expandOption))
             blEU.append((self.EU2AngleTextCtrl, expandOption))
@@ -6255,7 +6482,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blWU.append((self.WU1AngleTextCtrl, expandOption))
         blWU.append((self.WU1GCTextCtrl, expandOption))
         blWU.append((self.WU1ResidualTextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blWU.append(emptySpace)
             blWU.append((self.WU2TimeTextCtrl, expandOption))
             blWU.append((self.WU2AngleTextCtrl, expandOption))
@@ -6267,7 +6494,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blED.append((self.ED1AngleTextCtrl, expandOption))
         blED.append((self.ED1GCTextCtrl, expandOption))
         blED.append((self.ED1ResidualTextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blED.append(emptySpace)
             blED.append((self.ED2TimeTextCtrl, expandOption))
             blED.append((self.ED2AngleTextCtrl, expandOption))
@@ -6279,13 +6506,12 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blWD.append((self.WD1AngleTextCtrl, expandOption))
         blWD.append((self.WD1GCTextCtrl, expandOption))
         blWD.append((self.WD1ResidualTextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blWD.append(emptySpace)
             blWD.append((self.WD2TimeTextCtrl, expandOption))
             blWD.append((self.WD2AngleTextCtrl, expandOption))
             blWD.append((self.WD2GCTextCtrl, expandOption))
             blWD.append((self.WD2ResidualTextCtrl, expandOption))
-        #contlst=[]
         contlst.append((self.HorizontalLabel, noOptions))
         contlst.append((self.TimeLabel, noOptions))
         contlst.append((self.HAngleLabel, noOptions))
@@ -6320,7 +6546,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blMU = []
         blMU.append((self.BmireUpLabel, noOptions))
         blMU.append((self.BmireUp1TextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blMU.append((self.BmireUp2TextCtrl, expandOption))
         else:
             blMU.append(emptySpace)
@@ -6329,7 +6555,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blMD = []
         blMD.append((self.BmireDownLabel, noOptions))
         blMD.append((self.BmireDown1TextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blMD.append((self.BmireDown2TextCtrl, expandOption))
         else:
             blMD.append(emptySpace)
@@ -6350,7 +6576,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blNU.append((self.NU1GCTextCtrl, expandOption))
         blNU.append((self.NU1AngleTextCtrl, expandOption))
         blNU.append((self.NU1ResidualTextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blNU.append(emptySpace)
             blNU.append((self.NU2TimeTextCtrl, expandOption))
             blNU.append((self.NU2GCTextCtrl, expandOption))
@@ -6362,7 +6588,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blSU.append((self.SU1GCTextCtrl, expandOption))
         blSU.append((self.SU1AngleTextCtrl, expandOption))
         blSU.append((self.SU1ResidualTextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blSU.append(emptySpace)
             blSU.append((self.SU2TimeTextCtrl, expandOption))
             blSU.append((self.SU2GCTextCtrl, expandOption))
@@ -6374,7 +6600,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blND.append((self.ND1GCTextCtrl, expandOption))
         blND.append((self.ND1AngleTextCtrl, expandOption))
         blND.append((self.ND1ResidualTextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blND.append(emptySpace)
             blND.append((self.ND2TimeTextCtrl, expandOption))
             blND.append((self.ND2GCTextCtrl, expandOption))
@@ -6386,7 +6612,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         blSD.append((self.SD1GCTextCtrl, expandOption))
         blSD.append((self.SD1AngleTextCtrl, expandOption))
         blSD.append((self.SD1ResidualTextCtrl, expandOption))
-        if not self.layout['double'] == 'False':
+        if self.layout.get('double', True):
             blSD.append(emptySpace)
             blSD.append((self.SD2TimeTextCtrl, expandOption))
             blSD.append((self.SD2GCTextCtrl, expandOption))
@@ -6420,7 +6646,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
 
 
         # Scale test
-        if not self.layout['scalevalue'] == 'False':
+        if self.layout.get('scalevalue', True):
             contlst.append((self.SCLabel, noOptions))
             contlst.append((self.SCTimeTextCtrl, expandOption))
             contlst.append((self.SCGCTextCtrl, expandOption))
@@ -6583,7 +6809,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         if back == 'dms':
             return ":".join(map(str,_decdeg2dms(val)))
         else:
-            return str(val)
+            return str(np.round(val,6))
 
     def mean_angle(self, deg):   # rosettacode
         from cmath import rect, phase

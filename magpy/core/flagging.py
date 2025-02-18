@@ -454,10 +454,10 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
 
     def add(self, sensorid=None, starttime=None, endtime=None, components=None, flagtype=0, labelid='000', label='',
             comment='', groups=None, probabilities=None, stationid='', validity='', operator='', color='',
-            modificationtime=None, flagversion='2.0', minimumtimediff=0.5, debug=False):
+            modificationtime=None, flagversion='2.0', minimumtimediff=0.1, debug=False):
         """
         DESCRIPTION
-            Create a flagging dictionary input oot of given information
+            Create a flagging dictionary input out of given information
             Each flag will be defined by a unqiue flagID which is constructed
             from sensorid,starttime,endtime,",".join(components),flagtype,labelid
             if you want to add a flag with identical information use overwrite?

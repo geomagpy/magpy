@@ -78,7 +78,7 @@ Major methods:              major_method
 |  PlotPanel     |  monitor_plot  |    2.0.0  |             | level 2    |              |       | |
 |  PlotPanel     |  gui_plot  |        2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  power_plot  |      2.0.0  |             | level 2    |               |      | |
-|  PlotPanel     |  spec_plot  |       2.0.0  |             | level 0    |               |      | |
+|  PlotPanel     |  spec_plot  |       2.0.0  |             | level 0    | not working in GUI  |      | |
 |  PlotPanel     |  initial_plot  |    2.0.0  |             | level 2    |               |      | |
 |  PlotPanel     |  link_rep  |        2.0.0  |             |            |               |      | |
 |  PlotPanel     |  link_rep  |        2.0.0  |             |            |               |      | |
@@ -104,7 +104,7 @@ Major methods:              major_method
 |  MainFrame     | _update_plot  |     2.0.0  |             | level 2    |               |        | file_on_open  |
 |  MainFrame     | _do_plot  |         2.0.0  |             | level 2    |               |        | file_on_open  |
 |  MainFrame     | _update_cursor_status |  2.0.0  |        | level 2    |               |        |   |
-|  MainFrame     | _update_flags_onclick |  2.0.0  |        | level 2    | TODO: middle button |        |   |
+|  MainFrame     | _update_flags_onclick |  2.0.0  |        | level 2    |               |        |   |
 |  MainFrame     | _open_stream  |     2.0.0  |             | level 2    |               |        | file_on_open  |
 |  MainFrame     | _update_statistics | 2.0.0  |            | level 2    |               |        | _do_plot  |
 |  MainFrame     | changeStatusbar  |  2.0.0  |             | level 2    |               |        | everywhere  |
@@ -116,12 +116,12 @@ Major methods:              major_method
 |  MainFrame     | file_on_quit  |     2.0.0  |             | level 2    |               | 3.2    |   |
 |  MainFrame     | db_on_connect  |    2.0.0  |             | level 2    |               | 3.3    |   |
 |  MainFrame     | db_on_init  |       2.0.0  |             | level 2    |               | 3.3    |   |
-|  MainFrame     | di_input_sheet |    2.0.0  |             | level 1    |               | 3.4    |   |
+|  MainFrame     | di_input_sheet |    2.0.0  |             | level 2    |               | 3.4    |   |
 |  MainFrame     | memory_select |     2.0.0  |             | level 2    |               | 3.5    |   |
 |  MainFrame     | memory_clear |      2.0.0  |             | level 2    |               | 3.5    |   |
 |  MainFrame     | spec_check_data |   2.0.0  |             | level 2    |               | 3.6    |   |
 |  MainFrame     | options_init |      2.0.0  |             | level 2    |               | 3.7    |   |
-|  MainFrame     | options_plot   |    2.0.0  |             | level 1    |               | 3.7    |   |
+|  MainFrame     | options_plot   |    2.0.0  |             | level 2    |               | 3.7    |   |
 |  MainFrame     | options_di   |      2.0.0  |             | level 2    |               | 3.7    |   |
 |  MainFrame     | help_about  |       2.0.0  |             | level 2    |               | 3.8    |   |
 |  MainFrame     | help_read_formats | 2.0.0  |             | level 2    |               | 3.8    |   |
@@ -167,7 +167,7 @@ Major methods:              major_method
 |  MainFrame     | a_onActivityButton |  2.0.0  |           | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onCalcFButton |   2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onDailyMeansButton | 2.0.0  |          | level 2    |               | 4.4    |   |
-|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 1    |               | 4.4    |   |
+|  MainFrame     | a_onBaselineButton | 2.0.0  |            | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onApplyBCButton | 2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onPowerButton |   2.0.0  |             | level 2    |               | 4.4    |   |
 |  MainFrame     | a_onSpectrogramButton | 2.0.0  |         | level 0    |               |        |   |
@@ -1736,7 +1736,8 @@ class MainFrame(wx.Frame):
             if fl:
                 ids = [fid for fid in fl.flagdict if fl.flagdict.get(fid).get('starttime') <= orgtime <= fl.flagdict.get(fid).get('endtime')]
                 if len(ids) > 0:
-                    fd = fl.flagdict.get(ids[0])
+                    valids = [i for i in ids if not fl.flagdict.get(i).get('validity')]
+                    fd = fl.flagdict.get(valids[-1])
                     txt = "Label: {}: {},\nSensorID: {}, Operator: {},\nComment: {},\nGroups: {}".format(fd.get('labelid'),
                                                                                                 fd.get('label'),
                                                                                                 fd.get('sensorid'),
@@ -1773,6 +1774,7 @@ class MainFrame(wx.Frame):
             Mouse event for flagging
             Right click will remove flag patches and corresponding flags from the current flaglist
         """
+        debug = False
         if self.active_id:
             data = self.datadict.get(self.active_id).get('dataset')
             fl = data.header.get('DataFlags', flagging.Flags())
@@ -1782,10 +1784,63 @@ class MainFrame(wx.Frame):
                 pickX, pickY = event.xdata, event.ydata
                 time = num2date(pickX).replace(tzinfo=None)
                 if event.button is MouseButton.MIDDLE:
-                    # TODO open a window with flag data to be modified
-                    print("clicked left", pickX, pickY, time)
                     ids = [fid for fid in fl.flagdict if
                                        fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
+                    dlg = FlagModificationDialog(None, title='Modifiy flag:', flagobject=fl, flag=fl.flagdict.get(ids[0]))
+                    if dlg.ShowModal() == wx.ID_OK:
+                        # drop existing flag? or set validity to hide/delete
+                        selfl = fl.select(parameter='flagid', values=ids)
+                        newfl = fl.drop(parameter='flagid', values=ids)
+                        newin = selfl.replace(parameter='validity', value='', newvalue='h')
+                        newfl = newfl.join(newin)
+                        # add new flag
+                        sensorid = dlg.sensoridTextCtrl.GetValue()
+                        comment = dlg.commentTextCtrl.GetValue()
+                        operator = dlg.operatorTextCtrl.GetValue()
+                        stationid = dlg.stationidTextCtrl.GetValue()
+                        color = dlg.colorTextCtrl.GetValue()
+                        probabilities = dlg.probabilitiesTextCtrl.GetValue()
+                        # get selections and extract parameters
+                        comps = dlg.componentsTextCtrl.GetValue()
+                        components = comps.split(',')
+                        ft = dlg.flagidComboBox.GetValue()
+                        flagtype = ft[0]
+                        lab = dlg.labelComboBox.GetValue()
+                        labelid = lab[:3]
+                        val = dlg.validityComboBox.GetValue()
+                        validity = ''
+                        if val:
+                            validity = val[0]
+                        groups = dlg.groups
+                        stday = dlg.startFlagDatePicker.GetValue()
+                        sttime = str(dlg.startFlagTimePicker.GetValue())
+                        if sttime.endswith('AM') or sttime.endswith('am'):
+                            sttime_tmp = datetime.strptime(sttime, "%I:%M:%S %p")
+                            sttime = sttime_tmp.strftime("%H:%M:%S")
+                        if sttime.endswith('pm') or sttime.endswith('PM'):
+                            sttime_tmp = datetime.strptime(sttime, "%I:%M:%S %p")
+                            sttime = sttime_tmp.strftime("%H:%M:%S")
+                        sd_tmp = datetime.fromtimestamp(stday.GetTicks())
+                        sd = sd_tmp.strftime("%Y-%m-%d")
+                        starttime = datetime.strptime(str(sd) + '_' + sttime, "%Y-%m-%d_%H:%M:%S")
+                        enday = dlg.endFlagDatePicker.GetValue()
+                        entime = str(dlg.endFlagTimePicker.GetValue())
+                        if entime.endswith('AM') or entime.endswith('am'):
+                            entime_tmp = datetime.strptime(entime, "%I:%M:%S %p")
+                            entime = entime_tmp.strftime("%H:%M:%S")
+                        if entime.endswith('pm') or entime.endswith('PM'):
+                            entime_tmp = datetime.strptime(entime, "%I:%M:%S %p")
+                            entime = entime_tmp.strftime("%H:%M:%S")
+                        ed_tmp = datetime.fromtimestamp(enday.GetTicks())
+                        ed = ed_tmp.strftime("%Y-%m-%d")
+                        endtime = datetime.strptime(str(ed) + '_' + entime, "%Y-%m-%d_%H:%M:%S")
+                        if debug:
+                             print (starttime,endtime,components,flagtype,labelid,comment,groups,probabilities,stationid,validity,operator,color)
+                        newfl.add(sensorid=sensorid, starttime=starttime, endtime=endtime, components=components, flagtype=int(flagtype), labelid=labelid, comment=comment, groups=groups, probabilities=probabilities, stationid=stationid, validity=validity, operator=operator, color=color)
+                        data.header['DataFlags'] = newfl
+                        self._initial_plot(self.active_id, keepplotdict=True)
+                        self.menu_p.fla_page.flagAcceptButton.Enable() # is this necessary ??  -> yes, as only this button will update the data set
+
                 if event.button is MouseButton.RIGHT:
                     ids = [fid for fid in fl.flagdict if fl.flagdict.get(fid).get('starttime') <= time <= fl.flagdict.get(fid).get('endtime')]
                     # set validity to 'd': to be deleted during cleanups
@@ -3237,6 +3292,7 @@ class MainFrame(wx.Frame):
         diparameters = stationdict.get(dstation,{})
         dipath = diparameters.get('didatapath')
         dirname = self.guidict.get('dirname')
+        print ("Checking", diparameters)
 
         if os.path.isfile(dipath):
             dipath = os.path.split(dipath)[0]
@@ -3247,7 +3303,7 @@ class MainFrame(wx.Frame):
         self.dilayout['order'] = diparameters.get('order').split(',')
         cdate = pydate2wxdate(datetime.now(timezone.utc).replace(tzinfo=None))
         # didict contains already loaded data sets for this observatory code
-        dlg = InputSheetDialog(None, title='Add DI data', path=dipath, distation=dstation, diparameters=diparameters, cdate=cdate, datapath=dirname, distruct=self.active_didata)
+        dlg = InputSheetDialog(None, title='Add DI data', path=dipath, distation=dstation, diparameters=diparameters, cdate=cdate, datapath=dirname, distruct=self.active_didata, height=900, width=500)
         if dlg.ShowModal() == wx.ID_OK:
             pass
         dlg.Destroy()
