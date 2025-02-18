@@ -2180,9 +2180,9 @@ class MainFrame(wx.Frame):
             self.menu_p.ana_page.spectrumButton.Show()      # always
             self.menu_p.com_page.saveMonitorButton.Hide()   # always
             self.menu_p.fla_page.flagUltraButton.Show()     # always
-            self.menu_p.fla_page.flagUltraButton.Enable()     # if experimental
-            self.menu_p.ana_page.spectrumButton.Enable()      # if experimental
-            self.menu_p.com_page.saveMonitorButton.Enable()   # if experimental
+            self.menu_p.fla_page.flagUltraButton.Disable()     # if experimental
+            self.menu_p.ana_page.spectrumButton.Disable()      # if experimental - not working yet
+            self.menu_p.com_page.saveMonitorButton.Disable()   # if experimental
 
         # Selective fields
         # ----------------------------------------
