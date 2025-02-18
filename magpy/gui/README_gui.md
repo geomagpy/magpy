@@ -95,7 +95,12 @@ The graphical user interface relies on GTK >= 3. So you will need to install
 
 #### 2.1.2 Option 2: Using a basic python virtual environment
 
-- use virtual env from system python of your machine
+For using virtual environments from system python of your machine you will need to install "virtualenv". On a Debian/Ubuntu
+type machine you can do the following. If you are looking for a version specific install use something like 
+sudo apt install python3.12-venv in case of python3.12:
+
+        sudo apt install python3-virtualenv
+
 - open a terminal 
 - from the user$ prompt, create a new virtual environment called magpy
 

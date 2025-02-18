@@ -546,7 +546,7 @@ class TestStream(unittest.TestCase):
         func_to_file(contfunc, "/tmp/savedparameter.json")
         funcparameter = func_from_file("/tmp/savedparameter.json")
         firstf = funcparameter.get('0')
-        self.assertEqual(firstf.get('keys'), str(keys))
+        self.assertEqual(firstf.get('keys'), keys)
         self.assertEqual(firstf.get('fitfunc'), 'linear')
 
 

@@ -5757,10 +5757,11 @@ CALLED BY:
             Two datetime objects, start and end.
         """
         if len(self.ndarray[0]) > 0:
+            #print (self.ndarray[0][0], type(self.ndarray[0][0]))
             if isinstance(self.ndarray[0][0], datetime):
                 t_start = np.min(self.ndarray[0]).replace(tzinfo=None)
                 t_end = np.max(self.ndarray[0]).replace(tzinfo=None)
-            elif isinstance(self.ndarray[0][0], datetime64):
+            elif isinstance(self.ndarray[0][0], np.datetime64):
                 t_start = np.min(self.ndarray[0])
                 t_end = np.max(self.ndarray[0])
             else:
