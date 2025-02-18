@@ -10,7 +10,7 @@ sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import DataStream, read, magpyversion, join_streams, subtract_streams
 from magpy.core.methods import testtime, convert_geo_coordinate, extract_date_from_string
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 import numpy as np
 import logging

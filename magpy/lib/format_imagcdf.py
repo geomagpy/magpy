@@ -588,13 +588,13 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     ## 1. Fixed Part -- current version is 1.2.1
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
     globalAttrs['FormatDescription'] = { 0 : 'INTERMAGNET CDF format'}
-    globalAttrs['FormatVersion'] = { 0 : '1.2.1'}
+    globalAttrs['FormatVersion'] = { 0 : '1.3'}
     globalAttrs['Title'] = { 0 : 'Geomagnetic time series data'}
 
     ## 3. Optional flagging information
     ##    identify flags within the data set and if they are present then add an attribute to the header
     if addflags and datastream.header.get("DataFlags"):
-        globalAttrs['FormatVersion'] = { 0 : '1.3'}
+        globalAttrs['FormatVersion'] = { 0 : '1.3.1'}
     if addflags:
         flags = datastream.header.get("DataFlags", {})
         if flags:
@@ -1215,7 +1215,9 @@ if __name__ == '__main__':
             errors[testset] = str(excep)
             print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
         testset = 'IMAGCDF_RW'
-        try:
+        #try:
+        ok = True
+        if ok:
             ts = datetime.now(timezone.utc).replace(tzinfo=None)
             # Testing general IMAGCDF
             print ("A")
@@ -1237,7 +1239,7 @@ if __name__ == '__main__':
             test2rep = read('/tmp/wic_2024*', select=option)  # , debug=True)
             if not test2rep.header.get('DataComponents') == 'XYZG':
                 # raise Exception("ERROR within data validity test")
-                print("ERROR within data validity test")
+                print("ERROR within data validity test", test2rep.header.get('DataComponents'))
             # Testing multiple time columns and lists in header
             test3 = test1.filter()
             test3 = test3._drop_column('x')
@@ -1249,8 +1251,8 @@ if __name__ == '__main__':
             test1 = test1._drop_column('t2')
             test1.header['StationInstitution'] = ['Institute1', 'Institute2']
             test1.write("/tmp", format_type='IMAGCDF', scalar=test3, environment=test3)  # , debug=True)
-            print ("C")
-            test3rep = read('/tmp/wic_2018*', select=option)  # , debug=True)
+            print ("D")
+            test3rep = read('/tmp/wic_2024*', select=option)  # , debug=True)
             print(test3rep.header.get('FileContents'))
             fc = test3rep.header.get('FileContents')
             if fc:
@@ -1276,9 +1278,9 @@ if __name__ == '__main__':
             te = datetime.now(timezone.utc).replace(tzinfo=None)
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
-        except Exception as excep:
-            errors[testset] = str(excep)
-            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+        #except Exception as excep:
+        #    errors[testset] = str(excep)
+        #    print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
 
         break
 

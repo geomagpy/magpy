@@ -5983,26 +5983,30 @@ CALLED BY:
                 dfor = '%Y'
             elif coverage == 'month':
                 dfor = '%Y%m'
+            elif coverage == 'hour':
+                dfor = '%Y%m%d_%H'
+            elif coverage == 'minute':
+                dfor = '%Y%m%d_%H%M'
             else:
                 dfor = '%Y%m%d'
             if int(samprate) == 1:
                 dateformat = dfor
-                middle = '_000000_PT1S_'
+                middle = '_PT1S_'
             elif int(samprate) == 60:
                 dateformat = dfor
-                middle = '_0000_PT1M_'
+                middle = '_PT1M_'
             elif int(samprate) == 3600:
                 dateformat = dfor
-                middle = '_00_PT1H_'
+                middle = '_PT1H_'
             elif int(samprate) == 86400:
                 dateformat = dfor
-                middle = '_PT1D_'
+                middle = '_P1D_'
             elif int(samprate) > 30000000:
                 dateformat = '%Y'
-                middle = '_PT1Y_'
+                middle = '_T1Y_'
             elif int(samprate) > 2400000:
                 dateformat = '%Y%m'
-                middle = '_PT1M_'
+                middle = '_P1M_'
             else:
                 dateformat = '%Y%m%d'
                 middle = 'unknown'
@@ -6219,13 +6223,6 @@ CALLED BY:
                     self.ndarray[idx] = np.delete(self.ndarray[idx],nonnumlist)
 
             starttime, lasttime = self._find_t_limits()
-            """
-            starttime = datetime.strptime(datetime.strftime(num2date(float(self.ndarray[0][0])).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
-            try:
-                lasttime = num2date(float(self.ndarray[0][-1])).replace(tzinfo=None)
-            except:
-                lasttime = num2date(float(self.ndarray[0][-2])).replace(tzinfo=None)
-            """
             ndtype = True
         else:
             starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')

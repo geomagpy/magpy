@@ -246,10 +246,10 @@ if __name__ == '__main__':
         testset = "GFZINDEXJSON"
         try:
             ts = datetime.now(timezone.utc).replace(tzinfo=None)
-            data = read('https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp')
-            m = data.mean("var1")
+            data = read('https://kp.gfz-potsdam.de/app/json/?start=2024-11-01T00:00:00Z&end=2024-11-02T23:59:59Z&index=Kp&status=def')
+            m = np.round(data.mean("var1"),4)
             # agreement should be better than 0.01 nT as resolution is 0.1 nT in file
-            if not m == 1.77075:
+            if not m == 1.8124:
                  raise Exception("ERROR within data validity test")
             te = datetime.now(timezone.utc).replace(tzinfo=None)
             successes[testset] = (
