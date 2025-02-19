@@ -458,15 +458,17 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
 def writeIMAGCDF(datastream, filename, **kwargs):
     """
-    Writing Intermagnet CDF format (currently: vers1.2.1) + optional flagging info (vers1.3)
+    Writing Intermagnet CDF format (currently: vers1.3) + optional flagging info (vers1.3.1)
     """
     debug = kwargs.get('debug')
     fillval = kwargs.get('fillvalue')
     mode = kwargs.get('mode')
     scalar = kwargs.get('scalar')
-    environment = kwargs.get('environment')
+    temperature1 = kwargs.get('temperature1')
+    temperature2 = kwargs.get('temperature2')
     addflags = kwargs.get('addflags')
     skipcompression = kwargs.get('skipcompression')
+
 
     flags = {}
     logger.info("Writing IMAGCDF Format {}".format(filename))
@@ -500,6 +502,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             leapsecondlastupdate = ""
     if debug:
         print ("LastLeapSecond", leapsecondlastupdate)
+
+    # Does not work
+    #main_cdf_spec['LeapSecondUpdate'] = int(datetime.strftime(leapsecondlastupdate, "%Y%m%d"))
 
     if not skipcompression:
         try:
@@ -541,6 +546,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         except:
             mycdf = cdflib.CDF(filename, cdf_spec=main_cdf_spec)
 
+
+    if debug:
+        print ("CDF specifications:", main_cdf_spec)
     keylst = datastream._get_key_headers()
     tmpkeylst = ['time']
     tmpkeylst.extend(keylst)
@@ -610,10 +618,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         pubdate = pubdate.item()
     globalAttrs['PublicationDate'] = { 0 : pubdate }
 
-    # check for leapseconds
+    # add leapseconds to global atts
     try:
-        leapex = globalAttrs.get("LeapSecondUpdated").get(0)
-        if leapsecondlastupdate and leapex in ["","None"]:
+        leapex = globalAttrs.get("LeapSecondUpdated")
+        if leapsecondlastupdate and not leapex:
             lslu = datetime.strftime(leapsecondlastupdate,"%Y%m%d")
             globalAttrs['LeapSecondUpdated'] = {0: lslu}
     except:
@@ -740,10 +748,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     ### #########################################
     ###               Data
     ### #########################################
-
-    def checkEqualIvo(lst):
-        # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
-        return not lst or lst.count(lst[0]) == len(lst)
+    #def checkEqualIvo(lst):
+    #    # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
+    #    return not lst or lst.count(lst[0]) == len(lst)
 
     def checkEqual3(lst):
         return lst[1:] == lst[:-1]
@@ -760,7 +767,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     ftest = DataStream()
     useScalarTimes = False
     ftimecol = np.asarray([])
-    ttimecol = np.asarray([])
+    t1timecol = np.asarray([])
+    t2timecol = np.asarray([])
     fcol, t1col, t2col = [],[],[]
     mainsamprate = datastream.samplingrate()
 
@@ -794,13 +802,13 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         if ftest.length()[0] > 0:
             ftest = ftest.get_gaps()
         ftimecol = ftest.ndarray[0]
-        fcol = ftest._get_column(scal)
-
+        fcol = datastream._get_column(scal)
         if fsamprate-0.1 < mainsamprate and mainsamprate < fsamprate+0.1:
             #Samplingrate of F column and Vector are similar
             useScalarTimes=False
         else:
             useScalarTimes=True
+            fcol = ftest._get_column(scal)
     elif scalar:
         fkey = KEYLIST.index('f')
         fcol = scalar.ndarray[fkey]
@@ -824,38 +832,64 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     mycdf.write_globalattrs(globalAttrs)
 
     # environment data
-    ttest = DataStream()
-    useTemperatureTimes = False
+    t1test = DataStream()
+    t2test = DataStream()
+    useTemperature1Times = False
+    useTemperature2Times = False
     if 't1' in keylst:
         # Check sampling rates of t1/t2 stream
-        ttest = datastream.copy()
-        ttest = ttest._drop_nans('t1')
-        tsamprate = ttest.samplingrate()
-        ttest = ttest.get_gaps()
-        #print ("t lenght", ttest.length())
-        ttimecol = ttest.ndarray[0]
+        t1test = datastream.copy()
+        t1test = t1test._drop_nans('t1')
+        t1samprate = t1test.samplingrate()
+        t1test = t1test.get_gaps()
+        t1timecol = t1test.ndarray[0]
         t1col = datastream._get_column('t1')
-        t2col = datastream._get_column('t2')
-        if tsamprate-0.1 < mainsamprate and  mainsamprate < tsamprate+0.1:
-            #Samplingrate of t1/t2 column and Vector are similar
-            useTemperatureTimes=False
+        if t1samprate - 0.1 < mainsamprate and mainsamprate < t1samprate + 0.1:
+            # Samplingrate of t1/t2 column and Vector are similar
+            useTemperature1Times = False
         else:
-            useTemperatureTimes=True
-    elif environment:
+            useTemperature1Times = True
+            t1col = t1test._get_column('t1')
+    if 't2' in keylst:
+        t2test = datastream.copy()
+        t2test = t2test._drop_nans('t1')
+        t2samprate = t2test.samplingrate()
+        t2test = t2test.get_gaps()
+        t2timecol = t2test.ndarray[0]
+        t2col = datastream._get_column('t2')
+        if t2samprate-0.1 < mainsamprate and  mainsamprate < t2samprate+0.1:
+            #Samplingrate of t1/t2 column and Vector are similar
+            useTemperature2Times=False
+        else:
+            useTemperature2Times=True
+            t2col = t2test._get_column('t2')
+    if temperature1:
         t1key = KEYLIST.index('t1')
-        t2key = KEYLIST.index('t2')
-        t1col = environment.ndarray[t1key]
+        t1col = temperature1.ndarray[t1key]
         if len(t1col) > 0:
             keylst.append('t1')
-            datastream.header['unit-col-t1'] = environment.header['unit-col-t1']
-            datastream.header['col-t1'] = environment.header['col-t1']
-        t2col = environment.ndarray[t2key]
-        if len(t1col) > 0:
+            datastream.header['unit-col-t1'] = temperature1.header['unit-col-t1']
+            datastream.header['col-t1'] = temperature1.header['col-t1']
+        t1timecol = temperature1.ndarray[0]
+        useTemperature1Times = True
+    if temperature2:
+        t2key = KEYLIST.index('t2')
+        t2col = temperature2.ndarray[t2key]
+        if len(t2col) > 0:
             keylst.append('t2')
-            datastream.header['unit-col-t2'] = environment.header['unit-col-t2']
-            datastream.header['col-t2'] = environment.header['col-t2']
-        ttimecol = environment.ndarray[0]
-        useTemperatureTimes = True
+            datastream.header['unit-col-t2'] = temperature2.header['unit-col-t2']
+            datastream.header['col-t2'] = temperature2.header['col-t2']
+        t2timecol = temperature2.ndarray[0]
+        useTemperature2Times = True
+
+    # Redefine time column name in case of different components use the same time column
+    maintimes = 'GeomagneticVectorTimes'
+    if len(fcol) > 0 and not useScalarTimes:
+        maintimes = 'DataTimes'
+    if len(t1col) > 0 and not useTemperature1Times:
+        maintimes = 'DataTimes'
+    if len(t2col) > 0 and not useTemperature2Times:
+        maintimes = 'DataTimes'
 
     ## get sampling rate of vec, get sampling rate of scalar, if different extract scalar and time use separate, else ..
     fwritten = False
@@ -867,9 +901,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         var_spec = {}
         col = np.asarray([])
 
-        if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2','scalartime','temptime']:
+        if key in ['time','sectime','x','y','z','f','dx','dy','dz','df','t1','t2','scalartime','temp1time','temp2time']:
             try:
-                if not key in ['scalartime','temptime']:
+                if not key in ['scalartime','temp1time','temp2time']:
                     ind = KEYLIST.index(key)
                     if len(datastream.ndarray[ind])>0:
                         col = datastream.ndarray[ind]
@@ -877,8 +911,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         col = col.astype(float)
                     if key in ['f'] and scalar and len(scalar) > 0:
                         col = scalar._get_column(key)
-                    if key in ['t1','t2'] and environment and len(environment) > 0:
-                        col = environment._get_column(key)
+                    if key in ['t1'] and temperature1 and len(temperature1) > 0:
+                        col = temperature1._get_column(key)
+                    if key in ['t2'] and temperature2 and len(temperature2) > 0:
+                        col = temperature2._get_column(key)
 
                     # eventually use a different fill value (default is nan)
                     if not np.isnan(fillval):
@@ -890,7 +926,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
                 #{'FIELDNAM': 'Geomagnetic Field Element X', 'VALIDMIN': array([-79999.]), 'VALIDMAX': array([ 79999.]), 'UNITS': 'nT', 'FILLVAL': array([ 99999.]), 'DEPEND_0': 'GeomagneticVectorTimes', 'DISPLAY_TYPE': 'time_series', 'LABLAXIS': 'X'}
                 if key == 'time':
-                    cdfkey = 'GeomagneticVectorTimes'
+                    cdfkey = maintimes
                     cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in col] )
                     var_spec['Data_Type'] = 33
                 elif key == 'scalartime' and useScalarTimes:
@@ -898,9 +934,13 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     # use ftimecol Datastream
                     cdfdata = cdflib.cdfepoch.compute_tt2000( [tt(elem) for elem in ftimecol] )
                     var_spec['Data_Type'] = 33
-                elif key == 'temptime' and useTemperatureTimes:
-                    cdfkey = 'TemperatureTimes'
-                    cdfdata = cdflib.cdfepoch.compute_tt2000([tt(elem) for elem in ttimecol])
+                elif key == 'temp1time' and useTemperature1Times:
+                    cdfkey = 'Temperature1Times'
+                    cdfdata = cdflib.cdfepoch.compute_tt2000([tt(elem) for elem in t1timecol])
+                    var_spec['Data_Type'] = 33
+                elif key == 'temp2time' and useTemperature2Times:
+                    cdfkey = 'Temperature2Times'
+                    cdfdata = cdflib.cdfepoch.compute_tt2000([tt(elem) for elem in t2timecol])
                     var_spec['Data_Type'] = 33
                 elif len(col) > 0:
                     var_spec['Data_Type'] = 45
@@ -917,7 +957,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             elif key == 'z':
                                 compsupper = comps[2].upper()
                             elif key == 'f':
-                                compsupper = fcolname ## MagPy requires independend F value
+                                compsupper = fcolname ## MagPy requires independent F value
                             elif key == 'df':
                                 compsupper = 'G'
                             else:
@@ -930,10 +970,10 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                     else:
                         cdfkey = 'GeomagneticField'+key.upper()
 
-
                     nonetest = [elem for elem in col if not elem == None]
+                    #nonetest = col
                     if len(nonetest) > 0:
-                        var_attrs['DEPEND_0'] = "GeomagneticVectorTimes"
+                        var_attrs['DEPEND_0'] = maintimes
                         var_attrs['DISPLAY_TYPE'] = "time_series"
                         var_attrs['LABLAXIS'] = keyup
                         var_attrs['FILLVAL'] = fillval
@@ -952,35 +992,36 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         elif key in ['t1']:
                             var_attrs['VALIDMIN'] = -273
                             var_attrs['VALIDMAX'] = 88880
-                            if useTemperatureTimes:
-                                if not 'temptime' in keylst:
-                                    keylst.append('temptime')
-                                var_attrs['DEPEND_0'] = "TemperatureTimes"
+                            if useTemperature1Times:
+                                if not 'temp1time' in keylst:
+                                    keylst.append('temp1time')
+                                var_attrs['DEPEND_0'] = "Temperature1Times"
                                 cdfdata = t1col
                             else:
-                                cdfdata = t1col
+                                cdfdata = col
                         elif key in ['t2']:
                             var_attrs['VALIDMIN'] = -273
                             var_attrs['VALIDMAX'] = 88880
-                            if useTemperatureTimes:
-                                if not 'temptime' in keylst:
-                                    keylst.append('temptime')
-                                var_attrs['DEPEND_0'] = "TemperatureTimes"
+                            if useTemperature2Times:
+                                if not 'temp2time' in keylst:
+                                    keylst.append('temp2time')
+                                var_attrs['DEPEND_0'] = "Temperature2Times"
+                                # eventually use a different fill value (default is nan)
+                                if not np.isnan(fillval):
+                                    t2col = np.nan_to_num(t2col, nan=fillval)
                                 cdfdata = t2col
                             else:
-                                cdfdata = t2col
+                                cdfdata = col
                         elif key in ['f','s','df'] and not fwritten:
                             if useScalarTimes:
                                 # write time column
                                 keylst.append('scalartime')
-                                #fcol = ftest._get_column(key)
-                                #if len(naninds) > 0:
-                                #    cdfdata = col[~np.isnan(col)]
                                 var_attrs['DEPEND_0'] = "GeomagneticScalarTimes"
-                                #mycdf[cdfkey] = fcol
+                                if not np.isnan(fillval):
+                                    fcol = np.nan_to_num(fcol, nan=fillval)
                                 cdfdata = fcol
                             else:
-                                cdfdata = fcol
+                                cdfdata = col
                             fwritten = True
                             var_attrs['VALIDMIN'] = 0
                             var_attrs['VALIDMAX'] = 88880
@@ -1001,7 +1042,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             if key in ['x','y','z','f','dx','dy','dz','df','t1','t2']:
                                 try:
                                     unit = 'unspecified'
-                                    if 'unit-col-'+key == 'deg C':
+                                    if 'unit-col-'+key == 'deg C' or key in ['t1','t2']:
                                         #mycdf[cdfkey].attrs['FIELDNAM'] = "Temperature "+key.upper()
                                         unit = 'Celsius'
                                     elif 'unit-col-'+key == 'deg':
@@ -1222,22 +1263,22 @@ if __name__ == '__main__':
             # Testing general IMAGCDF
             print ("A")
             test1 = read(example4)
-            test1.write("/tmp", format_type='IMAGCDF', scalar=None, environment=None)  # , debug=True)
+            test1.write("/tmp", format_type='IMAGCDF', scalar=None, temperature1=None, temperature2=None)  # , debug=True)
             option = None
             print ("B")
             test1rep = read('/tmp/wic_2024*', select=option)  # , debug=True)
             di = dictdiff(test1.header, test1rep.header)
             if not di.get('added') == {} and not di.get('removed') == {}:
                 # raise Exception("ERROR within data validity test")
-                print("ERROR within data validity test")
+                print("ERROR within data validity test", di)
             # Testing G columns
             test2 = test1.copy()
             test2 = test2.delta_f()
             test2 = test2._drop_column('f')
-            test2.write("/tmp", format_type='IMAGCDF', scalar=None, environment=None)  # , debug=True)
+            test2.write("/tmp", format_type='IMAGCDF', scalar=None, temperature1=None, temperature2=None, mode='overwrite')  # , debug=True)
             print ("C")
             test2rep = read('/tmp/wic_2024*', select=option)  # , debug=True)
-            if not test2rep.header.get('DataComponents') == 'XYZG':
+            if not test2rep.header.get('DataComponents') in ['XYZG','HEZG']:
                 # raise Exception("ERROR within data validity test")
                 print("ERROR within data validity test", test2rep.header.get('DataComponents'))
             # Testing multiple time columns and lists in header
@@ -1245,15 +1286,13 @@ if __name__ == '__main__':
             test3 = test3._drop_column('x')
             test3 = test3._drop_column('y')
             test3 = test3._drop_column('z')
-            # test4 = test3.filter()
             test1 = test1._drop_column('f')
             test1 = test1._drop_column('t1')
             test1 = test1._drop_column('t2')
             test1.header['StationInstitution'] = ['Institute1', 'Institute2']
-            test1.write("/tmp", format_type='IMAGCDF', scalar=test3, environment=test3)  # , debug=True)
+            test1.write("/tmp", format_type='IMAGCDF', scalar=test3, temperature1=test3, temperature2=test3)  # , debug=True)
             print ("D")
             test3rep = read('/tmp/wic_2024*', select=option)  # , debug=True)
-            print(test3rep.header.get('FileContents'))
             fc = test3rep.header.get('FileContents')
             if fc:
                 for el in fc:
@@ -1263,18 +1302,18 @@ if __name__ == '__main__':
                     if el[1].find('Temperature') >= 0:
                         print("Reading Temperature")
                         temperature = read('/tmp/wic_2024*', select='temperature')
-            if not len(test3rep.header.get('FileContents')) == 3:
-                print (test3rep.header.get('FileContents'))
+            if not len(test3rep.header.get('FileContents')) == 4:
+                #print (test3rep.header.get('FileContents'))
                 # raise Exception("ERROR within data validity test")
                 print("ERROR within data validity test")
             di = dictdiff(test1.header, test3rep.header)
-            di = dictdiff(test1.header, test3rep.header)
+            #di = dictdiff(test1.header, test3rep.header)
             dv = di.get('value_diffs')
             tli = [el for el in dv]
             if not len(tli) <= 2:
                 # only format versions might be changed
                 # raise Exception("ERROR within data validity test")
-                print("ERROR within data validity test")
+                print("ERROR within data validity test", di)
             te = datetime.now(timezone.utc).replace(tzinfo=None)
             successes[testset] = (
                 "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
