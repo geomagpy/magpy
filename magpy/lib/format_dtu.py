@@ -136,23 +136,23 @@ def readDTU1(filename, headonly=False, **kwargs):
                     try:
                         row.x = float(elem[1])
                     except:
-                        row.x = float('nan')
+                        row.x = np.nan
                     try:
                         row.y = float(elem[2])
                     except:
-                        row.y = float('nan')
+                        row.y = np.nan
                     try:
                         row.z = float(elem[3])
                     except:
-                        row.z = float('nan')
+                        row.z = np.nan
                     try:
                         row.t1 = float(elem[4])
                     except:
-                        row.t1 = float('nan')
+                        row.t1 = np.nan
                     try:
                         row.t2 = float(elem[5])
                     except:
-                        row.t2 = float('nan')
+                        row.t2 = np.nan
                 except:
                     #raise ValueError, "Wrong date format in %s" % filename
                     pass

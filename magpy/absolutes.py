@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
+import numpy as np
+
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
 from magpy.stream import loggerabs, magpyversion, basestring, DataStream, example5, example6a
@@ -95,7 +98,7 @@ CONTENTS
 """
 
 class AbsoluteDIStruct(object):
-    def __init__(self, time=0, hc=float('nan'), vc=float('nan'), res=float('nan'), f=float('nan'), mu=float('nan'), md=float('nan'), expectedmire=float('nan'),varx=float('nan'), vary=float('nan'), varz=float('nan'), varf=float('nan'), var1=float('nan'), var2=float('nan'), temp=float('nan'), person='', di_inst='', f_inst=''):
+    def __init__(self, time=0, hc=np.nan, vc=np.nan, res=np.nan, f=np.nan, mu=np.nan, md=np.nan, expectedmire=np.nan,varx=np.nan, vary=np.nan, varz=np.nan, varf=np.nan, var1=np.nan, var2=np.nan, temp=np.nan, person='', di_inst='', f_inst=''):
         self.time = time
         self.hc = hc
         self.vc = vc
@@ -120,7 +123,7 @@ class AbsoluteDIStruct(object):
 
 
 class DILineStruct(object):
-    def __init__(self, ndi, nf=0, time=float('nan'), laser=float('nan'), hc=float('nan'), vc=float('nan'), res=float('nan'), ftime=float('nan'), f=float('nan'), opt=float('nan'), t=float('nan'), scaleflux=float('nan'), scaleangle=float('nan'), azimuth=float('nan'),
+    def __init__(self, ndi, nf=0, time=np.nan, laser=np.nan, hc=np.nan, vc=np.nan, res=np.nan, ftime=np.nan, f=np.nan, opt=np.nan, t=np.nan, scaleflux=np.nan, scaleangle=np.nan, azimuth=np.nan,
                  pier='', person='', di_inst='', f_inst='', fluxgatesensor ='', inputdate='',
                  stationid=None):
         self.time = ndi*[time]
@@ -517,7 +520,7 @@ class AbsoluteData(object):
                         try:
                             newval = float(function[0][fkey](functime)) + offset
                         except:
-                            newval = float('nan')
+                            newval = np.nan
                         exec('elem.var'+key+' = newval')
                     #if debug:
                     #    print (" -> key {}: {}".format(key,newval))
@@ -819,9 +822,9 @@ class AbsoluteData(object):
             else:
                 epZD = (dl2tmp[0]-dl2tmp[1]-dl2tmp[2]+dl2tmp[3]-2*np.pi)/4*hstart
         else:
-            s0d = float('nan')
-            deH = float('nan')
-            epZD = float('nan')
+            s0d = np.nan
+            deH = np.nan
+            epZD = np.nan
 
         resultline = LineStruct()
         try:
@@ -1037,7 +1040,7 @@ class AbsoluteData(object):
         elif len(flist) > 0 and len(fvlist) == len(flist):
             deltaF = np.mean(flist)-np.mean(fvlist)
         else:
-            deltaF = float('nan')
+            deltaF = np.nan
 
         # -- Start with the inclination calculation
         # --------------------------------------------------------------
@@ -1064,7 +1067,7 @@ class AbsoluteData(object):
                 yvals.append(scale_y*poslst[k].vary)
                 zvals.append(scale_z*poslst[k].varz)
                 if meanf == 0:
-                    ppmtmp = float('nan')
+                    ppmtmp = np.nan
                 else:
                     # correctness the following line requires that meanf is determined in the same time range as meanvario comps
                     # other sheets only take meanf and variomeans only during the respective cycle - with constant delta F
@@ -1146,7 +1149,7 @@ class AbsoluteData(object):
                     if 0.03 < rotation < 0.5: # Only analyze scale value if last step (17) deviates between 0.03 and 0.5 degrees from any other inclination value
                         #=(-SIN(B37*PI()/200)*(F20-F19)/K35+COS(B37*PI()/200)*(H20-H19)/K35)*200/PI()
                         if mean(ppmval) == 0:
-                            fieldchange = float('nan')
+                            fieldchange = np.nan
                         else:
                             fieldchange = (-np.sin(np.mean(I0list))*(poslst[n].varx-poslst[k].varx)/mean(ppmval) + np.cos(np.mean(I0list))*(poslst[n].varz-poslst[k].varz)/mean(ppmval))*180/np.pi
                         deltaB = rotation+fieldchange
@@ -1259,8 +1262,8 @@ class AbsoluteData(object):
             epzi = (EZI1/4. - ( EZI2*np.sin(inc*np.pi/180.) - EZI3*np.cos(inc*np.pi/180.) )/(4.*meanf))* (meanf*np.sin(inc*np.pi/180.))
         else:
             loggerabs.warning("_calcinc: %s : no intensity measurement available - you might provide annual means"  % num2date(self[0].time).replace(tzinfo=None))
-            s0i, epzi = float('nan'),float('nan')
-            fstart, deltaF = float('nan'),float('nan')
+            s0i, epzi = np.nan,np.nan
+            fstart, deltaF = np.nan,np.nan
             xstart = 0.0 ## arbitrary
             ystart = 0.0
 
@@ -1290,8 +1293,8 @@ class AbsoluteData(object):
         y_adder = 0.0
         if len(xvals) > 0:
             if tmpH**2 - mean(yvals)**2 < 0: # if no scalar data is available
-                h_adder = float('nan')
-                z_adder = float('nan')
+                h_adder = np.nan
+                z_adder = np.nan
             elif xyzorient:
                 # temX,Y are determined based on F during inc cycle, variationmeans from dec cycle, not perfect but reasonable - changed for version 1.1.4 to variationcycle of inc as sometimes not reasonable
                 if debugmode:
@@ -2263,10 +2266,14 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
 
     for idx, elem in enumerate(resultstream.ndarray):
         if KEYLIST[idx] in NUMKEYLIST:
-            resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float) == 999999.99, np.nan,
-                                                 resultstream.ndarray[idx])
-            resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)), np.nan,
-                                                 resultstream.ndarray[idx])
+            A = resultstream.ndarray[idx]
+            A[A==999999.99] = np.nan
+            A[A==np.inf] = np.nan
+            resultstream.ndarray[idx] = A
+            #resultstream.ndarray[idx] = np.where(resultstream.ndarray[idx].astype(float) == 999999.99, np.nan,
+            #                                     resultstream.ndarray[idx])
+            #resultstream.ndarray[idx] = np.where(np.isinf(resultstream.ndarray[idx].astype(float)), np.nan,
+            #                                     resultstream.ndarray[idx])
 
     # Add deltaF to resultsstream for all Fext:  if nan then df == deltaF else df = df+deltaF,
     posF = KEYLIST.index('str4')
@@ -2579,14 +2586,19 @@ if __name__ == '__main__':
                 errors['diline_from_db'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with diline_from_db.")
             try:
+                print ("_analyse_di_source test")
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 from magpy.core import database
                 db = database.DataBank("localhost","maxmustermann","geheim","testdb")
                 absst = abs_read(example6a)  # should be the default
+                print ("_analyse_di_source test: preparation done")
                 if db:
                     t1, fa = _analyse_di_source('DIDATA', db=db)
+                    print("_analyse_di_source test: database done")
                     t2, fa = _analyse_di_source(example6a, db=db)
+                    print("_analyse_di_source test: file done")
                     t3, fa = _analyse_di_source(absst, db=db, debug=True)
+                    print("_analyse_di_source test: listobject done")
                     print ("{} and {} and {} should all be 1".format(len(t1),len(t2),len(t3)))
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['_analyse_di_source'] = ("Version: {}: _analyse_di_source {}".format(magpyversion,(te-ts).total_seconds()))
@@ -2601,6 +2613,7 @@ if __name__ == '__main__':
             except Exception as excep:
                 errors['data_for_di'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with data_for_di.")
+            baseval1 = absolute_analysis(example6a, example5, example5)
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 baseval1 = absolute_analysis(example6a, example5, example5)
@@ -2615,10 +2628,10 @@ if __name__ == '__main__':
                     baseval3 = absolute_analysis(example6a, {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
                     baseval4 = absolute_analysis('DIDATA', {'file':example5, 'db':(db,'WIC_1_0001_0001')}, example5, db=db, starttime="2018-08-28", endtime="2018-08-30")
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
-                successes['_analyse_di_source'] = ("Version: {}: _analyse_di_source {}".format(magpyversion,(te-ts).total_seconds()))
+                successes['absolute_analysis'] = ("Version: {}: absolute_analysis {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
-                errors['_analyse_di_source'] = str(excep)
-                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with _analyse_di_source.")
+                errors['absolute_analysis'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with absolute_analysis.")
 
             # If end of routine is reached... break.
             break

@@ -333,14 +333,14 @@ def readIAGA(filename, headonly=False, **kwargs):
                         else:
                             raise ValueError
                     else:
-                        array[4].append(float('nan'))
+                        array[4].append(np.nan)
                         if varstr[-1] in ['g']:
-                            array[dfpos].append(float('nan'))
+                            array[dfpos].append(np.nan)
                 except:
                     if not float(row[6]) >= NOT_REPORTED:
                         array[4].append(float(row[6]))
                     else:
-                        array[4].append(float('nan'))
+                        array[4].append(np.nan)
                 #data.append(row)
 
     fh.close()

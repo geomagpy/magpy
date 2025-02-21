@@ -197,7 +197,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
     for idx,ar in enumerate(array):
         if len(ar) > 0:
             if KEYLIST[idx] in NUMKEYLIST:
-                tester = float('nan')
+                tester = np.nan
             else:
                 tester = '-'
             array[idx] = np.asarray(array[idx])
@@ -291,7 +291,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
     if len(array[0]) > 0:
         for idx,ar in enumerate(array):
             if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
-                tester = float('nan')
+                tester = np.nan
             else:
                 tester = '-'
             array[idx] = np.asarray(array[idx],dtype=object)
@@ -625,7 +625,7 @@ def writePYSTR(datastream, filename, **kwargs):
                         row.append(el[i])
                 else:
                     if KEYLIST[idx] in NUMKEYLIST:
-                        row.append(float('nan'))
+                        row.append(np.nan)
                     else:
                         row.append('-')
             wtr.writerow(row)

@@ -206,12 +206,12 @@ NUMKEYLIST = KEYLIST[1:16]
 """
 
 # Empty key values at initiation of stream:
-KEYINITDICT = {'time':0,'x':float('nan'),'y':float('nan'),'z':float('nan'),'f':float('nan'),
-                't1':float('nan'),'t2':float('nan'),'var1':float('nan'),'var2':float('nan'),
-                'var3':float('nan'),'var4':float('nan'),'var5':float('nan'),'dx':float('nan'),
-                'dy':float('nan'),'dz':float('nan'),'df':float('nan'),'str1':'-','str2':'-',
+KEYINITDICT = {'time':0,'x':np.nan,'y':np.nan,'z':np.nan,'f':np.nan,
+                't1':np.nan,'t2':np.nan,'var1':np.nan,'var2':np.nan,
+                'var3':np.nan,'var4':np.nan,'var5':np.nan,'dx':np.nan,
+                'dy':np.nan,'dz':np.nan,'df':np.nan,'str1':'-','str2':'-',
                 'str3':'-','str4':'-','flag':'0000000000000000-','comment':'-','typ':'xyzf',
-                'sectime':float('nan')}
+                'sectime':np.nan}
 
 # Formats supported by MagPy read function:
 SUPPORTED_FORMATS = {
@@ -768,7 +768,7 @@ CALLED BY:
                         fill = ['-']
                         key = KEYLIST[idx]
                         if key in self.NUMKEYLIST:
-                            fill = [float('nan')]
+                            fill = [np.nan]
                         nullvals = np.asarray(fill * len(self.ndarray[0]))
                         array[idx] = np.append(nullvals, ndarray[idx]).astype(object)
                     else:
@@ -1696,7 +1696,7 @@ CALLED BY:
                 return self
         if len(self.ndarray[0]) > 0.:
             self.ndarray[aic2ind] = np.empty((len(self.ndarray[0],)))
-            self.ndarray[aic2ind][:] = np.NAN
+            self.ndarray[aic2ind][:] = np.nan
         # get sampling interval for normalization - need seconds data to test that
         sp = self.samplingrate()
         # correct approach
@@ -1853,7 +1853,7 @@ CALLED BY:
         else:
             print ("deprecated")
             # 1) test whether absolutes are in the selected absolute data stream
-            if absolutestream[0].time == 0 or absolutestream[0].time == float('nan'):
+            if absolutestream[0].time == 0 or absolutestream[0].time == np.nan:
                 raise ValueError ("Baseline: Input stream needs to contain absolute data ")
             # 2) check whether enddate is within abs time range or larger:
             if not absolutestream[0].time-1 < endtime:
@@ -4550,7 +4550,7 @@ CALLED BY:
             mval = val[msk]
             mt = t[msk]
             array[ind] = val
-            dval = integrate.cumtrapz(mval,mt)
+            dval = integrate.cumulative_trapezoid(mval,mt)
             dval = np.insert(dval, 0, 0) # Prepend 0 to maintain original length
             for n in nind:
                 dval = np.insert(dval, n, np.nan) # Insert nans at original position
@@ -6561,26 +6561,26 @@ CALLED BY:
 
 
 class LineStruct(object):
-    def __init__(self, time=float('nan'), x=float('nan'), y=float('nan'), z=float('nan'), f=float('nan'), dx=float('nan'), dy=float('nan'), dz=float('nan'), df=float('nan'), t1=float('nan'), t2=float('nan'), var1=float('nan'), var2=float('nan'), var3=float('nan'), var4=float('nan'), var5=float('nan'), str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=float('nan')):
+    def __init__(self, time=np.nan, x=np.nan, y=np.nan, z=np.nan, f=np.nan, dx=np.nan, dy=np.nan, dz=np.nan, df=np.nan, t1=np.nan, t2=np.nan, var1=np.nan, var2=np.nan, var3=np.nan, var4=np.nan, var5=np.nan, str1='-', str2='-', str3='-', str4='-', flag='0000000000000000-', comment='-', typ="xyzf", sectime=np.nan):
         #def __init__(self):
         #- at the end of flag is important to be recognized as string
         """
-        self.time=float('nan')
-        self.x=float('nan')
-        self.y=float('nan')
-        self.z=float('nan')
-        self.f=float('nan')
-        self.dx=float('nan')
-        self.dy=float('nan')
-        self.dz=float('nan')
-        self.df=float('nan')
-        self.t1=float('nan')
-        self.t2=float('nan')
-        self.var1=float('nan')
-        self.var2=float('nan')
-        self.var3=float('nan')
-        self.var4=float('nan')
-        self.var5=float('nan')
+        self.time=np.nan
+        self.x=np.nan
+        self.y=np.nan
+        self.z=np.nan
+        self.f=np.nan
+        self.dx=np.nan
+        self.dy=np.nan
+        self.dz=np.nan
+        self.df=np.nan
+        self.t1=np.nan
+        self.t2=np.nan
+        self.var1=np.nan
+        self.var2=np.nan
+        self.var3=np.nan
+        self.var4=np.nan
+        self.var5=np.nan
         self.str1=''
         self.str2=''
         self.str3=''
@@ -6588,7 +6588,7 @@ class LineStruct(object):
         self.flag='0000000000000000-'
         self.comment='-'
         self.typ="xyzf"
-        self.sectime=float('nan')
+        self.sectime=np.nan
         """
         self.time = time
         self.x = x
@@ -7323,14 +7323,14 @@ def joinStreams(stream_a,stream_b, **kwargs):
             array[idx] = np.concatenate((sa.ndarray[idx],sb.ndarray[idx]))
         elif not len(sa.ndarray[idx]) > 0 and  len(sb.ndarray[idx]) > 0:
             if idx < len(stream_a.NUMKEYLIST):
-                fill = float('nan')
+                fill = np.nan
             else:
                 fill = '-'
             arraya = np.asarray([fill]*len(sa.ndarray[0]))
             array[idx] = np.concatenate((arraya,sb.ndarray[idx]))
         elif len(sa.ndarray[idx]) > 0 and not len(sb.ndarray[idx]) > 0:
             if idx < len(stream_a.NUMKEYLIST):
-                fill = float('nan')
+                fill = np.nan
             else:
                 fill = '-'
             arrayb = np.asarray([fill]*len(sb.ndarray[0]))

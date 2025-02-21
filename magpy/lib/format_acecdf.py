@@ -162,7 +162,7 @@ def readACECDF(filename, headonly=False, **kwargs):
                 for i in range(0,len(data)):
                     d = data[i]
                     if d == badval:
-                        data[i] = float('nan')
+                        data[i] = np.nan
                 skey = h1_epm_KEYDICT[key]
                 stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
                 stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
@@ -177,7 +177,7 @@ def readACECDF(filename, headonly=False, **kwargs):
                 for i in range(0,len(data)):
                     d = data[i]
                     if d == badval:
-                        data[i] = float('nan')
+                        data[i] = np.nan
                 skey = k0_epm_KEYDICT[key]
                 stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
                 stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
@@ -192,7 +192,7 @@ def readACECDF(filename, headonly=False, **kwargs):
                 for i in range(0,len(data)):
                     d = data[i]
                     if d == badval:
-                        data[i] = float('nan')
+                        data[i] = np.nan
                 skey = h0_swe_KEYDICT[key]
                 stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
                 stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
