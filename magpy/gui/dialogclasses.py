@@ -7780,10 +7780,22 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             # get the two data sets
             dataset1 = self.datadict.get(selectedids[0]).get('dataset')
             dataset2 = self.datadict.get(selectedids[1]).get('dataset')
-            self.result = merge_streams(dataset1,dataset2)
+            s1 = self.datadict.get(selectedids[0]).get('start')
+            e1 = self.datadict.get(selectedids[0]).get('end')
+            s2 = self.datadict.get(selectedids[1]).get('start')
+            e2 = self.datadict.get(selectedids[1]).get('end')
+            sr1 = self.datadict.get(selectedids[0]).get('samplingrate')
+            sr2 = self.datadict.get(selectedids[1]).get('samplingrate')
+            if not (s1 == s2 and e1 == e2):
+                e1 = e1+timedelta(seconds=sr1)
+                e2 = e2+timedelta(seconds=sr2)
+                dataset2 = dataset2.trim(s1,e1)
+                dataset1 = dataset1.trim(s2,e2)
+            self.result = merge_streams(dataset1,dataset2, debug=False)
             dlg.Update(100, "done")
             dlg.Destroy()
             # Return the new datastream self.result and call _init_read plus -update_plot
+            self.selectedids = selectedids
             self.modify = True
             self.Close(True)
             self.parent.Close(True)
@@ -7817,6 +7829,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             self.result = subtract_streams(dataset1, dataset2)
             dlg.Update(100, "done")
             dlg.Destroy()
+            self.selectedids = selectedids
             self.modify = True
             self.Close(True)
             self.parent.Close(True)
@@ -7887,6 +7900,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             dlg.Update(100, "done")
             dlg.Destroy()
             self.resultkeys = self.result._get_key_headers()
+            self.selectedids = selectedids
             self.modify = True
             self.Close(True)
             self.parent.Close(True)

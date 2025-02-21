@@ -3270,9 +3270,9 @@ The logger can also be configured to print to shell (stdout, without formatting)
 | format_wik.py           | PMAG1,PMAG2,OPT**            | 2.0.0   | r,r        | no        | X,X    |              |
 
 Runtime tests: internal testing routines contained within each library file, only available for rw libraries.
-RW: a local read/(write) test based on various example files. Only available on dedicated testing machines.
-Write tests are also included in stream.write which stores dummy data in all file types supporting write_format
-commands. 
+RW: a local read/(write) test based on various example files. Done using libraries2.0.ipynb which is only available on
+dedicated testing machines. Write tests are also included in stream.write which stores dummy data in all file types
+supporting write_format commands. 
 
 
 *  incomplete formats or tests:

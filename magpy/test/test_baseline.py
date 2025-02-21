@@ -8,8 +8,6 @@ DESCRIPTION:
  Then it calculates baseline corrected variation data.
  Finally it compares baseline corrected data with original DI measurements.
 
-IMPORTANT:
- Baseline test is not yet implemented in CI
 
 RETURN:
  BOOL

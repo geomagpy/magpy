@@ -622,7 +622,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     try:
         leapex = globalAttrs.get("LeapSecondUpdated")
         if leapsecondlastupdate and not leapex:
-            lslu = datetime.strftime(leapsecondlastupdate,"%Y%m%d")
+            lslu = int(datetime.strftime(leapsecondlastupdate,"%Y%m%d"))
             globalAttrs['LeapSecondUpdated'] = {0: lslu}
     except:
         pass
@@ -885,7 +885,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     # Redefine time column name in case of different components use the same time column
     maintimes = 'GeomagneticVectorTimes'
     if len(fcol) > 0 and not useScalarTimes:
-        maintimes = 'DataTimes'
+        maintimes = 'GeomagneticTimes'
     if len(t1col) > 0 and not useTemperature1Times:
         maintimes = 'DataTimes'
     if len(t2col) > 0 and not useTemperature2Times:

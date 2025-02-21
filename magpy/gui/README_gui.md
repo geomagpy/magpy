@@ -72,6 +72,9 @@ Ubuntu 22.04 but should work in other architectures as well.
 
 The graphical user interface relies on GTK >= 3. So you will need to install 
 
+         apt install python3-wxgtk4.0
+
+
 #### 2.1.1 Option 1: Using a conda/anaconda environment
 
 - install [Anaconda]() according to its recommendations

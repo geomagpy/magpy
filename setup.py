@@ -6,23 +6,23 @@ import sys
 exec(open('magpy/version.py').read())
 
 install_requires=[
-            "matplotlib > 2.0.2",
-            "numpy >= 1.13.0",
-            "scipy >= 0.8.6",
-            "paho-mqtt >= 1.2.0",
-            "pymysql >= 0.6.0",
-            "cdflib >= 0.3.0",
-            "pexpect >= 3.1.0",
+            "matplotlib >= 3.5.3",
+            "numpy >= 1.21.0",
+            "scipy >= 1.7.3",
+            "paho-mqtt >= 1.6.0",
+            "pymysql >= 1.0.2",
+            "cdflib >= 1.2.3",
+            "pexpect >= 4.8.0",
             "emd >= 0.7.0",
             "pypubsub >= 4.0.0",
-        ]
+         ]
 
 setup(
     name='geomagpy',
     version=__version__,
     author='R. Leonhardt, R. Bailey, M. Miklavec, J. Fee, H. Schovanec, S. Bracke',
     author_email='roman.leonhardt@zamg.ac.at',
-    packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.acquisition', 'magpy.collector', 'magpy.gui', 'magpy.doc', 'magpy.core'],
+    packages=['magpy', 'magpy.opt', 'magpy.examples', 'magpy.lib', 'magpy.gui', 'magpy.doc', 'magpy.core'],
     scripts=['magpy/gui/xmagpy','magpy/gui/xmagpyw','magpy/scripts/mpconvert','magpy/scripts/addcred','magpy/scripts/mptest'],
     url='http://pypi.python.org/pypi/geomagpy/',
     license='LICENSE.txt',

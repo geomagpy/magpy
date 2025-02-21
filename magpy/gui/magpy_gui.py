@@ -2436,6 +2436,7 @@ class MainFrame(wx.Frame):
         # ------------------------------
         if stream.header.get('DataFormat') == 'MagPyDI' or stream.header.get('DataType','').startswith('MagPyDI'):
             shownkeys = plotcont.get('shownkeys')
+            funclist = []
             # only for initial plot - not if selection or drop is chosen
             if shownkeys == lkeys:
                 if len(stream._get_column('x')) > 0 and not stream.header.get('DataFormat') == 'MagPyDailyMean':   # is a PYSTR or PYCDF file with basevalues
@@ -2444,11 +2445,16 @@ class MainFrame(wx.Frame):
                 elif not len(stream._get_column('x')) > 0 :                  # is a BLV file with basevalues
                     shownkeys = ['dx','dy','dz']
                     plotcont['padding'] = [5,0.05,5]
+                    func = stream.header.get('DataFunctionObject')
+                    funclist = [func,func,func]
                 dfcol = stream._get_column('df')
                 # check if df contains valid data
                 if not np.isnan(dfcol).all():
                     shownkeys.append('df')
                     plotcont['padding'].append(2)
+                    funclist.append(stream.header.get('DataFunctionObject'))
+                if funclist:
+                    plotcont['functions'] = funclist
                 # If dailymeans were calcluated
                 if isinstance(plotcont.get('errorbars'), (list,tuple)) and len(plotcont.get('errorbars')) > 0:
                     shownkeys = ['x','y','z','f']
@@ -3353,7 +3359,6 @@ class MainFrame(wx.Frame):
                     plotids.append(elem)
                     plotkeys.append(plotcont.get("shownkeys"))
                     activeid = elem
-            print (plotids)
             if len(plotids) > 1:
                 #  deactivate all Meta; Analysis methods
                 self._deactivate_controls()
@@ -3369,7 +3374,7 @@ class MainFrame(wx.Frame):
             selids = dlg.panel.selectedids
             if not selids:
                 mod = False
-            if mod == True:
+            if mod:
                 result = dlg.panel.result
                 if len(result) > 0:
                     newid = self._initial_read(result)
@@ -3378,8 +3383,8 @@ class MainFrame(wx.Frame):
                     if newid:  # will create a new input into datadict
                         self._initial_plot(newid)
                 elif len(selids) > 0:
-                    #if debug:
-                    print ("Nested plot has been choosen")
+                    if debug:
+                        print ("Nested plot has been choosen")
                     for elem in selids:
                          # create lists for plotdict
                         plotids.append(elem)
@@ -4004,49 +4009,10 @@ class MainFrame(wx.Frame):
         sttime = str(self.menu_p.str_page.startTimePicker.GetValue())
         stdate = (datetime.fromtimestamp(stday.GetTicks())).date()
         start = dparser.parse("{} {}".format(stdate,sttime))
-        """
-        try:
-            sttimetmp = datetime.strptime(sttime, "%I:%M:%S %p")
-            print ("TEST", sttimetmp)
-            if sttime.endswith('AM') or sttime.endswith('am'):
-                sttime = sttimetmp.strftime("%H:%M:%S")
-            if sttime.endswith('pm') or sttime.endswith('PM'):
-                sttime = sttimetmp.strftime("%H:%M:%S")
-            print ("HHHHHERE")
-            sdtmp = datetime.fromtimestamp(stday.GetTicks())
-            sd = sdtmp.strftime("%Y-%m-%d")
-        except:
-            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
-                        "Entered startdate is not valid.\n",
-                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Trimming timerange failed ... Ready")
-            dlg.Destroy()
-        start= datetime.strptime(str(sd)+'_'+sttime, "%Y-%m-%d_%H:%M:%S")
-        """
-
         enday = self.menu_p.str_page.endDatePicker.GetValue()
         entime = str(self.menu_p.str_page.endTimePicker.GetValue())
-        endate = (datetime.fromtimestamp(stday.GetTicks())).date()
+        endate = (datetime.fromtimestamp(enday.GetTicks())).date()
         end = dparser.parse("{} {}".format(endate,entime))
-        """
-        try:
-            entimetmp = datetime.strptime(entime,"%I:%M:%S %p")
-            if entime.endswith('AM') or entime.endswith('am'):
-                entime = entimetmp.strftime("%H:%M:%S")
-            if entime.endswith('pm') or entime.endswith('PM'):
-                entime = entimetmp.strftime("%H:%M:%S")
-            edtmp = datetime.fromtimestamp(enday.GetTicks())
-            ed = edtmp.strftime("%Y-%m-%d")
-        except:
-            dlg = wx.MessageDialog(self, "Could not trim timerange!\n"
-                        "Entered enddate is not valid.\n",
-                        "TrimTimerange", wx.OK|wx.ICON_INFORMATION)
-            dlg.ShowModal()
-            self.changeStatusbar("Trimming timerange failed ... Ready")
-            dlg.Destroy()
-        end= datetime.strptime(ed+'_'+entime, "%Y-%m-%d_%H:%M:%S")
-        """
 
         if end > start:
             plotstream = stream.copy()
@@ -5370,7 +5336,7 @@ class MainFrame(wx.Frame):
                     funclist.append([func])
                 if params['fitfunc'] == 'none':
                     plotcont['functions'] = []
-                elif isinstance(plotcont.get('functions'), list) and len(plotcont.get('functions')) > 0:
+                elif isinstance(plotcont.get('functions'), list) and len(plotcont.get('functions')) > 0 and not plotcont.get('functions') == [None]:
                     #[[x,y,z]] -> [[[func1],[func1,func2],[func1]]]
                     # Here: [x,y,z] -> [[func1],[func1,func2],[func1]]
                     oldfunclist = plotcont['functions']
