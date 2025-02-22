@@ -275,10 +275,11 @@ def writePYCDF(datastream, filename, **kwargs):
     main_cdf_spec['Compressed'] = False
 
     try:
-        leapsecondlastupdate = cdflib.cdfepoch.getLeapSecondLastUpdated()
+        leapsecondlastupdate = cdflib.cdfepoch.LTS[-1]
+        leapsecondlastupdate = int(datetime.strftime(leapsecondlastupdate, "%Y%m%d"))
     except:
         # removed in new cdflib version
-        leapsecondlastupdate = ""
+        leapsecondlastupdate = 0
 
     if not skipcompression:
         try:
@@ -365,6 +366,7 @@ def writePYCDF(datastream, filename, **kwargs):
 
     globalAttrs['DataFormat'] = { 0 : 'MagPyCDF{}'.format(version)}
     globalAttrs['DataCdflibVersion'] = { 0 : cdflib.__version__}
+    globalAttrs['LeapSecondUpdate'] = { 0 : leapsecondlastupdate}
 
     mycdf.write_globalattrs(globalAttrs)
 

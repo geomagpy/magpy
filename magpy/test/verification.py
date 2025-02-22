@@ -20,6 +20,10 @@ def create_verificationstream(startdate=datetime(2022, 11, 22)):
     array[6] = np.asarray([np.nan] * 1440)
     # array[4] = np.sqrt((x*x) + (y*y) + (z*z))
     array[0] = np.asarray([startdate + timedelta(minutes=i) for i in range(0, len(array[1]))])
+    rain1 = np.arange(1,721,1.0)
+    rain2 = np.arange(1,361,0.5)
+    rain = np.concatenate((rain1, rain2))
+    array[7] = rain
     array[KEYLIST.index('sectime')] = np.asarray(
         [startdate + timedelta(minutes=i) for i in range(0, len(array[1]))]) + timedelta(minutes=15)
     teststream = DataStream(header={'SensorID': 'Test_0002_0001'}, ndarray=np.asarray(array, dtype=object))
@@ -27,10 +31,12 @@ def create_verificationstream(startdate=datetime(2022, 11, 22)):
     teststream.header['col-y'] = 'Y'
     teststream.header['col-z'] = 'Z'
     teststream.header['col-t2'] = 'Text'
+    teststream.header['col-var1'] = 'Rain'
     teststream.header['unit-col-x'] = 'nT'
     teststream.header['unit-col-y'] = 'nT'
     teststream.header['unit-col-z'] = 'nT'
     teststream.header['unit-col-t2'] = 'degC'
+    teststream.header['unit-col-var1'] = 'mm'
     teststream.header['DataComponents'] = 'XYZ'
     return teststream
 
@@ -110,7 +116,7 @@ class TestStream(unittest.TestCase):
 
     def test_get_key_headers(self):
         keys = teststream._get_key_headers()
-        self.assertEqual(keys, ['x', 'y', 'z', 't2', 'sectime'])
+        self.assertEqual(keys, ['x', 'y', 'z', 't2', 'var1', 'sectime'])
 
     def test_get_max(self):
         max = teststream._get_max('x')
@@ -499,7 +505,9 @@ class TestStream(unittest.TestCase):
 
     def test_steadyrise(self):
         # To be done with rain analysis
-        self.assertEqual(2, 1)
+        teststream = create_verificationstream()
+        col = teststream.steadyrise('var1', timedelta(minutes=60), sensitivitylevel=0.002)
+        self.assertEqual(np.floor(np.mean(col)), 44.0)
 
     def test_stream2dict(self):
         # part of baseline/bc test
@@ -532,7 +540,7 @@ class TestStream(unittest.TestCase):
 
     def test_variables(self):
         v = teststream.variables()
-        self.assertEqual(v, ['x', 'y', 'z', 't2', 'sectime'])
+        self.assertEqual(v, ['x', 'y', 'z', 't2', 'var1', 'sectime'])
 
     def test_write(self):
         # Tested in the format libraries
@@ -1234,22 +1242,30 @@ class TestAbsolutes(unittest.TestCase):
             bh = basevalues._get_column('dx')
             be = basevalues._get_column('dy')
             bz = basevalues._get_column('dz')
-            ainc = basevalues._get_column('x')
-            adec = basevalues._get_column('y')
-            af = basevalues._get_column('z')
             # perform a baseline correction with this basevalues -> will lead to a hdz data files
             data = data.simplebasevalue2stream([bh[0], be[0], bz[0]], basecomp=comps)
             # select IDF from the baseline corrected dataset and compare with absolutes
             if comps == 'HDZ':
                 data = data.hdz2xyz()
-            data = data.xyz2idf()
+            #data = data.xyz2idf()
+            basevalues = basevalues.idf2xyz()
             idx = data.findtime(ti[0])
-            dinc = data.ndarray[1][idx]
-            ddec = data.ndarray[2][idx]
-            df = data.ndarray[3][idx]
-            self.assertEqual(np.round(ainc[0],6),np.round(dinc,6))
-            self.assertEqual(np.round(adec[0],6),np.round(ddec,6))
-            self.assertEqual(np.round(af[0],6),np.round(df,6))
+            #dinc = data.ndarray[1][idx]
+            #ddec = data.ndarray[2][idx]
+            #df = data.ndarray[3][idx]
+            bax = basevalues._get_column('x')
+            bay = basevalues._get_column('y')
+            baz = basevalues._get_column('z')
+            dax = data.ndarray[1][idx]
+            day = data.ndarray[2][idx]
+            daz = data.ndarray[3][idx]
+            # should be equal within 0.01 nT (which is the IAGA vraiofile resolution)
+            delta = 0.01
+            message = "not almost equal."
+            # assert function() to check if values are almost equal
+            self.assertAlmostEqual(np.round(bax[0],2),np.round(dax,2), None, message, delta)
+            self.assertAlmostEqual(np.round(bay[0],2),np.round(day,2), None, message, delta)
+            self.assertAlmostEqual(np.round(baz[0],2),np.round(daz,2), None, message, delta)
             #print(np.round(ainc[0], 6), np.round(adec[0], 6), np.round(af[0], 6), np.round(dinc, 6), np.round(ddec, 6),
             #      np.round(df, 6))
 

@@ -15,7 +15,8 @@ install_requires=[
             "pexpect >= 4.8.0",
             "emd >= 0.7.0",
             "pypubsub >= 4.0.0",
-         ]
+            "PyWavelets >= 1.5.0"
+          ]
 
 setup(
     name='geomagpy',
