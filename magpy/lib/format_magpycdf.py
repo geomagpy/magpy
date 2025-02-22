@@ -71,6 +71,9 @@ def readPYCDF(filename, headonly=False, **kwargs):
     getfile = True
     debug = kwargs.get('debug')
     cdfvers = 0.9
+    # time conversion datetime64 to datetime
+    ue = np.datetime64(0,'s')
+    onesec = np.timedelta64(1,'s')
 
     if debug:
         print ("Reading PYCDF with CDFLIB")
@@ -177,6 +180,10 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         array[ind] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,col)
                     except TypeError:
                         array[ind] = cdflib.cdfepoch.to_datetime(col)
+                    # covert datetime64 to datetime
+                    ar = np.array(array[ind])
+                    ar = (ar - ue) / onesec
+                    array[ind] = np.asarray([datetime.utcfromtimestamp(el) for el in ar])  # datetime.datetime
                 except:
                     array[ind] = np.asarray([])
             else:
@@ -357,6 +364,7 @@ def writePYCDF(datastream, filename, **kwargs):
                     globalAttrs[key] = { 0 : str(pfunc) }
 
     globalAttrs['DataFormat'] = { 0 : 'MagPyCDF{}'.format(version)}
+    globalAttrs['DataCdflibVersion'] = { 0 : cdflib.__version__}
 
     mycdf.write_globalattrs(globalAttrs)
 

@@ -182,7 +182,7 @@ class TestStream(unittest.TestCase):
         self.assertEqual(np.round(diff2, 3), 1.655)
 
     def test_baseline(self):
-        variodata = read(example5)
+        variodata = read(example1)
         # Test part - simplify teststream by just using constant mean value of variation for this day
         zmean = variodata.mean('z')
         variodata._put_column([variodata.mean('x')] * len(variodata), 'x')

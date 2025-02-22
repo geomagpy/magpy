@@ -128,7 +128,7 @@ def test_di():
 
     success4 = True
     try:
-        nxxabsresult = di.absoluteAnalysis(dipath,varionxxv,varionxxs,diid='NXX.txt',stationid='NXX',pier='A16', abstype='autodif', azimuth=267.5, alpha=0.0, deltaF=-0.5)
+        nxxabsresult = di.absolute_analysis(dipath,varionxxv,varionxxs,diid='NXX.txt',stationid='NXX',pier='A16', abstype='autodif', azimuth=267.5, alpha=0.0, deltaF=-0.5)
     except:
         success4 = False
     print ("4. Northen Hemisphere AUTODIF NXX: ", success4)

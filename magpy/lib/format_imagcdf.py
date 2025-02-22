@@ -5,8 +5,8 @@ Intermagnet ImagCDF input filter
 Written by Roman Leonhardt October 2019
 - contains test, read and write functions for
         ImagCDF
-- supports python >= 3.5
-- currently requires cdflib<=0.3.18
+- supports python >= 3.7
+- currently requires 1.0.0 >= cdflib <= 1.3.3
 """
 import sys
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
@@ -80,8 +80,22 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     referencetimecol = []
     indexarray = np.asarray([])
     cdfversion=0.9
+    # time conversion datetime64 to datetime
+    ue = np.datetime64(0,'s')
+    onesec = np.timedelta64(1,'s')
 
     def Ruleset2Flaglist(flagginglist,rulesettype,rulesetversion,stationid=None, debug=False):
+        """
+        DESCRIPTION
+            convert flags of MagPy1.x and 1.3 versions of ImagCDF to a flaglist again
+            DEPRECATED as since MagPy2.0 flags are part of the header information (json dump)
+        :param flagginglist:
+        :param rulesettype:
+        :param rulesetversion:
+        :param stationid:
+        :param debug:
+        :return:
+        """
         if debug:
             print ("Rules", rulesettype, rulesetversion)
         if rulesettype in ['Conrad', 'conrad', 'MagPy','magpy'] and len(flagginglist) > 0:
@@ -95,18 +109,19 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 #    modificationtime=None, flagversion='2.0', debug=False)
                 for elem in flagcolsconrad:
                     flaglisttmp.append(cdfdat[elem][...])
-                try:
-                    flaglisttmp[0] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[0])
-                except:
-                    flaglisttmp[0] = cdflib.cdfepoch.to_datetime(flaglisttmp[0])
-                try:
-                    flaglisttmp[1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[1])
-                except:
-                    flaglisttmp[1] = cdflib.cdfepoch.to_datetime(flaglisttmp[1])
-                try:
-                    flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(cdflib.cdfepoch,flaglisttmp[-1])
-                except:
-                    flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(flaglisttmp[-1])
+                flaglisttmp[0] = cdflib.cdfepoch.to_datetime(flaglisttmp[0])
+                # convert datetime64 to datetime
+                ar = flaglisttmp[0]
+                ar = (ar - ue) / onesec
+                flaglisttmp[0] = np.asarray([datetime.utcfromtimestamp(el) for el in ar])  # datetime.datetime
+                flaglisttmp[1] = cdflib.cdfepoch.to_datetime(flaglisttmp[1])
+                ar = flaglisttmp[1]
+                ar = (ar - ue) / onesec
+                flaglisttmp[1] = np.asarray([datetime.utcfromtimestamp(el) for el in ar])  # datetime.datetime
+                flaglisttmp[-1] = cdflib.cdfepoch.to_datetime(flaglisttmp[-1])
+                ar = flaglisttmp[-1]
+                ar = (ar - ue) / onesec
+                flaglisttmp[-1] = np.asarray([datetime.utcfromtimestamp(el) for el in ar])  # datetime.datetime
                 flaglist = np.transpose(flaglisttmp)
                 flaglist = [list(elem) for elem in flaglist]
                 unique = []
@@ -203,8 +218,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             headers['DataPublicationDate'] = testtime(pubdate[0])
         except:
             headers['DataPublicationDate'] = pubdate[0]
-        #pubdate = cdflib.cdfepoch.unixtime(headers.get('DataPublicationDate'))
-        #headers['DataPublicationDate'] = datetime.utcfromtimestamp(pubdate[0])
+        if debug:
+            print("Got publication date as", type(headers['DataPublicationDate']))
     except:
         if debug:
             print ("imagcdf warning: Publication date is not provided as tt_2000")
@@ -225,8 +240,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     except:
         datalist = cdfdat.cdf_info().zVariables
         cdfversion = 1.0
-    if debug:
-        print (" - cdfversion:",cdfversion)
+    #if debug:
+    #    print (" - cdfversion:", cdflib.__version__)
     if cdfversion < 1.0:
         lsu = cdfdat.cdf_info().get('LeapSecondUpdated')
         if not lsu:
@@ -238,18 +253,19 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
             lsu = ""
     headers['DataLeapSecondUpdated'] = lsu
     if debug:
+        lsu = cdfdat.cdf_info().LeapSecondUpdate
         print ("LEAP seconds updated:", lsu)
 
     #  IAGA code
     if headers.get('SensorID','') == '':
         try:
-            #TODO determine resolution
             headers['SensorID'] = "{}_{}_{}".format(headers.get('StationIAGAcode','xxx').upper()+'sec',headers.get('DataPublicationLevel','0'),'0001')
         except:
             pass
 
     if debug:
         print (" - readIMAGCDF: header done")
+        print (headers)
     # #########################################################
     # 1. Now getting individual data and check time columns
     # #########################################################
@@ -274,7 +290,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         -> Check for starttime and sampling rate in header
         """
         if  cdfdat.globalattsget().get('StartTime','') and cdfdat.globalattsget().get('SamplingPeriod',''):
-            # TODO Write that function
+            # TODO  - not now but eventually a future improvment - remove time columns and replace by start/increment
             st = cdfdat.globalattsget().get('StartTime','')
             sr = cdfdat.globalattsget().get('SamplingPeriod','')
             # get length of f or x
@@ -331,7 +347,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         newdatalist.append(['time',tllist[0][1]])
     te = datetime.now()
 
-    if not headers.get('FlagRulesetType','') == '':
+    if headers.get("DataFlags", ""):
+        print ("Found flags in header - MagPy 2.0 version - nothing else to do")
+    elif not headers.get('FlagRulesetType','') == '':
         if debug:
             print ("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         logger.info("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
@@ -411,7 +429,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 delrow = True
             arlen= len(ar)
             ind = KEYLIST.index('time')
-            array[ind] = ar.astype(datetime)  # datetime.datetime
+            ar = (ar-ue)/onesec
+            #array[ind] = np.array(ar, dtype=datetime)  # datetime.datetime # doe snot work any more with cdflib 1.3.3
+            array[ind] = np.asarray([datetime.utcfromtimestamp(el) for el in ar])  # datetime.datetime
             #array[ind] = ar  # np.datetime64 might be quicker (NO!) but breaks other methods as total_seconds not defined
         else:
             ar = cdfdat.varget(elem[1])
@@ -450,7 +470,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     ndarray = np.asarray(array, dtype=object)
     result = DataStream(header=headers,ndarray=ndarray)
 
-    if not headers.get('FlagRulesetType','') == '' and flags:
+    # if flags have been extracted in MagPy1.x manner then add them here
+    if not headers.get('FlagRulesetType','') == '' and flags and not result.header.get("DataFlags",""):
         result.header["DataFlags"] = flags
 
     return result
@@ -593,11 +614,12 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             globalAttrs[key.replace('Data','',1)] = { 0 : value }
 
 
-    ## 1. Fixed Part -- current version is 1.2.1
+    ## 1. Fixed Part -- current version is 1.3.0
     ## Transfer MagPy Header to INTERMAGNET CDF attributes
     globalAttrs['FormatDescription'] = { 0 : 'INTERMAGNET CDF format'}
     globalAttrs['FormatVersion'] = { 0 : '1.3'}
     globalAttrs['Title'] = { 0 : 'Geomagnetic time series data'}
+    globalAttrs['CdflibVersion'] = { 0 : cdflib.__version__}
 
     ## 3. Optional flagging information
     ##    identify flags within the data set and if they are present then add an attribute to the header
@@ -1063,6 +1085,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
 
     success = filename
 
+    # Flags are automatically included in MagPy2.0 as soon as the are contained in the header
+    # TODO - remove
+    """
     if flags and addflags == True:
         flagstart = 'FlagBeginTimes'
         flagend = 'FlagEndTimes'
@@ -1139,7 +1164,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             print ("... success")
         except:
             print ("writeIMAGCDF: error when adding flags. skipping this part")
-
+    """
     mycdf.close()
     return success
 
@@ -1262,7 +1287,8 @@ if __name__ == '__main__':
             ts = datetime.now(timezone.utc).replace(tzinfo=None)
             # Testing general IMAGCDF
             print ("A")
-            test1 = read(example4)
+            test1 = read(example4, debug=True)
+            print (test1)
             test1.write("/tmp", format_type='IMAGCDF', scalar=None, temperature1=None, temperature2=None)  # , debug=True)
             option = None
             print ("B")
