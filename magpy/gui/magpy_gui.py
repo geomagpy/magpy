@@ -1182,6 +1182,12 @@ class MainFrame(wx.Frame):
         guidict['dirname'] = basepath
         guidict['exportpath'] = basepath
         guidict['experimental'] = False
+        guidict['plotcolor'] = 'gray'
+        guidict['plotfunctionfmt'] = 'r-'
+        guidict['plotgrid'] = True
+        guidict['plotannotate'] = False
+        guidict['plotdateformatter'] = None
+        guidict['plotalpha'] = 0.5
         defaultstation = 'WIC'
         analysisdict['defaultstation'] = defaultstation
         analysisdict['magpyversion'] = __version__
@@ -1456,8 +1462,15 @@ class MainFrame(wx.Frame):
         """
         self.menu_p.fla_page.annotateCheckBox.SetValue(False)
 
+        pcolor = self.guidict.get('plotcolor','gray')
+        pfunctionfmt = self.guidict.get('plotfunctionfmt','r-')
+        pgrid = self.guidict.get('plotgrid', True)
+        pannotate = self.guidict.get('plotannotate',False)
+        pdateformatter = self.guidict.get('plotdateformatter', None)
+        palpha = self.guidict.get('plotalpha', 0.5)
+
         shownkeys = []
-        colors = ['gray']*15
+        colors = [pcolor]*15
         symbols = ['-']*15
 
         # TODO Remove the following
@@ -1473,21 +1486,21 @@ class MainFrame(wx.Frame):
                         'colors' : colors,
                         'title' : None,
                         'legend' : {},
-                        'grid' : True,
+                        'grid' : pgrid,
                         'patch' : {},
                         'timecolumn' : 'time',
-                        'annotate' : False,
+                        'annotate' : pannotate,
                         'fill' : [],
                         'showpatch' : [],
                         'errorbars' : [],
                         'functions' : [],
-                        'functionfmt' : "r-",
+                        'functionfmt' : pfunctionfmt,
                         'xlabelposition' : None,
                         'ylabelposition' : None,
                         'yscale' : None,
-                        'dateformatter' : None,
+                        'dateformatter' : pdateformatter,
                         'force' : False,
-                        'alpha' : 0.5,
+                        'alpha' : palpha,
                         'NFFT' : None,
                         'noverlap' : None,
                         'pad_to' : None,
@@ -3694,7 +3707,7 @@ class MainFrame(wx.Frame):
             dlg = OptionsPlotDialog(None, title='Plot Options:',optdict=plotcont)
             if dlg.ShowModal() == wx.ID_OK:
                 for elem in plotcont:
-                    if not elem in ['functions']:
+                    if not elem in ['functions', 'patch']:
                         val = eval('dlg.'+elem+'TextCtrl.GetValue()')
                         if val in ['False','True','None'] or val.startswith('[') or val.startswith('{'):
                             val = eval(val)
@@ -3703,6 +3716,14 @@ class MainFrame(wx.Frame):
                         if not val == plotcont[elem]:
                             plotcont[elem] = val
             dlg.Destroy()
+
+            if len(plotcont.get('colors')) > 0:
+                self.guidict['plotcolor'] = plotcont.get('colors')[0]
+            self.guidict['plotfunctionfmt'] = plotcont.get('functionfmt')
+            self.guidict['plotgrid'] = plotcont.get('grid')
+            self.guidict['plotannotate'] = plotcont.get('annotate')
+            self.guidict['plotdateformatter'] = plotcont.get('dateformatter')
+            self.guidict['plotalpha'] = plotcont.get('alpha')
 
             self.plotdict[self.active_id] = plotcont
             self._initial_plot(self.active_id, keepplotdict=True)
