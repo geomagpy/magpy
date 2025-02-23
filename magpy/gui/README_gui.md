@@ -72,10 +72,42 @@ Ubuntu 22.04 but should work in other architectures as well.
 
 The graphical user interface relies on GTK >= 3. So you will need to install 
 
-         apt install python3-wxgtk4.0
+         user$ sudo apt install python3-wxgtk4.0 libsdl2-dev
 
+#### 2.1.1 Option 1: Using a basic python virtual environment
 
-#### 2.1.1 Option 1: Using a conda/anaconda environment
+For using virtual environments from system python of your machine you will need to install "virtualenv". On a Debian/Ubuntu
+type machine you can do the following.
+
+         user$ sudo apt install python3-virtualenv 
+
+- open a terminal 
+- from the user$ prompt, create a new virtual environment called magpy
+
+         user$ virtualenv ~/env/magpy
+
+- activate the new environment and install geomagpy plus one optional package for real-time monitoring
+
+         user$ source ~/env/magpy/bin/activate
+
+- check your current python version
+
+         user$ python -V
+
+- Download the wxPython wheel fitting to your system and python versions from https://extras.wxpython.org/wxPython4/extras/linux/gtk3/
+
+         (magpy)user$ pip install ~/Downloads/wxPython...whl
+         (magpy)user$ pip install geomagpy 
+
+- Finally you can run xmgapy
+
+         (magpy)user$ xmagpy
+
+This technique was tested using Ubuntu24.04 with a python 3.12 environment and wxPython4.2.2. The benefit of tis
+option are newest python and wx packages as well as the fact that no additional large python package needs to be 
+installed. The benefit of the following technique is that it is rather easy and, at least to my experience, works flawless.
+
+#### 2.1.2 Option 2: Using a conda/anaconda environment
 
 - install [Anaconda]() according to its recommendations
 - open a terminal which should show a prompt starting with (base). If this is not the case, activate anaconda by typing "conda activate"
@@ -88,40 +120,12 @@ The graphical user interface relies on GTK >= 3. So you will need to install
 
          (base)user$ conda activate magpy
          (magpy)user$ pip install geomagpy
-         (magpy)user$ pip install paho-mqtt 
 
 - from the (magpy) environment you can now start xmagpy. 
 
          (magpy)user$ xmagpy
 
 - if you want to create symbol links please refer to the appendix
-
-#### 2.1.2 Option 2: Using a basic python virtual environment
-
-For using virtual environments from system python of your machine you will need to install "virtualenv". On a Debian/Ubuntu
-type machine you can do the following. If you are looking for a version specific install use something like 
-sudo apt install python3.12-venv in case of python3.12:
-
-        sudo apt install python3-virtualenv
-
-- open a terminal 
-- from the user$ prompt, create a new virtual environment called magpy
-
-         user$ python -m venv ~/env/magpy
-
-- activate the new environment and install geomagpy plus one optional package for real-time monitoring
-
-         user$ . env/magpy/bin/activate
-
-- Download the wxPython wheel fitting to your system and python versions from https://extras.wxpython.org/wxPython4/extras/linux/gtk3/
-
-         (magpy)user$ pip install ~/Downloads/wxPython...whl
-         (magpy)user$ pip install geomagpy 
-         (magpy)user$ pip install paho-mqtt 
-
-This technique was tested using Ubuntu22.04 with a python 3.10 environment and wxPython4.2.2. The benefit of the second
-option are newest python and wx packages as well as the fact that no additional large python package needs to be 
-installed. The benefit of the first technique is that it is rather easy and, at least to my experience, works flawless.
 
 
 ### 2.2 MacOS installation

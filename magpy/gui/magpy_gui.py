@@ -6595,16 +6595,14 @@ class MainFrame(wx.Frame):
                     print ("Could not get scantime from options - using approx 20 seconds")
                     maxloop = 200
                 self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))
-                """
-                proDlg = WaitDialog(None, "Scanning...", "Scanning for MQTT broadcasts.\nPlease wait....")
+                #proDlg = WaitDialog(None, "Scanning...", "Scanning for MQTT broadcasts.\nPlease wait....")
                 while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
                         loopcnt += 1
                         mqttclient.loop(.1) #blocks for 100ms
                         if loopcnt > 600:
                             success = False
                             break
-                proDlg.Destroy()
-                """
+                #proDlg.Destroy()
 
                 sensorlist = [key for key in sensordict]
 

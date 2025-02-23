@@ -10,6 +10,7 @@ install_requires=[
             "numpy >= 1.21.0",
             "scipy >= 1.7.3",
             "paho-mqtt >= 1.6.0",
+            "setuptools",
             "pymysql >= 1.0.2",
             "cdflib >= 1.2.3,<=1.3.3",
             "pexpect >= 4.8.0",
@@ -30,6 +31,6 @@ setup(
     description='Geomagnetic analysis tools.',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    package_data={'magpy': ['gui/*.png','gui/*.xpm','gui/*.jpg','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt','examples/*.sec','doc/*.pdf']},
+    package_data={'magpy': ['gui/*.png','gui/*.xpm','gui/*.jpg','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt','examples/*.sec','doc/*.png','doc/*.ipynb']},
     install_requires=install_requires,
 )
