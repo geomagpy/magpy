@@ -889,7 +889,7 @@ Linux environment:
 17. Select example 2 from memory and apply flags from file/DB
 18. Group flags will be shown
 19. open memory and select example1, clear flags
-20. Go to analysis page, calculate means and not mean for H/X
+20. Go to analysis page, calculate means and note mean for H/X
 21. Go to offset and subtract mean from column x
 22. data panel, select, only x column
 23. Open Webservice and load nearby observatory (i.e. BDV) for the same time range
@@ -920,7 +920,7 @@ Linux environment:
 47. Test all analysis methods on example1 and use report panel to save report
 48. Test save and load methods for fit 
 49. Run check data on a number of examples and save report
-50. Run marcos and martas monitoring with different data sources (TODO: test authenticitation)
+50. Run marcos and martas monitoring with different data sources (TODO: test authentication)
 51. Baseline analysis: Load DI files from files and analyse, save report
 52. Load DI files and analyse with changed parameters
 53. Test various source for vario and scalar data

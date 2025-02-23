@@ -70,7 +70,7 @@ class StreamPage(wx.Panel):
             label="Select symbols",
             choices=self.symbol, majorDimension=2, style=wx.RA_SPECIFY_COLS)
         self.statsLabel = wx.StaticText(self, label="Continuous statistics:")
-        self.activateStatsCheckBox = wx.CheckBox(self,label="activate")
+        self.activateStatsCheckBox = wx.CheckBox(self,label="activate",size=(160,30))
         self.compRadioBox.Disable()
         self.symbolRadioBox.Disable()
 

@@ -3,7 +3,8 @@
 Test program to read all supported formats. Only working on dedicated machines
 
 DESCRIPTION:
-    Tries to read all files in a specific directory
+    Tries to read all files in a specific directory.
+    Reports FAILURE
 RETURN:
     BOOL
     If all expected tests are satisfied then the test_di method will return "True".
@@ -17,11 +18,6 @@ if local:
     sys.path.insert(1,'/home/leon/Software/magpy/')
 
 from magpy.stream import *
-import copy
-from magpy.core import activity as act
-from magpy.core import plot as mp
-from magpy.core import flagging
-from magpy.core.methods import dictdiff
 import fnmatch
 
 source = '/home/leon/Cloud/Daten/MagPyTestFiles/datastreams/'

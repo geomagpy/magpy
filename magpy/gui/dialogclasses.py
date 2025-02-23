@@ -507,8 +507,8 @@ class ExportDataDialog(wx.Dialog):
         defaultformat = exportoptions.get('format_type')
         self.streamids = allstreamids
 
-        print (self.WriteFormats)
-        print (datadict)
+        #print (self.WriteFormats)
+        #print (datadict)
         ALL = ['IAGA', 'WDC', 'IMF', 'IAF', 'BLV', 'BLV1_2', 'IYFV', 'DKA', 'DIDD', 'COVJSON', 'PYSTR', 'PYASCII', 'CSV',
          'IMAGCDF', 'PYCDF', 'LATEX']
         LOWRESOLUTIONFORMATS = ['WDC', 'IMF', 'IAF', 'IYFV', 'DKA', 'DIDD']
@@ -1262,17 +1262,17 @@ class CheckDefinitiveDataDialog(wx.Dialog):
     def createControls(self):
         self.checkRadioBox = wx.RadioBox(self, label="Choose check type:",  choices=self.checkchoices,
                        majorDimension=2, style=wx.RA_SPECIFY_COLS ) #,size=(160,-1))
-        self.minuteLabel = wx.StaticText(self, label="Select minute data:",size=(160,30))
-        self.minuteButton = wx.Button(self, label='Choose IAF directory',size=(160,30))
-        self.minuteTextCtrl = wx.TextCtrl(self, value=self.minutedirname ,size=(160,30))
-        self.secondLabel = wx.StaticText(self, label="(Optional) Select second data:",size=(160,30))
-        self.secondButton = wx.Button(self, label='Choose ImagCDF/IAGA02 directory',size=(160,30))
-        self.secondTextCtrl = wx.TextCtrl(self, value=self.seconddirname ,size=(160,30))
-        self.checkOptionsButton = wx.Button(self, label='Specify check options',size=(160,30))
-        self.checkButton = wx.Button(self, wx.ID_OK, label='Run check', size=(160,30))
-        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
-        self.note1Label = wx.StaticText(self, label="*quick: ~40 secs with 1second data",size=(160,30))
-        self.note2Label = wx.StaticText(self, label="*full: ~7 min with 1second data",size=(160,30))
+        self.minuteLabel = wx.StaticText(self, label="Select minute data:",size=(240,30))
+        self.minuteButton = wx.Button(self, label='Choose IAF directory',size=(240,30))
+        self.minuteTextCtrl = wx.TextCtrl(self, value=self.minutedirname ,size=(240,30))
+        self.secondLabel = wx.StaticText(self, label="(Optional) Select second data:",size=(240,30))
+        self.secondButton = wx.Button(self, label='Choose ImagCDF/IAGA02 directory',size=(240,30))
+        self.secondTextCtrl = wx.TextCtrl(self, value=self.seconddirname ,size=(240,30))
+        self.checkOptionsButton = wx.Button(self, label='Specify check options',size=(240,30))
+        self.checkButton = wx.Button(self, wx.ID_OK, label='Run check', size=(240,30))
+        self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(240,30))
+        self.note1Label = wx.StaticText(self, label="*quick: ~40 secs with 1second data",size=(240,30))
+        self.note2Label = wx.StaticText(self, label="*full: ~7 min with 1second data",size=(240,30))
 
         self.minuteTextCtrl.Disable()
         self.secondTextCtrl.Disable()
@@ -4031,7 +4031,6 @@ class AnalysisBaselineDialog(wx.Dialog):
         self.baselinedict = {}
         self.parameterTextCtrl.Clear()
         self.parameterTextCtrl.SetValue("")
-        self.parameterButton.Disable()
         self.clearButton.Disable()
         self.saveButton.Disable()
         self.absstreamComboBox.Clear()
@@ -4046,13 +4045,16 @@ class AnalysisBaselineDialog(wx.Dialog):
         :return:
         """
         # open fit dlg
+        self.parameterstring = ""
         self.active_baseid = self.absstreamComboBox.GetValue().split(':')[0]
         activeparameters = self.baselinedict.get(self.active_baseid)
-        self.starttime = activeparameters.get('startdate')
-        self.endtime = activeparameters.get('enddate')
-        # get the selected data from plotoptlist - and then update the data here
-        self.fitparameters = self.get_fitpara(self.active_baseid, starttime=self.starttime,endtime=self.endtime)
-        self.parameterstring = self.create_fitparameterstring(self.active_baseid)
+        if activeparameters:
+            self.starttime = activeparameters.get('startdate')
+            self.endtime = activeparameters.get('enddate')
+            # get the selected data from plotoptlist - and then update the data here
+            self.fitparameters = self.get_fitpara(self.active_baseid, starttime=self.starttime,endtime=self.endtime)
+            self.parameterstring = self.create_fitparameterstring(self.active_baseid)
+            self.okButton.Enable()
         ## also add funtional parameters to the dictionary
         self.parameterTextCtrl.Clear()
         self.parameterTextCtrl.SetValue(self.parameterstring)
@@ -7826,6 +7828,17 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             dlg.Update(0, "please wait ... and ignore the progress bar")
             dataset1 = self.datadict.get(selectedids[0]).get('dataset')
             dataset2 = self.datadict.get(selectedids[1]).get('dataset')
+            s1 = self.datadict.get(selectedids[0]).get('start')
+            e1 = self.datadict.get(selectedids[0]).get('end')
+            s2 = self.datadict.get(selectedids[1]).get('start')
+            e2 = self.datadict.get(selectedids[1]).get('end')
+            sr1 = self.datadict.get(selectedids[0]).get('samplingrate')
+            sr2 = self.datadict.get(selectedids[1]).get('samplingrate')
+            if not (s1 == s2 and e1 == e2):
+                e1 = e1+timedelta(seconds=sr1)
+                e2 = e2+timedelta(seconds=sr2)
+                dataset2 = dataset2.trim(s1,e1)
+                dataset1 = dataset1.trim(s2,e2)
             self.result = subtract_streams(dataset1, dataset2)
             dlg.Update(100, "done")
             dlg.Destroy()
@@ -7913,7 +7926,7 @@ class MultiStreamPanel(scrolledpanel.ScrolledPanel):
             self.Close(True)
         #self.parent.Destroy()
 
-
+@deprecated("removed the wait dialog as information is shown in status bar and not working in wxpython 4.2")
 class WaitDialog(wx.Dialog):
     """
     A popup dialog for to inform users

@@ -402,7 +402,7 @@ class PlotPanel(scrolled.ScrolledPanel):
             If log file is chosen then this method makes use of collector.subscribe method:
             storeData to save binary file
         """
-        debug=True
+        debug=False
         t1 = datetime.now()
         db = database.DataBank(host=self.livedatadict.get('dbhost'), user=self.livedatadict.get('dbuser'),
                                password=self.livedatadict.get('dbpwd'), database=self.livedatadict.get('dbname'))
@@ -673,10 +673,9 @@ class PlotPanel(scrolled.ScrolledPanel):
             ylabelposition=None
             yscale=None
             dateformatter=plotcont.get('dateformatter', None)
-            functionfmt="r-"
+            functionfmt=plotcont.get('functionfmt','r-')
             #xinds=[None]
             #xlabelposition=None,
-            #dateformatter=None
             #force=False
             #width=10
             #height=4
@@ -707,8 +706,10 @@ class PlotPanel(scrolled.ScrolledPanel):
         self.figure, self.axes = mp.tsplot(data=streams, keys=keys, timecolumn=timecolumn, yranges=yranges, padding=padding,
               symbols=symbols, colors=colors, title=title, legend=legend, grid=grid, patch=patch, annotate=annotate,
               fill=fill, showpatch=showpatch, errorbars=errorbars, functions=functions, functionfmt=functionfmt,
-              ylabelposition=ylabelposition, yscale=yscale, dateformatter=dateformatter, alpha=alpha, figure=self.figure)
+              ylabelposition=ylabelposition, yscale=yscale, dateformatter=dateformatter, alpha=alpha, autoscale=False,
+              figure=self.figure)
         #xrange=None, xinds=[None],  xlabelposition=None, force=False, width=10, height=4,
+        # autoscale will lead to flag selection problems in numpy2, matplotlib > 3.10
 
         self.axlist = self.figure.axes
 
@@ -2544,7 +2545,7 @@ class MainFrame(wx.Frame):
 
             dlg.Destroy()
 
-            loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
+            #loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
 
             if isinstance(path, basestring):
                 if path:
@@ -2563,7 +2564,7 @@ class MainFrame(wx.Frame):
                 except:
                     print("Reading failed")
 
-            loadDlg.Destroy()
+            #loadDlg.Destroy()
             return stream
 
         else:
@@ -2630,7 +2631,7 @@ class MainFrame(wx.Frame):
             print (" - loading based on MagPy version", magpyversion)
 
         # Open a temporary dialog until loading is finished
-        loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
+        #loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
         try:
             for path in pathlist:
                 elem = os.path.split(path)
@@ -2666,7 +2667,7 @@ class MainFrame(wx.Frame):
         except:
             success = False
             message = "Could not identify file!\nplease check and/or try OpenDirectory\n"
-        loadDlg.Destroy()
+        #loadDlg.Destroy()
 
         if not len(stream) > 0:
             message = "Obtained an empty file structure\nfile format supported?\n"
@@ -2722,7 +2723,7 @@ class MainFrame(wx.Frame):
 
         try:
                 if not url.endswith('/'):
-                    loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
+                    #loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
                     self.menu_p.str_page.pathTextCtrl.SetValue(url)
                     self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                     try:
@@ -2730,7 +2731,7 @@ class MainFrame(wx.Frame):
                         success = True
                     except:
                         success = False
-                    loadDlg.Destroy()
+                    #loadDlg.Destroy()
                 else:
                     self.menu_p.str_page.pathTextCtrl.SetValue(url)
                     mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
@@ -2880,10 +2881,10 @@ class MainFrame(wx.Frame):
                                 entime = newend.strftime("%H:%M:%S")
 
                 end_time = '&{}={}T{}Z'.format(defaultcommands.get('endtime'), ed,entime)
-                #print("END3", end_time)
 
                 url = (base + '?' + add_elem + obs_id + start_time + end_time + file_format +
                       elements + data_type + period + addgroup)
+
                 self.analysisdict['defaultservice'] = service
             else:
                 msg = wx.MessageDialog(self, "Invalid time range!\n"
@@ -2898,7 +2899,7 @@ class MainFrame(wx.Frame):
         dlg.Destroy()
         try:
                 if not url.endswith('/'):
-                    loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
+                    #loadDlg = WaitDialog(None, "Loading...", "Loading data.\nPlease wait....")
                     self.menu_p.str_page.pathTextCtrl.SetValue(url)
                     self.menu_p.str_page.fileTextCtrl.SetValue(url.split('/')[-1])
                     try:
@@ -2907,7 +2908,7 @@ class MainFrame(wx.Frame):
                     except:
                         success = False
                         message = "Could not access URL"
-                    loadDlg.Destroy()
+                    #loadDlg.Destroy()
                 else:
                     self.menu_p.str_page.pathTextCtrl.SetValue(url)
                     mintime = pydate2wxdate(datetime(1777,4,30))  # Gauss
@@ -3039,7 +3040,7 @@ class MainFrame(wx.Frame):
         allstreamids = [streamid for streamid in self.datadict]
         datad = self.datadict.get(self.active_id)
         exportsuccess = False
-        debug = True # TODO set False
+        debug = False
         # Default write options
         exportparameter = {'format_type': 'PYCDF',
                            'filenamebegins': 'myfile_',
@@ -5953,7 +5954,7 @@ class MainFrame(wx.Frame):
         defaultstation = self.analysisdict.get('defaultstation')
         allstations = self.analysisdict.get('stations')
         dicont = allstations.get(defaultstation,{})
-        print ("CHECKING", defaultstation, dicont)
+        #print ("CHECKING", defaultstation, dicont)
         if not dicont:
             # identify a non-empty dictionary in allstations and get this one
             stats = [s for s in allstations]
@@ -5962,7 +5963,7 @@ class MainFrame(wx.Frame):
                 if dicont:
                     defaultstation = stat
                     break
-        print ("CHECKING again", defaultstation, dicont)
+        #print ("CHECKING again", defaultstation, dicont)
         newdicont = dicont.copy()
         defaultpath = dicont.get('didatapath','')
         debug = False
@@ -6101,8 +6102,8 @@ class MainFrame(wx.Frame):
         divariopath = dicont.get('divariopath','')
         discalarurl = dicont.get('discalarurl','')
         divariourl = dicont.get('divariourl','')
-        vselection = dicont.get('divariosource',0)
-        sselection = dicont.get('discalarsource',0)
+        vselection = int(dicont.get('divariosource',0))
+        sselection = int(dicont.get('discalarsource',0))
         varioDB = dicont.get('divarioDBinst','1')
         scalarDB = dicont.get('discalarDBinst','4')
         services = self.analysisdict.get('webservices',{})
@@ -6145,7 +6146,7 @@ class MainFrame(wx.Frame):
         defaultstation = self.analysisdict.get('defaultstation')
         allstations = self.analysisdict.get('stations')
         dicont = allstations.get(defaultstation,{})
-        debug = True
+        debug = False
 
         # Select the chosen source for variometer and scalar data
         divariosource = dicont.get('divariosource')
@@ -6573,6 +6574,7 @@ class MainFrame(wx.Frame):
                     print ("Could not get scantime from options - using approx 20 seconds")
                     maxloop = 200
                 self.changeStatusbar("Scanning for MQTT broadcasts ... approx {} sec".format(int(maxloop/10)))
+                """
                 proDlg = WaitDialog(None, "Scanning...", "Scanning for MQTT broadcasts.\nPlease wait....")
                 while loopcnt < maxloop: #colsup.identifier == {} and loopcnt < 100:
                         loopcnt += 1
@@ -6581,6 +6583,7 @@ class MainFrame(wx.Frame):
                             success = False
                             break
                 proDlg.Destroy()
+                """
 
                 sensorlist = [key for key in sensordict]
 
