@@ -68,7 +68,7 @@ github directory given above in folder magpy/examples/.
 Linux installations should be performed within a dedicated python environment:
 
 It is strongly recommended the use one of the following two options. The examples have been successfully tested on 
-Ubuntu 22.04 but should work in other architectures as well.
+Ubuntu 24.04 but should work in other architectures as well.
 
 The graphical user interface relies on GTK >= 3. So you will need to install 
 
@@ -76,7 +76,7 @@ The graphical user interface relies on GTK >= 3. So you will need to install
 
 #### 2.1.1 Option 1: Using a basic python virtual environment
 
-For using virtual environments from system python of your machine you will need to install "virtualenv". On a Debian/Ubuntu
+For using virtual environments based on system python of your machine you will need to install "virtualenv". On a Debian/Ubuntu
 type machine you can do the following.
 
          user$ sudo apt install python3-virtualenv 
@@ -86,7 +86,7 @@ type machine you can do the following.
 
          user$ virtualenv ~/env/magpy
 
-- activate the new environment and install geomagpy plus one optional package for real-time monitoring
+- activate the new environment
 
          user$ source ~/env/magpy/bin/activate
 
@@ -94,29 +94,33 @@ type machine you can do the following.
 
          user$ python -V
 
-- Download the wxPython wheel fitting to your system and python versions from https://extras.wxpython.org/wxPython4/extras/linux/gtk3/
+- download the wxPython wheel fitting to your system and python versions from https://extras.wxpython.org/wxPython4/extras/linux/gtk3/
 
          (magpy)user$ pip install ~/Downloads/wxPython...whl
+
+- then install magpy
+
          (magpy)user$ pip install geomagpy 
 
-- Finally you can run xmgapy
+- finally you can run xmgapy
 
          (magpy)user$ xmagpy
 
 This technique was tested using Ubuntu24.04 with a python 3.12 environment and wxPython4.2.2. The benefit of tis
 option are newest python and wx packages as well as the fact that no additional large python package needs to be 
-installed. The benefit of the following technique is that it is rather easy and, at least to my experience, works flawless.
+installed. Besides you can use this environment for backend scripts. The benefit of the following option2 is that it 
+is rather easy and, at least to my experience, works flawless on most operating systems.
 
 #### 2.1.2 Option 2: Using a conda/anaconda environment
 
-- install [Anaconda]() according to its recommendations
+- install [anaconda](https://www.anaconda.com/download) according to its recommendations
 - open a terminal which should show a prompt starting with (base). If this is not the case, activate anaconda by typing "conda activate"
-- from the (base)user$ prompt, create a new conda environment called magpy
+- from the (base)user$ prompt, create a new conda environment called magpy which supports wxpython
 
          (base)user$ conda create -n magpy wxpython matplotlib numpy scipy
 
 - this technique will create a pythion 3.7 environment using wxpython4.0.7.
-- activate the new environment and install geomagpy plus one optional package for real-time monitoring
+- activate the new environment and install geomagpy
 
          (base)user$ conda activate magpy
          (magpy)user$ pip install geomagpy
