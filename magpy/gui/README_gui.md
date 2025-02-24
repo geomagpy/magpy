@@ -68,7 +68,7 @@ github directory given above in folder magpy/examples/.
 Linux installations should be performed within a dedicated python environment:
 
 It is strongly recommended the use one of the following two options. The examples have been successfully tested on 
-Ubuntu 24.04 but should work in other architectures as well.
+Ubuntu 20.04, Ubuntu 22.04, Ubuntu 24.04 but should work in other architectures as well.
 
 The graphical user interface relies on GTK >= 3. So you will need to install 
 
@@ -92,9 +92,10 @@ type machine you can do the following.
 
 - check your current python version
 
-         user$ python -V
+         (magpy)user$ python -V
 
-- download the wxPython wheel fitting to your system and python versions from https://extras.wxpython.org/wxPython4/extras/linux/gtk3/
+- download the wxPython wheel fitting to your system and python version from https://extras.wxpython.org/wxPython4/extras/linux/gtk3/
+  and install it
 
          (magpy)user$ pip install ~/Downloads/wxPython...whl
 
@@ -106,9 +107,9 @@ type machine you can do the following.
 
          (magpy)user$ xmagpy
 
-This technique was tested using Ubuntu24.04 with a python 3.12 environment and wxPython4.2.2. The benefit of tis
+This technique is working on Ubuntu24.04 with a python 3.12 environment and wxPython4.2.2. The benefit of this
 option are newest python and wx packages as well as the fact that no additional large python package needs to be 
-installed. Besides you can use this environment for backend scripts. The benefit of the following option2 is that it 
+installed. Besides you can use this environment for backend scripts. The benefit of the following option 2 is that it 
 is rather easy and, at least to my experience, works flawless on most operating systems.
 
 #### 2.1.2 Option 2: Using a conda/anaconda environment
@@ -865,7 +866,26 @@ columns are selected again the fitting curves will be visible again. The reason 
 and lists for symbols, colors, padding and functions, which all depend on the key list. Possible solutions: do not use lists 
 but dictionaries. Well.... in a major future version.
 
-### 7.2 Testing procedure of the graphical user interface
+### 7.2 Creating desktop links
+
+#### 7.2.1 Creating a desktop link for Linux
+
+#### 7.2.2 Creating a desktop link for MacOs
+
+To execute a python program within a specific environment it is recommended to create a small startupscript i.e. named 
+xmagpy:
+
+        #!/bin/bash
+        eval "$(conda shell.bash hook)"
+        conda activate magpy
+        xmagpyw
+
+Make it executable e.g. by chmod 755 xmagpy.
+Open Finder and search for your script "xmagpy". Copy it to the desktop. To change the icon, click on the xmagpy link, 
+open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder).
+
+
+### 7.3 Testing procedure of the graphical user interface
 
 Unlike the backend which come with two code testing features, runtime tests and verification tests, such tests are 
 difficult to implement to cover issues with the graphical part. Runtime tests are used to check for general failures of
