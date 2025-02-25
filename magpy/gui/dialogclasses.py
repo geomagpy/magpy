@@ -2221,6 +2221,10 @@ class FlagModificationDialog(wx.Dialog):
         self.flagidlist = ["{}: {}".format(key,cftdict.get(key)) for key in cftdict]
         flagtype = self.flag.get('flagtype')
         self.flagtypeselect = [el for el in  self.flagidlist if el.startswith(str(flagtype))][0]
+        self.stationid = self.flag.get('stationid')
+        if not self.stationid:
+            self.stationid = ''
+
         self.createControls()
         self.doLayout()
         self.bindControls()
@@ -2254,7 +2258,7 @@ class FlagModificationDialog(wx.Dialog):
         self.componentsTextCtrl = wx.TextCtrl(self, value=",".join(self.flag.get('components',[])),size=(160,30))
         self.commentTextCtrl = wx.TextCtrl(self, value=self.flag.get('comment',''), size=(160, 30))
         self.operatorTextCtrl = wx.TextCtrl(self, value=self.flag.get('operator',''), size=(160, 30))
-        self.stationidTextCtrl = wx.TextCtrl(self, value=self.flag.get('stationid',''), size=(160, 30))
+        self.stationidTextCtrl = wx.TextCtrl(self, value=self.stationid, size=(160, 30))
         self.colorTextCtrl = wx.TextCtrl(self, value=self.flag.get('color',''), size=(160, 30))
         self.probabilitiesTextCtrl = wx.TextCtrl(self, value=self.flag.get('probability',''), size=(160, 30))
         self.flagidComboBox = wx.ComboBox(self, choices=self.flagidlist,
