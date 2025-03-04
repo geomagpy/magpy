@@ -153,6 +153,9 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
     if debug:
         print ("Reading ImagCDF with cdflib")
+        print ("  - debug selected: extracting cdfinfo, cdf.globalattributes and ...")
+        headers['CDFInfo'] = cdfdat.cdf_info()
+        headers['CDFGlobalAttributes'] = cdfdat.globalattsget()
 
     if select and debug:
         print ("Only data associated with {} time column will be extracted".format(select))
@@ -442,6 +445,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                 if referencetimecol:
                     if timedepend in referencetimecol:
                         fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
+                        headers['CDFfillval'] = fillval
                         if np.isnan(fillval):
                             # if it is nan than the following replace wont work anyway
                             fillval = 99999.0
@@ -453,6 +457,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
                         array[ind] = ar
                 else:
                     fillval = cdfdat.varattsget(elem[1]).get('FILLVAL')
+                    headers['CDFfillval'] = fillval
                     if np.isnan(fillval):
                         # if it is nan than the following replace wont work anyway
                         fillval = 99999.0

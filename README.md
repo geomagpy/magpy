@@ -539,7 +539,7 @@ different fill value using the option fillvalue:
 When writing IMAGCDF files with contents based on different time columns you will need to use options *scalar* and 
 *environment*. 
 
-        data.write('/path/to/export/', format_type='IMAGCDF', scalar=sdata, environment=tdata)
+        data.write('/path/to/export/', format_type='IMAGCDF', scalar=sdata, temperature1=tdata)
 
 MagPy is generally exporting IMAGCDF version 1.2.1 data files. Additionally, MagPy is also supports flagging information
 to be added into the IMAGCDF structure (IMAGCDF version 1.3, work in progress):
