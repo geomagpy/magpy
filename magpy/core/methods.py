@@ -393,13 +393,14 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             elif datatype in ['vario', 'variometer']:
                 func = data.interpol(['x', 'y', 'z'])
             elif datatype in ['both', 'full']:
+                print ("HERE", data.variables())
                 func = data.interpol(['x', 'y', 'z', 'f'])
             if debug:
                 print(
                     "  -> interpolation function determined - data at DI timesteps will be obtained from interpolated data ...")
             if func[0] == {}:
                 print(
-                    "  !! function determination apperantly failed: {} data of {} seems to be invalid".format(datatype,
+                    "  !! function determination apparently failed: {} data of {} seems to be invalid".format(datatype,
                                                                                                               sensorid))
                 datagood = False
             else:

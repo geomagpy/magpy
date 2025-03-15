@@ -4611,6 +4611,7 @@ CALLED BY:
         nt,sv,ev = normalize(t)
         sp = self.get_sampling_period()
         functionkeylist = {}
+        f = {}
 
         logger.info("interpol: Interpolating stream with %s interpolation." % kind)
 
@@ -4630,8 +4631,9 @@ CALLED BY:
                 #val[nans]=int(nan)
                 pass
             if len(val)>1:
-                exec('f'+key+' = interpolate.interp1d(nt, val, kind)')
-                exec('functionkeylist["f'+key+'"] = f'+key)
+                #exec('f'+key+' = interpolate.interp1d(nt, val, kind)')
+                #exec('functionkeylist["f'+key+'"] = f'+key)
+                functionkeylist['f'+key] = interpolate.interp1d(nt, val, kind)
             else:
                 logger.warning("interpol: interpolation of zero length data set - wont work.")
                 pass

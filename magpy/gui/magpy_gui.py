@@ -2438,7 +2438,9 @@ class MainFrame(wx.Frame):
         # 4. Set title and eventually assign function and patch objects
         # ------------------------------
         if stream.header.get('DataFunctionObject',False):
-            plotcont['function'] = [stream.header.get('DataFunctionObject')] * lenshownkeys
+            plotcont['functions'] = [stream.header.get('DataFunctionObject')] * lenshownkeys
+            if plotcont.get('functions') == [None]:
+                plotcont['functions'] = []
         plotcont['title'] = stationid
         if coverage < 5 and coverage > 1:
             plotcont['title'] = "{}: {} to {}".format(stationid,mintime.date(),maxtime.date())
@@ -2467,7 +2469,7 @@ class MainFrame(wx.Frame):
                     shownkeys.append('df')
                     plotcont['padding'].append(2)
                     funclist.append(stream.header.get('DataFunctionObject'))
-                if funclist:
+                if funclist and not funclist == [None]:
                     plotcont['functions'] = funclist
                 # If dailymeans were calcluated
                 if isinstance(plotcont.get('errorbars'), (list,tuple)) and len(plotcont.get('errorbars')) > 0:

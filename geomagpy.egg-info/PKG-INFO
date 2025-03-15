@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: geomagpy
-Version: 2.0b1
+Version: 2.0b2
 Summary: Geomagnetic analysis tools.
 Home-page: http://pypi.python.org/pypi/geomagpy/
 Author: R. Leonhardt, R. Bailey, M. Miklavec, J. Fee, H. Schovanec, S. Bracke
@@ -68,12 +68,35 @@ pandas : timeseries manipulation (flagging and activity analysis)
 pymysql : mysql/mariaDB data base support
 paho-mqtt : realtime data access of MARTAS
 pysubpub :  realtime data access of MARTAS
+pywavelets : storm seek
 sklearn : AI flagging support and geomagnetic activity forcasts
 
 
 ### 1.2 Linux installation (Ubuntu,Debian like systems)
 
-#### 1.2.1 Recommended: Using environments
+#### 1.2.1 Recommended: Using virtual environments 
+
+For this installation option you will need to install the following package
+
+        $ apt install python4-virtualenv
+
+Then you can create a new environment called magpy as follows:
+
+        $ virtualenv ~/env/magpy
+
+Switch to this environment
+
+        $ source ~/env/magpy/bin/activate
+
+and install a few packages
+
+        (magpy)$ pip install geomagpy
+        (magpy)$ pip install notebook
+
+If you want to use the graphical user interface you can use the very same environment. Follow xmagpy's instructions.
+
+#### 1.2.2 Alternatively you can use anaconda/minconda environments 
+
 In the following we assume a basic knowledge of linux systems and installations. 
 You need a working version of anaconda or miniconda.
 
@@ -89,15 +112,13 @@ Switch into this environment:
 
         (base)$ conda activate jnmagpy
 
-Install some basic packages for full MagPy support:
-
-        (jnmagpy)$ conda install pymysql
-
-and finally MagPy:
+and install MagPy:
 
         (jnmagpy)$ pip install geomagpy
 
-Now you can run python in the terminal and import the magpy package:
+#### 1.2.3 Running magpy and updates
+
+You can run python in the terminal after switching to the respective environment and import the magpy package:
 
         (jnmagpy)$: python
         >>> from magpy.stream import *
@@ -123,7 +144,7 @@ To use MagPy import and select an appropriate backend:
         > matplotlib.use("tkagg")
         > %matplotlib inline
 
-#### 1.2.2 Not-Recommended: Using system python
+#### 1.2.4 Not-Recommended: Using system python
 
 Make sure to install most required packages using *apt install* before installing geomagpy
 
@@ -131,7 +152,7 @@ Make sure to install most required packages using *apt install* before installin
 
 Optional but recommended packages are 
 
-        $ sudo apt install python3-pymysql python3-pandas python3-wxgtk4.0 libproj-dev proj-data proj-bin
+        $ sudo apt install python3-pymysql python3-pandas python3-wxgtk4.0 libsvl2-dev libproj-dev proj-data proj-bin
 
 Now install geomagpy and its remaining dependencies
 
@@ -145,7 +166,7 @@ Please also use a python environment for MacOs usage
   - see e.g. https://docs.continuum.io/anaconda/install for more details
   - before continuiung, test whether python is working. Open a terminal and run python
 
-Follow the instructions of 1.2.
+Follow the instructions of 1.2.2
 
 
 ### 1.4 Windows installation
@@ -171,56 +192,6 @@ Follow the instructions of 1.2.
   - select "run as administrator"
   - issue the following command "pip install -U geomagpy"
     (you can also specify the version e.g. pip install geomagpy==0.x.x)
-
-
-### 1.5 Installing XMagPy on Linux/MacOs
-
-XMagPy is making use of wxpython. Basically we are mainly testing the linux version 
-of this application and try to keep up with support for other operating systems. We highly recommend
-to follow the instructions below.
-
-#### 1.5.1 XMagPy prerequisites on Linux
-
-WX support requires the following package.
-
-        $ sudo apt-get install python3-wxgtk4.0
-
-In order to get a suitable python environment for wxpython you then need to create a new one based on wxpython
-
-        (base)$ conda create -n wxmagpy wxpython
-
-Then install the essential packages:
-
-        (base)$ conda activate wxmagpy
-
-        (wxmagpy)$ conda install numpy scipy matplotlib
-
-Continue with the optional packages as shown in 1.2
-Finally you can run the graphical user interface as follows:
-
-        (wxmagpy)$ xmagpy
-
-#### 1.5.2 Creating a desktop link for Linux
-
-#### 1.5.3 XMagPy on MacOs
-
-Follow the instructions of 1.5.1.
-
-You can now run XMagPy from the terminal by using the following command
-
-        $ xmagpyw
-
-#### 1.5.4 Creating a desktop link for MacOs
-
-To execute a python program within a specific environment it is recommended to create a small startupscript i.e. named xmagpy:
-
-        #!/bin/bash
-        eval "$(conda shell.bash hook)"
-        conda activate magpy
-        xmagpyw
-
-Make it executable e.g. by chmod 755 xmagpy.
-Open Finder and search for your script "xmagpy". Copy it to the desktop. To change the icon, click on the xmagpy link, open information and replace the image on the upper left with e.g. magpy128.jpg (also to be found using finder).
 
 
 ### 1.6 Platform independent container - Docker
@@ -579,7 +550,7 @@ different fill value using the option fillvalue:
 When writing IMAGCDF files with contents based on different time columns you will need to use options *scalar* and 
 *environment*. 
 
-        data.write('/path/to/export/', format_type='IMAGCDF', scalar=sdata, environment=tdata)
+        data.write('/path/to/export/', format_type='IMAGCDF', scalar=sdata, temperature1=tdata)
 
 MagPy is generally exporting IMAGCDF version 1.2.1 data files. Additionally, MagPy is also supports flagging information
 to be added into the IMAGCDF structure (IMAGCDF version 1.3, work in progress):

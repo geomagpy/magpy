@@ -440,9 +440,14 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                     if adjustrange:
                         plt.ylim(mincomp, maxcomp)
                 if padding and not is_list_empty(padding) and not adjustrange:
-                    mincomp = mincomp - padding[idx][i]
-                    maxcomp = maxcomp + padding[idx][i]
-                    plt.ylim(mincomp, maxcomp)
+                    try:
+                        mincomp = mincomp - padding[idx][i]
+                        maxcomp = maxcomp + padding[idx][i]
+                        plt.ylim(mincomp, maxcomp)
+                    except:
+                        # Might fail for nested plots of which padding has only be asigned to one data set
+                        # Then the padding array will not have the correct dimensions
+                        pass
                 # Plot patches - for flagging etc
                 # ------------------
                 if isinstance(patch, list):
