@@ -393,7 +393,6 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             elif datatype in ['vario', 'variometer']:
                 func = data.interpol(['x', 'y', 'z'])
             elif datatype in ['both', 'full']:
-                print ("HERE", data.variables())
                 func = data.interpol(['x', 'y', 'z', 'f'])
             if debug:
                 print(

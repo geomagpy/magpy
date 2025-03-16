@@ -2173,11 +2173,7 @@ CALLED BY:
             array = data._select_timerange(starttime=mintime, endtime=maxtime)
             stream = DataStream(data,data.header,array)
             baselinefunc = stream.baseline(absdata,startabs=mintime,endabs=maxtime, fitfunc=elem[3],fitdegree=int(elem[4]),knotstep=float(elem[5]),plotbaseline=plotbaseline)
-            #stream = stream.bc()
-            #exec('stream'+str(idx)+'= DataStream(stream,stream.header,stream.ndarray)')
             dicthead = stream.header
-            #dictlist.append(dicthead.copy()) # Note: append just adds a pointer to content - use copy
-            #streamlist.append([dicthead.copy(),stream.ndarray])
             streamlist.append([DataStream([LineStruct()],dicthead.copy(),stream.ndarray),baselinefunc])
 
         #print "Streamlist", streamlist
@@ -3614,8 +3610,9 @@ CALLED BY:
             else:
                 logger.warning('Fit: function not valid')
                 return
-            exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)') # TODO remove exec
-            exec('functionkeylist["f'+key+'"] = f'+key)
+            #exec('f'+key+' = interpolate.interp1d(x, f_fit, bounds_error=False)')
+            #exec('functionkeylist["f'+key+'"] = f'+key)
+            functionkeylist['f' + key] = interpolate.interp1d(x, f_fit, bounds_error=False)
 
         #if tok:
         func = [functionkeylist, sv, ev, fitfunc, fitdegree, knotstep, starttime, endtime, keys]
@@ -4592,7 +4589,6 @@ CALLED BY:
         used by resample, subtract and merge_streams, as well as some func2stream methods
         """
 
-        # TODO: remove exec command
         kind = kwargs.get('kind')
 
         if not kind:
@@ -4631,6 +4627,8 @@ CALLED BY:
                 #val[nans]=int(nan)
                 pass
             if len(val)>1:
+                # Leave the following two line as an example how NOT to do it!
+                # This was my own code 15 years ago and I am wondering about myself ;)
                 #exec('f'+key+' = interpolate.interp1d(nt, val, kind)')
                 #exec('functionkeylist["f'+key+'"] = f'+key)
                 functionkeylist['f'+key] = interpolate.interp1d(nt, val, kind)
