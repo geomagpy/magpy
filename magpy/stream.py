@@ -2677,12 +2677,9 @@ CALLED BY:
             sumar = list(arx+ary+arz)
             sqr = np.sqrt(np.asarray(sumar))
             self.ndarray[ind] = sqr - (self.ndarray[indf] + offset)
-        else:
-            for elem in self:
-                elem.df = round(np.sqrt(elem.x**2+elem.y**2+elem.z**2),digits) - (elem.f + offset)
 
-        self.header['col-df'] = 'delta f'
-        self.header['unit-col-df'] = 'nT'
+            self.header['col-df'] = 'delta f'
+            self.header['unit-col-df'] = 'nT'
 
         logger.info('--- Calculating delta f finished at %s ' % str(datetime.now()))
 
