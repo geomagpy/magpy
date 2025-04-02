@@ -160,14 +160,15 @@ Follow the instructions of 1.2.2
 
 ### 1.4 Windows installation
 
-#### 1.4.1 Install MagPy for Windows
+#### 1.4.1 Recommended: use the Windows installer
 
   - get the [MagPy Windows installer] here (under Downloads):
         https://cobs.geosphere.at
   - download and execute magpy-x.x.x.exe
   - all required packages are included in the installer
 
-#### 1.4.2 Post-installation information
+
+
 
   - MagPy will have a sub-folder in the Start menu. Here you will find three items:
 
@@ -175,12 +176,31 @@ Follow the instructions of 1.2.2
         * python  -> opens a python shell ready for MagPy
         * xmagpy  -> opens the MagPy graphical user interface
 
-#### 1.4.3 Update an existing MagPy installation on Windows
-
   - right-click on subfolder "command" in the start menu
   - select "run as administrator"
   - issue the following command "pip install -U geomagpy"
     (you can also specify the version e.g. pip install geomagpy==0.x.x)
+
+
+#### 1.4.2 Alternative: install without administration rights
+
+Firstly, download [WinPython](https://winpython.github.io). For the following instructions we used WinPython 3.13.2 
+from SourgeForge.
+
+Unpack WinPython in a directory of your choice i.e. Software/WPy64-31320. Go to this directory using the Explorer and start 
+"WinPython Command Prompt". From the command prompt install the following packages:
+
+         C:\Users\MyUser\Software\WPy64-31320> pip install numpy matplotlib scipy wxpython
+
+         C:\Users\MyUser\Software\WPy64-31320> pip install geomagpy
+
+To run xmagpy switch to the following folder
+
+         C:\Users\MyUser\Software\WPy64-31320> cd python\Lib\site-packages\magpy\gui
+
+And then run
+
+         C:\Users\MyUser\Software\WPy64-31320\python\Lib\site-packages\magpy\gui> python xmagpy.py
 
 
 ### 1.6 Platform independent container - Docker

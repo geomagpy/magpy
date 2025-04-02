@@ -6551,7 +6551,11 @@ class MainFrame(wx.Frame):
                     if debug:
                         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
                     # create a result dictionary
-                    sensorid = "{}".format(msg.topic).replace("{}/".format(martastopic),'')[:-5]
+                    # TODO the following line will fail if martastopic is "all"
+                    if martastopic == "+":
+                        sensorid = "{}".format(msg.topic).split("/")[1][:-5]
+                    else:
+                        sensorid = "{}".format(msg.topic).replace("{}/".format(martastopic),'')[:-5]
                     content = "{}".format(msg.topic)[-4:]
                     payload = "{}".format(msg.payload.decode())
                     sensorcont = {}
