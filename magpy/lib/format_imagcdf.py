@@ -690,7 +690,7 @@ def writeIMAGCDF(datastream, filename, **kwargs):
             globalAttrs['StandardLevel'] = { 0 : 'None'}
         if headers.get('DataStandardLevel','') in ['partial','Partial']:
             # one could add a validity check whether provided list is aggreement with standards
-            if headers.get('DataPartialStandDesc','') == '':
+            if headers.get('DataPartialStandDesc','') == '' and headers.get('PartialStandDesc','') == '':
                 print("writeIMAGCDF: PartialStandDesc is missing. Add items like IMOM-11,IMOM-12,IMOM-13 ...")
     else:
         print("writeIMAGCDF: StandardLevel not defined - please specify by yourdata.header['DataStandardLevel'] = ['None','Partial','Full']")
