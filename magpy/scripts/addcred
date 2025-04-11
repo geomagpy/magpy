@@ -102,7 +102,7 @@ def main(argv):
     elif typ == 'transfer':
         mpcred.cc('transfer', shortcut, user=user, passwd=password, address=address, port=port)
     elif typ == 'mail':
-        mpcred.cc('mail', shortcut, user=user, passwd=password, smtp=smtp)
+        mpcred.cc('mail', shortcut, user=user, passwd=password, smtp=smtp, port=port)
     else:
         print ('Type  needs to be either db, mail or transfer.')
         print ('-- check addcred.py -h for more options and requirements')
