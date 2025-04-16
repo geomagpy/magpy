@@ -214,7 +214,10 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             db = tup[0]
             data = tup[0].read(tup[1], starttime=starttime, endtime=endtime)
         if fi and not len(data) > 0:
-            data = read(fi, starttime=starttime, endtime=endtime)
+            try:
+                data = read(fi, starttime=starttime, endtime=endtime)
+            except:
+                data = DataStream()
         if len(data) > 0:
             if debug:
                 print("   Successfully loaded data with version 2.0")

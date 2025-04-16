@@ -5647,7 +5647,7 @@ class InputSheetDialog(wx.Dialog):
         layout['double'] = diparameters.get('double')
         layout['order'] = diparameters.get('order').split(',')
         # diparameters contains a list of all opened/available DI files for this stationID
-        print ("LAYOUT", layout)
+        #print ("LAYOUT", layout)
 
         self.cdate = cdate
         self.units = ['degree','gon']
@@ -6163,7 +6163,7 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
         if debug:
             print ("distruct", distruct)
             print ("distruct", self.dichoices)
-        print ("SETTING LAYOUT", layout)
+            print ("SETTING LAYOUT", layout)
         if self.layout.get('double', True) in ["False", False]:
             self.layout['double'] = False
         else:
@@ -6852,7 +6852,16 @@ class SettingsPanel(scrolledpanel.ScrolledPanel):
     def mean_angle(self, deg):   # rosettacode
         from cmath import rect, phase
         from math import radians, degrees
-        return degrees(phase(sum(rect(1, radians(d)) for d in deg)/len(deg)))
+        # spilt up in first 4 and second four an d then average those
+        # why: a poor mean of angles is definitle not correct (i.e. [359,0,1] would result in 120 instead of 0
+        # treatment as unit vectors as done here however does not seem to be perfectly correct either if angles strongly
+        # vary
+        deg1 = deg[:int(len(deg)/2)] # extract 90degree measurements
+        deg2 = deg[-int(len(deg)/2):] # extract 270degree measurements
+        m1 = degrees(phase(sum(rect(1, radians(d)) for d in deg1)/len(deg1)))
+        m2 = degrees(phase(sum(rect(1, radians(d)) for d in deg2)/len(deg2)))
+        fin = [m1,m2]
+        return degrees(phase(sum(rect(1, radians(d)) for d in fin)/len(fin)))
 
     def OnCalc(self, e):
         # Calculate angle if enough values are present:

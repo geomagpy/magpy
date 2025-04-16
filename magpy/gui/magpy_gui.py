@@ -3314,7 +3314,7 @@ class MainFrame(wx.Frame):
         diparameters = stationdict.get(dstation,{})
         dipath = diparameters.get('didatapath')
         dirname = self.guidict.get('dirname')
-        print ("Checking", diparameters)
+        #print ("Checking", diparameters)
 
         if os.path.isfile(dipath):
             dipath = os.path.split(dipath)[0]
