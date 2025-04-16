@@ -3556,7 +3556,7 @@ CALLED BY:
             ind = self.KEYLIST.index(key)
             val = tmpst.ndarray[ind]
 
-            # interplolate NaN values
+            # interpolate NaN values
             # normalized sampling rate
             sp = sp/(ev-sv) # should be the best?
             #sp = (ev-sv)/len(val) # does not work

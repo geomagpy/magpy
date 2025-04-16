@@ -5350,7 +5350,13 @@ class MainFrame(wx.Frame):
                 for elem in shownkeys:
                     if eval('dlg.{}CheckBox.GetValue()'.format(elem)):
                         funckeys.append(elem)
-                func = plotstream.fit(keys=funckeys,
+                fitstream = plotstream.trim(starttime=params['starttime'],
+                            endtime=params['endtime'])
+                print (fitstream.timerange())
+                fitstream = fitstream.extrapolate(starttime=params['starttime'],
+                            endtime=params['endtime'], method="linear")
+                print (fitstream.timerange())
+                func = fitstream.fit(keys=funckeys,
                             fitfunc=params['fitfunc'],
                             fitdegree=params['fitdegree'], knotstep=params['knotstep'],
                             starttime=params['starttime'],
