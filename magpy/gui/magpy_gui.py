@@ -4879,7 +4879,7 @@ class MainFrame(wx.Frame):
         # Open Dialog and return the parameters threshold, keys, timerange
         self.changeStatusbar("Loading flags ... please be patient")
         dlg = FlagLoadDialog(None, title='Load Flags', db=db, sensorid=sensorid, start=plotstream.start(),
-                                   end=plotstream.end(), last_dir=cdir)
+                                   end=plotstream.end(), header=stream.header, last_dir=cdir)
         dlg.ShowModal()
         if len(dlg.fl) > 0:
             fl = dlg.fl

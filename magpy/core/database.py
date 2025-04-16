@@ -1790,7 +1790,7 @@ REMOVED:
                       debug=False, commentconversion='cobs', **kwargs):
         """
         DEFINITION:
-            Read flagging information from data base and return a flagging objectt
+            Read flagging information from data base and return a flagging object
         PARAMETERS:
             sensorid:	       (string) provide the requested sensorid or 'all'
             starttime:	       (string) extract flags which end after this starttime

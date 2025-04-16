@@ -2852,11 +2852,12 @@ class FlagLoadDialog(wx.Dialog):
     DESCRIPTION
         Dialog for Loading Flagging data from file or DB
     """
-    def __init__(self, parent, title, db, sensorid, start, end, last_dir: string =''):
+    def __init__(self, parent, title, db, sensorid, start, end, header, last_dir: string =''):
         super(FlagLoadDialog, self).__init__(parent=parent,
             title=title, size=(300, 300))
         self.fl = flagging.Flags()
         self.sensorid = sensorid
+        self.header = header
         self.db = db
         self.start = start
         self.end = end
@@ -2913,9 +2914,24 @@ class FlagLoadDialog(wx.Dialog):
         self.loadFileButton.Bind(wx.EVT_BUTTON, self.OnLoadFile)
 
     def OnLoadDB(self, e):
-        self.fl = self.db.flags_from_db(starttime=self.start, endtime=self.end) # sensorid=self.sensorid,
-        #self.fl = db2flaglist(self.db, self.sensorid, begin=self.start, end=self.end)
-        dlg = wx.MessageDialog(self, "Flags for {} loaded from DB!\nFLAGS table contained {} inputs for all sensors in this timerange\n".format(self.sensorid,len(self.fl)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
+        fl = self.db.flags_from_db(starttime=self.start, endtime=self.end) # sensorid=self.sensorid,
+        # keep only flags matching sensorid and group
+        newflagdict = {}
+        for d in fl.flagdict:
+            flagcont = fl.flagdict[d]
+            # test, if sensorid is fitting or sensorid/group is part of groups
+            valid, comps = fl._match_groups(self.header, flagcont.get('sensorid'),
+                                            flag_keys=flagcont.get('components'),
+                                            flag_groups=flagcont.get('groups'))
+            # test validity parameter for d or h
+            if flagcont.get('validity') in ['d', 'h']:
+                valid = False
+            if valid:
+                newflagdict[d] = flagcont
+        fl.flagdict = newflagdict
+        self.fl = fl
+
+        dlg = wx.MessageDialog(self, "Flags loaded from DB!\nFLAGS table contained {} inputs for for this sensor and its group\n".format(len(self.fl)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
         self.Close(True)
@@ -2931,7 +2947,23 @@ class FlagLoadDialog(wx.Dialog):
             except:
                 self.fl = flagging.Flags()
             openFileDialog.Destroy()
-            dlg = wx.MessageDialog(self, "Flags for {} loaded from File!\nFound a total of {} flag inputs in this timerange for all sensors\n".format(self.sensorid,len(self.fl)),"FLAGS obtained from File", wx.OK|wx.ICON_INFORMATION)
+            # keep only flags matching sensorid and group
+            newflagdict = {}
+            for d in fl.flagdict:
+                flagcont = fl.flagdict[d]
+                # test, if sensorid is fitting or sensorid/group is part of groups
+                valid, comps = fl._match_groups(self.header, flagcont.get('sensorid'),
+                                                flag_keys=flagcont.get('components'),
+                                                flag_groups=flagcont.get('groups'))
+                # test validity parameter for d or h
+                if flagcont.get('validity') in ['d', 'h']:
+                    valid = False
+                if valid:
+                    newflagdict[d] = flagcont
+            fl.flagdict = newflagdict
+            self.fl = fl
+
+            dlg = wx.MessageDialog(self, "Flags loaded from File!\nFound a total of {} flag inputs for this sensor and its group\n".format(len(self.fl)),"FLAGS obtained from File", wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
         else:
