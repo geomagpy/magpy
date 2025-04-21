@@ -3107,7 +3107,9 @@ CALLED BY:
             # create a new time scale with sampling rate increment and give start and endtimes
             xnew = np.arange(sttime, entime, np.timedelta64(int(samprate), "us"))
             # now get the indices indbefore and indafter of xnew data just before and the first after xs
+            print ("CHECKING HERE", xnew, sttime, entime)
             ab, a, b = np.intersect1d(xnew, xs, return_indices=True)
+            print ("CHECKING HERE", a)
             indbefore = a[0]
             indafter = a[-1]
             if debug:

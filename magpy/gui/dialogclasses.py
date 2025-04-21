@@ -3284,6 +3284,7 @@ class AnalysisFitDialog(wx.Dialog):
         self.startFitTimePicker = wx.TextCtrl(self, value=self.mintime.strftime('%X'),size=(200,30))
         self.endFitDatePicker = wxDatePickerCtrl(self, dt=etfit,size=(200,30))
         self.endFitTimePicker = wx.TextCtrl(self, value=self.maxtime.strftime('%X'),size=(200,30))
+        self.extrapolateCheckBox = wx.CheckBox(self, label="extrapolate", size=(200,30))
         self.loadButton = wx.Button(self, label='Load fit',size=(200,30))
         self.saveButton = wx.Button(self, label='Save fit(s)',size=(200,30))
 
@@ -3324,7 +3325,7 @@ class AnalysisFitDialog(wx.Dialog):
         contlst.append((self.endFitDatePicker, expandOption))
         contlst.append((self.startFitTimePicker, expandOption))
         contlst.append((self.endFitTimePicker, expandOption))
-        contlst.append(emptySpace)
+        contlst.append((self.extrapolateCheckBox, expandOption))
         contlst.append(emptySpace)
         maxrange = max([len(self.shownkeys), 4])
         for i in range(0,maxrange):

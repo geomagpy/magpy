@@ -5339,6 +5339,7 @@ class MainFrame(wx.Frame):
                 fitfunc = params['fitfuncname']
                 knotstep = str(params['knotstep'])
                 fitdegree = str(params['fitdegree'])
+                extrapolate = dlg.extrapolateCheckBox.GetValue()
                 plotcont = dlg.plotcont
                 # Update defaults
                 self.analysisdict['fitfunction'] = fitfunc
@@ -5350,12 +5351,13 @@ class MainFrame(wx.Frame):
                 for elem in shownkeys:
                     if eval('dlg.{}CheckBox.GetValue()'.format(elem)):
                         funckeys.append(elem)
-                fitstream = plotstream.trim(starttime=params['starttime'],
+                if extrapolate:
+                    fitstream = plotstream.trim(starttime=params['starttime'],
                             endtime=params['endtime'])
-                print (fitstream.timerange())
-                fitstream = fitstream.extrapolate(starttime=params['starttime'],
-                            endtime=params['endtime'], method="linear")
-                print (fitstream.timerange())
+                    fitstream = fitstream.extrapolate(starttime=params['starttime'],
+                            endtime=params['endtime'], method="old")
+                else:
+                    fitstream = plotstream.copy()
                 func = fitstream.fit(keys=funckeys,
                             fitfunc=params['fitfunc'],
                             fitdegree=params['fitdegree'], knotstep=params['knotstep'],
