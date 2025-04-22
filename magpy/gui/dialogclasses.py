@@ -2931,7 +2931,7 @@ class FlagLoadDialog(wx.Dialog):
         fl.flagdict = newflagdict
         self.fl = fl
 
-        dlg = wx.MessageDialog(self, "Flags loaded from DB!\nFLAGS table contained {} inputs for for this sensor and its group\n".format(len(self.fl)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
+        dlg = wx.MessageDialog(self, "Flags loaded from DB!\nFLAGS table contained {} inputs for this sensor and its group\n".format(len(self.fl)),"FLAGS obtained from DB", wx.OK|wx.ICON_INFORMATION)
         dlg.ShowModal()
         dlg.Destroy()
         self.Close(True)

@@ -384,6 +384,8 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if key == 't2':
             possvals.extend(['temperature 2','temperature2'])
         for elem in datalist:
+            if debug:
+                print ("Variable attributes:", elem, cdfdat.varattsget(elem))
             try:
                 label = cdfdat.varattsget(elem).get('LABLAXIS').lower()
                 if label in possvals:
@@ -1006,19 +1008,19 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                         var_attrs['FILLVAL'] = fillval
                         if key in ['x','y','z','h','e','g']:
                             cdfdata = col
-                            var_attrs['VALIDMIN'] = -88880
-                            var_attrs['VALIDMAX'] = 88880
+                            var_attrs['VALIDMIN'] = -88880.
+                            var_attrs['VALIDMAX'] = 88880.
                         elif key == 'i':
                             cdfdata = col
-                            var_attrs['VALIDMIN'] = -90
-                            var_attrs['VALIDMAX'] = 90
+                            var_attrs['VALIDMIN'] = -90.
+                            var_attrs['VALIDMAX'] = 90.
                         elif key == 'd':
                             cdfdata = col
-                            var_attrs['VALIDMIN'] = -360
-                            var_attrs['VALIDMAX'] = 360
+                            var_attrs['VALIDMIN'] = -360.
+                            var_attrs['VALIDMAX'] = 360.
                         elif key in ['t1']:
-                            var_attrs['VALIDMIN'] = -273
-                            var_attrs['VALIDMAX'] = 88880
+                            var_attrs['VALIDMIN'] = -273.
+                            var_attrs['VALIDMAX'] = 88880.
                             if useTemperature1Times:
                                 if not 'temp1time' in keylst:
                                     keylst.append('temp1time')
@@ -1027,8 +1029,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             else:
                                 cdfdata = col
                         elif key in ['t2']:
-                            var_attrs['VALIDMIN'] = -273
-                            var_attrs['VALIDMAX'] = 88880
+                            var_attrs['VALIDMIN'] = -273.
+                            var_attrs['VALIDMAX'] = 88880.
                             if useTemperature2Times:
                                 if not 'temp2time' in keylst:
                                     keylst.append('temp2time')
@@ -1050,8 +1052,8 @@ def writeIMAGCDF(datastream, filename, **kwargs):
                             else:
                                 cdfdata = col
                             fwritten = True
-                            var_attrs['VALIDMIN'] = 0
-                            var_attrs['VALIDMAX'] = 88880
+                            var_attrs['VALIDMIN'] = 0.
+                            var_attrs['VALIDMAX'] = 88880.
 
                     for keydic in headers:
                         if keydic == ('col-'+key):
