@@ -352,6 +352,10 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 
     if headers.get("DataFlags", ""):
         print ("Found flags in header - MagPy 2.0 version - nothing else to do")
+        fl = flagging.Flags()
+        flagstring = headers.get("DataFlags")
+        flags = fl._readJson_string(flagstring)
+        headers["DataFlags"] = flags
     elif not headers.get('FlagRulesetType','') == '':
         if debug:
             print ("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
@@ -609,6 +613,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     globalAttrs = {}
     for key in headers:
         value = headers.get(key)
+        if key == "DataFlags" and value:
+            value = value._writeJson_string()
+
         if is_number(value) and key in FLOATLIST:
             value = float(value)
         else:
@@ -633,10 +640,12 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     if addflags and datastream.header.get("DataFlags"):
         globalAttrs['FormatVersion'] = { 0 : '1.3.1'}
     if addflags:
-        flags = datastream.header.get("DataFlags", {})
+        flags = datastream.header.get("DataFlags", flagging.Flags())
         if flags:
             globalAttrs['FlagRulesetVersion'] = { 0 : '2.0'}
             globalAttrs['FlagRulesetType'] = { 0 : 'Conrad'}
+            flags = flags._writeJson_string()
+            datastream.header["DataFlags"] = flags
 
     if not headers.get('DataPublicationDate','') == '':
         dat = tt(testtime(headers.get('DataPublicationDate','')))

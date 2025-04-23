@@ -447,7 +447,26 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                 res[id] = ncont
         return res
 
-        # ------------------------------------------------------------------------
+    def _readJson_string(self, flagstring, debug=False):
+        if debug:
+            print("Reading a json style string...")
+        self.flagdict = json.loads(flagstring, object_hook=_dateparser)
+        return self
+
+    def _writeJson_string(self, debug=False):
+        if debug:
+            print("Writing a json style string...")
+
+        def dateconv(d):
+            # Converter to serialize datetime objects in json
+            if isinstance(d, datetime):
+                return d.__str__()
+
+        flagstring = json.dumps(self.flagdict, ensure_ascii=False, default=dateconv)
+        return flagstring
+
+
+            # ------------------------------------------------------------------------
 
     # Flag methods in alphabetical order
     # ------------------------------------------------------------------------
