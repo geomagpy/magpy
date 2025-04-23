@@ -72,6 +72,8 @@ class Flags(object):
 | flags             |  _match_groups |  2.0.0        |                 |  yes           |  yes*         |    | apply_flags, create_patch |
 | flags             |  _list       |  2.0.0          |                 |  yes           |  yes             |         | |
 | flags             |  _set_label_from_comment |  2.0.0 |              |                |                  |         | flagging.load |
+| flags             |  _readJson_string |  2.0.0     |                 |                |                  |         | imagcdf read |
+| flags             |  _writeson_string |  2.0.0     |                 |                |                  |         | imagcdf write |
 | flags             |  add         |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
 | flags             |  apply_flags |  2.0.0          |                 |  yes           |                  |  6.1    | |
 | flags             |  copy        |  2.0.0          |                 |  yes           |  yes             |  6.1    | |
