@@ -2340,6 +2340,11 @@ CALLED BY:
                     else:
                         print("BC: could not interpret BaseLineFunctionObject - returning")
                         return self
+                    usedf = True
+                    if 'df' in funckeys and usedf:
+                        func[0]['ff'] = func[0]['fdf']
+                        func[0].pop('fdf', None)
+                        keys.append('f')
                     funclist.append(func)
 
             bcdata = baseline_adoption(bcdata,funclist,keys,basecomp,pierdata)
