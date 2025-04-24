@@ -361,9 +361,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             Specific method of the Conrad Observatory to obtain some groups from old input
         """
         groups = {}
-        if comment.lower().find('ssc') or comment.lower().find('pulsation'):
+        if comment.lower().find('ssc') >= 0 or comment.lower().find('pulsation') >= 0:
             groups['magnetism'] = ['x','y','z','f']
-        if comment.lower().find('earthquake'):
+        if comment.lower().find('earthquake') >= 0:
             if not groups.get('magnetism'):
                 groups['magnetism'] = ['x','y','z']
         if sensorid.startswith('BLV'):

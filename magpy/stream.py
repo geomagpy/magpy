@@ -1882,7 +1882,7 @@ CALLED BY:
                 if not fixend:
                     logger.warning("Baseline: Well... thats an adventurous extrapolation, but as you wish...")
 
-        # 4) get standard time rang of one year and extradays at start and end
+        # 4) get standard time range of one year and extradays at start and end
         #           test whether absstream covers this time range including extradays
         # ###########
         #  get boundaries
