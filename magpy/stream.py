@@ -2181,7 +2181,7 @@ CALLED BY:
         return streamlist
 
 
-    def bc(self, function=None, ctype=None, alpha=0.0, beta=0.0, level='preliminary',debug=False):
+    def bc(self, function=None, ctype=None, alpha=0.0, beta=0.0, level='preliminary',usedf=False,debug=False):
         """
         DEFINITION:
             Method to obtain baseline corrected data. By default flagged data is removed
@@ -2212,6 +2212,10 @@ CALLED BY:
         func = self.header.get('DataAbsFunctionObject')
         datatype = self.header.get('DataType')
         basecomp = self.header.get('DataBaseComponents')
+
+        ####  TODO  changed
+        print("BASECHECK")
+        usedf = True
 
         if datatype == 'BC':
             print ("BC: dataset is already baseline corrected - returning")
@@ -2312,6 +2316,8 @@ CALLED BY:
                 parameter = absinfo.split('_')
                 #print("BC:", parameter, len(parameter))
                 funckeys = parameter[6:9]
+                if usedf and parameter[-1] == 'df' and len(parameter) == 10:
+                    funckeys = parameter[6:10]
                 if len(parameter) >= 14:
                     #extract pier information
                     pierdata = {}
@@ -2340,7 +2346,6 @@ CALLED BY:
                     else:
                         print("BC: could not interpret BaseLineFunctionObject - returning")
                         return self
-                    usedf = True
                     if 'df' in funckeys and usedf:
                         func[0]['ff'] = func[0]['fdf']
                         func[0].pop('fdf', None)
@@ -3775,6 +3780,7 @@ CALLED BY:
             arrayy = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[1])])).astype(float)
             arrayz = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[2])])).astype(float)
 
+        print ("BASECHECK", mode, funclist, keys)
         for function in funct:
             if not function:
                 return self

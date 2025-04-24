@@ -5797,9 +5797,9 @@ class MainFrame(wx.Frame):
             else:
                 for fitparameter in fitparameters:
                     fitpara = fitparameters.get(fitparameter)
-                    #baselinefunclist.append(plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
-                    baselinefunclist.append(plotstream.baseline(absstream,keys=['dx','dy','dz','df'], fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
-                    print ("Test", baselinefunclist)
+                    baselinefunclist.append(plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
+                    #baselinefunclist.append(plotstream.baseline(absstream,keys=['dx','dy','dz','df'], fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
+                    #print ("Test", baselinefunclist)
 
                 self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: '
                                             'from Baseline ID {}'.format(self.baselinedict.get('filename'),baseid))
