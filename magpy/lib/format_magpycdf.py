@@ -351,6 +351,8 @@ def writePYCDF(datastream, filename, **kwargs):
     head, line = [],[]
     globalAttrs = {}
 
+    print ("TESTING", datastream.header.get("DataFlags"))
+
     if not mode == 'append':
         for key in headdict:
             if not key.find('col-') >= 0:

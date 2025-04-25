@@ -988,25 +988,27 @@ class OptionsInitDialog(wx.Dialog):
         self.basicLabel = wx.StaticText(self, label="Basics:",size=(160,30))
         self.calcLabel = wx.StaticText(self, label="Calculation:",size=(160,30))
         self.otherLabel = wx.StaticText(self, label="Other:",size=(160,30))
-        self.dirnameLabel = wx.StaticText(self, label="Default load directory",size=(160,30))
+        self.dirnameLabel = wx.StaticText(self, label="Default load directory:",size=(160,30))
         self.dirnameTextCtrl = wx.TextCtrl(self, value=self.guidict.get('dirname',''),size=(160,30))
-        self.exportLabel = wx.StaticText(self, label="Default export directory",size=(160,30))
+        self.exportLabel = wx.StaticText(self, label="Default export dir.:",size=(160,30))
         self.exportTextCtrl = wx.TextCtrl(self, value=self.guidict.get('exportpath',''),size=(160,30))
-        self.stationidLabel = wx.StaticText(self, label="Default station code",size=(160,30))
+        self.stationidLabel = wx.StaticText(self, label="Default station code:",size=(160,30))
         self.stationidTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('defaultstation','WIC'),size=(160,30))
-        self.experimentalLabel = wx.StaticText(self, label="Experimental methods",size=(160,30))
-        self.experimentalCheckBox = wx.CheckBox(self, label="Activate", size=(160,30))
-        self.baselinedirectLabel = wx.StaticText(self, label="Apply baseline",size=(160,30))
+        self.experimentalLabel = wx.StaticText(self, label="Experimental methods:",size=(160,30))
+        self.experimentalCheckBox = wx.CheckBox(self, label="activate", size=(160,30))
+        self.baselinedirectLabel = wx.StaticText(self, label="Apply baseline:",size=(160,30))
         self.baselinedirectCheckBox = wx.CheckBox(self, label="directly", size=(160,30))
+        self.FadoptionLabel = wx.StaticText(self, label='F-baseline:',size=(160,30))
+        self.FadoptionCheckBox = wx.CheckBox(self, label='adopt when available',size=(160,30))
         self.baselinedirectCheckBox.SetValue(self.analysisdict.get('baselinedirect',False))
-        self.fitfunctionLabel = wx.StaticText(self, label="Default fit function",size=(160,30))
+        self.fitfunctionLabel = wx.StaticText(self, label="Default fit function:",size=(160,30))
         self.fitfunctionComboBox = wx.ComboBox(self, choices=self.funclist,
                               style=wx.CB_DROPDOWN, value=self.analysisdict.get('fitfunction','spline'),size=(160,-1))
-        self.fitknotstepLabel = wx.StaticText(self, label="Knotstep (spline)",size=(160,30))
+        self.fitknotstepLabel = wx.StaticText(self, label="Knotstep (spline):",size=(160,30))
         self.fitknotstepTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('fitknotstep','0.3'),size=(160,30))
-        self.fitdegreeLabel = wx.StaticText(self, label="Degree (polynom)",size=(160,30))
+        self.fitdegreeLabel = wx.StaticText(self, label="Degree (polynom):",size=(160,30))
         self.fitdegreeTextCtrl = wx.TextCtrl(self, value=self.analysisdict.get('fitdegree','5'),size=(160,30))
-        self.flaglabelLabel = wx.StaticText(self, label="Flag labels",size=(160,30))
+        self.flaglabelLabel = wx.StaticText(self, label="Flag labels:",size=(160,30))
         self.flaglabelTextCtrl = wx.TextCtrl(self, wx.ID_ANY, value=self.flaglabels, size=(160,150),
                           style = wx.TE_MULTILINE|wx.HSCROLL|wx.VSCROLL)
         self.closeButton = wx.Button(self, wx.ID_CANCEL, label='Cancel',size=(160,30))
@@ -1052,6 +1054,10 @@ class OptionsInitDialog(wx.Dialog):
                     (self.baselinedirectCheckBox, noOptions),
                     (self.experimentalLabel, noOptions),
                     (self.experimentalCheckBox, noOptions),
+                    (self.FadoptionLabel, noOptions),
+                    (self.FadoptionCheckBox, noOptions),
+                    emptySpace,
+                    emptySpace,
                     (self.flaglabelLabel, noOptions),
                     emptySpace,
                     emptySpace,
@@ -2943,9 +2949,9 @@ class FlagLoadDialog(wx.Dialog):
         if openFileDialog.ShowModal() == wx.ID_OK:
             flagname = openFileDialog.GetPath()
             try:
-                self.fl = flagging.load(flagname, begin=self.start, end=self.end) #,sensorid=self.sensorid - removed sensorid for correct application of groups
+                fl = flagging.load(flagname, begin=self.start, end=self.end) #,sensorid=self.sensorid - removed sensorid for correct application of groups
             except:
-                self.fl = flagging.Flags()
+                fl = flagging.Flags()
             openFileDialog.Destroy()
             # keep only flags matching sensorid and group
             newflagdict = {}
@@ -3889,7 +3895,7 @@ class AnalysisBaselineDialog(wx.Dialog):
         # Select the fitting parameter lists for currently active baseline
         self.fitparameters = self.get_fitpara(self.active_baseid, starttime=self.starttime,endtime=self.endtime)
 
-        # Create an infromation string for the currently active baseid
+        # Create an information string for the currently active baseid
         self.parameterstring = self.create_fitparameterstring(self.active_baseid)
 
         self.createControls()
@@ -3973,7 +3979,6 @@ class AnalysisBaselineDialog(wx.Dialog):
         contlst.append((self.parameterLabel, noOptions))
         contlst.append((self.parameterTextCtrl, expandOption))
         contlst.append((self.okButton, dict(flag=wx.ALIGN_CENTER)))
-        #contlst.append((self.parameterButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.loadButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.saveButton, dict(flag=wx.ALIGN_CENTER)))
         contlst.append((self.clearButton, dict(flag=wx.ALIGN_CENTER)))

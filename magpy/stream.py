@@ -2213,10 +2213,6 @@ CALLED BY:
         datatype = self.header.get('DataType')
         basecomp = self.header.get('DataBaseComponents')
 
-        ####  TODO  changed
-        print("BASECHECK")
-        usedf = True
-
         if datatype == 'BC':
             print ("BC: dataset is already baseline corrected - returning")
             return self
@@ -3780,7 +3776,6 @@ CALLED BY:
             arrayy = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[1])])).astype(float)
             arrayz = np.asarray(list(self.ndarray[self.KEYLIST.index(keys[2])])).astype(float)
 
-        print ("BASECHECK", mode, funclist, keys)
         for function in funct:
             if not function:
                 return self

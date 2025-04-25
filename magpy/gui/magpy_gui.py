@@ -1237,6 +1237,7 @@ class MainFrame(wx.Frame):
         analysisdict['favoritemartas'] = favoritemartas
         # DI analysis
         analysisdict['baselinedirect'] = False
+        analysisdict['fadoption'] = False
         content = {}
         content['divariopath'] = os.path.join(basepath, '*')
         content['discalarpath'] = os.path.join(basepath, '*')
@@ -3641,6 +3642,7 @@ class MainFrame(wx.Frame):
             self.analysisdict['fitdegree'] = dlg.fitdegreeTextCtrl.GetValue()
             self.analysisdict['fitknotstep'] = dlg.fitknotstepTextCtrl.GetValue()
             self.analysisdict['baselinedirect'] = dlg.baselinedirectCheckBox.GetValue()
+            self.analysisdict['fadoption'] = dlg.FadoptionCheckBox.GetValue()
             flaglabels = dlg.flaglabelTextCtrl.GetValue()
             try:
                 # Try to convert flaglabels into a dictionary
@@ -5395,7 +5397,7 @@ class MainFrame(wx.Frame):
                             fitfunc=params['fitfunc'],
                             fitdegree=params['fitdegree'], knotstep=params['knotstep'],
                             starttime=params['starttime'],
-                            endtime=params['endtime'], debug=True)
+                            endtime=params['endtime'], debug=False)
                         funcl.append(func)
                     for ke in shownkeys:
                         funclist.append(funcl)
@@ -5790,16 +5792,17 @@ class MainFrame(wx.Frame):
             absstreamid = str(int(absstreamid))
             absstream = self.datadict.get(absstreamid).get("dataset")
 
-            baselinefunclist = []   # will hold a list of iundividual functions obtained by stream.baseline
+            baselinefunclist = []   # will hold a list of individual functions obtained by stream.baseline
             if not baseid:
                 self.menu_p.rep_page.logMsg('- baseline adoption aborted as no fit function defined')
                 self.changeStatusbar("Ready")
             else:
                 for fitparameter in fitparameters:
                     fitpara = fitparameters.get(fitparameter)
-                    baselinefunclist.append(plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
-                    #baselinefunclist.append(plotstream.baseline(absstream,keys=['dx','dy','dz','df'], fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
-                    #print ("Test", baselinefunclist)
+                    if 'f' in shownkeys and self.analysisdict.get("fadoption"):
+                        baselinefunclist.append(plotstream.baseline(absstream,keys=['dx','dy','dz','df'], fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
+                    else:
+                        baselinefunclist.append(plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
 
                 self.menu_p.rep_page.logMsg('- baseline adoption performed using DI data from {}. Parameters: '
                                             'from Baseline ID {}'.format(self.baselinedict.get('filename'),baseid))
@@ -5926,7 +5929,7 @@ class MainFrame(wx.Frame):
         datacont = self.datadict.get(self.active_id)
         stream = datacont.get('dataset')
 
-        plotstream = stream.bc(debug=True)
+        plotstream = stream.bc(usedf=self.analysisdict.get("fadoption"), debug=False)
         plotstream.header['DataType'] = 'BC'
         # Eventually update delta F
         if 'df' in plotstream.variables() and 'f' in plotstream.variables():
