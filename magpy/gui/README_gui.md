@@ -820,7 +820,11 @@ Having the spot basevalues we can now continue with fitting an adopted baseline.
 fit will do a good job here. Anyway, for demonstration purposes we will use two separate fits to describe the baseline.
 
 In the fit dialog we add the first fit, a cubic spline, as shown in figure 6.2.3a. Then we add a second fit, a linear
-least-squares according to figure 6.2.3b.  
+least-squares according to figure 6.2.3b. Please note: by default the fitting function will always be restricted to the
+time range defined by the first and last data point within the selected sequence. If you want to fit the full time
+range as defined in the fitting dialog you need to enable **extrapolation** which is using the duplication method (see
+section 5.8 of the main manual). If you save and want to reload such extrapolated fitting functions please make sure 
+to enable **extrapolate** before loading.
 
 Figure 6.2.3: Fit dialog for first and second fit.
 Both fits will be shown in the plot (Figure 6.2.4) and also be automatically recognized as fits to basevalue data in
@@ -839,7 +843,7 @@ will use a linear-least square based on example3.txt contents for our data set.
 
 Figure 6.2.5: Baseline adoption dialog.
 
-After using Adopt baseline an information dialog (Figure 6.2.6) will pop-up telling you that the baseline correction
+After using **Adopt baseline** an information dialog (Figure 6.2.6) will pop-up telling you that the baseline correction
 has been calculated. Its functional parameters are now contained in the meta information of the variation data set.
 Yet, the correction has not yet been performed. If you want you can now save your variation data set as an PYCDF
 archive which will store the functional parameters and, if available, also any flagging information currently connected

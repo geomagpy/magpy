@@ -1374,7 +1374,7 @@ in MagPy 1.x is the duplication method (option: *method='old'*) which duplicates
 at given times. New methods starting form 2.0 are the *'spline'* technique following 
 [this](https://docs.scipy.org/doc/scipy/tutorial/interpolate/extrapolation_examples.html) approach, a *'linear'* 
 extrapolation and a *'fourier'* technique as described [here](https://gist.github.com/tartakynov/83f3cd8f44208a1856ce).
-Please note: the extrapolation method will remove all nnon-numerical columns, any NaN columns and secondary time columns
+Please note: the extrapolation method will remove all non-numerical columns, any NaN columns and secondary time columns
 as those cannot be extrapolated.
 
         data = read(example5)
