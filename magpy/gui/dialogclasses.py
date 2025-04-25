@@ -1001,6 +1001,7 @@ class OptionsInitDialog(wx.Dialog):
         self.FadoptionLabel = wx.StaticText(self, label='F-baseline:',size=(160,30))
         self.FadoptionCheckBox = wx.CheckBox(self, label='adopt when available',size=(160,30))
         self.baselinedirectCheckBox.SetValue(self.analysisdict.get('baselinedirect',False))
+        self.FadoptionCheckBox.SetValue(self.analysisdict.get('fadoption',False))
         self.fitfunctionLabel = wx.StaticText(self, label="Default fit function:",size=(160,30))
         self.fitfunctionComboBox = wx.ComboBox(self, choices=self.funclist,
                               style=wx.CB_DROPDOWN, value=self.analysisdict.get('fitfunction','spline'),size=(160,-1))

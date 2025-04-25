@@ -2287,6 +2287,7 @@ CALLED BY:
         if function:
             if debug:
                 print("BC: baseline adoption information provided in function list - correcting")
+            keys = ['x','y','z']
             for func in function:
                 func[0]['fx'] = func[0]['fdx']
                 func[0]['fy'] = func[0]['fdy']
@@ -2294,7 +2295,11 @@ CALLED BY:
                 func[0].pop('fdx', None)
                 func[0].pop('fdy', None)
                 func[0].pop('fdz', None)
-            keys = ['x','y','z']
+                if usedf and func[0].get('fdf'):
+                    func[0]['ff'] = func[0]['fdf']
+                    func[0].pop('fdf', None)
+                    if not 'f' in keys:
+                        keys.append('f')
             bcdata = baseline_adoption(bcdata,function,keys,basecomp,pierdata)
         elif absinfostring and type(absvalues) in [list,np.ndarray,tuple]:
             if debug:

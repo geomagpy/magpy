@@ -5820,7 +5820,7 @@ class MainFrame(wx.Frame):
                 if calc_bc:
                     msgtext = "Baseline correction performed - Ready"
                     #self.plotstream = self.plotstream.bc(function=baselinefunclist)
-                    plotstream = plotstream.bc(function=baselinefunclist)
+                    plotstream = plotstream.bc(function=baselinefunclist,usedf=self.analysisdict.get("fadoption"))
                     # Eventually update delta F - recalculate from F as variometer data has been corrected
                     if 'df' in plotstream.variables() and 'f' in plotstream.variables():
                         plotstream = plotstream.delta_f()
