@@ -787,7 +787,8 @@ note that although all webservices can be selected only the USGS and Conrad webs
 (MagPy 2.0.0).
 
 Example5.sec contains variation data and independent F from the observatory. In order to consider the pier difference
-between F and DI pier one has to provide such data by modifying the analysis parameters. 
+between F and DI pier one has to either to correct F data in advance using i.e. the offset method. Alternatively,
+you can also adopt F baselines when activating this within **Options**.
 
 For our analysis the delta F values have already been considered in the F record and other deltas are negligible.
 We can directly use the Analyze button. This will result in a plot of D,I,F and basevalues as well as a detailed
@@ -818,7 +819,7 @@ complete data.
 Having the spot basevalues we can now continue with fitting an adopted baseline. It is obvious that a simple linear 
 fit will do a good job here. Anyway, for demonstration purposes we will use two separate fits to describe the baseline.
 
-In the fit dialog we add the first fit, a cubic spline,  as shown in figure 6.2.3a. Then we add a second fit, a linear
+In the fit dialog we add the first fit, a cubic spline, as shown in figure 6.2.3a. Then we add a second fit, a linear
 least-squares according to figure 6.2.3b.  
 
 Figure 6.2.3: Fit dialog for first and second fit.
@@ -828,7 +829,7 @@ Figure 6.2.4: Adopted baseline.
 
 If you are satisfied with that you can save a BLV file. Please note that the file name will automatically be set with
 the correct year. Now we want to use the adopted baseline for baseline correction of the variation data. Therefore 
-we load such variation data (example5.sec). After that you will find the button Baseline on the Analysis page enabled.
+we load such variation data (example1.zip). After that you will find the button Baseline on the Analysis page enabled.
 Time to use it.
 
 A dialog will open as shown in figure 6.2.6. This dialog will let you choose from different baseline data sets and

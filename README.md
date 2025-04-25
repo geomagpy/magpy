@@ -2380,8 +2380,8 @@ correction information is now contained within its meta data. To apply baseline 
 Please note that MagPy by defaults expects basevalues for HDZ (see example3.txt). When applying these basevalues 
 the D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also 
 use MaPy basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain
-the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt).
-
+the correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt). Activating 
+option `usedf` will adopt the baseline also to F data, provided that a baseline fit and F data are available.
 If baseline jumps/breaks are necessary due to missing data, you can call the baseline function for each independent 
 segment and combine the resulting baseline functions to  a list. Please note that if no measured data is available at
 the time of the baseline jump then extrapolation based on duplication is used or calculating the baseline fit in that

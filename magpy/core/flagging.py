@@ -1486,7 +1486,7 @@ def extract_flags(data, debug=False):
         print ("extract_flags: Unique Comments -", uniquecomments)
     keylist = []
     for elem in uniqueflags:
-        if not elem in ['','-']:
+        if not elem in ['','-','0000000000000000-']:
             #print (elem)
             for idx,el in enumerate(elem):
                 if not el == '-' and el in ['0','1','2','3','4','5','6']:
