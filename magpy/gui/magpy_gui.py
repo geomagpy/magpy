@@ -5329,6 +5329,7 @@ class MainFrame(wx.Frame):
         if len(stream) > 0:
             plotstream = stream.copy()
             # get the currently zoomed time range
+            extrapolate = False
             xlimits = self.plot_p.xlimits
             dlg = AnalysisFitDialog(None, title='Analysis: Fit parameter',
                                     datacont=datacont, plotcont=plotcont, analysisdict=self.analysisdict,
@@ -5387,13 +5388,20 @@ class MainFrame(wx.Frame):
                 self._initial_plot(self.active_id, keepplotdict=True)
             else:
                 parameter = dlg.fitparameter
+                extrapolate = dlg.extrapolateCheckBox.GetValue()
                 if parameter:
                     funclist = []
                     funcl = []
                     for key in parameter:
                         params=parameter[key]
-                        #print (params['keys'], type(params['keys']))
-                        func = plotstream.fit(keys=params['keys'],
+                        if extrapolate:
+                            fitstream = plotstream.trim(starttime=params['starttime'],
+                                                    endtime=params['endtime'])
+                            fitstream = fitstream.extrapolate(starttime=params['starttime'],
+                                                          endtime=params['endtime'], method="old")
+                        else:
+                            fitstream = plotstream.copy()
+                        func = fitstream.fit(keys=params['keys'],
                             fitfunc=params['fitfunc'],
                             fitdegree=params['fitdegree'], knotstep=params['knotstep'],
                             starttime=params['starttime'],
