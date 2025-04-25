@@ -394,7 +394,10 @@ The special parameters **Apply baseline** affects the way how baseline correctio
 By default XMagPy will not apply conduct a baseline correction after its calculation but just store the correction
 function in the data sets header. The user has to actively apply this correction as described in section 
 [4.4](#44-the-analysis-panel) **Baseline**. You can however skip this step and apply the 
-baseline correction directly. Depending on its development stage, XMagPy might contain some *hidden* **experimental 
+baseline correction directly. By default MagPy is applying baseline corrections only on vectorial data. If you want to
+adopt a baseline also for scalar F data, then activate **F adoption**. Provided that you fitted df values of baseline 
+data and F data is available and shown along with your vectorial data, then F adoption will be performed.
+Depending on its development stage, XMagPy might contain some *hidden* **experimental 
 methods** which can be activated here as well. Please use these experimental methods with care as they are under
 current development, might not work correctly yet and might even break current analyses. 
 
