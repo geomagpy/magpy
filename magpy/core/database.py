@@ -8,7 +8,7 @@ import numpy as np
 import json  # used for storing dictionaries and list in text fields
 import hashlib  # used to create unique database ids
 from datetime import datetime, timedelta, timezone
-from magpy.core.methods import testtime, convert_geo_coordinate, string2dict, round_second
+from magpy.core.methods import testtime, convert_geo_coordinate, string2dict, round_second, is_number
 
 mysql.install_as_MySQLdb()
 
@@ -1923,6 +1923,10 @@ REMOVED:
                 st = testtime(line[0])
                 et = round_second(testtime(line[1]))
                 ft = line[3]
+                if is_number(ft):
+                    ft = int(ft)
+                else:
+                    ft = 0
                 if ft == 2:
                     ft = 4
                 if not st <= et:
