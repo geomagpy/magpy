@@ -8,6 +8,9 @@ Version 2.0 (starting July 2024)
 """
 # TODO - remove the following two line as soon as new packages are updated (only required for testruns (python stream.py)
 import sys
+
+import scipy.interpolate
+
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 import logging
 import os
@@ -3285,10 +3288,14 @@ CALLED BY:
         resample_period = kwargs.get('resample_period')
         noresample = kwargs.get('noresample')
         resampleoffset = kwargs.get('resampleoffset')
+        resamplemethod = kwargs.get('resamplemethod')
         testplot = kwargs.get('testplot')
         autofill = kwargs.get('autofill')
         debugmode = kwargs.get('debug')
         missingdata =  kwargs.get('missingdata')
+
+        if not resamplemethod:
+            resamplemethod = "3.0"
 
         if debugmode:
             print ("Running filter...")
@@ -3475,7 +3482,7 @@ CALLED BY:
             if debugmode:
                 print("Resampling: ", keys, resample_period)
                 print(" length before resampling: ", len(fstream))
-            fstream = fstream.resample(keys,period=resample_period,offset=resampleoffset)
+            fstream = fstream.resample(keys,period=resample_period,offset=resampleoffset,method=resamplemethod)
             if debugmode:
                 print(" length after resampling: ", len(fstream))
 
@@ -4669,16 +4676,20 @@ CALLED BY:
     RETURNS:
         - stream:       Original stream with nans replaced by linear interpolation.
         """
-
+        stream = self.copy()
+        # Drop columns containing only nan as they cannot be interpolated
+        stream = stream._remove_nancolumns()
+        newkeys = stream.variables()
         for key in keys:
-            if key not in self.NUMKEYLIST:
-                logger.error("interpolate_nans: {} is an invalid key! Cannot interpolate.".format(key))
-            y = self._get_column(key)
-            nans, x = nan_helper(y)
-            y[nans] = np.interp(x(nans), x(~nans), y[~nans])
-            self._put_column(y, key)
-            logger.info("interpolate_nans: Replaced nans in {} with linearly interpolated values.".format(key))
-        return self
+            if key in newkeys:
+                if key not in stream.NUMKEYLIST:
+                    logger.error("interpolate_nans: {} is an invalid key! Cannot interpolate.".format(key))
+                y = stream._get_column(key)
+                nans, x = nan_helper(y)
+                y[nans] = np.interp(x(nans), x(~nans), y[~nans])
+                stream._put_column(y, key)
+                logger.info("interpolate_nans: Replaced nans in {} with linearly interpolated values.".format(key))
+        return stream
 
 
     @deprecated("Can not be used with new K_fmi technique")
@@ -4800,54 +4811,35 @@ CALLED BY:
             percentage = 95
         if not std:
             std = False
-        timecol = False
+        res = np.nan
+        erro = np.nan
 
-        if not len(self.ndarray[0])>0:
-            logger.error('mean: empty stream - aborting')
-            if std:
-                return float("NaN"), float("NaN")
-            else:
-                return float("NaN")
+        if key in self.NUMKEYLIST or key.find("time") >= 0:
+            col = self._get_column(key)
+            if key.find("time") >= 0:
+                col = date2num(col).astype(float)
+            if len(col) > 0:
+                nans = np.count_nonzero(np.isnan(col))
+                perc = (len(col)-nans)/len(col)*100.
+                if perc >= percentage:
+                    col = col[~np.isnan(col)]
+                    if meanfunction == 'median':
+                        res = np.nanmedian(col)
+                        erro = scipy.stats.median_abs_deviation(col)
+                    else:
+                        res = np.nanmean(col)
+                        erro = np.std(col)
+                else:
+                    print('mean: Too many nans in column {}, exceeding {} percent ({:.1f})'.format(key, 100-percentage, 100-perc))
+                    logger.info('mean: Too many nans in column {}, exceeding {} percent ({:.1f})'.format(key, 100-percentage, 100-perc))
 
-        try:  #python2
-            if not isinstance( percentage, (int,long)):
-                logger.error("mean: Percentage needs to be an integer!")
-        except:
-            if not isinstance( percentage, (int)):
-                logger.error("mean: Percentage needs to be an integer!")
-        if not key in self.KEYLIST[:16]:
-            logger.error("mean: Column key not valid!")
+        if key.find("time") >= 0 and np.isnan(res):
+            res = num2date(res)
 
-        ind = self.KEYLIST.index(key)
-        length = len(self.ndarray[0])
-        self.ndarray[ind] = np.asarray(self.ndarray[ind])
-        if key in self.NUMKEYLIST:
-            ar = self.ndarray[ind].astype(float)
-            ar = ar[~np.isnan(ar)]
-        elif key.find('time') > -1:
-            ar = date2num(self.ndarray[ind]).astype(float)
-            timecol = True
+        if std:
+            return res, erro
         else:
-            if std:
-                return float("NaN"), float("NaN")
-            else:
-                return float("NaN")
-
-        div = float(len(ar))/length*100.0
-
-        if div >= percentage:
-            res = eval('np.' + meanfunction + '(ar)')
-            if std:
-                return res, np.std(ar)
-            else:
-                return res
-        else:
-            print ('mean: Too many nans in column {}, exceeding {} percent'.format(key,percentage))
-            logger.info('mean: Too many nans in column {}, exceeding {} percent'.format(key,percentage))
-            if std:
-                return float("NaN"), float("NaN")
-            else:
-                return float("NaN")
+            return res
 
 
     def modwt_calc(self,key='x',wavelet='haar',level=1,plot=False,outfile=None,
@@ -5279,7 +5271,7 @@ CALLED BY:
         return data
 
 
-    def resample(self, keys, debugmode=False,**kwargs):
+    def resample(self, keys, method="3.0", debugmode=False,**kwargs):
         """
     DEFINITION:
         Uses Numpy interpolate.interp1d to resample stream to requested period. An initial time step is added by extrapolation to maintain the length
@@ -5307,6 +5299,7 @@ CALLED BY:
     APPLICATION:
         """
 
+        t1 = datetime.now()
         period = kwargs.get('period')
         offset = kwargs.get('offset')
 
@@ -5347,90 +5340,148 @@ CALLED BY:
         # Create a list (t_list) containing new time steps, separeted by period
         t_list = list(np.arange(t_min, t_max, timedelta(seconds=period)).astype(datetime))
 
-        # Compare length of new time list with old timelist
-        # multiplicator is used to check whether nan value is at the corresponding position of the orgdata file - used for not yet completely but sufficiently correct missing value treatment
         if not len(t_list) > 0:
             return DataStream()
-        multiplicator = float(stwithnan.length()[0])/float(len(t_list))
-        diff = int(np.abs(stwithnan.length()[0]-len(t_list)))
-        if diff < np.abs(multiplicator)*10:
-            diff = int(np.abs(multiplicator)*10)
-        if diff > 1000:
-            # arbitrary maximum: if larger than 1000 something went wrong anyway
-            # eventuallly use smaller data sets
-            diff = 1000
-        logger.info("resample a: {},{},{}".format(float(stwithnan.length()[0]), float(len(t_list)),startperiod))
 
-        if debugmode:
-            print ("Times:", stwithnan.ndarray[0][0],stwithnan.ndarray[0][-1],t_list[0],t_list[-1])
-            print("Multiplikator:", multiplicator, stwithnan.length()[0], len(t_list))
-            print("Diff:", diff)
+        if method == "3.0":
+            array=[np.asarray([]) for elem in self.KEYLIST]
+            newtil = np.array(np.arange(t_min, t_max, timedelta(seconds=period)).astype(datetime))
+            newti = date2num(newtil)
+            int_data = stwithnan.interpolate_nans(keys)
+            ti = date2num(int_data.ndarray[0])
+            #print (newtil)
+            # update keys as full nan columns might have been removed
+            keys = int_data.variables()
+            for key in keys:
+                if key in self.KEYLIST[1:16]:
+                    index = self.KEYLIST.index(key)
+                    col = int_data._get_column(key)
+                    func = interpolate.interp1d(ti, col, kind='linear')
+                    f = func(newti)
+                    orgcol = stwithnan._get_column(key)
+                    nans, x = nan_helper(orgcol)
+                    orgcol[~nans] = 5
+                    orgcol[nans] = 10
+                    nanfunc = interpolate.interp1d(ti, orgcol, kind='linear')
+                    nanf = nanfunc(newti)
+                    ind = np.where(nanf>6)
+                    f[ind] = np.nan
+                    array[index] = np.asarray(f)
+            array[0] = newtil
+        elif method == "2.0":
+            # new and fast in MagPy2.0 , based on Fourier signal.resample (old makes use of linear)
+            # not working yet
+            array=[np.asarray([]) for elem in self.KEYLIST]
+            t_list = list(np.arange(t_min-timedelta(seconds=period), t_max, timedelta(seconds=period)).astype(datetime))
+            int_data = stwithnan.interpolate_nans(keys)
+            # update keys as full nan columns might have been removed
+            keys = int_data.variables()
+            for key in keys:
+                if key in self.KEYLIST[1:16]:
+                    col = int_data._get_column(key)
+                    col = np.insert(col, 0, col[0])  # insert value 1 at position 0 - as timelist is extrended- will be replaced by nan later
+                    orgcol = stwithnan._get_column(key)
+                    nans, x = nan_helper(orgcol)
+                    orgcol[~nans] = 5
+                    orgcol[nans] = 10
+                    orgcol = np.insert(orgcol, 0, 10)
+                    index = self.KEYLIST.index(key)
+                    f, t = signal.resample(col, len(t_list), t_list)
+                    #print (t)
+                    nanf = signal.resample(orgcol, len(t_list))
+                    # get all indices with 1 in nanf
+                    ind = np.where(nanf>6)
+                    f[ind] = np.nan
+                    #f.insert(0, np.nan)  # insert nan if len(f) not fitting times
+                    array[index] = np.asarray(f)
+            array[0] = np.asarray(t_list)
+            array = [ar[1:] for ar in array]
+        else:
+            # Compare length of new time list with old timelist
+            # multiplicator is used to check whether nan value is at the corresponding position of the orgdata file - used for not yet completely but sufficiently correct missing value treatment
+            multiplicator = float(stwithnan.length()[0])/float(len(t_list))
+            diff = int(np.abs(stwithnan.length()[0]-len(t_list)))
+            if diff < np.abs(multiplicator)*10:
+                diff = int(np.abs(multiplicator)*10)
+            if diff > 1000:
+                # arbitrary maximum: if larger than 1000 something went wrong anyway
+                # eventuallly use smaller data sets
+                diff = 1000
+            logger.info("resample a: {},{},{}".format(float(stwithnan.length()[0]), float(len(t_list)),startperiod))
 
-        # res stream with new t_list is used for return
-        array=[np.asarray([]) for elem in self.KEYLIST]
-        t0 = t_list[0] - timedelta(seconds=period)
-        for key in keys:
             if debugmode:
-                print ("Resampling:", key)
-            if key not in self.KEYLIST[1:16]:
-                logger.warning("resample: Key %s not supported!" % key)
+                print("Times:", stwithnan.ndarray[0][0],stwithnan.ndarray[0][-1],t_list[0],t_list[-1])
+                print("Multiplikator:", multiplicator, stwithnan.length()[0], len(t_list))
+                print("Diff:", diff)
 
-            index = self.KEYLIST.index(key)
-            try:
-                int_data = stwithnan.interpol([key],kind='linear')#'cubic')
-                int_func = int_data[0]['f'+key]
-                int_min = int_data[1]
-                int_max = int_data[2]
-                # add an initial value
-                t0 = t_list[0] -timedelta(seconds=period)
-                v0 = np.nan
-                if len(stwithnan.ndarray[index]) > 2 and not np.isnan(stwithnan.ndarray[index][0]) and not np.isnan(stwithnan.ndarray[index][1]):
-                    ti1 = stwithnan.ndarray[0][0]
-                    ti2 = stwithnan.ndarray[0][1]
-                    v1 = stwithnan.ndarray[index][0]
-                    v2 = stwithnan.ndarray[index][1]
-                    v0 = v2 + (v2-v1)/((ti2-ti1).total_seconds())*((t0-ti2).total_seconds())
-                key_list = [v0]
-                for ind, item in enumerate(t_list):
-                    # normalized time range between 0 and 1
-                    #print (item, int_min, int_max)
-                    functime = (date2num(item) - int_min)/(int_max - int_min)
-                    if int(ind*multiplicator) <= len(self.ndarray[index]):
-                        # Exact solution: (well, is not exact as actually the difference in counts should be considered for the search window (leon, 2023-05-01))
-                        # but should be OK for now: change to stv = mv-diff, etv = mv+diff , diff = abs(
-                        mv = int(ind*multiplicator+startperiod)
-                        #stv = mv-int(20*multiplicator)
-                        stv = int(mv-diff)
-                        if stv < 0:
-                            stv = 0
-                        #etv = mv+int(20*multiplicator)
-                        etv = int(mv+diff)
-                        if etv >= len(stwithnan.ndarray[index]):
-                            etv = len(stwithnan.ndarray[index])
-                        subar = stwithnan.ndarray[0][stv:etv]
-                        idx = (np.abs(subar-item)).argmin()
-                        #subar = stwithnan.ndarray[index][stv:etv]
-                        orgval = stwithnan.ndarray[index][stv+idx] # + offset
-                    else:
-                        print("Check Resampling method")
-                        orgval = 1.0
-                    tempval = np.nan
-                    # Not a safe fix, but appears to cover decimal leftover problems
-                    # (e.g. functime = 1.0000000014, which raises an error)
-                    if functime > 1.0:
-                        functime = 1.0
-                    if not isnan(orgval):
-                        tempval = int_func(functime)
-                    key_list.append(float(tempval))
+            # res stream with new t_list is used for return
+            array=[np.asarray([]) for elem in self.KEYLIST]
+            t0 = t_list[0] - timedelta(seconds=period)
+            for key in keys:
+                if debugmode:
+                    print ("Resampling:", key)
+                if key not in self.KEYLIST[1:16]:
+                    logger.warning("resample: Key %s not supported!" % key)
 
-                array[index] = np.asarray(key_list)
-            except:
-                logger.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
+                index = self.KEYLIST.index(key)
+                try:
+                    int_data = stwithnan.interpol([key],kind='linear')#'cubic')
+                    int_func = int_data[0]['f'+key]
+                    int_min = int_data[1]
+                    int_max = int_data[2]
+                    # add an initial value
+                    t0 = t_list[0] -timedelta(seconds=period)
+                    v0 = np.nan
+                    if len(stwithnan.ndarray[index]) > 2 and not np.isnan(stwithnan.ndarray[index][0]) and not np.isnan(stwithnan.ndarray[index][1]):
+                        ti1 = stwithnan.ndarray[0][0]
+                        ti2 = stwithnan.ndarray[0][1]
+                        v1 = stwithnan.ndarray[index][0]
+                        v2 = stwithnan.ndarray[index][1]
+                        v0 = v2 + (v2-v1)/((ti2-ti1).total_seconds())*((t0-ti2).total_seconds())
+                    key_list = [v0]
+                    for ind, item in enumerate(t_list):
+                        # normalized time range between 0 and 1
+                        #print (item, int_min, int_max)
+                        functime = (date2num(item) - int_min)/(int_max - int_min)
+                        if int(ind*multiplicator) <= len(self.ndarray[index]):
+                            # Exact solution: (well, is not exact as actually the difference in counts should be considered for the search window (leon, 2023-05-01))
+                            # but should be OK for now: change to stv = mv-diff, etv = mv+diff , diff = abs(
+                            mv = int(ind*multiplicator+startperiod)
+                            #stv = mv-int(20*multiplicator)
+                            stv = int(mv-diff)
+                            if stv < 0:
+                                stv = 0
+                            #etv = mv+int(20*multiplicator)
+                            etv = int(mv+diff)
+                            if etv >= len(stwithnan.ndarray[index]):
+                                etv = len(stwithnan.ndarray[index])
+                            subar = stwithnan.ndarray[0][stv:etv]
+                            idx = (np.abs(subar-item)).argmin()
+                            #subar = stwithnan.ndarray[index][stv:etv]
+                            orgval = stwithnan.ndarray[index][stv+idx] # + offset
+                        else:
+                            print("Check Resampling method")
+                            orgval = 1.0
+                        tempval = np.nan
+                        # Not a safe fix, but appears to cover decimal leftover problems
+                        # (e.g. functime = 1.0000000014, which raises an error)
+                        if functime > 1.0:
+                            functime = 1.0
+                        if not isnan(orgval):
+                            tempval = int_func(functime)
+                        key_list.append(float(tempval))
 
-        t_list.insert(0, t0) # do not insert startcondition
-        array[0] = np.asarray(t_list)
-        # now drop first line of array
-        array = [ar[1:] for ar in array]
+                    array[index] = np.asarray(key_list)
+                except:
+                    logger.error("resample: Error interpolating stream. Stream either too large or no data for selected key")
+
+            t_list.insert(0, t0) # do not insert startcondition
+            array[0] = np.asarray(t_list)
+            # now drop first line of array
+            array = [ar[1:] for ar in array]
+
+        t2 = datetime.now()
+        print ("Resample duration", (t2-t1).total_seconds())
 
         logger.info("resample: Data resampling complete.")
         stwithnan.header['DataSamplingRate'] = period

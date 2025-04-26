@@ -1314,7 +1314,8 @@ If you want also the standard deviation use option *std*:
 
         print(data.mean('x', percentage=80, std=True))
 
-The median can be calculated by defining the `meanfunction` option:
+The median can be calculated by defining the `meanfunction` option. In this case the option std will return MAD, the
+median absolute deviation:
 
         print(data.mean('x', meanfunction='median'))
 
