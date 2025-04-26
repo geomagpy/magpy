@@ -1564,7 +1564,7 @@ def flag_outlier(data, keys=None, threshold=1.5, timerange=None, markall=False, 
     if debug:
         print ("samplingrate", sr)
         print ("window", window)
-    if not window > 30:
+    if not window > 29:
         print(" timerange to small for a proper outlier detection")
         return fl
     else:
