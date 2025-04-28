@@ -2,7 +2,6 @@
 
 # TODO - remove the following two line as soon as new packages are updated (only required for testruns (python stream.py)
 import sys
-
 sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 
 import wx
