@@ -3857,6 +3857,7 @@ class MainFrame(wx.Frame):
             get_adjacent_stream
         """
 
+        self.changeStatusbar("Loading previous ...")
         self.get_adjacent_stream(mode='previous')
 
 
@@ -3868,6 +3869,7 @@ class MainFrame(wx.Frame):
             get_adjacent_stream
         """
 
+        self.changeStatusbar("Loading next ...")
         self.get_adjacent_stream(mode='next', debug=False)
 
 
