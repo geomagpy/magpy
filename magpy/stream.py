@@ -5480,8 +5480,9 @@ CALLED BY:
             # now drop first line of array
             array = [ar[1:] for ar in array]
 
-        t2 = datetime.now()
-        print ("Resample duration", (t2-t1).total_seconds())
+        if debugmode:
+            t2 = datetime.now()
+            print ("Resample duration", (t2-t1).total_seconds())
 
         logger.info("resample: Data resampling complete.")
         stwithnan.header['DataSamplingRate'] = period

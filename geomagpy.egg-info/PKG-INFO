@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: geomagpy
-Version: 2.0b7
+Version: 2.0b8
 Summary: Geomagnetic analysis tools.
 Home-page: http://pypi.python.org/pypi/geomagpy/
 Author: R. Leonhardt, R. Bailey, M. Miklavec, J. Fee, H. Schovanec, S. Bracke
@@ -1325,7 +1325,8 @@ If you want also the standard deviation use option *std*:
 
         print(data.mean('x', percentage=80, std=True))
 
-The median can be calculated by defining the `meanfunction` option:
+The median can be calculated by defining the `meanfunction` option. In this case the option std will return MAD, the
+median absolute deviation:
 
         print(data.mean('x', meanfunction='median'))
 

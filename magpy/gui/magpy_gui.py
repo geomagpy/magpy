@@ -4425,6 +4425,9 @@ class MainFrame(wx.Frame):
                 operator = dlg.OperatorTextCtrl.GetValue()
                 label = dlg.LabelComboBox.GetValue()
                 labelid = label[:3]
+                # Update operator
+                self.analysisdict['operator'] = operator
+                #self.analysisdict['labelid'] = labelid # do not update label when selection is chosen
 
                 above = min(self.ylimits)
                 below = max(self.ylimits)
