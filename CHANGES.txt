@@ -1,7 +1,7 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<2.0.0>, <2025-xx-xx> --
+####v<2.0.0>, <2025-04-30> --
 
 2.0.0 general:
     - considerable changes to internal data structure
@@ -16,6 +16,9 @@ Installation instructions can be found on the main download page.
 
     Please note: despite the removal of py2.x support, MagPy2.x is fully
     compatible with all datas structures and DB contents created with MagPy1.x
+
+    Database commands, flagging data and functions are now saved in a different format which is NOT
+    readable with MagPy1.x.
 
 2.0.0 important removals/modifications affecting definitive data production:
     - internal geomagnetic activity K code was replaced by the generally used routine as provided

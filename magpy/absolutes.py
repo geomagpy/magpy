@@ -3,7 +3,6 @@
 import sys
 
 import numpy as np
-
 sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
 from magpy.stream import loggerabs, magpyversion, basestring, DataStream, example5, example6a

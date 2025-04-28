@@ -8,7 +8,6 @@ Written by Roman Leonhardt June 2012
 from magpy.core.methods import *
 from magpy.absolutes import *
 from magpy.stream import loggerlib
-#import magpy.absolutes as di
 
 
 def isMAGPYABS(filename):
