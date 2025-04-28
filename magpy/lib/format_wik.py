@@ -4,16 +4,25 @@ PMAG input filter (specific for WIK - Elsec)
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
-from magpy.stream import *
+from magpy.stream import DataStream
+from datetime import datetime, timedelta
+import os
+import numpy as np
+from magpy.core.methods import testtime, extract_date_from_string
+import logging
+logger = logging.getLogger(__name__)
+
+KEYLIST = DataStream().KEYLIST
+
 
 def isOPT(filename):
     """
     Checks whether a file is ASCII PMAG format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -29,7 +38,8 @@ def isPMAG1(filename):
     Checks whether a file is ASCII PMAG format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
 
@@ -51,12 +61,12 @@ def isPMAG2(filename):
     Leading blank lines are likely
     """
     try:
-        fh = open(filename, 'rt')
-        temp = fh.readline()
-        if temp == "":
+        with open(filename, "rt") as fh:
             temp = fh.readline()
-        if temp == "":
-            temp = fh.readline()
+            if temp == "":
+                temp = fh.readline()
+            if temp == "":
+                temp = fh.readline()
     except:
         return False
     try:
@@ -82,6 +92,7 @@ def readOPT(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
+    array = [[] for elem in KEYLIST]
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -131,30 +142,37 @@ def readOPT(filename, headonly=False, **kwargs):
             i=0
             for i in range(24):
                 try:
-                    row = LineStruct()
                     date = year + '-' + month + '-' + str(day).strip('.') + 'T' + str(i) + ':30:00'
-                    row.time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
+                    array[0].append(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
                     if comp=='d':
                         # minutes to seconds
-                        row.y = offset + float(elem[i+1])/60.
+                        array[2].append(offset + float(elem[i+1])/60.)
                     if comp=='z':
                         # minutes to seconds
-                        row.z = offset + float(elem[i+1])
+                        array[3].append(offset + float(elem[i+1]))
                     if comp=='h':
                         # minutes to seconds
-                        row.x = offset + float(elem[i+1])
+                        array[1].append(offset + float(elem[i+1]))
                     if comp=='f':
                         # minutes to seconds
                         if (offset + float(elem[i+1])) < 100000: # empty values get 100000 as input in data file
-                            row.f = offset + float(elem[i+1])
-                    row.typ = 'hdzf'
-                    stream.add(row)
+                            array[4].append(offset + float(elem[i+1]))
                 except:
                     pass
 
     fh.close()
 
-    return DataStream(stream, headers)
+    headers['col-x'] = 'H'
+    headers['unit-col-x'] = 'nT'
+    headers['col-y'] = 'D'
+    headers['unit-col-y'] = 'deg'
+    headers['col-z'] = 'Z'
+    headers['unit-col-z'] = 'nT'
+    headers['col-f'] = 'F'
+    headers['unit-col-f'] = 'nT'
+
+    array = np.asarray([np.asarray(el) for el in array], dtype=object)
+    return DataStream(header=headers, ndarray=array)
 
 
 
@@ -188,10 +206,10 @@ def readPMAG1(filename, headonly=False, **kwargs):
     try:
         day = datetime.strftime(datetime.strptime(daystring, "%Y_%m_%d"),"%Y-%m-%d")
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= stream._testtime(starttime):
+            if not datetime.strptime(day,'%Y-%m-%d') >= testtime(starttime):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= stream._testtime(endtime):
+            if not datetime.strptime(day,'%Y-%m-%d') <= testtime(endtime):
                 getfile = False
     except:
         logging.warning("Wrong dateformat in Filename %s" % daystring)
@@ -213,7 +231,6 @@ def readPMAG1(filename, headonly=False, **kwargs):
             else:
                 # data entry - may be written in multiple columns
                 # row beinhaltet die Werte eine Zeile
-                row=LineStruct()
                 # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
                 elem = line.split()
                 try:
@@ -225,7 +242,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
                     elif int(hour) == 0:
                         regularfound = True
                     #row.time=date2num(strtime + timedelta(days=subday))
-                    array[0].append(date2num(strtime + timedelta(days=subday)))
+                    array[0].append(strtime + timedelta(days=subday))
                     try:
                         strval = elem[1].replace(',','.')
                     except:
@@ -233,7 +250,7 @@ def readPMAG1(filename, headonly=False, **kwargs):
                         pass
                     #row.f = float(strval)
                     array[find].append(float(strval))
-                    array[secind].append(date2num(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S")))
+                    array[secind].append(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S"))
                     #row.sectime=date2num(datetime.strptime(day.split("-")[0]+elem[2],"%Y%m%d%H%M%S"))
                     #stream.add(row)
                 except:
@@ -241,12 +258,11 @@ def readPMAG1(filename, headonly=False, **kwargs):
                     pass
         fh.close()
 
-    headers['col-f'] = 'f'
+    headers['col-f'] = 'F'
     headers['unit-col-f'] = 'nT'
 
-    array = np.asarray([np.asarray(el) for el in array])
-    stream = [LineStruct()]
-    return DataStream(stream, headers, array)
+    array = np.asarray([np.asarray(el) for el in array], dtype=object)
+    return DataStream(header=headers, ndarray=array)
 
 
 
@@ -307,7 +323,7 @@ def readPMAG2(filename, headonly=False, **kwargs):
                     addyear = 1
                     strtime = datetime.strptime(str(int(day.split("-")[0])+addyear)+elem[1],"%Y%m%d%H%M%S")
                 #row.time=date2num(strtime)
-                array[0].append(date2num(strtime))
+                array[0].append(strtime)
                 try:
                     strval = elem[0].replace(',','.')
                 except:
@@ -321,12 +337,11 @@ def readPMAG2(filename, headonly=False, **kwargs):
                 pass
 
     if len(array[0]) > 0:
-        headers['col-f'] = 'f'
+        headers['col-f'] = 'F'
         headers['unit-col-f'] = 'nT'
 
     fh.close()
 
-    array = np.asarray([np.asarray(el) for el in array])
-    stream = [LineStruct()]
-    return DataStream(stream, headers, array)
+    array = np.asarray([np.asarray(el) for el in array], dtype=object)
+    return DataStream(header=headers, ndarray=array)
 

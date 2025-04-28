@@ -5,21 +5,20 @@ Written by Roman Leonhardt April 2022
 - contains test and read function
 - testet for py3 only
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-from io import open
+from magpy.stream import DataStream
+from datetime import datetime
+import os
+import numpy as np
 
-from magpy.stream import *
-
+KEYLIST = DataStream().KEYLIST
 
 def isPREDSTORM(filename, debug=False):
     """
     Checks whether a file is ASCII IAGA 2002 format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
         if debug:
             print ("First line:", temp)
     except:
@@ -77,13 +76,13 @@ def readPREDSTORM(filename, headonly=False, **kwargs):
                 datalist = line.split()
                 datestring = "-".join(datalist[:6])
                 d = datetime.strptime(datestring,"%Y-%m-%d-%H-%M-%S")
-                array[0].append(date2num(d))
+                array[0].append(d)
                 valuelist = datalist[6:]
                 for idx,key in enumerate(KEYLIST):
                     if idx > 0 and idx < len(valuelist):
                         array[idx].append(float(valuelist[idx]))
     
-    nparray = np.array([np.array(ar).astype(object) for ar in array])
+    nparray = np.array([np.array(ar).astype(object) for ar in array],dtype=object)
     code = os.path.basename(filename).replace('predstorm','').replace('.txt','').replace('_','')
     header['SensorName'] = "PREDSTORM"
     header['SensorSerialNum'] = "HELIO{}".format(code.upper())
@@ -91,7 +90,7 @@ def readPREDSTORM(filename, headonly=False, **kwargs):
     if debug:
         print (header)
         print (nparray)
-    stream = DataStream([LineStruct()],header,nparray)
+    stream = DataStream([],header,nparray)
     if starttime:
         stream = stream.trim(starttime=starttime)
     if endtime:

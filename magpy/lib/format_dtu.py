@@ -4,9 +4,9 @@ Auxiliary input filter - WIC/WIK
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
 
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
 
 def isDTU1(filename):
     """
@@ -80,10 +80,10 @@ def readDTU1(filename, headonly=False, **kwargs):
         return []
     # Select only files within eventually defined time range
     if starttime:
-        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+        if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
             getfile = False
     if endtime:
-        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+        if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
             getfile = False
 
     if getfile:
@@ -136,23 +136,23 @@ def readDTU1(filename, headonly=False, **kwargs):
                     try:
                         row.x = float(elem[1])
                     except:
-                        row.x = float('nan')
+                        row.x = np.nan
                     try:
                         row.y = float(elem[2])
                     except:
-                        row.y = float('nan')
+                        row.y = np.nan
                     try:
                         row.z = float(elem[3])
                     except:
-                        row.z = float('nan')
+                        row.z = np.nan
                     try:
                         row.t1 = float(elem[4])
                     except:
-                        row.t1 = float('nan')
+                        row.t1 = np.nan
                     try:
                         row.t2 = float(elem[5])
                     except:
-                        row.t2 = float('nan')
+                        row.t2 = np.nan
                 except:
                     #raise ValueError, "Wrong date format in %s" % filename
                     pass

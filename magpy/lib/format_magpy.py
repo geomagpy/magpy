@@ -4,19 +4,25 @@ MagPy input/output filters
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
 from io import open
 
 # Specify what methods are really needed
-from magpy.stream import *
-
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
+from magpy.stream import DataStream, read, join_streams, subtract_streams, magpyversion
+from magpy.core.methods import testtime, extract_date_from_string
+from magpy.core import flagging
+from datetime import datetime, timedelta, timezone
+import numpy as np
+import os
+import struct
+import csv
 import logging
 logger = logging.getLogger(__name__)
 
-import gc
+KEYLIST = DataStream().KEYLIST
+NUMKEYLIST = DataStream().NUMKEYLIST
+#import gc
 
 
 # K0 (Browsing - not for Serious Science) ACE-EPAM data from the OMNI database:
@@ -53,35 +59,13 @@ h0_mfi_KEYDICT = {
                 # (... Many other keys unused.)
                    }
 
-def isPYCDF(filename):
-    """
-    Checks whether a file is Nasa CDF format.
-    """
-    try:
-        temp = cdf.CDF(filename)
-    except:
-        return False
-    try:
-        cdfformat = temp.attrs['DataFormat']
-    except:
-        pass
-    try:
-        if not 'Epoch' in temp:
-            if not 'time' in temp:
-                return False
-    except:
-        return False
-
-    logger.debug("format_magpy: Found PYCDF file %s" % filename)
-    return True
-
-
 def isPYSTR(filename):
     """
     Checks whether a file is ASCII PyStr format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     if not temp.startswith(' # MagPy - ASCII'):
@@ -96,7 +80,8 @@ def isPYASCII(filename):
     Checks whether a file is ASCII PyStr format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     if not temp.find('# MagPy ASCII') > -1:
@@ -111,7 +96,9 @@ def isPYBIN(filename):
     Checks whether a file is binary PyStr format.
     """
     try:
-        temp = open(filename, 'r', encoding='utf-8', newline='', errors='ignore').readline()
+        with open(filename, 'r', encoding='utf-8', newline='', errors='ignore') as fi:
+            temp = fi.readline()
+        #temp = open(filename, 'r', encoding='utf-8', newline='', errors='ignore').readline()
     except:
         return False
     if not temp.startswith('# MagPyBin'):
@@ -130,7 +117,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
         734928.0416666666,2013-03-01T01:00:00.000000,14061.940719529965,6.8539941994665305,11.869002442573095
 
     """
-    stream = DataStream([],{})
+    stream = DataStream()
 
     array = [[] for key in KEYLIST]
 
@@ -180,11 +167,11 @@ def readPYASCII(filename, headonly=False, **kwargs):
                     elif elem[i] == 'Time' and not timecol > 0:
                         timecol = i
                         timeconv = True
-                    elif elem[i] == 'Time-days':
-                        timecol = i
-                        timeconv = False
+                    #elif elem[i] == 'Time-days':  # ignore this column from 2.0 onwards
+                    #    timecol = i
+                    #    timeconv = False
                 if len(keylst) > len(NUMKEYLIST):
-                    keylst = keylist[:len(NUMKEYLIST)]
+                    keylst = keylst[:len(NUMKEYLIST)]
             elif headonly:
                 # skip data for option headonly
                 continue
@@ -193,7 +180,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
             else:
                 try:
                     if timeconv:
-                        ti = date2num(stream._testtime(elem[timecol]))
+                        ti = testtime(elem[timecol])
                     else:
                         ti = elem[timecol]
                     array[0].append(ti)
@@ -210,7 +197,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
     for idx,ar in enumerate(array):
         if len(ar) > 0:
             if KEYLIST[idx] in NUMKEYLIST:
-                tester = float('nan')
+                tester = np.nan
             else:
                 tester = '-'
             array[idx] = np.asarray(array[idx])
@@ -221,7 +208,7 @@ def readPYASCII(filename, headonly=False, **kwargs):
     if headers.get('SensorID','') == '':
         headers['SensorID'] = 'unknown_12345_0001'
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 
@@ -229,6 +216,7 @@ def readPYSTR(filename, headonly=False, **kwargs):
     """
     Reading ASCII PyMagStructure format data.
     """
+    debug = kwargs.get('debug')
     stream = DataStream([],{})
 
     array = [[] for key in KEYLIST]
@@ -275,10 +263,10 @@ def readPYSTR(filename, headonly=False, **kwargs):
                 for idx, key in enumerate(KEYLIST):
                     if key.find('time') >= 0:
                         try:
-                            ti = date2num(datetime.strptime(elem[idx],"%Y-%m-%d-%H:%M:%S.%f"))
+                            ti = datetime.strptime(elem[idx],"%Y-%m-%d-%H:%M:%S.%f")
                         except:
                             try:
-                                ti = date2num(datetime.strptime(elem[idx],"%Y-%m-%dT%H:%M:%S.%f"))
+                                ti = datetime.strptime(elem[idx],"%Y-%m-%dT%H:%M:%S.%f")
                             except:
                                 ti = elem[idx]
                                 pass
@@ -290,9 +278,6 @@ def readPYSTR(filename, headonly=False, **kwargs):
                                 elem[idx]=np.nan
                             array[idx].append(float(elem[idx]))
                         else:
-                            #print elem[idx]
-                            #if elem[idx] == '':
-                            #    elem[idx] = '-'
                             array[idx].append(elem[idx])
             except ValueError:
                 print("readPYSTR: Found value error when reading data")
@@ -306,378 +291,19 @@ def readPYSTR(filename, headonly=False, **kwargs):
     if len(array[0]) > 0:
         for idx,ar in enumerate(array):
             if KEYLIST[idx] in NUMKEYLIST or KEYLIST[idx] == 'time':
-                tester = float('nan')
+                tester = np.nan
             else:
                 tester = '-'
             array[idx] = np.asarray(array[idx],dtype=object)
             if not False in checkEqual3(array[idx]) and ar[0] == tester:
                 array[idx] = np.asarray([])
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    result = DataStream(header=headers,ndarray=np.asarray(array,dtype=object))
+    if len(result._get_column('flag')) > 1 and not result.header.get('DataFlags'):
+        result.header['DataFlags'] = flagging.extract_flags(result, debug=debug)
 
+    return result
 
-def readPYCDF(filename, headonly=False, **kwargs):
-    """
-    Reading CDF format data - DTU type.
-    """
-    #stream = DataStream()
-    #stream = DataStream([],{})
-    stream = DataStream([],{},np.asarray([[] for key in KEYLIST]))
-
-    array = [[] for key in KEYLIST]
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
-    oldtype = kwargs.get('oldtype')
-    getfile = True
-
-    #oldtype=True
-    # Some identification parameters used by Juergs
-    jind = ["H0", "D0", "Z0", "F0", "HNscv", "HEscv", "Zscv", "Basetrig", "time", \
-"HNvar", "HEvar", "Zvar", "T1", "T2", "timeppm", "timegps", \
-"timefge", "Fsc", "HNflag", "HEflag", "Zflag", "Fscflag", "FscQP", \
-"T1flag", "T2flag", "Timeerr", "Timeerrtrig"]
-
-    # Check whether header information is already present
-    headskip = False
-    if stream.header == None:
-        stream.header.clear()
-    else:
-        headskip = True
-
-    theday = extractDateFromString(filename)
-    try:
-        if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
-                getfile = False
-            #if not theday >= datetime.date(stream._testtime(starttime)):
-            #    getfile = False
-        if endtime:
-            #if not theday <= datetime.date(stream._testtime(endtime)):
-            #    getfile = False
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
-                getfile = False
-    except:
-        # Date format not recognized. Need to read all files
-        getfile = True
-    logbaddata = False
-
-    # Get format type:
-    # Juergens DTU type is using different date format (MATLAB specific)
-    # MagPy type is using datetime objects
-    if getfile:
-        try:
-            cdf_file = cdf.CDF(filename)
-        except:
-            return stream
-        try:
-            cdfformat = cdf_file.attrs['DataFormat']
-        except:
-            logger.info("readPYCDF: No format specification in CDF - passing")
-            cdfformat = 'Unknown'
-            pass
-        OMNIACE = False
-        try:
-            title = str(cdf_file.attrs['TITLE'])
-            if 'ACE' in title:
-                OMNIACE = True
-        except:
-            pass
-
-        if headskip:
-            for key in cdf_file.attrs:
-                if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList']:
-                    stream.header[key] = str(cdf_file.attrs[key])
-                else:
-                    logger.debug("readPYCDF: Found object - loading and unpickling")
-                    try:
-                        func = pickle.loads(str(cdf_file.attrs[key]))
-                        stream.header[key] = func
-                    except:
-                        logger.debug("readPYCDF: Failed to load Object - constructed before v0.2.000?")
-
-        #if headonly:
-        #    cdf_file.close()
-        #    return DataStream(stream, stream.header)
-
-        logger.info('readPYCDF: %s Format: %s ' % (filename, cdfformat))
-
-        for key in cdf_file:
-            #print ("KEY", key)
-            if key.find('time')>=0 or key == 'Epoch':
-                #ti = cdf_file[key][...]
-                #row = LineStruct()
-                if str(cdfformat).startswith('MagPyCDF'):
-                    if not oldtype:
-                        if not key == 'sectime':
-                            ind = KEYLIST.index('time')
-                        else:
-                            ind = KEYLIST.index('sectime')
-                        try:
-                            try:
-                                array[ind] = np.asarray(date2num(cdf_file[key][...]))
-                            except:
-                                array[ind] = np.asarray(np.asarray([cdf.lib.tt2000_to_datetime(el) for el in cdf_file[key][...]]))
-                        except:
-                            array[ind] = np.asarray([])
-                            pass ### catches exceptions if sectime is nan
-                    else:
-                        #ti = [date2num(elem) for elem in ti]
-                        #stream._put_column(ti,'time')
-                        for elem in cdf_file[key][...]:
-                            row = LineStruct()
-                            row.time = date2num(elem)
-                            stream.add(row)
-                            del row
-                else:
-                    if not oldtype:
-                        if key  == 'time':
-                            ind = KEYLIST.index(key)
-                            array[ind] = np.asarray(cdf_file[key][...]) + 730120.
-                        elif key == 'Epoch':
-                            ind = KEYLIST.index('time')
-                            array[ind] = np.asarray(date2num(cdf_file[key][...]))
-                    else:
-                        for elem in cdf_file[key][...]:
-                            row = LineStruct()
-                            # correcting matlab day (relative to 1.1.2000) to python day (1.1.1)
-                            if type(elem) in [float,np.float64]:
-                                row.time = 730120. + elem
-                            else:
-                                row.time = date2num(elem)
-                            stream.add(row)
-                            del row
-                #del ti
-            elif key == 'HNvar' or key == 'x':
-                x = cdf_file[key][...]
-                if len(x) == 1:
-                    # This is the case if identical data is found
-                    try:
-                        length = len(cdf_file['Epoch'][...])
-                    except:
-                        length = len(cdf_file['time'][...])
-                    x = [x[0]] * length
-                if len(x) > 0:
-                    if not oldtype:
-                        ind = KEYLIST.index('x')
-                        array[ind] = np.asarray(x)
-                    else:
-                        stream._put_column(x,'x')
-                    del x
-                    #if not headskip:
-                    stream.header['col-x'] = 'x'
-                    try:
-                        stream.header['col-x'] = cdf_file['x'].attrs['name']
-                    except:
-                        pass
-                    try:
-                        stream.header['unit-col-x'] = cdf_file['x'].attrs['units']
-                    except:
-                        # Apply default unit:
-                        stream.header['unit-col-x'] = 'nT'
-                        pass
-            elif key == 'HEvar' or key == 'y':
-                y = cdf_file[key][...]
-                if len(y) == 1:
-                    # This is the case if identical data is found
-                    try:
-                        length = len(cdf_file['Epoch'][...])
-                    except:
-                        length = len(cdf_file['time'][...])
-                    y = [y[0]] * length
-                if len(y) > 0:
-                    if not oldtype:
-                        ind = KEYLIST.index('y')
-                        array[ind] = np.asarray(y)
-                    else:
-                        stream._put_column(y,'y')
-                    del y
-                    try:
-                        stream.header['col-y'] = cdf_file['y'].attrs['name']
-                    except:
-                        stream.header['col-y'] = 'y'
-                    try:
-                        stream.header['unit-col-y'] = cdf_file['y'].attrs['units']
-                    except:
-                        # Apply default unit:
-                        stream.header['unit-col-y'] = 'nT'
-                        pass
-            elif key == 'Zvar' or key == 'z':
-                z = cdf_file[key][...]
-                if len(z) == 1:
-                    # This is the case if identical data is found
-                    try:
-                        length = len(cdf_file['Epoch'][...])
-                    except:
-                        length = len(cdf_file['time'][...])
-                    z = [z[0]] * length
-                if len(z) > 0:
-                    if not oldtype:
-                        ind = KEYLIST.index('z')
-                        array[ind] = np.asarray(z)
-                    else:
-                        stream._put_column(z,'z')
-                    del z
-                    try:
-                        stream.header['col-z'] = cdf_file['z'].attrs['name']
-                    except:
-                        stream.header['col-z'] = 'z'
-                    try:
-                        stream.header['unit-col-z'] = cdf_file['z'].attrs['units']
-                    except:
-                        # Apply default unit:
-                        stream.header['unit-col-z'] = 'nT'
-                        pass
-            elif key == 'Fsc' or key == 'f':
-                f = cdf_file[key][...]
-                if len(f) == 1:
-                    # This is the case if identical data is found
-                    try:
-                        length = len(cdf_file['Epoch'][...])
-                    except:
-                        length = len(cdf_file['time'][...])
-                    f = [f[0]] * length
-                if len(f) > 0:
-                    if not oldtype:
-                        ind = KEYLIST.index('f')
-                        array[ind] = np.asarray(f)
-                    else:
-                        stream._put_column(f,'f')
-                    del f
-                    try:
-                        stream.header['col-f'] = cdf_file['f'].attrs['name']
-                    except:
-                        stream.header['col-f'] = 'f'
-                    try:
-                        stream.header['unit-col-f'] = cdf_file['f'].attrs['units']
-                    except:
-                        # Apply default unit:
-                        stream.header['unit-col-f'] = 'nT'
-                        pass
-            elif key.endswith('scv'): # solely found in juergs files - now define magpy header info
-                try:
-                    # Please note: using only the last value to identify scalevalue
-                    # - a change of scale values should leed to a different cdf archive !!
-                    stream.header['DataScaleX'] = cdf_file['HNscv'][...][-1]
-                    stream.header['DataScaleY'] = cdf_file['HEscv'][...][-1]
-                    stream.header['DataScaleZ'] = cdf_file['Zscv'][...][-1]
-                    stream.header['DataSensorOrientation'] = 'hdz'
-                except:
-                    # print "error while interpreting header"
-                    pass
-            elif key in h0_mfi_KEYDICT and OMNIACE: # MAG DATA (H0)
-                data = cdf_file[key][...]
-                flag = cdf_file['Q_FLAG'][...]
-                #for i in range(0,len(data)):
-                #    f = flag[i]
-                #    if f != 0:
-                #        data[i] = float('nan')
-                if key == 'BGSM':
-                    skey_x = h0_mfi_KEYDICT[key][0]
-                    skey_y = h0_mfi_KEYDICT[key][1]
-                    skey_z = h0_mfi_KEYDICT[key][2]
-                    splitdata = np.hsplit(data, 3)
-                    stream.header['col-'+skey_x] = 'Bx'
-                    stream.header['unit-col-'+skey_x] = 'nT'
-                    stream.header['col-'+skey_y] = 'By'
-                    stream.header['unit-col-'+skey_y] = 'nT'
-                    stream.header['col-'+skey_z] = 'Bz'
-                    stream.header['unit-col-'+skey_z] = 'nT'
-                    for ikey, skey in enumerate([skey_x, skey_y, skey_z]):
-                        if not oldtype:
-                            ind = KEYLIST.index(skey)
-                            array[ind] = np.asarray(splitdata[ikey])
-                        else:
-                            stream._put_column(splitdata[ikey],skey)
-                elif key == 'Magnitude':
-                    skey = h0_mfi_KEYDICT[key]
-                    stream.header['col-'+skey] = 'Bt'
-                    stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
-                    if not oldtype:
-                        ind = KEYLIST.index(skey)
-                        array[ind] = np.asarray(data)
-                    else:
-                        stream._put_column(data,skey)
-            elif key in h1_epm_KEYDICT and OMNIACE: # EPAM DATA (H1)
-                data = cdf_file[key][...]
-                badval = cdf_file[key].attrs['FILLVAL']
-                for i in range(0,len(data)):
-                    d = data[i]
-                    if d == badval:
-                        data[i] = float('nan')
-                skey = h1_epm_KEYDICT[key]
-                stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
-                stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
-                if not oldtype:
-                    ind = KEYLIST.index(skey)
-                    array[ind] = np.asarray(data)
-                else:
-                    stream._put_column(data,skey)
-            elif key in k0_epm_KEYDICT and OMNIACE: # EPAM DATA (K0)
-                data = cdf_file[key][...]
-                badval = cdf_file[key].attrs['FILLVAL']
-                for i in range(0,len(data)):
-                    d = data[i]
-                    if d == badval:
-                        data[i] = float('nan')
-                skey = k0_epm_KEYDICT[key]
-                stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
-                stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
-                if not oldtype:
-                    ind = KEYLIST.index(skey)
-                    array[ind] = np.asarray(data)
-                else:
-                    stream._put_column(data,skey)
-            elif key in h0_swe_KEYDICT and OMNIACE: # SWEPAM DATA
-                data = cdf_file[key][...]
-                badval = cdf_file[key].attrs['FILLVAL']
-                for i in range(0,len(data)):
-                    d = data[i]
-                    if d == badval:
-                        data[i] = float('nan')
-                skey = h0_swe_KEYDICT[key]
-                stream.header['col-'+skey] = cdf_file[key].attrs['LABLAXIS']
-                stream.header['unit-col-'+skey] = cdf_file[key].attrs['UNITS']
-                if not oldtype:
-                    ind = KEYLIST.index(skey)
-                    array[ind] = np.asarray(data)
-                else:
-                    stream._put_column(data,skey)
-            else:
-                if key.lower() in KEYLIST:
-                    arkey = cdf_file[key][...]
-                    if len(arkey) == 1:
-                        # This is the case if identical data is found
-                        try:
-                            length = len(cdf_file['Epoch'][...])
-                        except:
-                            length = len(cdf_file['time'][...])
-                        arkey = [arkey[0]] * length
-                    if len(arkey) > 0:
-                        if not oldtype:
-                            ind = KEYLIST.index(key.lower())
-                            array[ind] = np.asarray(arkey).astype(object)
-                        else:
-                            stream._put_column(arkey,key.lower())
-                        stream.header['col-'+key.lower()] = key.lower()
-                        try:
-                            stream.header['unit-col-'+key.lower()] = cdf_file[key.lower()].attrs['units']
-                        except:
-                            # eventually apply default deg C for temperatures if not provided in header
-                            if key.lower() in ['t1','t2']:
-                                stream.header['unit-col-'+key.lower()] = "*C"
-                            pass
-                        try:
-                            stream.header['col-'+key.lower()] = cdf_file[key.lower()].attrs['name']
-                        except:
-                            pass
-
-        cdf_file.close()
-        del cdf_file
-
-    if not oldtype:
-        return DataStream([LineStruct()], stream.header,np.asarray(array,dtype=object))
-    else:
-        return DataStream(stream, stream.header,stream.ndarray)
 
 def readPYBIN(filename, headonly=False, **kwargs):
     """
@@ -701,10 +327,14 @@ def readPYBIN(filename, headonly=False, **kwargs):
     keylist = kwargs.get('keylist') # required for very old format, does not affect other formats
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
-    oldtype = kwargs.get('oldtype')
     debug = kwargs.get('debug')
 
     getfile = True
+    elemlist = []
+    unitlist = []
+    multilist = []
+    array = [[] for key in KEYLIST]
+
 
     stream = DataStream([],{},[[] for key in KEYLIST])
 
@@ -717,20 +347,20 @@ def readPYBIN(filename, headonly=False, **kwargs):
     if debug:
         print ("PYBIN: reading data ...")
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
         getfile = True
     logbaddata = False
 
-    #t1 = datetime.utcnow()
+    #t1 = datetime.now(timezone.utc).replace(tzinfo=None)
     if getfile:
         logger.info("readPYBIN: %s Format: PYBIN" % filename)
         if debug:
@@ -863,37 +493,30 @@ def readPYBIN(filename, headonly=False, **kwargs):
                         print ("readPYBIN: struct error {} {}".format(filename, len(line)))
                 try:
                     time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-                    if not oldtype:
-                        array[0].append(date2num(stream._testtime(time)))
-                        # check elemlist and keylist
-                        for idx, elem in enumerate(keylist):
-                            try:
-                                index = KEYLIST.index(elem)
-                                if not elem.endswith('time'):
-                                    if elem in NUMKEYLIST:
-                                        array[index].append(data[idx+7]/float(multilist[idx]))
-                                    else:
-                                        array[index].append(data[idx+7])
+                    array[0].append(testtime(time))
+                    # check elemlist and keylist
+                    for idx, elem in enumerate(keylist):
+                        try:
+                            index = KEYLIST.index(elem)
+                            if not elem.endswith('time'):
+                                if elem in NUMKEYLIST:
+                                    array[index].append(data[idx+7]/float(multilist[idx]))
                                 else:
-                                    try:
-                                        sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
-                                        array[index].append(date2num(stream._testtime(sectime)))
-                                    except:
-                                        pass
-                            except:
-                                if elem.endswith('time'):
-                                    try:
-                                        sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
-                                        index = KEYLIST.index('sectime')
-                                        array[index].append(date2num(stream._testtime(sectime)))
-                                    except:
-                                        pass
-                    else:
-                        row = LineStruct()
-                        row.time = date2num(stream._testtime(time))
-                        for idx, elem in enumerate(keylist):
-                            exec('row.'+keylist[idx]+' = data[idx+7]/float(multilist[idx])')
-                        stream.add(row)
+                                    array[index].append(data[idx+7])
+                            else:
+                                try:
+                                    sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
+                                    array[index].append(testtime(sectime))
+                                except:
+                                    pass
+                        except:
+                            if elem.endswith('time'):
+                                try:
+                                    sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
+                                    index = KEYLIST.index('sectime')
+                                    array[index].append(testtime(sectime))
+                                except:
+                                    pass
                     if logbaddata == True:
                         logger.error("readPYBIN: Good data resumes with: %s" % str(data))
                         logbaddata = False
@@ -911,16 +534,9 @@ def readPYBIN(filename, headonly=False, **kwargs):
 
         array = [np.asarray(el,dtype=object) for el in array]
 
-        if len(stream.ndarray[0]) > 0:
-            logger.debug("readPYBIN: Imported bin as ndarray")
-            stream.container = [LineStruct()]
-            # if unequal lengths are found, then usually txt and bin files are loaded together
-
-    #t2 = datetime.utcnow()
-    #print ("Duration:", (t2-t1).total_seconds())
     stream.header["DataFormat"] = "PYBIN"
 
-    return DataStream([LineStruct()], stream.header, np.asarray(array,dtype=object))
+    return DataStream(header=stream.header, ndarray=np.asarray(array,dtype=object))
 
 
 
@@ -936,7 +552,7 @@ def writePYSTR(datastream, filename, **kwargs):
         if mode == 'skip': # skip existing inputs
             try:
                 exst = read(path_or_url=filename)
-                datastream = joinStreams(exst,datastream)
+                datastream = join_streams(exst,datastream)
             except:
                 logger.info("writePYSTR: Could not interprete existing file - replacing %s" % filename)
             if sys.version_info >= (3,0,0):
@@ -946,7 +562,7 @@ def writePYSTR(datastream, filename, **kwargs):
         elif mode == 'replace': # replace existing inputs
             try:
                 exst = read(path_or_url=filename)
-                datastream = joinStreams(datastream,exst)
+                datastream = join_streams(datastream,exst)
             except:
                 logger.info("writePYSTR: Could not interprete existing file - replacing %s" % filename)
             if sys.version_info >= (3,0,0):
@@ -992,13 +608,13 @@ def writePYSTR(datastream, filename, **kwargs):
                     if KEYLIST[idx].find('time') >= 0:
                         # check whether floats are present - secondary time column 
                         # might be filled with string '-' placeholder
-                        if not datastream._is_number(el[i]):
-                            el[i] = np.nan
-                        #print el[i]
-                        if not np.isnan(float(el[i])):   ## if secondary time steps are empty
-                            row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                        if isinstance(el[0],datetime):
+                            row.append(
+                                datetime.strftime(el[i].replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f"))
+                        elif isinstance(el[0],np.datetime64):
+                            row.append(np.datetime_as_string(el[i], unit='us'))
                         else:
-                            row.append(float(el[i]))
+                            row.append(np.nan)
                     else:
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
                             try:
@@ -1009,209 +625,12 @@ def writePYSTR(datastream, filename, **kwargs):
                         row.append(el[i])
                 else:
                     if KEYLIST[idx] in NUMKEYLIST:
-                        row.append(float('nan'))
+                        row.append(np.nan)
                     else:
                         row.append('-')
             wtr.writerow(row)
-    else:
-        for elem in datastream:
-            row = []
-            for key in KEYLIST:
-                if key.find('time') >= 0:
-                    try:
-                        row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
-                    except:
-                        row.append( float('nan') )
-                        pass
-                else:
-                    row.append(eval('elem.'+key))
-            wtr.writerow( row )
     myFile.close()
     return filename
-
-
-def writePYCDF(datastream, filename, **kwargs):
-    """
-    VARIABLES
-        new: use compression variable instead of skipcompression
-        compression = 0: skip compression
-        compression = 1-9: use this compression factor: 
-                           9 high compreesion (slow)
-                           1 low compression (fast)
-               default is 5
-
-    """
-
-    if pyvers and pyvers == 2:
-                ch1 = '-'.encode('utf-8') # not working with py3
-                ch2 = ''.encode('utf-8')
-    else:
-                ch1 = '-'
-                ch2 = ''
-
-    if not len(datastream.ndarray[0]) > 0 and not len(datastream) > 0:
-        return False
-
-    mode = kwargs.get('mode')
-    skipcompression = kwargs.get('skipcompression')
-    compression = kwargs.get('compression')
-
-    cdf.lib.set_backward(False) ## necessary for time_tt2000 support
-
-    if os.path.isfile(filename+'.cdf'):
-        if mode == 'skip': # skip existing inputs
-            exst = read(path_or_url=filename+'.cdf')
-            datastream = joinStreams(exst,datastream,extend=True)
-            os.remove(filename+'.cdf')
-            mycdf = cdf.CDF(filename, '')
-        elif mode == 'replace': # replace existing inputs
-            #print filename
-            #### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            ####  Please note: Replacing requires a lot memory
-            #### If memory issues appear then please overwrite existing data
-            #### TODO Optimze sorting
-            #### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            try:
-                exst = read(path_or_url=filename+'.cdf')
-                datastream = joinStreams(datastream,exst,extend=True)
-            except:
-                logger.error("writePYCDF: Could not interprete existing data set - aborting")
-                sys.exit()
-            os.remove(filename+'.cdf')
-            mycdf = cdf.CDF(filename, '')
-        elif mode == 'append':
-            #print filename
-            exst = read(path_or_url=filename+'.cdf')
-            datastream = joinStreams(exst,datastream,extend=True)
-            os.remove(filename+'.cdf')
-            mycdf = cdf.CDF(filename, '')
-        else: # overwrite mode
-            #print filename
-            os.remove(filename+'.cdf')
-            mycdf = cdf.CDF(filename, '')
-    else:
-        mycdf = cdf.CDF(filename, '')
-
-    keylst = datastream._get_key_headers()
-    #print "writeCDF", keylst
-    if not 'flag' in keylst:
-        keylst.append('flag')
-    #print keylst
-    if not 'comment' in keylst:
-        keylst.append('comment')
-    if not 'typ' in keylst:
-        keylst.append('typ')
-    tmpkeylst = ['time']
-    tmpkeylst.extend(keylst)
-    keylst = tmpkeylst
-
-    headdict = datastream.header
-    head, line = [],[]
-
-    if not mode == 'append':
-        for key in headdict:
-            if not key.find('col') >= 0:
-                #print key, headdict[key]
-                if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlagList']:
-                    mycdf.attrs[key] = headdict[key]
-                else:
-                    logger.info("writePYCDF: Found Object in header - pickle and dump ")
-                    pfunc = pickle.dumps(headdict[key])
-                    mycdf.attrs[key] = pfunc
-
-    mycdf.attrs['DataFormat'] = 'MagPyCDF1.1'
-
-    #def checkEqualIvo(lst):
-    #    # http://stackoverflow.com/questions/3844801/check-if-all-elements-in-a-list-are-identical
-    #    return not lst or lst.count(lst[0]) == len(lst)
-    def checkEqual3(lst):
-        return lst[1:] == lst[:-1]
-
-    ndtype = False
-    try:
-        if len(datastream.ndarray[0]) > 0:
-            ndtype = True
-    except:
-        pass
-
-    #print("WriteFormat length 1", datastream.ndarray, datastream.length())
-    for key in keylst:
-        if ndtype:
-            ind = KEYLIST.index(key)
-            col = datastream.ndarray[ind]
-            if not key in NUMKEYLIST:
-                if not key == 'time':
-                    #print "converting"
-                    col = np.asarray(col)
-        else:
-            col = datastream._get_column(key)
-
-        # Sort out columns only containing nan's
-        try:
-            test = [elem for elem in col if not isnan(elem)]
-            if not len(test) > 0:
-                col = np.asarray([])
-        except:
-            pass
-        if not False in checkEqual3(col) and len(col) > 0:
-            logger.warning("writePYCDF: Found identical values only for key: %s" % key)
-            col = col[:1]
-
-        if key.find('time') >= 0:
-            if key == 'time':
-                key = 'Epoch'
-                try:
-                    mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
-                    mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)]))
-                except:
-                    mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)])
-            elif key == 'sectime':
-                try: #col = np.asarray([np.nan if el is '-' else el for el in col])
-                    try:
-                        mycdf.new(key, type=cdf.const.CDF_TIME_TT2000)
-                        mycdf[key] = cdf.lib.v_datetime_to_tt2000(np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)]))
-                    except:
-                        mycdf[key] = np.asarray([num2date(elem).replace(tzinfo=None) for elem in col.astype(np.float64)])
-                except:
-                    pass
-        elif len(col) > 0:
-            if not key in NUMKEYLIST:
-                col = list(col)
-                col = ['' if el is None else el for el in col]
-                col = np.asarray(col) # to get string conversion
-            else:
-                #print(col, key)
-                col = np.asarray([np.nan if el in [None,ch1] else el for el in col])
-                #col = np.asarray([float(nan) if el is None else el for el in col])
-                col = col.astype(float)
-            mycdf[key] = col
-
-            for keydic in headdict:
-                if keydic == ('col-'+key):
-                    try:
-                        mycdf[key].attrs['name'] = headdict.get('col-'+key,'')
-                    except:
-                        pass
-                if keydic == ('unit-col-'+key):
-                    try:
-                        mycdf[key].attrs['units'] = headdict.get('unit-col-'+key,'')
-                    except:
-                        pass
-
-    #print ("Got here", mycdf)
-
-    if compression == 0: ## temporary solution until all refs to skipcomression are eliminated
-        skipcompression = True
-
-    if isinstance(compression, int) and not compression == 0 and compression in range(0,10) and not skipcompression and len(mycdf['Epoch']) > 0:
-        try:
-            mycdf.compress(cdf.const.GZIP_COMPRESSION, compression)
-        except:
-            logger.warning("writePYCDF: : compression of CDF failed - Trying to store uncompressed data")
-            logger.warning("writePYCDF: please use option skipcompression=True if unreadable")
-
-    mycdf.close()
-    return filename+'.cdf'
 
 
 def writePYASCII(datastream, filename, **kwargs):
@@ -1226,43 +645,23 @@ def writePYASCII(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = joinStreams(exst,datastream,extend=True)
-            if sys.version_info >= (3,0,0):
-                myFile = open(filename, 'w', newline='')
-            else:
-                myFile = open(filename, 'wb')
+            datastream = join_streams(exst,datastream,extend=True)
+            myFile = open(filename, 'w', newline='')
         elif mode == 'replace': # replace existing inputs
             logger.debug("write ascii filename", filename)
             exst = read(path_or_url=filename)
-            datastream = joinStreams(datastream,exst,extend=True)
-            if sys.version_info >= (3,0,0):
-                myFile = open(filename, 'w', newline='')
-            else:
-                myFile = open(filename, 'wb')
-        elif mode == 'append':
-            if sys.version_info >= (3,0,0):
-                myFile = open(filename, 'a', newline='')
-            else:
-                myFile = open(filename, 'ab')
-        else:
-            if sys.version_info >= (3,0,0):
-                myFile = open(filename, 'w', newline='')
-            else:
-                myFile = open(filename, 'wb')
-    elif filename.find('StringIO') > -1 and not os.path.isfile(filename):
-        if sys.version_info >= (3,0,0):
-            import io
-            myFile = io.StringIO()
-            returnstring = True
-        else:
-            import StringIO
-            myFile = StringIO.StringIO()
-            returnstring = True
-    else:
-        if sys.version_info >= (3,0,0):
+            datastream = join_streams(datastream,exst,extend=True)
             myFile = open(filename, 'w', newline='')
+        elif mode == 'append':
+            myFile = open(filename, 'a', newline='')
         else:
-            myFile = open(filename, 'wb')
+            myFile = open(filename, 'w', newline='')
+    elif filename.find('StringIO') > -1 and not os.path.isfile(filename):
+        import io
+        myFile = io.StringIO()
+        returnstring = True
+    else:
+        myFile = open(filename, 'w', newline='')
 
     wtr= csv.writer( myFile )
     headdict = datastream.header
@@ -1288,8 +687,8 @@ def writePYASCII(datastream, filename, **kwargs):
                 if len(datastream.ndarray[idx]) > 0:
                     if KEYLIST[idx].find('time') >= 0:
                         #print el[i]
-                        row.append(float(el[i]))
-                        row.append(datetime.strftime(num2date(float(el[i])).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
+                        row.append(np.datetime64(el[i]).astype(np.float64))
+                        row.append(datetime.strftime(el[i].replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
                     else:
                         if not KEYLIST[idx] in NUMKEYLIST: # Get String and replace all non-standard ascii characters
                             try:
@@ -1299,23 +698,140 @@ def writePYASCII(datastream, filename, **kwargs):
                                 pass
                         row.append(el[i])
             wtr.writerow(row)
-    else:
-        for elem in datastream:
-            row = []
-            for key in keylst:
-                if key.find('time') >= 0:
-                    row.append(elem.time)
-                    try:
-                        row.append( datetime.strftime(num2date(eval('elem.'+key)).replace(tzinfo=None), "%Y-%m-%dT%H:%M:%S.%f") )
-                    except:
-                        row.append( float('nan') )
-                        pass
-                else:
-                    row.append(eval('elem.'+key))
-            wtr.writerow( row )
 
     if returnstring:
         return myFile
 
     myFile.close()
     return filename
+
+if __name__ == '__main__':
+
+    import scipy
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: MAGPY SPECIFIC FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE MAGPY LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+    l = 88400
+    array = [[] for el in DataStream().KEYLIST]
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(20950, 21000, size=int(l/2))
+    b = np.random.uniform(20950, 21050, size=int(l/2))
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x[1000:-1000]
+    a = np.random.uniform(1950, 2000, size=int(l/2))
+    b = np.random.uniform(1900, 2050, size=int(l/2))
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1000:-1000]
+    a = np.random.uniform(44300, 44400, size=l)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1000:-1000]
+    a = np.random.uniform(49000, 49200, size=l)
+    f = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[4] = f[1000:-1000]
+    array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    # 2. Creating artificial header information
+    header = {}
+    header['DataSamplingRate'] = 1
+    header['SensorID'] = 'Test_0001_0002'
+    header['StationIAGAcode'] = 'XXX'
+    header['DataAcquisitionLatitude'] = 48.123
+    header['DataAcquisitionLongitude'] = 15.999
+    header['DataElevation'] = 1090
+    header['DataComponents'] = 'XYZS'
+    header['StationInstitution'] = 'TheWatsonObservatory'
+    header['DataDigitalSampling'] = '1 Hz'
+    header['DataSensorOrientation'] = 'HEZ'
+    header['StationName'] = 'Holmes'
+
+    teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+
+
+    errors = {}
+    successes = {}
+    testrun = 'STREAMTESTFILE'
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    while True:
+        testset = 'PYSTR'
+        try:
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            succ1 = writePYSTR(teststream, filename)
+            succ2 = isPYSTR(filename)
+            dat = readPYSTR(filename)
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
+                 raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        testset = 'PYASCII'
+        try:
+            filename = os.path.join('/tmp', '{}_{}_{}'.format(testrun, testset,
+                                                              datetime.strftime(t_start_test, '%Y%m%d-%H%M')))
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            succ1 = writePYASCII(teststream, filename)
+            succ2 = isPYASCII(filename)
+            dat = readPYASCII(filename)
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
+                raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
+    time_taken = t_end_test - t_start_test
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")

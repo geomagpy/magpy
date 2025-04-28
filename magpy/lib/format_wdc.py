@@ -3,23 +3,25 @@ MagPy
 WDC (BGS version) input filter
 Written by Roman Leonhardt October 2012
 - contains test, read and write function for hour data
-ToDo: Filter for minute data
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import division
-from io import open
-
-from magpy.stream import *
-from datetime import timedelta
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
+from magpy.stream import DataStream, read, merge_streams, subtract_streams, magpyversion
+from datetime import datetime, timedelta, timezone
+import os
+import numpy as np
+from magpy.core.methods import testtime, extract_date_from_string
+import logging
+logger = logging.getLogger(__name__)
+KEYLIST = DataStream().KEYLIST
 
 def isWDC(filename):
     """
     Checks whether a file is ASCII PMAG format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -48,6 +50,7 @@ def readWDC(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
+    KEYLIST = DataStream().KEYLIST
 
     fh = open(filename, 'rt')
 
@@ -67,11 +70,10 @@ def readWDC(filename, headonly=False, **kwargs):
     itest = 0
     minute = False
     complist = ['','','','']
-    nanval = float(NaN)
+    nanval = np.nan
     oldformat = False
     kind = '' # To store Q, D in all data format (Quiet, Disturbed)
     for line in fh:
-        #print (line)
         if line.isspace():
             # blank line
             pass
@@ -109,7 +111,7 @@ def readWDC(filename, headonly=False, **kwargs):
                     date = year + '-' + mo + '-' + day + 'T' + hour + ':30:00'
                     #print date
                     if co == firstco:
-                        time=date2num(datetime.strptime(date,"%Y-%m-%dT%H:%M:%S"))
+                        time=datetime.strptime(date,"%Y-%m-%dT%H:%M:%S")
                         array[tind].append(time)
                         if not kind == '':
                             array[str1ind].append(kind)
@@ -117,7 +119,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             x = float(base) + float(elem)/600
                         else:
-                            x = float(NaN)
+                            x = np.nan
                         complist[0] = co
                         array[xind].append(x)
                         headers['col-x'] = 'i'
@@ -126,7 +128,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             y = float(base) + float(elem)/600
                         else:
-                            y = float(NaN)
+                            y = np.nan
                         complist[1] = co
                         array[yind].append(y)
                         headers['col-y'] = 'd'
@@ -135,7 +137,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             x = float(base)*100 + float(elem)
                         else:
-                            x = float(NaN)
+                            x = np.nan
                         complist[0] = co
                         array[xind].append(x)
                         headers['col-x'] = co
@@ -144,7 +146,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             y = float(base)*100 + float(elem)
                         else:
-                            y = float(NaN)
+                            y = np.nan
                         complist[1] = co
                         array[yind].append(y)
                         headers['col-y'] = 'y'
@@ -153,7 +155,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             z = float(base)*100 + float(elem)
                         else:
-                            z = float(NaN)
+                            z = np.nan
                         complist[2] = co
                         array[zind].append(z)
                         headers['col-z'] = 'z'
@@ -162,7 +164,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             f = float(base)*100 + float(elem)
                         else:
-                            f = float(NaN)
+                            f = np.nan
                         complist[3] = co
                         array[find].append(f)
                         headers['col-f'] = 'f'
@@ -171,7 +173,7 @@ def readWDC(filename, headonly=False, **kwargs):
                         if not elem == "9999":
                             dst = float(elem)
                         else:
-                            dst = float(NaN)
+                            dst = np.nan
                         complist[3] = co
                         array[KEYLIST.index('var1')].append(dst)
                         headers['col-var1'] = "DST"
@@ -204,7 +206,7 @@ def readWDC(filename, headonly=False, **kwargs):
             for i in range(0, 60*6, 6):
                 if var == firstvar:
                     timestr = hr+':%02d:00' % (i/6)
-                    array[tind].append(date2num(datetime.strptime(datestr+'T'+timestr, "%Y-%m-%dT%H:%M:%S")))
+                    array[tind].append(datetime.strptime(datestr+'T'+timestr, "%Y-%m-%dT%H:%M:%S"))
                 val = float(line[34+i:40+i])
                 if var in ['x','i','h']:
                     complist[0] = var
@@ -270,7 +272,7 @@ def readWDC(filename, headonly=False, **kwargs):
     if oldformat:
         print ("readWDC: found old WDC format - assuming 20th century")
 
-    stream = DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    stream = DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
     return stream
 
@@ -282,6 +284,7 @@ def writeWDC(datastream, filename, **kwargs):
 
     mode = kwargs.get('mode')
     #createlatex = kwargs.get('createlatex')
+    KEYLIST = DataStream().KEYLIST
 
     try:
         datastream.header['DataComponents'] = datastream.header.get('DataComponents','').upper()
@@ -296,10 +299,7 @@ def writeWDC(datastream, filename, **kwargs):
 
 
     def OpenFile(filename, mode='w'):
-        if sys.version_info >= (3,0,0):
-            f = open(filename, mode, newline='')
-        else:
-            f = open(filename, mode+'b')
+        f = open(filename, mode, newline='')
         return f
 
     keylst = datastream._get_key_headers()
@@ -309,12 +309,12 @@ def writeWDC(datastream, filename, **kwargs):
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
-            exst = pmRead(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            exst = read(path_or_url=filename)
+            datastream = merge_streams(exst,datastream,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'replace': # replace existing inputs
-            exst = pmRead(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            exst = read(path_or_url=filename)
+            datastream = merge_streams(datastream,exst,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'append':
             myFile= OpenFile(filename,mode='a')
@@ -328,9 +328,9 @@ def writeWDC(datastream, filename, **kwargs):
     # 1.) Test whether min or hourly data are used
     hourly, minute = False, False
     samplinginterval = datastream.get_sampling_period()
-    if 0.98 < samplinginterval*24 < 1.02:
+    if 0.98 < samplinginterval/3600. < 1.02:
         hourly = True
-    elif 0.98 < samplinginterval*24*60 < 1.02:
+    elif 0.98 < samplinginterval/60. < 1.02:
         minute = True
     else:
         print("Wrong sampling interval - please filter the data to minutes or hours")
@@ -339,7 +339,7 @@ def writeWDC(datastream, filename, **kwargs):
 
     # 2.) Get Iaga code
     header = datastream.header
-    iagacode = header.get('StationIAGAcode'," ").upper()
+    iagacode = header.get('StationIAGAcode','XXX').upper()
 
     # 3.) Create component objects:
 
@@ -420,10 +420,10 @@ def writeWDC(datastream, filename, **kwargs):
             for key in KEYLIST:
                 if key == 'time':
                     try:
-                        year = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%Y")
-                        month = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%m")
-                        day = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%d")
-                        hour = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%H")
+                        year = datetime.strftime(timeval.replace(tzinfo=None), "%Y")
+                        month = datetime.strftime(timeval.replace(tzinfo=None), "%m")
+                        day = datetime.strftime(timeval.replace(tzinfo=None), "%d")
+                        hour = datetime.strftime(timeval.replace(tzinfo=None), "%H")
                         ye = year[2:]
                         ar = year[:-2]
                     except:
@@ -441,12 +441,12 @@ def writeWDC(datastream, filename, **kwargs):
                         cl = f
                     cl.name = "{}{}{}{}{}  {}{}".format(iagacode,ye,month,header.get('col-{}'.format(key),key).upper()[:1],day,arb,ar)
                     if cl.row[:16] == cl.name:
-                        if not isnan(cl.elem):
+                        if not np.isnan(cl.elem):
                             cl.el.append(cl.elem)
                             cl.hourel.append(int(hour))
                     elif cl.row == '':
                         cl.row = cl.name
-                        if not isnan(cl.elem):
+                        if not np.isnan(cl.elem):
                             cl.el = [cl.elem]
                             cl.hourel = [int(hour)]
                         else:
@@ -457,7 +457,7 @@ def writeWDC(datastream, filename, **kwargs):
                             cl.dailymean = int(9999)
                             cl.base = int(9999)
                         else:
-                            cl.mean = round(np.mean(cl.el),0)
+                            cl.mean = np.round(np.mean(cl.el),0)
                             cl.base = cl.mean - 5000.0
                             cl.base = int(cl.base/100)
                             cl.dailymean = int(cl.mean - cl.base*100)
@@ -465,7 +465,7 @@ def writeWDC(datastream, filename, **kwargs):
                         count = 0
                         for i in range(24):
                             if len(cl.hourel) > 0 and count < len(cl.hourel) and cl.hourel[count] == i:
-                                cl.val = int(cl.el[count] - cl.base*100)
+                                cl.val = int(np.round(cl.el[count],0) - cl.base*100)
                                 count = count+1
                             else:
                                 cl.val = int(9999)
@@ -476,7 +476,7 @@ def writeWDC(datastream, filename, **kwargs):
                         line.append(cl.row)
                         cl.row = cl.name
                         cl.el, cl.hourel = [], []
-                        if not isnan(cl.elem):
+                        if not np.isnan(cl.elem):
                             cl.el.append(cl.elem)
                             cl.hourel.append(int(hour))
 
@@ -484,25 +484,13 @@ def writeWDC(datastream, filename, **kwargs):
         # TODO Replace all eval methods with better attribute definitions 
         for comp in [x,y,z,f]:
             if len(comp.el)<1:
-                #name='r0t%d%s' % (t,k) and value=getattr(temp, k)
-                #value = getattr(dailymean, comp)
-                #setattr(dailymean, comp, int(9999))
-                #setattr(base, comp, int(9999))
                 comp.dailymean = int(9999)
-                #exec('{}dailymean = int(9999)'.format(comp))
-                #eval(comp+'base = int(9999)')
                 comp.base = int(9999)
             else:
                 comp.mean=np.round(np.mean(comp.el),0)
                 comp.base = comp.mean - 5000.0
                 comp.base = int(comp.base/100)
                 comp.dailymean = int(comp.mean - comp.base*100)
-                #setattr(mean, comp, round(np.mean(eval(comp+'el')),0) )
-                #eval("{}mean=np.round(np.mean({}el),0)".format(comp,comp))
-                #eval(comp+'base = ' + comp +'mean - 5000.0')
-                #eval(comp+'base = int(' + comp +'base/100)')
-                #eval(comp+'dailymean = int(' + comp +'mean - ' + comp +'base*100)')
-            #eval('row'+comp+'+= "%4i" % '+comp+'base')
             comp.row += "%4i" % comp.base
             count = 0
             for i in range(24):
@@ -522,45 +510,43 @@ def writeWDC(datastream, filename, **kwargs):
             pass
         finally:
            myFile.close()
-        #except IOError:
-        #    pass
         success = True
 
     # 3.)
     elif minute:
         '''
-COLUMNS   FORMAT   DESCRIPTION
-
-1-6       I6       Observatory's North Polar distance (header['DataAcquisitionLatitude']).
-                   the north geographic pole in thousandths
-                   of a degree. Decimal point is implied between positions 3
-                   and 4.
-7-12      I6       Observatory's Geographic longitude (header['DataAcquisitionLongitude']).
-                   of a degree. Decimal point is implied between positions 9
-                   and 10.
-13-14     I2       Year. Last 2 digits, 1996 = 96. See also column 26.
-15-16     I2       Month (01-12)
-17-18     I2       Day of month (01-31)
-19        Al       Element (D,I,H,X,Y,Z, or F)
-20-21     I2       Hour of day (00-23)
-22-24     A3       Observatory 3-letter code (header['StationIAGAcode']).
-25        A1       Arbitrary.
-26        I1       Century digit.
-                   Year = 2014, Century digit = 0.
-                   Year = 1889, Century digit = 8.
-                   Year = 1996, Century digit = 9 or 'SPACE' for backwards
-                   compatibility.
-27        A1       Preliminary or Definitive data (given by stream header['DataRating']).
-                   Preliminary = P , Definitive = D
-28-34     A7       Blanks
-35-394    60I6     60 6-digit 1-minute values for the given element for that
-                   data hour.
-                   The values are in tenth-minutes for D and I, and in
-                   nanoTeslas for the intensity elements.
-395-400   I6       Hourly Mean.
-                   The average of the preceeding 60 1-minute values.
-401-402            Record end marker.
-                   Two chars 'cr'= 13 and 'nl'= 10.
+        COLUMNS   FORMAT   DESCRIPTION
+        
+        1-6       I6       Observatory's North Polar distance (header['DataAcquisitionLatitude']).
+                           the north geographic pole in thousandths
+                           of a degree. Decimal point is implied between positions 3
+                           and 4.
+        7-12      I6       Observatory's Geographic longitude (header['DataAcquisitionLongitude']).
+                           of a degree. Decimal point is implied between positions 9
+                           and 10.
+        13-14     I2       Year. Last 2 digits, 1996 = 96. See also column 26.
+        15-16     I2       Month (01-12)
+        17-18     I2       Day of month (01-31)
+        19        Al       Element (D,I,H,X,Y,Z, or F)
+        20-21     I2       Hour of day (00-23)
+        22-24     A3       Observatory 3-letter code (header['StationIAGAcode']).
+        25        A1       Arbitrary.
+        26        I1       Century digit.
+                           Year = 2014, Century digit = 0.
+                           Year = 1889, Century digit = 8.
+                           Year = 1996, Century digit = 9 or 'SPACE' for backwards
+                           compatibility.
+        27        A1       Preliminary or Definitive data (given by stream header['DataRating']).
+                           Preliminary = P , Definitive = D
+        28-34     A7       Blanks
+        35-394    60I6     60 6-digit 1-minute values for the given element for that
+                           data hour.
+                           The values are in tenth-minutes for D and I, and in
+                           nanoTeslas for the intensity elements.
+        395-400   I6       Hourly Mean.
+                           The average of the preceeding 60 1-minute values.
+        401-402            Record end marker.
+                           Two chars 'cr'= 13 and 'nl'= 10.
         '''
 
         # http://www.wdc.bgs.ac.uk/catalog/format.html
@@ -569,6 +555,7 @@ COLUMNS   FORMAT   DESCRIPTION
         for key in write_KEYLIST:
             min_dict[key] = ''
         day, hour = '0', '0'
+        year = '2024'
 
         for day in range(1,32):         # TODO: make this exact for given month
             day_dict[str(day).zfill(2)] = ''
@@ -585,24 +572,16 @@ COLUMNS   FORMAT   DESCRIPTION
         zind = KEYLIST.index('z')
         find = KEYLIST.index('f')
         for i in range(fulllength):
-            if not ndtype:
-                elem = datastream[i]
-                elemx = elem.x
-                elemy = elem.y
-                elemz = elem.z
-                elemf = elem.f
-                timeval = elem.time
-            else:
-                elemx = datastream.ndarray[xind][i]
-                elemy = datastream.ndarray[yind][i]
-                elemz = datastream.ndarray[zind][i]
-                elemf = datastream.ndarray[find][i]
-                timeval = datastream.ndarray[0][i]
-            timestamp = num2date(timeval).replace(tzinfo=None)
+            elemx = datastream.ndarray[xind][i]
+            elemy = datastream.ndarray[yind][i]
+            elemz = datastream.ndarray[zind][i]
+            elemf = datastream.ndarray[find][i]
+            timeval = datastream.ndarray[0][i]
+            timestamp = timeval.replace(tzinfo=None)
             minute = datetime.strftime(timestamp, "%M")
             if minute == '00':
                 if len(min_dict['x']) != 360:
-                    loggerlib.error('format_wdc: Error in formatting data for %s.' % datetime.strftime(timestamp,'%Y-%m-%d %H:%M'))
+                    logger.error('format_wdc: Error in formatting data for %s.' % datetime.strftime(timestamp,'%Y-%m-%d %H:%M'))
                 minutedata = dict(min_dict)
                 hour_dict[hour] = minutedata
                 for key in write_KEYLIST:
@@ -618,7 +597,7 @@ COLUMNS   FORMAT   DESCRIPTION
             for key in write_KEYLIST:
                 #exec('value = elem'+key)
                 value = eval('elem'+key)
-                if not isnan(value):
+                if not np.isnan(value):
                     if len(str(value)) > 6:
                         if value >= 10000:
                             value = int(round(value))
@@ -649,33 +628,33 @@ COLUMNS   FORMAT   DESCRIPTION
             if str(predef) == '2' or predef[0].upper == 'P': # Preliminary data
                 data_predef = 'P'
             elif str(predef) in ['1','3']: # Raw (1) or quasi-definitive (3) data
-                loggerlib.warning("format_WDC: DataPublicationLevel as 1 or 3 are not supported by WDC. Assuming P (preliminary).")
+                logger.warning("format_WDC: DataPublicationLevel as 1 or 3 are not supported by WDC. Assuming P (preliminary).")
                 data_predef = 'P'
             elif str(predef) == '4' or predef[0].upper == 'D': # Definitive data
                 data_predef = 'D'
             elif predef == ' ':
-                loggerlib.warning("format_WDC: No DataPublicationLevel defined in header! Assuming P (preliminary).")
+                logger.warning("format_WDC: No DataPublicationLevel defined in header! Assuming P (preliminary).")
                 data_predef = 'P'
         except:
             data_predef = 'P'
         try:
             iagacode = header.get('StationIAGAcode'," ").upper()
             if iagacode == ' ':
-                loggerlib.warning("format_WDC: No StationIAGAcode defined in header!")
+                logger.warning("format_WDC: No StationIAGAcode defined in header!")
                 iagacode = 'XXX'
         except:
             iagacode = 'WIC'
         try:
             station_lat = header.get('DataAcquisitionLatitude'," ")
             if station_lat == ' ':
-                loggerlib.warning("format_WDC: No DataAcquisitionLatitude defined in header!")
+                logger.warning("format_WDC: No DataAcquisitionLatitude defined in header!")
                 station_lat = 00.00
         except:
             station_lat = 00.00 # 47.93
         try:
             station_long = header.get('DataAcquisitionLongitude'," ")
             if station_long == ' ':
-                loggerlib.warning("format_WDC: No DataAcquisitionLongitude defined in header!")
+                logger.warning("format_WDC: No DataAcquisitionLongitude defined in header!")
                 station_long = 00.00
         except:
             station_long = 00.00 # 15.865
@@ -693,7 +672,7 @@ COLUMNS   FORMAT   DESCRIPTION
         else:
             nextmonth = datetime(int(year)+1,1,1)
 
-        # Write data in beliebiges Format:
+        # Write data in any format:
         while day < nextmonth:
             for key in write_KEYLIST:
                 for hour_ in range(0,24):
@@ -722,22 +701,22 @@ COLUMNS   FORMAT   DESCRIPTION
                                 hourly_mean = round(hourly_mean,2)
                         hourly_mean = str(hourly_mean).rjust(6)
                     except KeyError:
-                        loggerlib.warning('format_wdc: key It appears there is missing data for date %s. Replacing with 999999.'
+                        logger.warning('format_wdc: key It appears there is missing data for date %s. Replacing with 999999.'
                                 % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
                         data = '999999'*60
                         hourly_mean = '999999'
                     except TypeError:
-                        loggerlib.warning('format_wdc: type It appears there is missing data for date %s. Replacing with 999999.'
+                        logger.warning('format_wdc: type It appears there is missing data for date %s. Replacing with 999999.'
                                 % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
                         data = '999999'*60
                         hourly_mean = '999999'
                     if len(data) != 360:
-                        loggerlib.warning('format_wdc: It appears there is missing data for date %s. Replacing with 999999.'
+                        logger.warning('format_wdc: It appears there is missing data for date %s. Replacing with 999999.'
                                 % (datetime.strftime(day,'%Y-%m-%d ')+hour+':00'))
                         data = '999999'*60
                         hourly_mean = '999999'
                     line = preamble + data + hourly_mean + '\r\n'
-                    myFile.write(line.encode('utf-8'))
+                    myFile.write(line)
             day = day + timedelta(days=1)
 
         success = True
@@ -746,3 +725,143 @@ COLUMNS   FORMAT   DESCRIPTION
         logging.warning("Could not save WDC data. Please provide hour or minute data")
 
     return success
+
+if __name__ == '__main__':
+
+    from scipy import signal
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: WDC FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE WDC LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    def create_minteststream(startdate=datetime(2022, 11, 1), addnan=True):
+        c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+        l = 32 * 1440
+        #import scipy
+        teststream = DataStream()
+        array = [[] for el in DataStream().KEYLIST]
+        win = signal.windows.hann(60)
+        a = np.random.uniform(20950, 21000, size=int(l / 2))
+        b = np.random.uniform(20950, 21050, size=int(l / 2))
+        x = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+        array[1] = x[1440:-1440]
+        a = np.random.uniform(1950, 2000, size=int(l / 2))
+        b = np.random.uniform(1900, 2050, size=int(l / 2))
+        y = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+        array[2] = y[1440:-1440]
+        a = np.random.uniform(44300, 44400, size=l)
+        z = signal.convolve(a, win, mode='same') / sum(win)
+        array[3] = z[1440:-1440]
+        array[4] = np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440]
+        array[0] = np.asarray([startdate + timedelta(minutes=i) for i in range(0, len(array[1]))])
+        teststream = DataStream(header={'SensorID': 'Test_0001_0001'}, ndarray=np.asarray(array, dtype=object))
+        minstream = teststream.filter()
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['col-f'] = 'F'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        teststream.header['unit-col-f'] = 'nT'
+        teststream.header['StationID'] = 'XXX'
+        teststream.header['StationIAGAcode'] = 'XXX'
+        return teststream
+
+    teststream = create_minteststream(addnan=False)
+    #teststream = teststream.trim('2022-11-22','2022-11-23')
+    #print (len(teststream))
+
+    errors = {}
+    successes = {}
+    testrun = 'MAGPYTESTFILE'
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    while True:
+        testset = 'WDC-minute'
+        try:
+            filename = os.path.join('/tmp','{}_{}.dat'.format(testrun, datetime.strftime(teststream.start(),'%b%d%y')))
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            succ1 = writeWDC(teststream, filename)
+            succ2 = isWDC(filename)
+            dat = readWDC(filename)
+            if not len(dat) > 0:
+                raise Exception("Error - no data could be read")
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            # agreement should be better than 0.01 nT as resolution is 0.1 nT in file
+            if np.abs(xm) > 0.01 or np.abs(ym) > 0.01 or np.abs(zm) > 0.01 or np.abs(fm) > 0.01:
+                 raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+        testset = 'WDC-hour'
+        try:
+            teststream = teststream.filter(filter_type='flat',filter_width=timedelta(hours=1),resampleoffset=timedelta(minutes=30))
+            filename = os.path.join('/tmp','{}_{}.dat'.format(testrun, datetime.strftime(teststream.start(),'%b%d%y')))
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            succ1 = writeWDC(teststream, filename)
+            succ2 = isWDC(filename)
+            dat = readWDC(filename)
+            if not len(dat) > 0:
+                raise Exception("Error - no data could be read")
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            # agreement should be better than 0.01 nT as resolution is 0.1 nT in file
+            if np.abs(xm) > 0.05 or np.abs(ym) > 0.05 or np.abs(zm) > 0.05 or np.abs(fm) > 0.05:
+                 raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
+    time_taken = t_end_test - t_start_test
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")

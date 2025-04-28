@@ -4,13 +4,10 @@ Auxiliary input filter - WIC/WIK
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
 from io import open
-
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
+import csv
 
 
 def isCR800(filename):
@@ -18,7 +15,8 @@ def isCR800(filename):
     Checks whether a file is ASCII CR800 txt file format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -38,7 +36,8 @@ def isRADON(filename):
     """
     debug = True
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -65,16 +64,17 @@ def readRADON(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     debug = kwargs.get('debug')
     getfile = True
+    KEYLIST = DataStream().KEYLIST
 
     if debug:
         print ("RADON: Reading Radon data")
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -85,8 +85,7 @@ def readRADON(filename, headonly=False, **kwargs):
     stream = DataStream([],{},np.asarray(array))
     tpos = KEYLIST.index('t1')
     varpos = KEYLIST.index('var1')
-
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     if stream.header is None:
         headers = {}
     else:
@@ -94,33 +93,28 @@ def readRADON(filename, headonly=False, **kwargs):
 
     if getfile:
         try:
-            infile = open(filename, 'r', encoding='utf-8', newline='')
-            CSVReader = csv.reader(infile)
-            for line in CSVReader:
-                if line[0].isspace():
-                    # blank line
-                    pass
-                elif headonly:
-                    # skip data for option headonly
-                    continue
-                else:
-                    #row = LineStruct()
-                    time = date2num(datetime.strptime(line[0],"%Y-%m-%d %H:%M:%S"))
-                    array[0].append(time)
-                    #row.x = float(line[3])
-                    array[1].append(float(line[3]))
-                    #row.t1 = float(line[2])
-                    array[tpos].append(float(line[2]))
-                    #row.var1 = float(line[1])
-                    array[varpos].append(float(line[1]))
-                    #stream.add(row)
-            stream.header['col-x'] = 'Counts'
-            stream.header['col-t1'] = 'Temp'
-            stream.header['unit-col-t1'] = 'deg'
-            stream.header['col-var1'] = 'Voltage'
-            stream.header['unit-col-var1'] = 'V'
-            if debug:
-                print ("RADON: Successfully loaded radon data")
+            with open(filename) as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',')
+                for line in csv_reader:
+                    if line[0].isspace():
+                        # blank line
+                        pass
+                    elif headonly:
+                        # skip data for option headonly
+                        continue
+                    else:
+                        time = datetime.strptime(line[0],"%Y-%m-%d %H:%M:%S")
+                        array[0].append(time)
+                        array[1].append(float(line[3]))
+                        array[tpos].append(float(line[2]))
+                        array[varpos].append(float(line[1]))
+                stream.header['col-x'] = 'Counts'
+                stream.header['col-t1'] = 'Temp'
+                stream.header['unit-col-t1'] = 'deg'
+                stream.header['col-var1'] = 'Voltage'
+                stream.header['unit-col-var1'] = 'V'
+                if debug:
+                    print ("RADON: Successfully loaded radon data")
         except:
             headers = stream.header
             stream =[]
@@ -135,7 +129,7 @@ def readRADON(filename, headonly=False, **kwargs):
     headers['DataFormat'] = 'CR800RADON'
     headers['DataSource'] = 'Radon data from the Conrad Observatory'
 
-    return DataStream([LineStruct()], headers, np.asarray(array, dtype=object))
+    return DataStream([], headers, np.asarray(array, dtype=object))
 
 
 def readCR800(filename, headonly=False, **kwargs):

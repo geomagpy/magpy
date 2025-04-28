@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
 from magpy.stream import *
-from magpy.absolutes import *
-from magpy.transfer import *
-from magpy.database import *
+import magpy.absolutes as di
+from magpy.core import database
 
 import wx
 
@@ -24,6 +23,7 @@ class MetaPage(wx.Panel):
 
     # Widgets
     def createControls(self):
+        font = wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.head1Label = wx.StaticText(self, label="Basic Information:")
         self.head2Label = wx.StaticText(self, label="Database:")
         self.head3Label = wx.StaticText(self, label="Modify/Review:")
@@ -53,6 +53,9 @@ class MetaPage(wx.Panel):
         self.MetaStationButton = wx.Button(self,-1,"Station related",size=(160,30))
         self.stationTextCtrl = wx.TextCtrl(self, wx.ID_ANY, size=(330,80),
                           style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL|wx.VSCROLL)
+        self.head1Label.SetFont(font)
+        self.head2Label.SetFont(font)
+        self.head3Label.SetFont(font)
 
 
     def doLayout(self):
@@ -89,8 +92,6 @@ class MetaPage(wx.Panel):
                  (self.putDBButton, dict(flag=wx.ALIGN_CENTER)),
                   emptySpace,
                   emptySpace,
-                 (self.head3Label, noOptions),
-                  emptySpace,
                   emptySpace,
                   emptySpace]:
             gridSizer.Add(control, **options)
@@ -103,6 +104,7 @@ class MetaPage(wx.Panel):
 
         mainSizer.Add(boxSizer, 1, wx.EXPAND)
 
+        mainSizer.Add(self.head3Label, 0, 0)
         mainSizer.Add(self.MetaDataButton, 0, wx.ALIGN_LEFT | wx.ALL, 3)
         mainSizer.Add(self.dataTextCtrl, 0, wx.ALIGN_LEFT | wx.ALL, 3)
         mainSizer.Add(self.MetaSensorButton, 0, wx.ALIGN_LEFT | wx.ALL, 3)

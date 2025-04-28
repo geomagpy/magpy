@@ -16,8 +16,8 @@ from datetime import datetime
 from matplotlib.dates import date2num, num2date
 import numpy as np
 
-from magpy.stream import KEYLIST, NUMKEYLIST, DataStream, loggerlib, testTimeString
-
+from magpy.stream import KEYLIST, NUMKEYLIST, DataStream, loggerlib
+from magpy.core.methods import test_timestring
 
 """
 FORMAT looks like
@@ -136,7 +136,7 @@ def readCOVJSON(filename, headonly=False, **kwargs):
     parameters = dataset.get("parameters")
 
     times = dataset.get("domain").get("axes").get("t").get("values")
-    times = [testTimeString(el) for el in times]
+    times = [test_timestring(el) for el in times]
     array[0] = date2num(times)
     stream = DataStream([],header,array)
 

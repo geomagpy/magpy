@@ -8,8 +8,6 @@ DESCRIPTION:
  Then it calculates baseline corrected variation data.
  Finally it compares baseline corrected data with original DI measurements.
 
-IMPORTANT:
- Baseline test is not yet implemented in CI
 
 RETURN:
  BOOL
@@ -21,6 +19,7 @@ local = True
 if local:
     import sys
     sys.path.insert(1,'/Users/leon/Software/magpy/')
+    sys.path.insert(1, '/home/leon/Software/magpy/')
 from magpy.stream import *
 import magpy.absolutes as di
 import copy
@@ -37,7 +36,7 @@ def test_baseline(dipath=None, variopath=None, scalarpath=None,debug=False):
     if not scalarpath:
         return False
     compensation = True
-    absresult = di.absoluteAnalysis(dipath,os.path.join(variopath,"*"),os.path.join(scalarpath,"*"),compensation=compensation,diid='A2_WIC.txt',stationid='WIC',pier='A2', alpha=0.0, deltaF=0.0, debug=debug)
+    absresult = di.absolute_analysis(dipath,os.path.join(variopath,"*"),os.path.join(scalarpath,"*"),compensation=compensation,diid='A2_WIC.txt',stationid='WIC',pier='A2', alpha=0.0, deltaF=0.0, debug=debug)
     if debug:
         print ("Analyzed DI data", absresult.length()[0])
     vario = read(os.path.join(variopath,"*2022-08-22.cdf"))
@@ -158,8 +157,8 @@ exepath = os.getcwd()
 if not exepath.endswith('test'):
     exepath = os.path.join(exepath,'magpy','test') # travis...
 datadir = 'testdata'
-dipath = os.path.join(exepath,datadir,"di-data")
-variopath = os.path.join(exepath,datadir,"vario1")
+dipath = os.path.join(exepath,datadir,"difiles")
+variopath = os.path.join(exepath,datadir,"variometer")
 scalarpath = os.path.join(exepath,datadir,"scalar")
 testpath = os.path.join(exepath,datadir,"baseline")
 

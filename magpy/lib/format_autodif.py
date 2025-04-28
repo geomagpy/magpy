@@ -1,8 +1,6 @@
 from magpy.absolutes import *
 import numpy as np
 
-
-
 def readAUTODIFABS(file_name: string, headonly: bool = False, **kwargs) -> list:
     output = kwargs.get('output')
     if output != 'DIListStruct':
@@ -11,7 +9,7 @@ def readAUTODIFABS(file_name: string, headonly: bool = False, **kwargs) -> list:
         abs_list = []
         #scale_flux = kwargs.get('scaleflux', 0.098)
         #scale_angle = kwargs.get('scaleangle', 0.00011)
-        temperature = kwargs.get('temperature', float(nan))
+        temperature = kwargs.get('temperature', np.nan)
         legacy = True
         with open(file_name, 'r', encoding='ascii') as file:
             lines = file.readlines()

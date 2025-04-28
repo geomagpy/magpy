@@ -74,7 +74,7 @@ class StatisticsPage(wx.Panel):
             valueText += '|-----------------------{}'.format(key) + \
                     '-----------------------|\n'.format(key)
             for t, val in zip(times, teststream.ndarray[KEYLIST.index(key)]):
-                line = '     {}: {}\n'.format(num2date(t), val)
+                line = '     {}: {}\n'.format(t, val)
                 valueText += line
         return valueText
 
@@ -91,7 +91,7 @@ class StatisticsPage(wx.Panel):
         try:
             mini = teststream._get_min(key,returntime=True)
             minText = '       Minimum: {} at {}\n'.format(mini[0],
-                    num2date(mini[1]))
+                    mini[1])
         except:
             minText = '       Unable to calculate minimum.\n'
         return minText
@@ -109,7 +109,7 @@ class StatisticsPage(wx.Panel):
         try:
             maxi = teststream._get_max(key,returntime=True)
             maxText = '       Maximum: {} at {}\n'.format(maxi[0],
-                    num2date(maxi[1]))
+                    maxi[1])
         except:
             maxText = '       Unable to calculate maximum.\n'
         return maxText

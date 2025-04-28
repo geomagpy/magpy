@@ -5,22 +5,17 @@ Supports USB temperature loggers, RCS files, old Caesium data and SG data
 Written by Roman Leonhardt June 2012
 - contains test and read function, toDo: write function
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import division
 
-from io import open
+from magpy.stream import DataStream
+from datetime import datetime, timedelta, timezone
+import csv
+import numpy as np
+from magpy.core.methods import testtime, extract_date_from_string
+import logging
+logger = logging.getLogger(__name__)
 
-from magpy.stream import *
-
-
-def OpenFile(filename, mode='w'):
-    if sys.version_info >= (3,0,0):
-        f = open(filename, mode, newline='')
-    else:
-        f = open(filename, mode+'b')
-    return f
+KEYLIST = DataStream().KEYLIST
+NUMKEYLIST = DataStream().NUMKEYLIST
 
 def isUSBLOG(filename):
     """
@@ -29,7 +24,9 @@ def isUSBLOG(filename):
     Extend that code for CO logger as well
     """
     try:
-        temp = open( filename, "r", newline='', encoding='utf-8', errors='ignore' ).readline()
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
+            temp = fi.readline()
+        #temp = open( filename, "r", newline='', encoding='utf-8', errors='ignore' ).readline()
     except:
         return False
     try:
@@ -43,39 +40,24 @@ def isUSBLOG(filename):
     return True
 
 
-def isRMRCS(filename):
-    """
-    Checks whether a file is ASCII RCS format.
-    """
-    try:
-        fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
-        temp = fh.readline()
-    except:
-        return False
-    try:
-        if not temp.startswith('# RCS'):
-            return False
-    except:
-        return False
-    return True
-
 def isIWT(filename):
     """
     Checks whether a file is ASCII Tiltmeter format.
     """
 
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
+            temp = fi.readline()
     except:
         return False
     try:
-        comp = temp.split()
+        comp = temp.split("     ")
         if not len(comp) == 4:
             return False
     except:
         return False
     try:
-        test = datetime.strptime(comp[0],"%Y%m%dT%H%M%S.%f")
+        test = datetime.strptime(comp[0].replace(" ",""),"%Y%m%dT%H%M%S.%f")
     except:
         return False
     return True
@@ -84,14 +66,14 @@ def isMETEO(filename):
     """
     Checks whether a file is ASCII METEO format provided by the Cobs RCS system.
     """
-
     try:
-        fh = open(filename, 'rb')
-        temp = fh.readline()
+        with open(filename, "rb") as fi:
+            temp1 = fi.readline()
+            temp2 = fi.readline()
     except:
         return False
     try:
-        comp = temp.split()
+        comp = temp1.split()
     except:
         return False
 
@@ -101,8 +83,7 @@ def isMETEO(filename):
         if not comp[3].decode('utf-8').startswith('AP23'):
             return False
 
-        temp = fh.readline()
-        comp = temp.split()
+        comp = temp2.split()
         date = comp[0].decode('utf-8') + '-' + comp[1].decode('utf-8')
         test = datetime.strptime(date,"%Y%m%d-%H%M%S")
     except:
@@ -117,8 +98,8 @@ def isLNM(filename):
     """
 
     try:
-        fh = open(filename, 'rt')
-        temp = fh.readline()
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -135,8 +116,8 @@ def isLIPPGRAV(filename):
     """
 
     try:
-        fh = open(filename, 'rt')
-        temp = fh.readline()
+        with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -155,169 +136,6 @@ def isLIPPGRAV(filename):
     return True
 
 
-def isGRAVSG(filename):
-    """
-    Checks whether a file is ASCII SG file format.
-    """
-
-    try:
-        temp = open(filename, 'rt').readline()
-    except:
-        return False
-    try:
-        if not temp.startswith('[TSF-file]'):
-            return False
-    except:
-        return False
-    return True
-
-
-def isCS(filename):
-    """
-    Checks whether a file is ASCII CS Mag and initial ws format.
-    should be called as one of the last options
-    """
-    try:
-        temp = open(filename, 'rt').readline()
-    except:
-        return False
-    try:
-        tmp = temp.split()
-        if not len(tmp) in [2,4]:
-            return False
-    except:
-        return False
-    try:
-        testdate = datetime.strptime(tmp[0].strip(','),"%H:%M:%S.%f")
-    except:
-        try:
-            testdate = datetime.strptime(tmp[0],"%Y-%m-%dT%H:%M:%S.%f")
-        except:
-            return False
-    return True
-
-def readRMRCS(filename, headonly=False, **kwargs):
-    """
-    Reading RMRCS format data. (Richard Mandl's RCS extraction)
-    # RCS Fieldpoint T7
-    # Conrad Observatorium, www.zamg.ac.at
-    # 2012-02-01 00:00:00
-    #
-    # 12="ZAGTFPT7      M6      I,cFP-AI-110    CH00    AP23    Niederschlagsmesser     --      Unwetter, S     AR0-20H0.1      mm      y=500x+0        AI"
-    # 13="ZAGTFPT7      M6      I,cFP-AI-110    CH01    JC      Schneepegelsensor       OK      Mastverwehung, S        AR0-200H0       cm      y=31250x+0      AI"
-    # 14="ZAGTFPT7      M6      I,cFP-AI-110    CH02    430A_T  Wetterhuette - Lufttemperatur   -       -, B    AR-35-45H0      C       y=4000x-35      AI"
-    # 15="ZAGTFPT7      M6      I,cFP-AI-110    CH03    430A_F  Wetterhuette - Luftfeuchte      -       -, B    AR0-100H0       %       y=5000x+0       AI"
-    #
-    1328054403.99       20120201 000004 49.276E-6       49.826E+0       -11.665E+0      78.356E+0
-    1328054407.99       20120201 000008 79.480E-6       49.823E+0       -11.677E+0      78.364E+0
-    1328054411.99       20120201 000012 68.555E-6       49.828E+0       -11.688E+0      78.389E+0
-    """
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
-    getfile = True
-
-    debug = kwargs.get('debug')
-    if debug:
-        print ("RCS: found data from Richards Perl script")
-
-    #fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
-    #fh = open(filename, 'r', newline='')
-    fh = open(filename, 'rb')
-    # read file and split text into channels
-    # --------------------------------------
-    stream = DataStream()
-    headers = {}
-    array = [[] for key in KEYLIST]
-    data = []
-    measurement = []
-    unit = []
-    i = 0
-    key = None
-
-    # try to get day from filename (platform independent)
-    # --------------------------------------
-    theday = extractDateFromString(filename)
-    try:
-        if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
-                getfile = False
-        if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
-                getfile = False
-    except:
-        # Date format not recognized. Need to read all files
-        getfile = True
-
-    if getfile:
-        for line in fh:
-            line = line.decode('utf-8','ignore')
-            if line.isspace():
-                # blank line
-                pass
-            elif line.startswith('# RCS Fieldpoint'):
-                # data header
-                fieldpoint = line.replace('# RCS Fieldpoint','').strip()
-            elif line.startswith('#'):
-                # data header
-                colsstr = line.split(',')
-                if (len(colsstr) == 3):
-                    # select the lines with three komma separeted parts -> they describe the data
-                    meastype = colsstr[1].split()
-                    unittype = colsstr[2].split()
-                    measurement.append(meastype[2])
-                    unit.append(unittype[2])
-                    headers['col-'+KEYLIST[i+1]] = measurement[i]
-                    headers['unit-col-'+KEYLIST[i+1]] = unit[i]
-                    if headers['unit-col-'+KEYLIST[i+1]] == '--':
-                        headers['unit-col-'+KEYLIST[i+1]] = ''
-                    i=i+1
-            elif headonly:
-                # skip data for option headonly
-                continue
-            else:
-                # data entry - may be written in multiple columns
-                # row beinhaltet die Werte eine Zeile
-                elem = line[:-1].split()
-                gottime = False
-
-                try:
-                    array[0].append(date2num(datetime.strptime(elem[1],"%Y-%m-%dT%H:%M:%S")))
-                    add = 2
-                    gottime = True
-                except:
-                    try:
-                        array[0].append(date2num(datetime.strptime(elem[1]+'T'+elem[2],"%Y%m%dT%H%M%S")))
-                        add = 3
-                        gottime = True
-                    except:
-                        raise ValueError("Can't read date format in RCS file")
-                if gottime:
-                    for i in range(len(unit)):
-                        try:
-                            array[i+1].append(float(elem[i+add]))
-                        except:
-                            array[i+1].append(float(nan))
-                            pass
-
-        array = [np.asarray(el) for el in array]
-        headers['SensorID'] = 'RCS{}_20160114_0001'.format(fieldpoint) # 20160114 corresponds to the date at which RCS was activated
-        headers["SensorName"] = 'RCS{}'.format(fieldpoint)
-        headers["SensorSerialNum"] = "20160114"
-        headers["SensorRevision"] = "0001"
-        headers["SensorModule"] = "RCS"
-        headers["DataFormat"] = "RCS-Perl"
-        headers["SensorGroup"] = "environment"
-        headers["SensorDataLogger"] = "{}".format(fieldpoint)
-    else:
-        headers = stream.header
-        stream =[]
-
-    fh.close()
-
-
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
-
-
 def readLNM(filename, headonly=False, **kwargs):
     """
     Reading ASCII LNM data files.
@@ -329,7 +147,7 @@ def readLNM(filename, headonly=False, **kwargs):
     getfile = True
 
     array = [[] for key in KEYLIST]
-    stream = DataStream([],{},np.asarray(array))
+    stream = DataStream()
 
     if debug:
         print("Found LNM file")
@@ -357,13 +175,13 @@ def readLNM(filename, headonly=False, **kwargs):
                  "89":"Hagel"}
 
     # get day from filename (platform independent)
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -423,7 +241,7 @@ def readLNM(filename, headonly=False, **kwargs):
                 elif len(elem) == 527:
                     cnt += 1
                     #print datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")
-                    array[0].append(date2num(datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f")))
+                    array[0].append(datetime.strptime(elem[0]+'T'+elem[1],"%Y-%m-%dT%H:%M:%S.%f"))
                     array[indx].append(elem[17])
                     array[indy].append(elem[18])
                     array[indz].append(elem[19])
@@ -470,7 +288,7 @@ def readLNM(filename, headonly=False, **kwargs):
 
     headers['DataFormat'] = 'Theiss-LaserNiederschlagsMonitor'
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 def readUSBLOG(filename, headonly=False, **kwargs):
@@ -514,15 +332,10 @@ def readUSBLOG(filename, headonly=False, **kwargs):
             elif len(elem) == 6 and not elem[1] == 'Time':
                 headers['SensorSerialNum'] = '%s' % elem[5]
             else:
-                array[0].append(date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S")))
+                array[0].append(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S"))
                 array[t1ind].append(float(elem[2]))
                 array[t2ind].append(float(elem[4]))
                 array[var1ind].append(float(elem[3]))
-                #row.time = date2num(datetime.strptime(elem[1],"%d/%m/%Y %H:%M:%S"))
-                #row.t1 = float(elem[2])
-                #row.var1 = float(elem[3])
-                #row.t2 = float(elem[4])
-                #stream.add(row)
         except:
             pass
     qFile.close()
@@ -534,8 +347,7 @@ def readUSBLOG(filename, headonly=False, **kwargs):
 
 
     array = np.asarray([np.asarray(el) for el in array],dtype=object)
-    stream = [LineStruct()]
-    return DataStream(stream, headers, array)
+    return DataStream(header=headers, ndarray=array)
 
 
 def readMETEO(filename, headonly=False, **kwargs):
@@ -556,6 +368,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
     takehelium = kwargs.get('takehelium')
     debug = kwargs.get('debug')
     getfile = True
+    cols=[]
 
     heliumcols = []
 
@@ -567,14 +380,14 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
     # Check whether header infromation is already present
     headers = {}
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
 
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         print("Did not recognize the date format")
@@ -623,10 +436,9 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
                         print("Found error in data sequence", filename)
                         #print colsstr
                         break
-                row = LineStruct()
                 try:
                     date = colsstr[0]+'-'+colsstr[1]
-                    array[0].append(date2num(datetime.strptime(date,"%Y%m%d-%H%M%S")))
+                    array[0].append(datetime.strptime(date,"%Y%m%d-%H%M%S"))
                     #row.time = date2num(datetime.strptime(date,"%Y%m%d-%H%M%S"))
                     for i in range(2,len(colsstr)):
                         key = KEYLIST[i-1]
@@ -670,7 +482,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
 
     if debug:
         print ("METEO: Successfully loaded METEO data")
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 
 def readLIPPGRAV(filename, headonly=False, **kwargs):
@@ -699,17 +511,17 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
 
     stream = DataStream()
 
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     headers = {}
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
 
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         print("Did not recognize the date format")
@@ -723,51 +535,49 @@ def readLIPPGRAV(filename, headonly=False, **kwargs):
     posvar1 = KEYLIST.index('var1')
     posvar2 = KEYLIST.index('var2')
 
-    fh = open(filename, 'rt')
-
-    if getfile:
-        for line in fh:
-            if line.isspace():
-                # blank line
-                continue
-            elif line.startswith(' '):
-                continue
-            else:
-                colsstr = line.split()
-                row = LineStruct()
-                try:
-                    date = colsstr[0]+'-'+colsstr[1]
+    with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fh:
+        if getfile:
+            for line in fh:
+                if line.isspace():
+                    # blank line
+                    continue
+                elif line.startswith(' '):
+                    continue
+                else:
+                    colsstr = line.split()
                     try:
-                        array[0].append(date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S")))
+                        date = colsstr[0]+'-'+colsstr[1]
+                        try:
+                            array[0].append(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S"))
+                        except:
+                            array[0].append(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S.%f"))
+                        array[posx].append(float(colsstr[1]))
+                        array[posy].append(float(colsstr[2]))
+                        array[post1].append(float(colsstr[3]))
+                        array[posvar1].append(float(colsstr[4]))
+                        array[posvar2].append(float(colsstr[5]))
                     except:
-                        array[0].append(date2num(datetime.strptime(colsstr[0],"%Y%m%d%H%M%S.%f")))
-                    array[posx].append(float(colsstr[1]))
-                    array[posy].append(float(colsstr[2]))
-                    array[post1].append(float(colsstr[3]))
-                    array[posvar1].append(float(colsstr[4]))
-                    array[posvar2].append(float(colsstr[5]))
-                except:
-                    pass
+                        pass
 
-        headers['unit-col-x'] = 'lambda'
-        headers['col-x'] = 'tilt'
-        headers['unit-col-y'] = 'lambda'
-        headers['col-y'] = 'tilt'
-        headers['unit-col-t1'] = 'deg C'
-        headers['col-t1'] = 'T'
-        headers['unit-col-var1'] = 'percent'
-        headers['col-var1'] = 'rh'
-        headers['unit-col-var2'] = 'hPa'
-        headers['col-var2'] = 'p'
-        headers['SensorDescription'] = 'Lippmann: Tiltmeter system'
-        headers['SensorName'] = 'Lippmann Tiltmeter'
-        headers['SensorType'] = 'Tiltmeter'
-        headers['SensorID'] = 'Lippmann_Tilt'
+            headers['unit-col-x'] = 'lambda'
+            headers['col-x'] = 'tilt'
+            headers['unit-col-y'] = 'lambda'
+            headers['col-y'] = 'tilt'
+            headers['unit-col-t1'] = 'deg C'
+            headers['col-t1'] = 'T'
+            headers['unit-col-var1'] = 'percent'
+            headers['col-var1'] = 'rh'
+            headers['unit-col-var2'] = 'hPa'
+            headers['col-var2'] = 'p'
+            headers['SensorDescription'] = 'Lippmann: Tiltmeter system'
+            headers['SensorName'] = 'Lippmann Tiltmeter'
+            headers['SensorType'] = 'Tiltmeter'
+            headers['SensorID'] = 'Lippmann_Tilt'
 
-        for idx,el in enumerate(array):
-            array[idx] = np.asarray(el)
+            for idx,el in enumerate(array):
+                array[idx] = np.asarray(el)
 
-    return DataStream([LineStruct()], headers, np.asarray(array,dtype=object))
+    return DataStream(header=headers, ndarray=np.asarray(array,dtype=object))
 
 def readIWT(filename, headonly=False, **kwargs):
     """
@@ -788,20 +598,21 @@ def readIWT(filename, headonly=False, **kwargs):
     sensorid = kwargs.get('sensorid')
     debug = kwargs.get('debug')
     getfile = True
+    ndarray=np.array([])
 
     stream = DataStream()
 
-    # Check whether header infromation is already present
+    # Check whether header information is already present
     headers = {}
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
 
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         if debug:
@@ -809,348 +620,56 @@ def readIWT(filename, headonly=False, **kwargs):
         # Date format not recognized. Need to read all files
         getfile = True
 
-    fh = open(filename, 'rt')
-
-    if getfile:
-        ta,xa,ya,za = [],[],[],[]
-        cnt = 0
-        for line in fh:
-            skipline = False
-            if line.isspace():
-                # blank line
-                continue
-            elif line.startswith(' '):
-                continue
-            else:
-                colsstr = line.split()
-                try:
+    with open(filename, "r", newline='', encoding='utf-8', errors='ignore') as fh:
+        if getfile:
+            ta,xa,ya,za = [],[],[],[]
+            cnt = 0
+            for line in fh:
+                skipline = False
+                if line.isspace():
+                    # blank line
+                    continue
+                elif line.startswith(' '):
+                    continue
+                else:
+                    colsstr = line.split("     ")
                     try:
-                        t = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S.%f"))
-                    except:
                         try:
-                            t = date2num(datetime.strptime(colsstr[0],"%Y%m%dT%H%M%S"))
+                            t = datetime.strptime(colsstr[0].replace(" ",""),"%Y%m%dT%H%M%S.%f")
                         except:
-                            if debug:
-                                print("IWT: Could not interprete time in line {}".format(cnt))
-                            skipline = True
-                    if not skipline:
-                        x = float(colsstr[1])
-                        y = float(colsstr[2])
-                        z = float(colsstr[3])
-                        ta.append(t)
-                        xa.append(x)
-                        ya.append(y)
-                        za.append(z)
-                except:
-                    if debug:
-                        print("IWT: Could not interprete values in line {}: Found {}".format(cnt,line))
-                    pass
-                cnt += 1
-        array = [np.asarray(ta),np.asarray(xa),np.asarray(ya),np.asarray(za)]
-
-
-        ndarray = np.asarray(array,dtype=object)
-
-        stream = DataStream()
-        stream = [LineStruct()]
-
-
-        headers['unit-col-x'] = 'nrad'
-        headers['col-x'] = 'tilt'
-        headers['unit-col-y'] = 'lambda'
-        headers['col-y'] = 'phase'
-        headers['unit-col-z'] = 'arb'
-        headers['col-z'] = 'val3'
-        headers['SensorDescription'] = 'iWT: Tiltmeter system'
-        headers['SensorName'] = 'Tiltmeter'
-        headers['SensorType'] = 'Tiltmeter'
-        if sensorid:
-            headers['SensorID'] = sensorid
-
-    return DataStream(stream,headers,ndarray)
-
-
-def readCS(filename, headonly=False, **kwargs):
-    """
-    Reading ASCII PyMagStructure format data.
-    """
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
-
-    stream = DataStream()
-    # Check whether header infromation is already present
-    headers = {}
-    array = [[] for elem in KEYLIST]
-    qFile= open( filename, "rt", newline='' )
-    csvReader= csv.reader( qFile )
-
-    # get day from filename (platform independent)
-    getfile = True
-
-    theday = extractDateFromString(filename)
-    try:
-        if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
-                getfile = False
-        if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
-                getfile = False
-    except:
-        # Date format not recognized. Need to read all files
-        getfile = True
-
-    # Select only files within eventually defined time range
-    if getfile:
-        print ("REading", theday[0])
-        logging.info(' Read: %s Format: CS (txt) ' % (filename))
-        for elem in csvReader:
-            #print (elem)
-            if len(elem) == 1:
-                elem = elem[0].split()
-            if elem[0]=='#':
-                # blank line
-                pass
-            elif headonly:
-                # skip data for option headonly
-                continue
-            else:
-                try:
-                    #row = LineStruct()
-                    try:
-                        #row.time = date2num(datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
-                        ti = date2num(datetime.strptime(day+'T'+elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
+                            try:
+                                t = datetime.strptime(colsstr[0].replace(" ",""),"%Y%m%dT%H%M%S")
+                            except:
+                                if debug:
+                                    print("IWT: Could not interprete time in line {}".format(cnt))
+                                skipline = True
+                        if not skipline:
+                            x = float(colsstr[1].strip())
+                            y = float(colsstr[2].strip())
+                            z = float(colsstr[3].strip())
+                            ta.append(t)
+                            xa.append(x)
+                            ya.append(y)
+                            za.append(z)
                     except:
-                        #row.time = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
-                        ti = date2num(datetime.strptime(elem[0],"%Y-%m-%dT%H:%M:%S.%f"))
-                    array[find].append(ti)
-                    if len(elem) == 2:
-                        #row.f = float(elem[1])
-                        array[find].append(float(elem[1]))
-                    elif len(elem) == 4:
-                        array[t1ind].append(float(elem[1]))
-                        array[var1ind].append(float(elem[2]))
-                        array[t2ind].append(float(elem[3]))
-                        #row.t1 = float(elem[1])
-                        #row.var1 = float(elem[2])
-                        #row.t2 = float(elem[3])
+                        if debug:
+                            print("IWT: Could not interprete values in line {}: Found {}".format(cnt,line))
+                        pass
+                    cnt += 1
+            array = [np.asarray(ta),np.asarray(xa),np.asarray(ya),np.asarray(za)]
 
-                    #stream.add(row)
-                except ValueError:
-                    pass
-        qFile.close()
+            ndarray = np.asarray(array,dtype=object)
 
-        if len(elem) == 2:
-            headers['unit-col-f'] = 'nT'
-            headers['col-f'] = 'F'
-        elif len(elem) == 4:
-            headers['unit-col-t1'] = 'deg C'
-            headers['unit-col-t2'] = 'deg C'
-            headers['unit-col-var1'] = 'percent'
-            headers['col-t1'] = 'T'
-            headers['col-t2'] = 'Dewpoint'
-            headers['col-var1'] = 'RH'
+            headers['unit-col-x'] = 'nrad'
+            headers['col-x'] = 'tilt'
+            headers['unit-col-y'] = 'lambda'
+            headers['col-y'] = 'phase'
+            headers['unit-col-z'] = 'arb'
+            headers['col-z'] = 'val3'
+            headers['SensorDescription'] = 'iWT: Tiltmeter system'
+            headers['SensorName'] = 'Tiltmeter'
+            headers['SensorType'] = 'Tiltmeter'
+            if sensorid:
+                headers['SensorID'] = sensorid
 
-    array = np.asarray([np.asarray(el) for el in array],dtype=object)
-    stream = [LineStruct()]
-    return DataStream(stream, headers, array)
-
-
-def readGRAVSG(filename, headonly=False, **kwargs):
-    """
-    Reading SG-Gravity data files.
-    """
-
-    starttime = kwargs.get('starttime')
-    endtime = kwargs.get('endtime')
-    getfile = True
-
-    stream = DataStream()
-
-    array = [[] for key in KEYLIST]
-
-    # Check whether header infromation is already present
-    headers = {}
-
-    theday = extractDateFromString(filename)
-
-    try:
-        if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
-                getfile = False
-        if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
-                getfile = False
-    except:
-        # Date format not recognized. Need to read all files
-        getfile = True
-
-    fh = open(filename, 'rt')
-
-    ncol = 0
-    ucol = 0
-    getchannel = False
-    getunit = False
-    if getfile:
-        datablogstarts = False
-        for line in fh:
-            if line.isspace():
-                # blank line
-                continue
-            #elif line.startswith(' '):
-            #    continue
-            elif line.startswith('[TSF-file]'):
-                contline = line.split()
-                stream.header['DataFormat'] = "GRAVSG{}".format(contline[1])
-            elif line.startswith('[TIMEFORMAT]'):
-                contline = line.split()
-                val = contline[1]
-            elif line.startswith('[INCREMENT]'):
-                contline = line.split()
-                stream.header['DataSamplingRate'] = contline[1]
-            elif line.startswith('[CHANNELS]'):
-                getchannel = True
-                #line = fh.readline()
-                #while not line.startswith('['):
-                #    #except:
-                #    #    pass
-                #    # eventually do ot like that
-                #
-                #CO:SG025:Grav-1
-                #CO:SG025:Grav-2
-                #CO:SG025:Baro-1
-                #CO:SG025:Baro-2
-                pass
-            elif line.startswith('   ') and getchannel:
-                ncol += 1
-                #line = fh.readline()
-                #try:
-                if ncol <= 15:
-                    colnames = line.split(':')[2]
-                    key = KEYLIST[ncol]
-                    stream.header['col-'+key] = colnames.strip()
-                else:
-                    ncol = 15
-            elif line.startswith('[UNITS]'):
-                getchannel = False
-                getunit = True
-            elif line.startswith('   ') and getunit:
-                ucol += 1
-                if ucol <= 15:
-                    unitnames = line.strip()
-                    key = KEYLIST[ucol]
-                    stream.header['unit-col-'+key] = unitnames
-                else:
-                    ucol = 15
-                #VOLT
-                #VOLT
-                #mbar
-                #mbar
-            elif line.startswith('[UNDETVAL]'):
-                getunit = False
-                pass
-            elif line.startswith('[PHASE_LAG_1_DEG_CPD]'):
-                #0.0390
-                pass
-            elif line.startswith('[PHASE_LAG_1_DEG_CPD_ERROR]'):
-                #0.0001
-                pass
-            elif line.startswith('[N_LATITUDE_DEG]'):
-                #47.9288
-                contline = line.split()
-                stream.header['DataAcquisitionLatitude'] = contline[1]
-            elif line.startswith('[N_LATITUDE_DEG_ERROR]'):
-                #0.0005
-                pass
-            elif line.startswith('[E_LONGITUDE_DEG]') :
-                #015.8609
-                contline = line.split()
-                stream.header['DataAcquisitionLongitude'] = contline[1]
-            elif line.startswith('[E_LONGITUDE_DEG_ERROR]'):
-                #0.0005
-                pass
-            elif line.startswith('[HEIGHT_M_1]'):
-                #1045.00
-                contline = line.split()
-                stream.header['DataElevation'] = contline[1]
-            elif line.startswith('[HEIGHT_M_1_ERROR]'):
-                #0.10
-                pass
-            elif line.startswith('[GRAVITY_CAL_1_UGAL_V]'):
-                #-77.8279
-                contline = line.split()
-                stream.header['DataScaleX'] = contline[1]
-            elif line.startswith('[GRAVITY_CAL_1_UGAL_V_ERROR]'):
-                #0.5000
-                pass
-            elif line.startswith('[PRESSURE_CAL_MBAR_V]'):
-                #1.0000
-                contline = line.split()
-                stream.header['DataScaleY'] = contline[1]
-            elif line.startswith('[PRESSURE_CAL_MBAR_V_ERROR]'):
-                #0.0001
-                pass
-            elif line.startswith('[AUTHOR]'):
-                #(bruno.meurers@univie.ac.at)
-                contline = line.split()
-                stream.header['SensorDecription'] = contline[1]
-            elif line.startswith('[PHASE_LAG_2_DEG_CPD]'):
-                #0.0000
-                pass
-            elif line.startswith('[PHASE_LAG_2_DEG_CPD_ERROR]'):
-                #0.0000
-                pass
-            elif line.startswith('[HEIGHT_M_2]'):
-                #00.00
-                pass
-            elif line.startswith('[HEIGHT_M_2_ERROR]'):
-                #0.00
-                pass
-            elif line.startswith('[GRAVITY_CAL_2_UGAL_V]'):
-                #-77.8279
-                contline = line.split()
-                stream.header['DataScaleZ'] = contline[1]
-            elif line.startswith('[GRAVITY_CAL_2_UGAL_V_ERROR]'):
-                #0.5000
-                pass
-            elif line.startswith('[PRESSURE_ADMIT_HPA_NMS2]'):
-                #03.5300
-                pass
-            elif line.startswith('[PRESSURE_MEAN_HPA]'):
-                #1000.0
-                pass
-            elif line.startswith('[COMMENT]'):
-                pass
-                #SG CT-025 Moved from Vienna to Conrad Observatory 2007/11/07
-                #Institute of Meteorology and Geophysics Vienna, Austria
-                #Instrument owner Central Institute for Meteorology and Geodynamics
-                #Geology Limestone
-                #Calibration method LSQ fit to absolute gravity measurements
-                #Installation by Eric Brinton (GWR) November 7, 2007
-                #Installation Team N.Blaumoser, S.Haden, P.Melichar, B.Meurers, R.Steiner
-                #Maintenance by N.Blaumoser, M.Goeschke, S.Haden, B.Meurers
-                #date           time       Grav_1     Grav_2    Baro_1    Baro_2
-            elif line.startswith('[DATA]'):
-                datablogstarts = True
-                if headonly:
-                    # skip data for option headonly
-                    return stream
-            else:
-                if datablogstarts:
-                    # Read data - select according to channels
-                    colsstr = line.split()
-                    row = LineStruct()
-                    datatime = colsstr[0]+'-'+colsstr[1]+'-'+colsstr[2]+'T'+colsstr[3]+':'+colsstr[4]+':'+colsstr[5]
-                    array[0].append(date2num(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S")))
-                    for n in range(ncol):
-                        array[n+1].append(float(colsstr[n+6]))
-                else:
-                    # some header lines not noted above found
-                    pass
-
-    for idx, elem in enumerate(array):
-        array[idx] = np.asarray(array[idx])
-
-    stream = DataStream([LineStruct()],stream.header,np.asarray(array,dtype=object))
-
-    fh.close()
-    return stream
+    return DataStream(header=headers,ndarray=ndarray)

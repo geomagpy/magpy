@@ -5,13 +5,11 @@ REQUIRES PACKAGE netCDF4
 Written by RLB April 2017
 """
 
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
 from datetime import datetime
 from matplotlib.dates import date2num
 import numpy as np
+from magpy.core.methods import testtime
+
 try:
     from netCDF4 import Dataset
 except ImportError:     # No netCDF4 support
@@ -69,10 +67,10 @@ def readNETCDF(filename, headonly=False, **kwargs):
     getfile = True
     try:
         if starttime:
-            if not filestart >= datetime.date(stream._testtime(starttime)):
+            if not filestart >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not fileend <= datetime.date(stream._testtime(endtime)):
+            if not fileend <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         getfile = True

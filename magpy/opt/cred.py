@@ -32,19 +32,16 @@ REQUIREMENTS:
     independent of any other magpy package
 
 EXAMPLE:
-    >>> from magpy.opt import cred as mpcred
-    >>> from magpy import transfer
-    >>> # Creating credentials
-    >>> mpcred.cc('db', 'maindatabase', db='mydb',name='max',passwd='secret',host='myhost')
-    >>> mpcred.cc('mail', 'firstmail', name='moritz',smtp='schiller.ed',passwd='evenmoresecret')
-    >>> mpcred.cc('transfer', 'ftp1', name='friedrich',adress='ftp.find.the.fish',passwd='somehowsecret')
-    >>> # Using credentials
-    >>> ftpget(ftpname=mpcred.lc(ftp1[name]), etc)
-    >>> sendmail(mailname=mpcred.lc(firstmail[name]), mailadress=mpcred.lc(firstmail[adress]), mailpasswd=mpcred.lc(firstmail[passwd]), text='Hello World', attach='mycompleteharddisk')
+    from magpy.opt import cred as mpcred
+    # Creating credentials
+    mpcred.cc('db', 'maindatabase', db='mydb',user='max',passwd='secret',host='myhost')
+    mpcred.cc('mail', 'firstmail', user='moritz',smtp='schiller.ed',passwd='evenmoresecret')
+    mpcred.cc('transfer', 'ftp1', user='friedrich',adress='ftp.find.the.fish',passwd='somehowsecret')
+    # Using credentials
+    ftpget(ftpname=mpcred.lc(ftp1[name]), etc)
+    sendmail(mailname=mpcred.lc(firstmail[name]), mailadress=mpcred.lc(firstmail[adress]), mailpasswd=mpcred.lc(firstmail[passwd]), text='Hello World', attach='mycompleteharddisk')
 
 """
-from __future__ import print_function
-
 import base64
 import pickle
 import os
@@ -168,7 +165,7 @@ def cc(typus, name, user=None,passwd=None,smtp=None,db=None,address=None,remoted
             return
         #pwd = base64.b64encode(passwd)
         pwd = base64ify(passwd)
-        dictionary = {'user': user, 'passwd': pwd, 'smtp':smtp}
+        dictionary = {'user': user, 'passwd': pwd, 'smtp':smtp, 'port':port }
     if typus == 'transfer':
         if not address:
             print('Credentials: address missing')

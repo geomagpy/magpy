@@ -20,13 +20,11 @@ DEPENDENCIES:
 CALLED BY:
         magpy.lib.magpy_formats
 '''
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
 from io import open
 
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
+import struct
 
 def h2d(x):
     '''
@@ -41,7 +39,8 @@ def isLEMIHF(filename):
     Checks whether a file is ASCII Lemi txt file format.
     '''
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
     try:
@@ -65,7 +64,9 @@ def isLEMIBIN1(filename):
     Checks whether a file is Binary Lemi file format.
     '''
     try:
-        temp = open(filename, 'rb').read(32)
+        with open(filename, "rb") as fi:
+            temp = fi.read(32)
+        #temp = open(filename, 'rb').read(32)
         data= struct.unpack('<4cb6B11Bcbbhhhb', temp)
     except:
         return False
@@ -74,7 +75,7 @@ def isLEMIBIN1(filename):
         if not data[0].decode('ascii') == 'L':
             return False
         if not data[22].decode('ascii') in (['A','P']):
-            return false
+            return False
     except:
         return False
 
@@ -87,7 +88,8 @@ def isLEMIBIN(filename):
     Checks whether a file is Binary Lemi025 file format. (2nd format. Used at Conrad Observatory.)
     '''
     try:
-        temp = open(filename, 'rb').read(169)
+        with open(filename, 'rb') as fi:
+            temp = fi.read(169)
         if temp[:20].decode('ascii').startswith("LemiBin"):
             return True
         else:
@@ -99,7 +101,7 @@ def isLEMIBIN(filename):
         if not data[0].decode('ascii') == 'L':
             return False
         if not data[53].decode('ascii') in (['A','P']):
-            return false
+            return False
     except:
         return False
 
@@ -116,6 +118,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
     starttime = kwargs.get('starttime')
     endtime = kwargs.get('endtime')
     getfile = True
+    KEYLIST = DataStream().KEYLIST
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -145,10 +148,10 @@ def readLEMIHF(filename, headonly=False, **kwargs):
         day = datetime.strftime(datetime.strptime(daystring, '%Y%m%d'),'%Y-%m-%d')
         # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
         loggerlib.warning("readLEMIHF: Wrong dateformat in Filename %s." % filename)
@@ -166,7 +169,7 @@ def readLEMIHF(filename, headonly=False, **kwargs):
             else:
                 #row = LineStruct()
                 elem = line.split()
-                tim = date2num(datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2]+'T'+elem[3]+':'+elem[4]+':'+elem[5],'%Y-%m-%dT%H:%M:%S.%f'))
+                tim = datetime.strptime(elem[0]+'-'+elem[1]+'-'+elem[2]+'T'+elem[3]+':'+elem[4]+':'+elem[5],'%Y-%m-%dT%H:%M:%S.%f')
                 #row.time = tim
                 array[0].append(tim)
                 array[xpos].append(float(elem[6]))
@@ -253,6 +256,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     timeshift = kwargs.get('timeshift')
     gpstime = kwargs.get('gpstime')
     sectime = kwargs.get('sectime')
+    KEYLIST = DataStream().KEYLIST
 
     #print "Reading LEMIBIN -- careful --- check time shifts and used time column (used during acquisition and read????)"
     timediff = []
@@ -304,13 +308,13 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         getfile = True
@@ -394,7 +398,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
             str1pos = KEYLIST.index('str1')
             secpos = KEYLIST.index('sectime')
             for i in range(10):
-                tim = date2num(time+timedelta(microseconds=(100000.*i)))
+                tim = time+timedelta(microseconds=(100000.*i))
                 array[0].append(tim)
                 array[xpos].append((data[20+i*3])*1000.)
                 array[ypos].append((data[21+i*3])*1000.)
@@ -439,6 +443,7 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     endtime = kwargs.get('endtime')
     debug = kwargs.get('debug')
     getfile = True
+    KEYLIST = DataStream().KEYLIST
 
     fh = open(filename, 'rb')
     # read file and split text into channels
@@ -449,13 +454,13 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         if starttime:
-            if not theday[-1] >= datetime.date(stream._testtime(starttime)):
+            if not theday[-1] >= datetime.date(testtime(starttime)):
                 getfile = False
         if endtime:
-            if not theday[0] <= datetime.date(stream._testtime(endtime)):
+            if not theday[0] <= datetime.date(testtime(endtime)):
                 getfile = False
     except:
         # Date format not recognized. Need to read all files
@@ -495,7 +500,6 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
             currsec = newtime[-1]
             newtime.append(0.0)
             for i in range (0,30):
-                row = LineStruct()
                 line = fh.read(16)
                 data= struct.unpack('<3f2h', line)
                 microsec = i/10.
@@ -509,7 +513,7 @@ def readLEMIBIN1(filename, headonly=False, **kwargs):
                 newtime[-2] = currsec+secadd
                 time = datetime(2000+newtime[0],newtime[1],newtime[2],newtime[3],newtime[4],int(newtime[5]),int(newtime[6]*1000000))
 
-                array[0].append(date2num(time))
+                array[0].append(time)
                 array[xpos].append((data[0])*1000.)
                 array[ypos].append((data[1])*1000.)
                 array[zpos].append((data[2])*1000.)

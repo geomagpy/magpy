@@ -2,25 +2,29 @@
 MagPy
 QSPIN input filter
 Written by Roman Leonhardt, Tim White June 2018
-- contains test and read function, toDo: write function
+- contains test and read function,
 """
-from __future__ import print_function
 
-from magpy.stream import *
+from magpy.stream import DataStream
+from datetime import datetime, timedelta
+import os
+import numpy as np
+import logging
+logger = logging.getLogger(__name__)
+
+KEYLIST = DataStream().KEYLIST
+
 
 def isQSPIN(filename):
     """
     Checks whether a file is GSM19 format.
     """
     try:
-        temp = open(filename, 'rt') #, encoding='utf-8', errors='ignore'
+        with open(filename, "rt") as fi:
+            temp = fi.readline()
     except:
         return False
-    try:
-        li = temp.readline()
-    except:
-        return False
-    if not li.startswith('*Start Header*'):
+    if not temp.startswith('*Start Header*'):
         return False
     return True
 
@@ -54,6 +58,7 @@ Line Format: <Data in nT>,<valid>,<counter>,<strength>
     daytmp = datetime.strftime(creationdate,"%Y-%m-%d")
     YeT = daytmp[:2]
     ctime = creationdate
+    lineformat=False
 
     fh = open(filename, 'rt')
     # read file and split text into channels
@@ -97,9 +102,7 @@ Line Format: <Data in nT>,<valid>,<counter>,<strength>
             data = line.split(',')
             #48613.0368106664,True,,99
             ctime = ctime+timedelta(seconds=delta)
-            numtime = date2num(ctime)
-            if numtime > 0:
-                array[0].append(numtime)
+            array[0].append(ctime)
             for idx,el in enumerate(data):
                 pos = 4+idx # start with f column
                 try:
@@ -119,4 +122,4 @@ Line Format: <Data in nT>,<valid>,<counter>,<strength>
     headers['DataFormat'] = 'QSpin'
     array = [np.asarray(el) for el in array]
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
+    return DataStream(header=headers, ndarray=np.asarray(array, dtype=object))

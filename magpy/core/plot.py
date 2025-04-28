@@ -1,1057 +1,973 @@
-'''
-Path:                   magpy.mpplot
-Part of package:        stream (plot)
-Type:                   Library of matplotlib plotting functions
 
-PURPOSE:
-        This script provides multiple functions for plotting a stream as well
-        as analysing various properties of a stream.
-        All plots are done with python's matplotlib package.
-
-CONTAINS:
-    (MAIN...)
-        plot:           (Func) Will plot variables from a single stream.
-        plotStreams:    (Func) Plots multiple variables from multiple streams.
-        ploteasy:       (Func) Quick & easy plotting function that plots all data.
-    (EXTENDED...)
-        plotFlag:       (Func) Enables flagging in plot
-        plotEMD:        (Func) Plots Empirical Mode Decomposition from magpy.opt.emd
-        plotNormStreams:(Func) Plot normalised streams
-        plotPS:         (Func) Plots the power spectrum of a given key.
-        plotSatMag:     (Func) Useful tool for plotting magnetic and satellite data.
-        plotSpectrogram:(Func) Plots spectrogram of a given key.
-        plotStereoplot: (Func) Plots stereoplot of inc and dec values.
-        obspySpectrogram:(Func) Spectrogram plotting function taken from ObsPy.
-    (HELPER/INTERNAL FUNCTIONS...)
-        _plot:          (Func) ... internal function to funnel plot information
-                        into a matplotlib plot object.
-        _confinex:      (Func) ... utility function of _plot.
-        maskNAN:        (Func) ... utility function of _plot.
-        nan_helper:     (Func) ... utility function of _plot.
-        denormalize:    (Func) ... utility function of _plot.
-
-DEPENDENCIES:
-        magpy.stream
-        magpy.opt.emd
-        matplotlib
-
-CALLED BY:
-        External data plotting and analysis scripts only.
-'''
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import division
-
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import *
+import matplotlib
 
-import logging
+gui_env = ['TKAgg', 'GTKAgg', 'Agg'] # remove WXAgg and add this activation to GUI
+maversion = matplotlib.__version__.replace('svn', '')
+try:
+    maversion = map(int, maversion.replace("rc", "").split("."))
+    matplotlibversion = list(maversion)
+except:
+    maversion = maversion.strip("rc")
+    matplotlibversion = maversion
 logger = logging.getLogger(__name__)
-'''
+logger.info("Loaded Matplotlib - Version %s" % str(matplotlibversion))
+
+noterminal = False
 try:
-    import matplotlib
-    if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
-        print "No terminal connected - assuming cron job and using Agg for matplotlib"
-        matplotlib.use('Agg') # For using cron
+        if not os.isatty(sys.stdout.fileno()):   # checks if stdout is connected to a terminal (if not, cron is starting the job)
+            logger.info("No terminal connected - assuming cron job and using Agg for matplotlib")
+            #gui_env = ['WXAgg','TKAgg','Agg','GTKAgg','Qt4Agg']
+            matplotlib.use('Agg') # For using cron
+            notermial = True
 except:
-    print "Prob with matplotlib"
-
-try:
-    version = matplotlib.__version__.replace('svn', '')
-    try:
-        version = map(int, version.replace("rc","").split("."))
-        MATPLOTLIB_VERSION = version
-    except:
-        version = version.strip("rc")
-        MATPLOTLIB_VERSION = version
-    print "Loaded Matplotlib - Version %s" % str(MATPLOTLIB_VERSION)
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import Normalize
-    from matplotlib import mlab
-    from matplotlib.dates import date2num, num2date
-    import matplotlib.cm as cm
-    from pylab import *
-    from datetime import datetime, timedelta
-except ImportError as e:
-    logger.error("plot package: Matplotlib import error. If missing, please install to proceed.")
-    logger.error("Error string: %s" % e)
-    raise Exception("CRITICAL IMPORT ERROR FOR PLOT PACKAGE: Matplotlib import error.")
-'''
-
-# TODO:
-# - Move all plotting functions over from stream.
-#       STILL TO FIX:
-#       spectrogram()
-#               TODO: ORIGINAL FUNCTION HAS ERRORS.
-#               renamed to plotSpectrogram
-#               changed variable title to plottitle
-#       obspyspectrogram()
-#               renamed to obspySpectrogram.
-#       DONE:
-#       plot() + plotStreams()
-#       powerspectrum()
-#               renamed to plotPS
-#               changed variable title to plottitle
-#       stereoplot()
-#               renamed to plotStereoplot
-#
-# KNOWN BUGS:
-# - None? :)
-
-colorlist =  ['b','g','m','c','y','k','b','g','m','c','y','k']
-symbollist = ['-','-','-','-','-','-','-','-','-','-','-','-']
-gridcolor = '#316931'
-labelcolor = '0.2'
-
-try:
-    defaultcolormap=plt.get_cmap('plasma')
-except:
-    defaultcolormap=cm.Accent
-
-
-#####################################################################
-#                                                                   #
-#       MAIN PLOTTING FUNCTIONS                                     #
-#       (for plotting geomagnetic data)                             #
-#                                                                   #
-#####################################################################
-
-def plot_new(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=False,
-        annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
-        t_stormphases=None,includeid=False,function=None,plottype='discontinuous',resolution=None,
-        **kwargs):
-
-        plot(stream,variables=variables,specialdict=specialdict,errorbars=errorbars,padding=padding,
-                        noshow=noshow,annotate=annotate,stormphases=stormphases,colorlist=colorlist,
-                        symbollist=symbollist,t_stormphases=t_stormphases,includeid=includeid,
-                        function=function,plottype=plottype,flagontop=flagontop,resolution=resolution, **kwargs)
-
-
-def plot(stream,variables=[],specialdict={},errorbars=False,padding=0,noshow=False,
-        annotate=False,stormphases=False,colorlist=colorlist,symbollist=symbollist,
-        t_stormphases=None,includeid=False,flagontop=False,function=None,plottype='discontinuous',resolution=None,
-        **kwargs):
-    '''
-    DEFINITION:
-        This function creates a graph from a single stream.
-
-    PARAMETERS:
-    Variables:
-        - stream:       (DataStream object) Stream to plot
-        - variables:    (list) List of variables to plot.
-    Kwargs:
-        - annotate:     (bool/list=False) If True, will annotate plot.
-        - bartrange:    (float) Variable for plotting of bars.
-        - bgcolor:      (color='white') Background colour of plot.
-        - colorlist:    (list(colors)) List of colours to plot with.
-                        Default = ['b','g','m','c','y','k','b','g','m','c','y','k']
-        - confinex:     (bool=False) x-axis will be confined to smaller t-values if True.
-        - errorbars:    (bool/list=False) If True, will plot corresponding errorbars:
-                        [ [False], [True], [False, False] ]
-        - fill:         (list = []) List of keys for which the plot uses fill_between
-        - fmt:          (str) Format of outfile.
-        - fullday:      (bool=False) Will plot fullday if True.
-        - function:     (func) [0] is a dictionary containing keys (e.g. fx),
-                        [1] the startvalue, [2] the endvalue
-                        Plot the content of function within the plot.
-                        CAUTION: Not yet implemented.
-        - grid:         (bool=True) If True, will plot grid.
-        - gridcolor:    (color='#316931') Colour of grid.
-        - includeid:    (bool) If True, sensor IDs will be extracted from header data and
-                        plotted alongside corresponding data. Default=False
-        - labelcolor:   (color='0.2') Colour of labels.
-        - outfile:      (str) Path of file to plot figure to.
-        - padding:      (float/list) Float or list of padding for each variable.
-        - plottitle:    (str) Title to put at top of plot.
-        - plottype:     (NumPy str='discontinuous') Can also be 'continuous'.
-        - savedpi:      (float=80) Determines dpi of outfile.
-        - specialdict:  (dictionary) contains special information for specific plots.
-                        key corresponds to the column
-                        input is a list with the following parameters
-                        {'x':[ymin,ymax]}
-        - stormphases:  (bool/list) If True, will plot shaded and annotated storm phases.
-                        NOTE: Also requires variable t_stormphases.
-        - symbollist:   (list) List of symbols to plot with. Default= '-' for all.
-        - t_stormphases:(dict) Dictionary (2 <= len(dict) <= 4) containing datetime objects.
-                        dict('ssc') = time of SSC
-                        dict('mphase') = time of start of main phase / end of SSC
-                        dict('rphase') = time of start of recovery phase / end of main phase
-                        dict('stormend') = end of recovery phase
-
-    RETURNS:
-        - plot:         (Pyplot plot) Returns plot as plt.show or savedfile
-                        if outfile is specified.
-
-    EXAMPLE:
-        >>>
-
-    APPLICATION:
-
-    '''
-
-    # Test whether columns really contain data or whether only nans are present:
-    stream = stream._remove_nancolumns()
-    availablekeys = stream._get_key_headers(numerical=True)
-    logger = logging.getLogger(__name__+".plot")
-
-    # if no variables are given, use all available:
-    if len(variables) < 1:
-        variables = availablekeys
-    else:
-        variables = [var for var in variables if var in availablekeys]
-    if len(variables) > 9:
-        logger.info("More than 9 variables available - plotting only the first nine!")
-        logger.info("Available: "+ str(variables))
-        variables = variables[:9]
-        logger.info("Plotting: "+ str(variables))
-    else:
-        logger.info("Plotting: "+ str(variables))
-
-    # Check lists for variables have correct length:
-    num_of_var = len(variables)
-    if num_of_var > 9:
-        logger.error("Can't plot more than 9 variables, sorry.")
-        raise Exception("Can't plot more than 9 variables!")
-
-    if len(symbollist) < num_of_var:
-        logger.error("Length of symbol list does not match number of variables.")
-        raise Exception("Length of symbol list does not match number of variables.")
-    if len(colorlist) < num_of_var:
-        logger.error("Length of color list does not match number of variables.")
-        raise Exception("Length of color list does not match number of variables.")
-
-    plot_dict = []
-    count = 0
-
-    # The follow four variables can be given in two ways:
-    #    bool: annotate = True --> all plots will be annotated
-    #    list: annotate = [False, True, False] --> only second plot will be annotated
-    # These corrections allow for simple variable definition during use.
-    if type(errorbars) == list:
-        errorbars = [errorbars]
-    else:
-        errorbars = errorbars
-
-    if type(stormphases) == list:
-        stormphases = [stormphases]
-    else:
-        stormphases = stormphases
-
-    if type(annotate) == list:
-        annotate = [annotate]
-    else:
-        annotate = annotate
-
-    if type(padding) == list:
-        padding = [padding]
-    else:
-        padding = padding
-
-    plotStreams([stream], [ variables ], specialdict=[specialdict],noshow=noshow,
-        errorbars=errorbars,padding=padding,annotate=annotate,flagontop=flagontop,stormphases=stormphases,
-        colorlist=colorlist,symbollist=symbollist,t_stormphases=t_stormphases,
-        includeid=includeid,function=function,plottype=plottype,resolution=resolution,**kwargs)
-
-
-def plotStreams(streamlist,variables,padding=None,specialdict={},errorbars=None,
-        colorlist=colorlist,symbollist=symbollist,annotate=None,stormphases=None,
-        t_stormphases={},includeid=False,function=None,plottype='discontinuous',
-        noshow=False,labels=False,flagontop=False,resolution=None,debug=False,**kwargs):
-    '''
-    DEFINITION:
-        This function plots multiple streams in one plot for easy comparison.
-
-    PARAMETERS:
-    Variables:
-        - streamlist:   (list) A list containing the streams to be plotted
-                        in a list, e.g.:
-                        [ stream1, stream2, etc...]
-                        [ fge, pos1, env1 ]
-        - variables:    (list(list)) List containing the variables to be plotted
-                        from each stream, e.g:
-                        [ ['x'], ['f'], ['t1', 't2'] ]
-    Args:
-        LISTED VARIABLES:
-        (NOTE: All listed variables must correspond in size to the variable list.)
-        - annotate:     (bool/list(bool)) If True, will annotate plot with flags, e.g.:
-                        [ [True], [True], [False, False] ]
-                        (Enter annotate = True for all plots to be annotated.)
-        - errorbars:    (bool/list(bool)) If True, will plot corresponding errorbars:
-                        [ [False], [True], [False, False] ]
-                        (Enter errorbars = True to plot error bars on all plots.)
-        - labels:       [ (str) ] List of labels for each stream and variable, e.g.:
-                        [ ['FGE'], ['POS-1'], ['ENV-T1', 'ENV-T2'] ]
-        - padding:      (float/list(list)) List of lists containing paddings for each
-                        respective variable, e.g:
-                        [ [5], [5], [0.1, 0.2] ]
-                        (Enter padding = 5 for all plots to use 5 as padding.)
-        - stormphases:  (bool/list(bool)) If True, will plot shaded and annotated storm phases.
-                        (Enter stormphases = True to plot storm on all plots.)
-                        NOTE: Also requires variable t_stormphases.
-        - specialdict:  (list(dict)) Same as plot variable, e.g:
-                        [ {'z': [100,150]}, {}, {'t1':[7,8]} ]
-        NORMAL VARIABLES:
-        - bartrange:    (float) Variable for plotting of bars.
-        - bgcolor:      (color='white') Background colour of plot.
-        - colorlist:    (list(colors)) List of colours to plot with.
-                        Default = ['b','g','m','c','y','k','b','g','m','c','y','k']
-        - confinex:     (bool=False) x-axis will be confined to smaller t-values if True.
-        - fmt:          (str) Format of outfile.
-        - fullday:      (bool=False) Will plot fullday if True.
-        - function:     (func) [0] is a dictionary containing keys (e.g. fx),
-                        [1] the startvalue, [2] the endvalue
-                        Plot the content of function within the plot.
-                        CAUTION: Not yet implemented.
-        - grid:         (bool=True) If True, will plot grid.
-        - gridcolor:    (color='#316931') Colour of grid.
-        - includeid:    (bool) If True, sensor IDs will be extracted from header data and
-                        plotted alongside corresponding data. Default=False
-        - labelcolor:   (color='0.2') Colour of labels.
-        - flagontop:    (True/False) define whether flags are shown above or below data.
-        - opacity:      (0.0 to 1.0) Opacity applied to fills and bars.
-        - legendposition: (str) Position of legend (when var labels is used), e.g. 'upper left'
-        - noshow:       (bool) If True, figure object will be returned. Default=False
-        - outfile:      (str) Path of file to plot figure to.
-        - plottitle:    (str) Title to put at top of plot.
-        - plottype:     (NumPy str='discontinuous') Can also be 'continuous'.
-        - savedpi:      (float=80) Determines dpi of outfile.
-        - symbollist:   (list) List of symbols to plot with. Default= '-' for all.
-        - resolution:   (int) Resolution of plot. Amount of points are reduced to this value.
-        - t_stormphases:(dict) Dictionary (2 <= len(dict) <= 4) containing datetime objects.
-                        dict('ssc') = time of SSC
-                        dict('mphase') = time of start of main phase / end of SSC
-                        dict('rphase') = time of start of recovery phase / end of main phase
-                        dict('stormend') = end of recovery phase
-                        WARNING: If recovery phase is defined as past the end of
-                        the data to plot, it will be plotted in addition to the
-                        actual data.
-
-    RETURNS:
-        - plot:         (Pyplot plot) Returns plot as plt.show or saved file
-                        if outfile is specified.
-
-    EXAMPLE:
-        >>> plotStreams(streamlist, variables, padding=5, outfile='plots.png')
-
-    APPLICATION:
-        fge_file = fge_id + '_' + date + '.cdf'
-        pos_file = pos_id + '_' + date + '.bin'
-        lemi025_file = lemi025_id + '_' + date + '.bin'
-        cs_file = cs_id + '_' + date + '.bin'
-        fge = read(fge_file)
-        pos = read(pos_file)
-        lemi025 = read(lemi025_file,tenHz=True)
-        cs = read(cs_file)
-        streamlist =    [ fge,                  cs,                     lemi025,        pos             ]
-        variables =     [ ['x','y','z'],        ['f'],                  ['z'],          ['f']           ]
-        specialdict =   [ {},                   {'f':[48413,48414]},    {},             {}              ]
-        errorbars =     [ [False,False,False],  [False],                [False],        [True]          ]
-        padding =       [ [1,1,1],              [1],                    [1] ,           [1]             ]
-        annotate =      [ [False,False,False],  [True],                 [True] ,        [True]          ]
-
-        # TO PLOT FOUR DIFFERENT STREAMS WITH 7 VARIABLES TO A FILE:
-        plotStreams(streamlist, variables, padding=padding,specialdict=specialdict,
-                annotate=annotate,includeid=True,errorbars=errorbars,
-                outfile='plots/all_magn_cut1.png',
-                plottitle="WIC: All Magnetometers (%s)" % date)
-
-        # TO PLOT DATA AND RETURN A FIGURE FOR FURTHER:
-        plot = plotStreams(streamlist, variables, noshow=True)
-        plot.title("New title.")
-        plot.savefig("newfig.png")
-    '''
-
-    logger = logging.getLogger(__name__+".plotStreams")
-
-    # Preselect only numerical values
-    variables = [[el for el in lst if el in NUMKEYLIST] for lst in variables]
-    num_of_var = 0
-    for item in variables:
-        num_of_var += len(item)
-    if num_of_var > 9:
-        logger.error("Can't plot more than 9 variables, sorry.")
-        raise Exception("Can't plot more than 9 variables!")
-
-    # Check lists for variables have correct length:
-    if len(symbollist) < num_of_var:
-        logger.error("Length of symbol list does not match number of variables.")
-        raise Exception("Length of symbol list does not match number of variables.")
-    if len(colorlist) < num_of_var:
-        logger.error("Length of color list does not match number of variables.")
-        raise Exception("Length of color list does not match number of variables.")
-
-    plot_dict = []
-    count = 0
-
-    if not resolution:
-        resolution = 5000000  # 40 days of 1 second data can be maximaly shown in detail, 5 days of 10 Hz
-
-    # Iterate through each variable, create dict for each:
-    for i in range(len(streamlist)):
-        stream = streamlist[i]
-        ndtype = False
+        logger.warning("Problems with identfying cron job - windows system?")
+        pass
+if not noterminal:
+    for gui in gui_env:
         try:
-            t = stream.ndarray[KEYLIST.index('time')]
-            lentime = len(t)
-            if not lentime > 0:
-                x=1/0
-            if lentime > resolution:
-                logger.info("Reducing data resultion ...")
-                stepwidth = int(len(t)/resolution)
-                t = t[::stepwidth]
-                # Redetermine lentime
-                lentime = len(t)
-            logger.info("Start plotting of stream with length %i" % len(stream.ndarray[0]))
-            ndtype = True
+            logger.info("Testing backend {}".format(gui))
+            try:  # will be important from matplotlib3.3 onwards
+                matplotlib.use(gui, force=True)
+            except:
+                matplotlib.use(gui, warn=False, force=True)
+            from matplotlib import pyplot as plt
+            break
         except:
-            t = np.asarray([row[0] for row in stream])
-            logger.info("Start plotting of stream with length %i" % len(stream))
-        orgt = np.asarray([ti for ti in t]) # orgt is needed if time column is modified (i.e. continuous plots)
-        for j in range(len(variables[i])):
-            data_dict = {}
-            key = variables[i][j]
-            logger.info("Determining plot properties for key %s." % key)
-            if not key in NUMKEYLIST:
-                logger.error("Column key (%s) not valid!" % key)
-                raise Exception("Column key (%s) not valid!" % key)
-            ind = KEYLIST.index(key)
-            try:
+            continue
+logger.info("Using backend: {}".format(matplotlib.get_backend()))
 
-                y = stream.ndarray[ind]
-                if not len(y) > 0:
-                    x=1/0
-                if len(y) > resolution:
-                    stepwidth = int(len(y)/resolution)
-                    y = y[::stepwidth]
-                if len(y) != lentime:
-                    logger.error("Dimensions of time and %s do not match!" % key)
-                    raise Exception("Dimensions of time and %s do not match!")
-            except:
-                y = np.asarray([float(row[ind]) for row in stream])
-
-            if len(y) == 0:
-                logger.error("Cannot plot stream of zero length!")
-
-            # eventually remove flagged:
-            dropflagged = False
-            if dropflagged:
-                flagind = KEYLIST.index('flag')
-                flags = stream.ndarray[flagind]
-                ind = KEYLIST.index(key)
-                flagarray =  np.asarray([list(el)[ind] for el in flags])
-                if debug:
-                    print("Flagarray", flagarray)
-                indicies = np.where(flagarray == '1')
-                if debug:
-                    print("Indicis", indicis)
-
-            # Fix if NaNs are present:
-            if plottype == 'discontinuous':
-                y = maskNAN(y)
-            else:
-                nans, test = nan_helper(y)
-                newt = [orgt[idx] for idx, el in enumerate(y) if not nans[idx]]
-                t = newt
-                y = [el for idx, el in enumerate(y) if not nans[idx]]
-
-            if len(y) == 0:
-                logger.error("Cannot plot stream without data - Filling with 9999999!")
-                if len(stream.ndarray[0]) > 0:
-                    y = np.asarray([9999999 for row in stream.ndarray[0]])
-                else:
-                    y = np.asarray([9999999 for row in stream])
+#from matplotlib.colors import Normalize
+#from matplotlib.widgets import RectangleSelector, RadioButtons
+#from matplotlib import mlab
+from matplotlib.dates import date2num, num2date, DateFormatter
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.backend_bases import MouseButton
 
 
-            data_dict['key'] = key
-            data_dict['tdata'] = t
-            data_dict['ydata'] = y
-            data_dict['color'] = colorlist[count]
-            data_dict['symbol'] = symbollist[count]
+edgecolor = [0.8, 0.8, 0.8]
 
-            # Define padding for each variable:
-            if padding:
-                if type(padding) == list:
-                    ypadding = padding[i][j]
-                else:
-                    ypadding = padding
-            else:
-                ypadding = (np.max(y)- np.min(y))*0.05 # 0
+"""
+|class | method | since version | until version | runtime test | result verification | manual | *tested by |
+|----- | ------ | ------------- | ------------- | ------------ | ------------------- | ------ | ---------- |
+|**core.plot** |  |             |               |              |                     |        | |
+|    | tsplot          | 2.0.0  |               | yes          | -                   | 4.1    | |
+|    | testtimestep    | 2.0.0  |               | yes          | yes                 |        | tsplot |
+|    | fill_list       | 2.0.0  |               | yes          | yes                 |        | tsplot |
+|    | psplot          | 2.0.0  |               | yes          | -                   | 4.6    | |
+|    | spplot          | 2.0.0  |               | yes          | not working in gui  | 4.7    | |
 
-            # If limits are specified, use these:
-            if specialdict:
-                data_dict['ymin'] = np.min(y) - ypadding
-                data_dict['ymax'] = np.max(y) + ypadding
-                if key in specialdict[i]:
-                    specialparams = specialdict[i][key]
-                    try:
-                        if DataStream()._is_number(specialparams[0]):
-                            lowlev = specialparams[0]
-                        else:
-                            lowlev = np.min(y)
-                    except:
-                        lowlev = np.min(y)
-                    try:
-                        if DataStream()._is_number(specialparams[1]):
-                            highlev = specialparams[1]
-                        else:
-                            highlev = np.max(y)
-                    except:
-                        highlev = np.max(y)
-                    data_dict['ymin'] = lowlev - ypadding
-                    data_dict['ymax'] = highlev + ypadding
-                else:
-                    if not (np.min(y) == np.max(y)):
-                        data_dict['ymin'] = np.min(y) - ypadding
-                        data_dict['ymax'] = np.max(y) + ypadding
-                    else:
-                        logger.warning('Min and max of key %s are equal. Adjusting axes.' % key)
-                        data_dict['ymin'] = np.min(y) - 0.05
-                        data_dict['ymax'] = np.max(y) + 0.05
-            else:
-                if not (np.min(y) == np.max(y)):
-                    data_dict['ymin'] = np.min(y) - ypadding
-                    data_dict['ymax'] = np.max(y) + ypadding
-                else:
-                    logger.warning('Min and max of key %s are equal. Adjusting axes.' % key)
-                    data_dict['ymin'] = np.min(y) - 0.5
-                    data_dict['ymax'] = np.max(y) + 0.5
+"""
 
-            # Define y-labels:
-            try:
-                ylabel = stream.header['col-'+key].upper()
-            except:
-                ylabel = ''
-                pass
-            try:
-                yunit = stream.header['unit-col-'+key]
-            except:
-                yunit = ''
-                pass
-            if not yunit == '':
-                yunit = re.sub('[#$%&~_^\{}]', '', yunit)
-                label = ylabel+' $['+yunit+']$'
-            elif yunit == None:
-                logger.warning("No units for key %s! Empty column?" % key)
-                label = ylabel
-            else:
-                label = ylabel
-            data_dict['ylabel'] = label
+class AutoScaleY():
+    # Used to rescale all y axes in a multicomponent plot to optimal range
+    # https://stackoverflow.com/questions/53326158/interactive-zoom-with-y-axis-autoscale
+    def  __init__(self, line, margin=0.05):
+        self.margin = margin
+        self.line = line
+        self.ax = line.axes
+        self.ax.callbacks.connect('xlim_changed', self.rescale_y)
 
-            # Create array for errorbars:
-            if errorbars:
-                if type(errorbars) == list:
-                    try:
-                        if errorbars[i][j] and not key.startswith('d'):
-                            ind = KEYLIST.index('d'+key)
-                            if ndtype:
-                                errors = stream.ndarray[ind]
-                            else:
-                                errors = np.asarray([row[ind] for row in stream])
-                            if len(errors) > 0:
-                                data_dict['errors'] = errors
-                            else:
-                                logger.warning("No errors for key %s. Leaving empty." % key)
-                    except:
-                        logger.warning("No errors for key %s. Leaving empty." % key)
-                else:
-                    try:
-                        ind = KEYLIST.index('d'+key)
-                        if ndtype:
-                            errors = stream.ndarray[ind]
-                        else:
-                            errors = np.asarray([row[ind] for row in stream])
-                        if len(errors) > 0:
-                            data_dict['errors'] = errors
-                        else:
-                            logger.warning("No errors for key %s. Leaving empty." % key)
-                    except:
-                        logger.warning("No errors for key %s. Leaving empty." % key)
+    def rescale_y(self,evt=None):
+        xmin, xmax = self.ax.get_xlim()
+        x, y = self.line.get_data()
+        cond = (x >= xmin) & (x <= xmax)
+        yrest = y[cond]
+        margin = (yrest.max()-yrest.min())*self.margin
+        self.ybounds = [yrest.min()-margin, yrest.max()+margin]
+        self.timer = self.ax.figure.canvas.new_timer(interval=10)
+        self.timer.single_shot = True
+        self.timer.add_callback(self.change_y)
+        self.timer.start()
 
-            # Annotate flagged data points:
-            if annotate:
-                if type(annotate) == list:
-                    if annotate[i][j]:
-                        if ndtype:
-                            ind = KEYLIST.index('flag')
-                            flag = stream.ndarray[ind]
-                            ind = KEYLIST.index('comment')
-                            comments = stream.ndarray[ind]
-                        else:
-                            flag = stream._get_column('flag')
-                            comments = stream._get_column('comment')
-                        flags = array([flag,comments], dtype=object)
-                        data_dict['annotate'] = True
-                        data_dict['flags'] = flags
-                    else:
-                        data_dict['annotate'] = False
-                else:
-                    if ndtype:
-                        ind = KEYLIST.index('flag')
-                        flag = stream.ndarray[ind]
-                        ind = KEYLIST.index('comment')
-                        comments = stream.ndarray[ind]
-                    else:
-                        flag = stream._get_column('flag')
-                        comments = stream._get_column('comment')
-                    flags = array([flag,comments], dtype=object)
-                    #print "plotStreams1", flags
-                    data_dict['annotate'] = True
-                    data_dict['flags'] = flags
-            else:
-                data_dict['annotate'] = False
+    def change_y(self):
+        #print ("HERE")
+        #print (self.ybounds)
+        if not any(np.isnan(np.array(self.ybounds))):
+            self.ax.set_ylim(self.ybounds)
+            self.ax.figure.canvas.draw()
 
-            data_dict['flagontop'] = flagontop
 
-            #print "plotStreams2", data_dict['flags']
+def testtimestep(variable):
+    try:
+        if isinstance(variable, (datetime, datetime64)):
+            return True
+        else:
+            return False
+    except:
+        return False
 
-            # Get an existing function object from header:
-            funclist = stream.header.get('DataFunction',[])
-            if len(funclist) > 0:
-                data_dict['function'] = funclist
 
-            # Plot a function (overwrite any existing object):
-            if function:
-                data_dict['function'] = function
+def fill_list(mylist, target_len, value):
+    return mylist[:target_len] + [value] * (target_len - len(mylist))
 
-            # Plot shaded storm phases:
-            if stormphases:
-                if not t_stormphases:
-                    logger.error("No variable t_stormphases for plotting phases.")
-                    raise Exception("Require variable t_stormphases when stormphases=True!")
-                if len(t_stormphases) not in [1,2,3,4]:
-                    logger.error("Length of variable t_stormphases incorrect.")
-                    raise Exception("Something is wrong with length of variable t_stormphases!")
-                if type(stormphases) == list:
-                    if stormphases[i][j]:
-                        data_dict['stormphases'] = t_stormphases
-                else:
-                    data_dict['stormphases'] = t_stormphases
 
-            # Add labels:
-            if labels:
-                data_dict['datalabel'] = labels[i][j]
-            else:
-                data_dict['datalabel'] = ''
+def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges = None, padding = None,
+    symbols = None, colors = None, title = None, xinds = None, legend = None, grid = None, patch = None, annotate = False,
+    fill = None, showpatch = None, errorbars = None, functions = None, functionfmt = "r-", xlabelposition = None,
+    ylabelposition = None, yscale = None, dateformatter = None, force = False, width = 10, height = 4, alpha = 0.5,
+    variables = None, autoscale=True, figure = None, debug=False):
+    """
+    DESCRIPTION:
+        tsplot creates a timeseries plot of selected data. tsplot is highly configureable. fixed contents contain a
+        shared x axis based on the first plot.
 
-            # Include sensor IDs:
-            if includeid:
-                try:
-                    sensor_id = stream.header['SensorID']
-                    data_dict['sensorid'] = sensor_id
-                except:
-                    logger.warning("No sensor ID to put into plot!")
+        This method replaces plotStreams, ploteasy and plot of magpy1.x
 
-            plot_dict.append(data_dict)
-            count += 1
+    SPEED:
+        matplotlib has some speed issues when plotting dates for large datasets as they are internally converted.
+        - tsplot uses the following way: time column (datetime or np.datetime64) is converted to matplotlib.dates date2num
+              before: this technique is a bot more than twice faster then just plotting dates and rely on internal conversion
+        - tsplot needs slightly more then 1 second to display 1 month of 1sec 6 channel data in the backend on my machine
 
-    logger.info("Starting plotting function...")
-    if not noshow:
-        _plot(plot_dict, **kwargs)
-        logger.info("Plotting completed.")
+    OPTIONS:
+        keys (list)         :    default are the first three av[]ailable keys of the first data set. If only keys for
+                                 the first data set are given, then an overlay plot is activated
+                                 If all keys are provided then all plots are plotted separately.
+        symbols (list)      :    default "-" : define plot symbols - accpeted are "-",".","o" and "k"
+        colors (list)       :    default is light grey : defines the color of all individual plots of each datastream
+        timecolumn (list)   :    default None : define the used time column - can be time or sectime (if existing)
+        yranges (list)      :    default None : define individual ranges for y axes - overrides padding
+                                 EXAMPLE: keys=[['x','y'],['f']], yranges=[[[20000,22000],[-1000,1000]],[[44000,54000]]]
+        padding (list)      :    default None : define scalar paddings to minimal and maximal data value for y range
+                                 EXAMPLE: keys=[['x','y'],['f']], padding=[[100,50],[10]]
+        fill (dict)         :    provide a list with specific fill information (dicts) for each key i.e.
+                                 [{"boundary":400,"fillcolor":"red"},{"boundary":400,"fillcolor":"blue","fillrange":"smaller"}]
+                                 to fill everything above 400 read and everything below 400 blue for key y
+                                 EXAMPLE: keys=[['x','y','z']], fill=[[[],[{"boundary":400,"fillcolor":"red"},
+                                 {"boundary":400,"fillcolor":"blue","fillrange":"smaller"}],[{"boundary":0,"fillcolor":"red"}]]]
+        legend (dict)       :    default None
+                                 EXAMPLE: legend={"legendtext":('Primary-LEMI036_2', 'Primary-FGE_S0252'),
+                                 "legendposition":"upper right","legendstyle":"shadow","plotnumber":2}
+                                 or legend=True for default with SensorID
+        grid (dict)         :    default None
+                                 EXAMPLE: grid={"visible":True,"which":"major","axis":"both","color":"k"}
+                                 or grid=True  for default values
+        patch (list/dict)   :    default none - patch contain colored regions covering the full vertical space in each
+                                 plot - used for flagging info
+                                 {"patch1":{"start":datetime,"end":datetime,"color":color,"alpha":0.2},"patch2":
+                                 {"start":datetime,"end":datetime,"color":color,"alpha":0.2}]
+        annotate (Bool/dict) :   default False - if True, then annotations are set to start time of patches
+                                                 True will show labelid's
+                                                 annotate='flagid' or annotate='label' are also possible
+        showpatch (list)    :    default True for all streams -
+                                 EXAMPLE: data=[stream1,stream2,stream3],showpatches=[True,False,True]
+        errorbars (list/dict) :  a list of dicts containing definitions for each plot as follows: i.e. two data stream
+                                 with keys=[['x','y'],['var1']]
+                                 plot error bars for 'x' and 'var1', errorbars for 'x' are stored in key 'dx',
+                                 errorbars for 'var1' are stored in 'var5'
+                                 errorbars=[[ex,{}],[evar1]] with:
+                                 ex = {'key':'dx','color':'red','marker':'o', 'linestype':'-'}, evar1={'key':'var5'}
+                                 if errorbars are selected then general symbols and linestyles will be replaced
+        functions (list)     :    a list of functions in the same format as keys, functions will be plotted in functioncolor.
+                                 empty values are defined by emtpy lists
+                                 EXAMPLE: keys=[['x','y'],['var1']], functions=[[func1,[]],[func2]]
+        functionfmt(string) :    Default "r-" for all functions
+        xlabelposition (dict) :    default none - if defined then all xlabels are configured as follows
+                                 EXAMPLE: not yet implemented
+        ylabelposition (float) :    default none - if defined then all ylabels are set to this x position
+                                 EXAMPLE: ylabelposition=-0.1
+        ysacle (string)     :    'linear' (default), 'log'
+        dateformatter (string) : if provided then autoformat x is activated and the choosen format is used for the datecolumn
+                                 i.e. dateformatter="%Y-%m-%d %H"
+        force (bool)        :    plot even with empty DataStream - can be used to plot flag patches without data
+        height (float)      :    default 4 - default height of each individual plot
+                                 EXAMPLE: height=2
+        width (float)       :    default 10 - default width of all plots
+                                 EXAMPLE: width=12
+        autoscale (Bool)    :    default is True - rescale all axes if zoomed
+        figure (object)     :    provide a figure object for the plot - used by magpy_gui
+                                 EXAMPLE: width=12
+
+    EXAMPLE:
+        A) A simple plot in MagPy2.x design
+        B) Plot two plots on each other
+        Overlay plot of two difference plots with x,y,z respectively
+        p = tsplot([delta1,delta2],keys=[['x','y','z']], yranges=[[[-5,5],[-5,5],[-5,5]]], symbolcolor=[[0.8, 0.8, 0.8],[0.5, 0.5, 0.5]], height=2, legend={"legendtext":('Primary-LEMI036_2', 'Primary-FGE_S0252'),"legendposition":"upper right","legendstyle":"shadow","plotnumber":2})
+        C) Fill options:
+        p = tsplot(ace1,fill=[[[],[{"boundary":400,"fillcolor":"red"},{"boundary":400,"fillcolor":"blue","fillrange":"smaller"}],[{"boundary":0,"fillcolor":"red"}]]])
+        D) Plotting errorbars
+        e1={'key':'dx','color':'red','capsize':5, 'marker':'o', 'linestyle':'-'}
+        e2={'key':'dy'}
+        tsplot([teststream,xxx],[['x','y'],['x','y']], symbols=[["-","-"],[".","--"]], symbolcolor=[[0.5, 0.5, 0.5]], errorbars=[[{},{}],[e1,e2]], height=2)
+
+    """
+    # This method requires the provision of data sets on which the get_gaps method has been applied
+    def is_list_empty(testlist):
+        # Replaces older testing method whether array like [[]] are empty
+        tester = min(np.array(testlist, dtype=object).shape)
+        if tester:
+            return False
+        else:
+            return True
+
+    if not data:
+        data = [DataStream()]
+    if not keys:
+        keys = [['dummy']]
+    if not symbols:
+        symbols = [[]]
+    if not colors:
+        colors = [[]]
+    if not timecolumn:
+        timecolumn = ['time']
+    if not yranges:
+        yranges = [[]]
+    if not yscale:
+        yscale = [[]]
+    if not padding:
+        padding = [[]]
+    if not fill:
+        fill = [[]]
+    if not errorbars:
+        errorbars = [[]]
+    if not functions:
+        functions = [[]]
+    if not xinds:
+        xinds = [None]
+    if not showpatch:
+        showpatch = [True]
+    if not legend:
+        legend = {}
+    if not grid:
+        grid = {}
+    if not patch:
+        patch = {}
+
+    titledone = False
+    # check if provided data is a list
+    if not isinstance(data, (list, tuple)):
+        data = [data]
+        # amount of plots
+    amount = len(data)
+    if variables and not keys:
+        keys = variables
+    # check for available keys - do that only for the primary dataset if not provided
+    if keys:
+        keysdepth = len(np.array(keys, dtype=object).shape)
+        if keysdepth == 1 and amount == 1:
+            keys = [keys]
+    if keys and keys[0][0] == 'dummy':
+        keys = [data[0]._get_key_headers(limit=3)]
+    if len(keys) < amount or amount == 1:
+        hght = int(height * len(keys[0]))
+        separate = False
     else:
-        fig = _plot(plot_dict, noshow=True, **kwargs)
-        logger.info("Plotting completed.")
-        return fig
-
-
-#####################################################################
-#                                                                   #
-#       EXTENDED PLOTTING FUNCTIONS                                 #
-#       (for more advanced functions)                               #
-#                                                                   #
-#####################################################################
-
-
-#####################################################################
-#                                                                   #
-#       INTERNAL/HELPER FUNCTIONS                                   #
-#       (Best not play with these.)                                 #
-#                                                                   #
-#####################################################################
-
-
-def _plot(data,savedpi=80,grid=True,gridcolor=gridcolor,noshow=False,
-        bgcolor='white',plottitle=None,fullday=False,bartrange=0.06,
-        labelcolor=labelcolor,confinex=False,outfile=None,fmt=None,figure=False,fill=[],
-        legendposition='upper left',singlesubplot=False,opacity=1.0):
-    '''
-    For internal use only. Feed a list of dictionaries in here to plot.
-    Every dictionary should contain all data needed for one single subplot.
-    DICTIONARY STRUCTURE FOR EVERY SUBPLOT:
-    [ { ***REQUIRED***
-        'key'   : 'x'           (str) MagPy key
-        'tdata' : t             (np.ndarray) Time
-        'ydata' : y             (np.ndarray) Data y(t)
-        'ymin'  : ymin          (float)    Minimum of y-axis
-        'ymax'  : ymax          (float)    Maximum of y-axis
-        'symbol': '-'           (str)      Symbol for plotting, '-' = line
-        'color' : 'b'           (str)      Colour of plotted line
-        'ylabel': 'F [nt]'      (str)      Label on y-axis
-        'annotate': False       (bool)     If this is True, must have 'flags' key
-        'sensorid': 'LEMI025'   (str)      String pulled from header data. If available,
-                                will be plotted alongside data for clarity.
-
-        OPTIONAL:
-        'errorbars': eb         (np.ndarray) Errorbars to plot in subplot
-        'flags' : flags         (np.ndarray) Flags to add into subplot.
-                                Note: must be 2-dimensional, flags & comments.
-        'function': fn          (function object) Plot a function within the subplot.
-        'flagontop': True/False  (bool) define whether flags are on top or not.
-        } ,
-
-      { 'key' : ...                             } ... ]
-
-    GENERAL VARIABLES:
-    plottitle = "Data from 2014-05-02"
-    confinex = False
-    bgcolor = 'blue'
-    etc. ... (all are listed in plot() and plotStreams() functions)
-    figure  -- for GUI
-    fill = ['x']
-    '''
-    logger = logging.getLogger(__name__+"._plot")
+        hght = int(height * np.concatenate(keys).size)
+        separate = True
+    if is_list_empty(symbols):
+        symbols = [["-" for el in line] for line in keys]
+    if is_list_empty(colors):
+        colors = [[[0.8, 0.8, 0.8] for el in line] for line in keys]
+    if is_list_empty(yranges):
+        yranges = [[["default", "default"] for el in line] for line in keys]
+    if yscale and not isinstance(yscale, (list, tuple)):
+        yscale = [[yscale for el in line] for line in keys]
+    if is_list_empty(yscale):
+        yscale = [["linear" for el in line] for line in keys]
+    keys = fill_list(keys, amount, keys[-1])
+    symbols = fill_list(symbols, amount, symbols[-1])
+    colors = fill_list(colors, amount, colors[-1])
+    yscale = fill_list(yscale, amount, yscale[-1])
+    yranges = fill_list(yranges, amount, yranges[-1])
+    timecolumn = fill_list(timecolumn, amount, timecolumn[-1])
+    showpatch = fill_list(showpatch, amount, showpatch[-1])
+    xinds = fill_list(xinds, amount, xinds[-1])
+    if not title:
+        title = [None]
+    if isinstance(title, (list, tuple)):
+        title = fill_list(title, amount, title[-1])
+    if yranges:
+        if len(yranges[0]) == len(keys[0]):
+            yranges = fill_list(yranges, amount, yranges[-1])
+        else:
+            yranges = None
+    if not is_list_empty(padding):
+        if len(padding[0]) == len(keys[0]):
+            padding = fill_list(padding, amount, padding[-1])
+        else:
+            padding = None
+    skey = list(np.array(keys, dtype=object).shape)[:2]
+    if not is_list_empty(errorbars):
+        if not isinstance(errorbars, (list, tuple)):
+            errorbars = False
+        elif not skey == list(np.array(errorbars, dtype=object).shape)[:2]:
+            print("Given error bars do not fit in shape to keys - skipping")
+            errorbars = False
+    if not is_list_empty(functions):
+        if not isinstance(functions, (list, tuple)):
+            functions = False
+        elif not skey == list(np.array(functions, dtype=object).shape)[:2]:
+            print("Given functions do not fit in shape to keys - skipping")
+            functions = False
+    if not functionfmt:
+        functionfmt = 'r-'
 
     if not figure:
-        fig = plt.figure()
+        fig = plt.figure(figsize=(width, hght))
     else:
         fig = figure
 
-    # CREATE MATPLOTLIB FIGURE OBJECT:
-    #fig = plt.figure()
-    plt_fmt = ScalarFormatter(useOffset=False)
-    n_subplots = len(data)
-    zorder = 2
+    # parameter for separate plots
+    total_pos = 0
+    total_keys = np.concatenate(keys).size
+    annocount = 0
+    yoff = -10
+    axs=[]
 
-    for i in range(n_subplots):
-
-        subplt = int("%d%d%d" %(n_subplots,1,i+1))
-        if singlesubplot:
-            subplt = int("111")
-
-        #------------------------------------------------------------
-        # PART 1: Dealing with data
-        #------------------------------------------------------------
-
-        # DEFINE DATA:
-        key = data[i]['key']
-        t = np.asarray(data[i]['tdata']).astype(float)
-        y = np.asarray(data[i]['ydata']).astype(float)
-        if not len(t) == len(y):
-            y = [99999]*len(t)
-        # Sort data before plotting - really necessary ? costs 0.1 seconds for 1 day second data
-        #datar = sorted([[t[j],y[j]] for j, el in enumerate(t)])
-        #t = [datar[j][0] for j, el in enumerate(datar)]
-        #y = [datar[j][1] for j, el in enumerate(datar)]
-        color = data[i]['color']
-        symbol = data[i]['symbol']
-        datalabel = data[i]['datalabel']
-
-        if 'flagontop' in data[i]:
-            if data[i]['flagontop'] == True:
-                zorder = 10
-            else:
-                zorder = 2
-
-        # CREATE SUBPLOT OBJECT & ADD TITLE:
-        logger.info("Adding subplot for key %s..." % data[i]['ylabel'])
-        if i == 0:
-            ax = fig.add_subplot(subplt)#, axisbg=bgcolor)
-            ax.patch.set_facecolor(bgcolor)
-            if plottitle:
-                ax.set_title(plottitle)
-            a = ax
+    if debug:
+        t1 = datetime.now()
+    for idx, dat in enumerate(data):
+        # x column
+        if debug:
+            t2 = datetime.now()
+        x = dat._get_column(timecolumn[idx])
+        if len(x) > 0 and testtimestep(x[0]):
+            # Testdata set: if datetime is converted here total plotting needs 0.25 sec
+            # Testdata set: if datetime is used here as is total plotting needs 0.60 sec
+            t = date2num(x)  # for sharex numerical dates are apparently necessary
+            # 0. date directly (~0 sec), but in later stage much longer (remove ax.axis_date when testing)
         else:
-            ax = fig.add_subplot(subplt, sharex=a) #, axisbg=bgcolor)
-            ax.patch.set_facecolor(bgcolor)
-
-        if datalabel != '':
-            ax.plot(t,y,color+symbol,label=datalabel)
-        else:
-            ax.plot(t,y,color+symbol)
-        if key in fill:
-            ax.fill_between(t,0,y,color=color,alpha=opacity)
-
-        # PLOT A LEGEND
-        if datalabel != '':
-            legend = ax.legend(loc=legendposition, shadow=True)
-            for label in legend.get_texts():
-                label.set_fontsize('small')
-
-        # DEFINE MIN AND MAX ON Y-AXIS:
-        ymin = data[i]['ymin']
-        ymax = data[i]['ymax']
-
-        # PLOT ERROR BARS (if available):
-        if 'errors' in data[i]:
-            errorbars = data[i]['errors']
-            ax.errorbar(t,y,yerr=errorbars,fmt=color+'o')
-
-        # ANNOTATE:
-        if data[i]['annotate'] == True:
-            orientationcnt = 0
-            flags = data[i]['flags']
-            emptycomment = "-"
-            indexflag = KEYLIST.index(key)
-            # identfy subsequent idx nums in flags[1]
-            a_t,a_y,b_t,b_y,c_t,c_y,d_t,d_y = [],[],[],[],[],[],[],[]
-            if len(flags[1]) > 0:
-                # 1. get different comments
-                tmp = DataStream()
-                uniqueflags = tmp.union(flags[1])
-                #print "Flags", flags,uniqueflags, key
-                for fl in uniqueflags:
-                    #print ("Flag", fl)
-                    flagindicies = []
-                    for idx, elem in enumerate(flags[1]):
-                        if not elem == '' and elem == fl:
-                            #print ("ELEM", elem)
-                            flagindicies.append(idx)
-                    #print "IDX", np.asarray(flagindicies)
-                    # 2. get consecutive groups
-                    for k, g in groupby(enumerate(flagindicies), lambda ix: ix[0] - ix[1]):
-                        orientationcnt += 1 # used to flip orientation of text box
-                        consecutives = list(map(itemgetter(1), g))
-                        # 3. add annotation arrow for all but 1
-                        cnt0 = consecutives[0]
-                        #print ("Cons", np.asarray(consecutives), len(flags[0][cnt0]))
-                        if len(flags[0][cnt0]) >= indexflag:
-                          try:
-                            #print ("Fl", flags[0][cnt0][indexflag], flags[1][cnt0], y[cnt0])
-                            if not flags[0][cnt0][indexflag] in ['1','-'] and not flags[1][cnt0] == '-':
-                                axisextend = (max(y)-min(y))*0.15 ## 15 percent of axislength
-                                if orientationcnt % 2 or y[cnt0]-axisextend < min(y):
-                                    xytext=(20, 20)
-                                elif y[cnt0]+axisextend > max(y):
-                                    xytext=(20, -20)
+            t = x
+        if not xinds[idx]:
+            # plot only selected indicies
+            xinds[idx] = list(range(0, len(x), 1))
+        # drop nan columns
+        # TODO : better to do remove_nancolumns not during plotting?
+        dat = dat._remove_nancolumns()
+        if debug:
+            t3 = datetime.now()
+        for i, component in enumerate(keys[idx]):
+            comp = dat._get_column(component)
+            if len(comp) > 0  or force:
+                if separate:
+                    subpos1 = total_keys
+                    subpos3 = total_pos + 1
+                else:
+                    subpos1 = len(keys[idx])
+                    subpos3 = i + 1
+                ax = plt.subplot(subpos1,1,subpos3)
+                axs.append(ax)
+                if testtimestep(x[0]):
+                    ax.xaxis.axis_date()
+                # Symbols and color
+                # ------------------
+                symbol = symbols[idx][i]
+                try:
+                    color = colors[idx][i]
+                except:
+                    color = [0.8, 0.8, 0.8]
+                if symbol == "k":
+                    # special symbol for K values
+                    diffs = np.asarray(t[1:] - t[:-1]).astype(float64)  # in days
+                    diffs = diffs[~np.isnan(diffs)]
+                    me = np.median(diffs)
+                    bartrange = ((me / 2.) * 0.95) # use 99% of the half distance for bartrange
+                    xy = range(9)
+                    for num in range(len(t)):
+                        # if bartrange < t[num] < np.max(t)-bartrange:
+                        ax.fill([t[num] - bartrange, t[num] + bartrange, t[num] + bartrange, t[num] -
+                                 bartrange], [0, 0, comp[num] + 0.1, comp[num] + 0.1],
+                                facecolor=cm.RdYlGn((9 - comp[num]) / 9., 1), alpha=alpha, edgecolor='k')
+                    symbol = "|"
+                    color = None
+                    yranges[idx][i] = [0, 9]
+                # Fill between graphs
+                # ------------------
+                if fill and not is_list_empty(fill):
+                    try:
+                        fdi = fill[idx][i]
+                    except:
+                        fdi = 0
+                    if isinstance(fdi, (list, tuple)):
+                        for fdiitem in fdi:
+                            boundary = fdiitem.get("boundary", 0)
+                            fillcolor = fdiitem.get("fillcolor", "gray")
+                            fillalpha = fdiitem.get("fillaplha", alpha)
+                            fillrange = fdiitem.get("fillrange", "larger")
+                            if fillrange == "larger":
+                                indi = np.where(comp > boundary, True, False)
+                            else:
+                                indi = np.where(comp < boundary, True, False)
+                            ax.fill_between(t, comp, boundary, color=fillcolor, alpha=fillalpha, where=indi)
+                # Error bars
+                # ------------------
+                if errorbars and not is_list_empty(errorbars):
+                    errordict = errorbars[idx][i]
+                    if errordict and isinstance(errordict, dict):
+                        yerr = dat._get_column(errordict.get('key'))
+                        if len(yerr) > 0:
+                            errorcolor = errordict.get('color', color)
+                            capsize = errordict.get('capsize', 3)
+                            marker = errordict.get('marker', '.')
+                            linestyle = errordict.get('linestyle', '-')
+                            plt.errorbar(t, comp, yerr=yerr, linestyle=linestyle, marker=marker, color=color,
+                                         capsize=capsize, ecolor=errorcolor)
+                # Plot the main graph
+                # ------------------
+                if force and not len(comp) > 0 and patch and not is_list_empty(patch):
+                    # need the time range covered by patches
+                    line, = ax.plot(t, [0.5] * len(t), 'w-', alpha=0.0)
+                    if autoscale:
+                        r = AutoScaleY(line)
+                    mincomp = 0
+                    maxcomp = 1
+                else:
+                    line, = ax.plot(t, comp, symbol, color=color)
+                    if autoscale:
+                        r = AutoScaleY(line)
+                    mincomp = np.nanmin(comp)
+                    maxcomp = np.nanmax(comp)
+                plt.yscale(yscale[idx][i])
+                if dateformatter:
+                    plt.gca().xaxis.set_major_formatter(DateFormatter(dateformatter))
+                    plt.gcf().autofmt_xdate()
+                # Padding and y ranges
+                # ------------------
+                adjustrange = False
+                if yranges and not is_list_empty(yranges):
+                    adjustrange = False
+                    if not yranges[idx][i][0] == "default":
+                        adjustrange = True
+                        mincomp = yranges[idx][i][0]
+                    if not yranges[idx][i][1] == "default":
+                        adjustrange = True
+                        maxcomp = yranges[idx][i][1]
+                    if adjustrange:
+                        plt.ylim(mincomp, maxcomp)
+                if padding and not is_list_empty(padding) and not adjustrange:
+                    try:
+                        mincomp = mincomp - padding[idx][i]
+                        maxcomp = maxcomp + padding[idx][i]
+                        plt.ylim(mincomp, maxcomp)
+                    except:
+                        # Might fail for nested plots of which padding has only be asigned to one data set
+                        # Then the padding array will not have the correct dimensions
+                        pass
+                # Plot patches - for flagging etc
+                # ------------------
+                if isinstance(patch, list):
+                    pat = patch[idx][i]
+                else:
+                    pat = patch
+                if pat and isinstance(pat, dict) and showpatch[idx]:
+                    for line in pat:
+                        l = pat.get(line)
+                        patchcomps = l.get('components')
+                        if component in patchcomps:
+                            # winmin = date2num(l.get('start'))
+                            # winmax = date2num(l.get('end'))
+                            winmin = l.get('start')
+                            winmax = l.get('end')
+                            edgecolor = l.get('color')
+                            if not edgecolor:
+                                if l.get('flag', 0) in [1, 3]:
+                                    edgecolor = 'r'
+                                elif l.get('flag', 0) in [2, 4]:
+                                    edgecolor = 'g'
+                                elif l.get('flag', 0) == 0:
+                                    edgecolor = 'y'
+                            rect = patches.Rectangle((winmin, mincomp), winmax - winmin, maxcomp - mincomp,
+                                                     edgecolor=edgecolor, facecolor=edgecolor, alpha=0.2)
+                            plt.gca().add_patch(rect)
+                            # Annotations
+                            # ------------------
+                            if annotate:
+                                annosign = -1
+                                annocount += 1
+                                annotext = l.get('labelid')
+                                textx = 0
+                                texty = 0
+                                if annotate == "label":
+                                    annotext = l.get('label')
+                                elif annotate == "flagid":
+                                    annotext = line
+                                    #annosign = 1
+                                    #texty = rect.get_y()
+                                if annocount % 2:
+                                    yoff = 20
                                 else:
-                                    xytext=(20, -20)
-                                connstyle = "angle,angleA=0,angleB=90,rad=10"
-                                ax.annotate(r'%s' % (flags[1][cnt0]),
-                                        xy=(t[cnt0], y[cnt0]),
-                                        xycoords='data', xytext=xytext, size=10,
-                                        textcoords='offset points',
-                                        bbox=dict(boxstyle="round", fc="0.9"),
-                                        arrowprops=dict(arrowstyle="->",
-                                        shrinkA=0, shrinkB=1, connectionstyle=connstyle))
-                            for idx in consecutives:
-                                #if not flags[0][idx][indexflag] == '0':
-                                #    print "Got", flags[0][idx][indexflag], idx
-                                if flags[0][idx][indexflag] in ['3']:
-                                    a_t.append(float(t[idx]))
-                                    a_y.append(y[idx])
-                                elif flags[0][idx][indexflag] in ['1']:
-                                    b_t.append(float(t[idx]))
-                                    b_y.append(y[idx])
-                                elif flags[0][idx][indexflag] in ['2']:
-                                    c_t.append(float(t[idx]))
-                                    c_y.append(y[idx])
-                                elif flags[0][idx][indexflag] in ['4']:
-                                    d_t.append(float(t[idx]))
-                                    d_y.append(y[idx])
-                          except:
-                            logger.error("Error when marking flags - check: {} {}".format(flags[0][cnt0], indexflag))
+                                    yoff = 10
+                                plt.gca().annotate(annotext, (rect.get_x() + rect.get_width() / 2, maxcomp), xytext = (textx, texty + annosign*yoff),
+                                                   textcoords = 'offset points', ha = 'center', va = 'bottom')
+
+                # Plottitle
+                # ------------------
+                if not isinstance(title, (list, tuple)) and not titledone:
+                    plt.title(title)
+                    titledone = True
+                elif title[idx] and i == 0 and not titledone:
+                    plt.title(title[idx])
+
+                # Functions
+                # ------------------
+                if functions and not is_list_empty(functions):
+                    function = functions[idx][i]
+                    if function and isinstance(function, (list, tuple)):
+                        if len(np.array(function,
+                                        dtype=object).shape) > 1:  # allow multiple functions for each component
+                            for functio in function:
+                                # function should contain the fitted time range and the projected timerange
+                                fres = evaluate_function(component, functio, dat.samplingrate(), starttime=None,
+                                                         endtime=None, debug=False)
+                                if fres and len(fres) == 2:
+                                    ax.plot(fres[0], fres[1], functionfmt, alpha=0.5)
                         else:
-                            logger.info("Found problem in flagging information - still to be solved")
-                            logger.info("Flag at count and its index position {} {}".format(cnt0, indexflag))
-                            logger.info("Flag and Comment (expected -000000000 and comment) {} {}".format(flags[0][cnt0], flags[1][cnt0]))
-                linecrit = 2000
-                if len(a_t) > 0:
-                    if len(a_t) > linecrit:
-                        ax.plot(a_t,a_y,'.',c='r', zorder=zorder) ## Use lines if a lot of data is marked
-                    else:
-                        ax.scatter(a_t,a_y,c='r', zorder=zorder)
-                if len(b_t) > 0:
-                    if len(b_t) > linecrit:
-                        ax.plot(b_t,b_y,'.',c='orange', zorder=zorder)
-                    else:
-                        ax.scatter(b_t,b_y,c='orange', zorder=zorder)
-                if len(c_t) > 0:
-                    # TODO Here we have a masked nan warning - too be solved
-                    #print np.asarray(c_t)
-                    #print np.asarray(c_y)
-                    if len(c_t) > linecrit:
-                        ax.plot(c_t,c_y,'.',c='g', zorder=zorder)
-                    else:
-                        ax.scatter(c_t,c_y,c='g', zorder=zorder)
-                if len(d_t) > 0:
-                    if len(d_t) > linecrit:
-                        ax.plot(d_t,d_y,'.',c='b', zorder=zorder)
-                    else:
-                        ax.scatter(d_t,d_y,c='b', zorder=zorder)
+                            # function should contain the fitted time range and the projected timerange
+                            fres = evaluate_function(component, function, dat.samplingrate(), starttime=None,
+                                                     endtime=None, debug=False)
+                            if fres and len(fres) == 2:
+                                ax.plot(fres[0], fres[1], functionfmt, alpha=0.5)
+                # Labels
+                # ------------------
+                if i == len(keys[idx]) - 1:
+                    plt.xlabel('Time')
+                colname = dat.header.get('col-{}'.format(component), '')
+                colunit = dat.header.get('unit-col-{}'.format(component), '')
+                if colunit:
+                    colunit = " [{}]".format(colunit)
+                plt.ylabel('{}{}'.format(colname, colunit))
+                if ylabelposition:
+                    ylabelposition = ylabelposition  # axes coords
+                    ax.yaxis.set_label_coords(ylabelposition, 0.5)
+                # TODO xlabel positions
+                # Legends
+                # ------------------
+                if legend:
+                    legenddummy = []
+                    if separate:
+                        legenddummy = [dat.header.get('SensorID', '')]
+                    if not isinstance(legend, dict):
+                        legend = {}
+                        if separate:
+                            legend["plotnumber"] = i
+                        else:
+                            legenddummy = [tmpdat.header.get('SensorID', '') for tmpdat in data]
+                            legend["plotnumber"] = len(keys[idx]) - 1
+                    shadow = False
+                    legendtext = legend.get("legendtext", legenddummy)
+                    legendposition = legend.get("legendposition", "best")
+                    legendstyle = legend.get("legendstyle", "shadow")
+                    if legendstyle == 'shadow':
+                        shadow = True
+                    if legend.get("plotnumber", i) == i:
+                        plt.legend(legendtext, loc=legendposition, shadow=shadow)
+                # Plot grid
+                # ------------------
+                if grid:
+                    mygrid = grid
+                    if not isinstance(mygrid, dict):
+                        mygrid = {}
+                    gridvisible = mygrid.get("visible", True)
+                    gridwhich = mygrid.get("which", "major")
+                    gridaxis = mygrid.get("axis", "both")
+                    gridcolor = mygrid.get("color", [0.9, 0.9, 0.9])
+                    plt.grid(visible=gridvisible, which=gridwhich, axis=gridaxis, color=gridcolor)
+                # Remove offsets on y-axes
+                try:
+                    # Might fail for various reasons - just ignore
+                    plt.ticklabel_format(useOffset=False, style='plain', axis='y')
+                except:
+                    pass
 
-        # PLOT A GIVEN FUNCTION:
-        if 'function' in data[i]:
-            fkey = 'f'+key
-            funclist = data[i]['function']
-            if isinstance(funclist[0], dict):
-                 funct = [funclist]
+                # set visibility of x-axis as False
+                # ------------------
+                mid = np.round(len(keys[idx]) / 2, 0) - 1
+                if i < len(keys[idx]) - 1 and len(keys[idx]) > 3: #and separate
+                    plt.xticks(color='w')
+                if idx+i > 0:
+                    ax.sharex(axs[0])
+                #plt.tight_layout()
+
+                total_pos += 1
             else:
-                 funct = funclist
-            for function in funct:
-                # length of function - an old version just added up functions in one list
-                funclength = len(function)
-                for nu in range(int(len(function)/funclength)):
-                    indexadd = nu*funclength
-                    if fkey in function[0+indexadd]:
-                        # --> Get the minimum and maximum relative times
-                        ttmp = arange(0,1,0.0001)
-                        ax.plot_date(denormalize(ttmp,function[1+indexadd],function[2+indexadd]),function[0+indexadd][fkey](ttmp),'r-')
+                print(" tsplot: warning component {} of stream {} is empty".format(component, idx))
+    if debug:
+        t4 = datetime.now()
+        print ("TIMING total:", (t4-t1).total_seconds())
+        print ("TIMING time conversion:", (t3-t2).total_seconds())
 
-        #------------------------------------------------------------
-        # PART 2: Formatting the plot
-        #------------------------------------------------------------
+    return fig, plt.gca()
 
-        # ADD SENSOR IDS TO DATA PLOTS:
-        if 'sensorid' in data[i]:
-            sensorid = data[i]['sensorid']
-            ydistance = [13,13,15,15,15,15,15,15]
-            ax.annotate(sensorid, xy=(10, ydistance[n_subplots-1]),
-                    xycoords='axes points',
-                    horizontalalignment='left', verticalalignment='top')
 
-        # ADD GRID:
-        if grid:
-            ax.grid(True,color=gridcolor,linewidth=0.5)
+def psplot(data=None, keys=None, colors=None, title=None, legend=None, grid=None, ylabelposition=None,
+           xscale='log', separate=True, width=10, height=4, alpha=0.5, variables=None, figure=None,
+           NFFT=None, noverlap=None, pad_to=None, detrend='mean', scale_by_freq=True, debug=False):
+    """
+    DESCRIPTION
+        plot a spectrogram based on pythons specgram method. Like plot.psplot this method only supports a single data set.
 
-        # SET X-LABELS:
-        timeunit = ''
-        if confinex:
-            tmin = np.min(t)
-            tmax = np.max(t)
-            # --> If dates to be confined, set value types:
-            _confinex(ax, tmax, tmin, timeunit)
+    OPTIONS:
+        keys (list)         :    Provide a list of columns keys. Default is the first available key of the data set.
+        grid (dict)         :    default None
+                                 EXAMPLE: grid={"visible":True,"which":"major","axis":"both","color":"k"}
+                                 or grid=True  for default values
+                                 EXAMPLE: ylabelposition=-0.1
+        xsacle (string)     :    'log' (default), 'linear'
+        separate (BOOL)     :    Default True - if False then all graphs will be plotted in a single diagram
+                                 i.e. dateformatter="%Y-%m-%d %H"
+        title (list)        :    'log' (default), 'linear'
+        height (float)      :    default 4 - default height of each individual plot
+                                 EXAMPLE: height=2
+        width (float)       :    default 10 - default width of all plots
+                                 EXAMPLE: width=12
+        figure (object)     :    provide a figure object for the plot - used by magpy_gui
+                                 EXAMPLE: width=12
 
-        if i < n_subplots-1:
-            setp(ax.get_xticklabels(), visible=False)
-        else:
-            ax.set_xlabel("Time (UTC) %s" % timeunit, color=labelcolor)
+        matplotlib - specgram parameters (capital defaults are different from standard defaults):
+        --------------------------------------
+        NFFT (int)          :    DEFAULT is length of timeseries: The number of data points used in each block for the FFT.
+                                 A power 2 is most efficient.
+                                 This should NOT be used to get zero padding, or the scaling of the result will be incorrect;
+                                 use pad_to for this instead.
+        noverlap (int)      :    DEFAULT None: The number of points of overlap between blocks.
+        pad_to (int)        :    The number of points to which the data segment is padded when performing the FFT.
+                                 This can be different from NFFT, which specifies the number of data points used. While not
+                                 increasing the actual resolution of the spectrum (the minimum distance between resolvable
+                                 peaks), this can give more points in the plot, allowing for more detail. This corresponds
+                                 to the n parameter in the call to fft. The default is equal to NFFT
+        detrend (str)       :    {'none', 'mean', 'linear'} default: 'mean'; The function applied to each segment before
+                                 fft-ing, designed to remove the mean or linear trend. Unlike in MATLAB, where the detrend
+                                 parameter is a vector, in Matplotlib it is a function. The mlab module defines detrend_none,
+                                 detrend_mean, and detrend_linear, but you can use a custom function as well. You can also
+                                 use a string to choose one of the functions: 'none' calls detrend_none. 'mean' calls
+                                 detrend_mean. 'linear' calls detrend_linear.
+        scale_by_freq (bool) :   default: True; Whether the resulting density values should be scaled by the scaling
+                                 frequency, which gives density in units of 1/Hz. This allows for integration over the
+                                 returned frequency values. The default is True for MATLAB compatibility.
 
-        # SET TICK TO ALTERNATING SIDES:
-        if bool(i & 1):
-            ax.yaxis.tick_right()
-            ax.yaxis.set_label_position("right")
 
-        # APPLY FORMATTERS:
-        label = data[i]['ylabel']
-        ax.set_ylim(ymin,ymax)
-        ax.set_ylabel(label, color=labelcolor)
-        ax.get_yaxis().set_major_formatter(plt_fmt)
 
-    #----------------------------------------------------------------
-    # PART 3: Finalising and saving plot
-    #----------------------------------------------------------------
+    EXAMPLE:
+        psplot(data, keys=['x','y','z'], colors=['black','r','y'], separate=True, title="Awsome plot",
+                     xscale='log', grid=True, legend=True, debug=False)
+    """
 
-    # BUNDLE UP ALL SUBPLOTS:
-    #fig.subplots_adjust(hspace=0)
+    if not keys:
+        keys = ['x']
+    if variables and not keys:
+        keys = variables
+    if not colors:
+        colors = ['gray'] * len(keys)
+    if not legend:
+        legend = {}
+    if not grid:
+        grid = {}
 
-    # ADJUST X-AXIS FOR FULLDAY PLOTTING:
-    if fullday:
-        ax.set_xlim(np.floor(np.round(np.min(t)*100)/100),np.floor(np.max(t)+1))
-
-    # SAVE OR SHOW:
-    if figure:
-        return ax
-    if outfile:
-        path = os.path.split(outfile)[0]
-        if not path == '':
-            if not os.path.exists(path):
-                os.makedirs(path)
-        if fmt:
-            fig.savefig(outfile, format=fmt, dpi=savedpi)
-        else:
-            fig.savefig(outfile, dpi=savedpi)
-    elif noshow:
-        return fig
+    titledone = False
+    amount = len(data)
+    # check for available keys - do that only for the primary dataset if not provided
+    if separate:
+        hght = int(height) * len(keys)
     else:
-        plt.show()
-
-
-def _confinex(ax, tmax, tmin, timeunit):
-    """
-    Automatically determines t-range so that the x-axis is easier
-    on the eye.
-    """
-
-    trange = tmax - tmin
-    loggerstream.debug('plot: x range = %s' % str(trange))
-    if trange < 0.0001: # 8 sec level --> set 0.5 second
-        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%S'))
-        timeunit = '[Sec]'
-    elif trange < 0.01: # 13 minute level
-        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%M:%S'))
-        timeunit = '[M:S]'
-    elif trange <= 1: # day level -->  set 1 hour
-        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%H:%M'))
-        timeunit = '[H:M]'
-    elif trange < 7: # 3 day level
-        if trange < 2:
-            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=6))
-        elif trange < 5:
-            ax.get_xaxis().set_major_locator(matplotlib.dates.HourLocator(interval=12))
-        else:
-            ax.get_xaxis().set_major_locator(matplotlib.dates.WeekdayLocator(byweekday=matplotlib.dates.MO))
-        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b\n%H:%M'))
-        setp(ax.get_xticklabels(),rotation='0')
-        timeunit = '[Day-H:M]'
-    elif trange < 60: # month level
-        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b'))
-        setp(ax.get_xticklabels(),rotation='70')
-        timeunit = '[Day]'
-    elif trange < 150: # year level
-        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%d.%b\n%Y'))
-        setp(ax.get_xticklabels(),rotation='0')
-        timeunit = '[Day]'
-    elif trange < 600: # minute level
-        if trange < 300:
-            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=1))
-        elif trange < 420:
-            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=2))
-        else:
-            ax.get_xaxis().set_major_locator(matplotlib.dates.MonthLocator(interval=4))
-        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%b %Y'))
-        setp(ax.get_xticklabels(),rotation='0')
-        timeunit = '[Month]'
+        hght = int(height)
+    if not title:
+        title = None
+    if not figure:
+        fig = plt.figure(figsize=(width, hght))
     else:
-        ax.get_xaxis().set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
-        timeunit = '[Year]'
+        fig = figure
+
+    # parameter for separate plots
+    total_pos = 0
+    total_keys = len(keys)
+    annocount = 0
+    yoff = -10
+    axs = []
+
+    if debug:
+        t1 = datetime.now()
+    data = data._remove_nancolumns()
+    T = data._get_column('time')
+    t = np.linspace(0, len(T), len(T))
+    sr = data.samplingrate()  # in seconds
+
+    if not NFFT:
+        NFFT = len(t)
+    if not pad_to:
+        pad_to = NFFT
+    if not detrend or detrend not in ['mean', 'linear']:
+        detrend = 'mean'
+    legenddummy = []
+
+    for i, component in enumerate(keys):
+        cdata = data.copy()
+        cdata = cdata._drop_nans(component)
+        comp = cdata._get_column(component)
+        if len(comp) > 0:
+            if separate:
+                subpos1 = len(keys)
+                subpos3 = i + 1
+            else:
+                subpos1 = 1
+                subpos3 = total_pos + 1
+            ax = plt.subplot(subpos1, 1, subpos3)
+            axs.append(ax)
+            power, freqs = ax.psd(comp, NFFT=NFFT, pad_to=pad_to, Fs=1. / sr,
+                                  detrend=detrend, scale_by_freq=scale_by_freq, color=colors[i])
+            plt.xscale(xscale)
+
+            # Labels
+            # ------------------
+            colname = data.header.get('col-{}'.format(component), '')
+            colunit = data.header.get('unit-col-{}'.format(component), '')
+            if colunit:
+                colunit = " [{}]".format(colunit)
+            if separate:
+                plt.ylabel('PSD [db/Hz] ({}{})'.format(colname, colunit))
+            else:
+                plt.ylabel('PSD [db/Hz]')
+            if ylabelposition:
+                ylabelposition = ylabelposition  # axes coords
+                ax.yaxis.set_label_coords(ylabelposition, 0.5)
+
+            # Legends
+            # ------------------
+            if legend:
+                if not isinstance(legend, dict):
+                    legend = {}
+                    if separate:
+                        legend["plotnumber"] = i
+                        legenddummy = [data.header.get('SensorID', '')]
+                    else:
+                        legenddummy = [data.header.get('col-{}'.format(co), '') for co in keys]
+                        legend["plotnumber"] = len(keys) - 1
+                shadow = False
+                legendtext = legend.get("legendtext", legenddummy)
+                legendposition = legend.get("legendposition", "best")
+                legendstyle = legend.get("legendstyle", "shadow")
+                if legendstyle == 'shadow':
+                    shadow = True
+                if legend.get("plotnumber", i) == i:
+                    plt.legend(legendtext, loc=legendposition, shadow=shadow)
+
+            # Plot grid
+            # ------------------
+            if grid:
+                mygrid = grid
+                if not isinstance(mygrid, dict):
+                    mygrid = {}
+                gridvisible = mygrid.get("visible", True)
+                gridwhich = mygrid.get("which", "major")
+                gridaxis = mygrid.get("axis", "both")
+                gridcolor = mygrid.get("color", [0.9, 0.9, 0.9])
+                plt.grid(visible=gridvisible, which=gridwhich, axis=gridaxis, color=gridcolor)
+
+            # Plottitle
+            # ------------------
+            if isinstance(title, (list, tuple)) and len(title) == len(keys):
+                plt.title(title[i])
+            elif title and not titledone:
+                plt.title(title)
+                titledone = True
+
+            # set visibility of x-axis as False
+            # ------------------
+            mid = np.round(len(keys) / 2, 0) - 1
+            if i < len(keys) - 1 and separate and len(keys) > 3:
+                plt.xticks(color='w')
+            if i > 0:
+                ax.sharex(axs[0])
+
+    if debug:
+        t4 = datetime.now()
+        print("TIMING total:", (t4 - t1).total_seconds())
+
+    return fig, plt.gca()
 
 
-def _extract_data_for_PSD(stream, key):
+def spplot(data=None, keys=None, colormap=None, title=None, legend=None, grid=None,
+           yscale=None, yrange=None, ylabelposition=None, dateformatter=None, width=10, height=4,
+           alpha=0.5, variables=None, figure=None, debug=False, NFFT=1024, noverlap=512, pad_to=None, detrend='none',
+           scale_by_freq=True, cmap='viridis', mode='psd'):
     """
-    Prepares data for power spectral density evaluation.
+    DESCRIPTION
+        plot a spectrogram based on pythons specgram method. Like plot.psplot this method only supports a single data set.
+
+    OPTIONS:
+        keys (list)         :    Provide a list of columns keys. Default is the first available key of the data set.
+        yrange (list)       :    Y axis contains the frequency. Default range: from 1/fulltimerange *2 to 1/samplingperiod *2
+                                 (Nyquist), or (0,nyquist) if a linear scale is used. You can change as follows:
+                                 keys=['x','y'], yranges=[[0.00001,0.5],[0.01,0.5]]
+        grid (dict)         :    default None
+                                 EXAMPLE: grid={"visible":True,"which":"major","axis":"both","color":"k"}
+                                 or grid=True  for default values
+                                 EXAMPLE: ylabelposition=-0.1
+        ysacle (list)       :    'log' (default), 'linear'
+        dateformatter (string) : if provided then autoformat x is activated and the choosen format is used for the datecolumn
+                                 i.e. dateformatter="%Y-%m-%d %H"
+        title (list)        :    'log' (default), 'linear'
+        height (float)      :    default 4 - default height of each individual plot
+                                 EXAMPLE: height=2
+        width (float)       :    default 10 - default width of all plots
+                                 EXAMPLE: width=12
+        figure (object)     :    provide a figure object for the plot - used by magpy_gui
+                                 EXAMPLE: width=12
+
+        matplotlib - specgram parameters (capital defaults are different from standard defaults):
+        --------------------------------------
+        NFFT (int)          :    DEFAULT 1024: The number of data points used in each block for the FFT. A power 2 is most efficient.
+                                 This should NOT be used to get zero padding, or the scaling of the result will be incorrect;
+                                 use pad_to for this instead.
+        noverlap (int)      :    DEFAULT 512: The number of points of overlap between blocks.
+        pad_to (int)        :    The number of points to which the data segment is padded when performing the FFT.
+                                 This can be different from NFFT, which specifies the number of data points used. While not
+                                 increasing the actual resolution of the spectrum (the minimum distance between resolvable
+                                 peaks), this can give more points in the plot, allowing for more detail. This corresponds
+                                 to the n parameter in the call to fft. The default is None, which sets pad_to equal to NFFT
+        detrend (str)       :    {'none', 'mean', 'linear'} default: 'none'; The function applied to each segment before
+                                 fft-ing, designed to remove the mean or linear trend. Unlike in MATLAB, where the detrend
+                                 parameter is a vector, in Matplotlib it is a function. The mlab module defines detrend_none,
+                                 detrend_mean, and detrend_linear, but you can use a custom function as well. You can also
+                                 use a string to choose one of the functions: 'none' calls detrend_none. 'mean' calls
+                                 detrend_mean. 'linear' calls detrend_linear.
+        scale_by_freq (bool) :   default: True; Whether the resulting density values should be scaled by the scaling
+                                 frequency, which gives density in units of 1/Hz. This allows for integration over the
+                                 returned frequency values. The default is True for MATLAB compatibility.
+        mode                 :   {'default', 'psd', 'magnitude', 'angle', 'phase'} What sort of spectrum to use. Default
+                                 is 'psd', which takes the power spectral density. 'magnitude' returns the magnitude
+                                 spectrum. 'angle' returns the phase spectrum without unwrapping. 'phase' returns the
+                                 phase spectrum with unwrapping.
+        cmap                 :   Colormap, default: rcParams["image.cmap"] (default: 'viridis')
+
+
+
+    EXAMPLE:
+        spplot(data, keys=['x','y','z'], yscale = ['log','linear','log'], title="Testplot",
+                            yrange=[[0.0001,0.5],[0.00002,0.5],[0.01,0.5]], grid = True,
+                            dateformatter = "%d %b %y %H:%M", cmap='inferno')
     """
 
-    if len(stream.ndarray[0]) > 0:
-        pos = KEYLIST.index(key)
-        t = stream.ndarray[0]
-        val = stream.ndarray[pos]
+    if isinstance(data, (list, tuple)):
+        print("plot.spplot only supports a single data set")
+        return
+    if not keys:
+        keys = ['x']
+    if variables and not keys:
+        keys = variables
+    if not yscale:
+        yscale = []
+    if not yrange:
+        yrange = []
+    if not legend:
+        legend = {}
+    if not grid:
+        grid = {}
+    if not title:
+        title = None
+
+    data = data._remove_nancolumns()  # just make sure that no empty/nan-filled columns are provided
+    T = data._get_column('time')
+    t = np.linspace(0, len(T), len(T))
+    sr = data.samplingrate()  # in seconds
+    coverage = (data.end() - data.start()).total_seconds()
+
+    titledone = False
+    hght = int(height) * len(keys)
+    axs = []
+
+    if not figure:
+        fig = plt.figure(figsize=(width, hght))
     else:
-        t = np.asarray(stream._get_column('time'))
-        val = np.asarray(stream._get_column(key))
-    t_min = np.min(t)
-    t_new, val_new = [],[]
+        fig = figure
 
-    nfft = int(nearestPow2(len(t)))
+    t1 = datetime.now()  # for debugging and speed optimization
+    for i, component in enumerate(keys):
+        #cdata = data.copy()
+        #cdata = cdata._drop_nans(component)
+        comp = data._get_column(component)
+        if len(comp) > 0:
+            ax = plt.subplot(len(keys), 1, i+1)
+            axs.append(ax)
+            Pxx, freqs, bins, im = ax.specgram(comp, NFFT=1024, Fs=1. / sr, noverlap=512, pad_to=pad_to, detrend=detrend,
+                                               scale_by_freq=scale_by_freq, mode=mode, cmap=cmap, xextent=(T[0], T[-1]))
+            #fig.colorbar(im, ax=ax)
+            # Labels
+            # ------------------
+            if i == len(keys) - 1:
+                ax.set_xlabel('Time')
+            ax.set_ylabel('Frequency')
+            colname = data.header.get('col-{}'.format(component), '')
+            colunit = data.header.get('unit-col-{}'.format(component), '')
+            if colunit:
+                colunit = " [{}]".format(colunit)
+            ax.set_ylabel('Frequency[Hz] ({}{})'.format(colname, colunit))
+            if ylabelposition:
+                ylabelposition = ylabelposition  # axes coords
+                ax.yaxis.set_label_coords(ylabelposition, 0.5)
 
-    if nfft > len(t):
-        nfft = int(nearestPow2(len(t) / 2.0))
+            # Frequnecy axis
+            # ------------------
+            ys = ''
+            ax.set_yscale('log')  # use this as default if input is wrong
+            if yscale:
+                if len(yscale) == len(keys):
+                    ys = yscale[i]
+                elif len(yscale) < len(keys):
+                    ys = yscale[0]
+                if ys in ['linear', 'log']:
+                    ax.set_yscale(ys)
+            miny = 1. / coverage * 2.
+            maxy = 1. / sr / 2.
+            if ys == 'linear':
+                miny = 0
+            yr = [miny, maxy]
+            if yrange:
+                if len(yrange) == len(keys):
+                    yr = yrange[i]
+                elif len(yrange) < len(keys):
+                    yr = yrange[0]
+                ax.set_ylim(yr)
 
-    for idx, elem in enumerate(val):
-        if not isnan(elem):
-            t_new.append((t[idx]-t_min)*24*3600)
-            val_new.append(elem)
+            # Time axis
+            # ------------------
+            if dateformatter:
+                plt.gca().xaxis.set_major_formatter(DateFormatter(dateformatter))
+                plt.gcf().autofmt_xdate()
 
-    t_new = np.asarray(t_new)
-    val_new = np.asarray(val_new)
+            # Plottitle
+            # ------------------
+            if isinstance(title, (list, tuple)) and len(title) == len(keys):
+                plt.title(title[i])
+            elif title and not titledone:
+                plt.title(title)
+                titledone = True
 
-    return t_new, val_new, nfft
+            # Plot grid
+            # ------------------
+            if grid:
+                mygrid = grid
+                if not isinstance(mygrid, dict):
+                    mygrid = {}
+                gridvisible = mygrid.get("visible", True)
+                gridwhich = mygrid.get("which", "major")
+                gridaxis = mygrid.get("axis", "both")
+                gridcolor = mygrid.get("color", [0.9, 0.9, 0.9])
+                plt.grid(visible=gridvisible, which=gridwhich, axis=gridaxis, color=gridcolor)
+
+            # set visibility of x-axis as False
+            mid = np.round(len(keys) / 2, 0) - 1
+            if i < len(keys) - 1 and (len(keys) > 3 or isinstance(title, (list, tuple))):
+                plt.xticks(color='w')
+            if i > 0:
+                ax.sharex(axs[0])
+
+    if debug:
+        t4 = datetime.now()
+        print("TIMING total:", (t4 - t1).total_seconds())
+
+    return fig, plt.gca()
 
 
 #####################################################################
 #                                                                   #
 #       TESTING                                                     #
 #       Run this after making changes:                              #
-#       $ python mpplot.py                                          #
+#       $ python3 plot.py                                          #
 #                                                                   #
 #####################################################################
 
@@ -1072,177 +988,71 @@ if __name__ == '__main__':
     print("----------------------------------------------------------")
     print()
 
-    print("Please enter path of a variometer data file for testing:")
-    print("(e.g. /srv/archive/WIC/LEMI025/LEMI025_2014-05-07.bin)")
-    while True:
-        filepath = raw_input("> ")
-        if os.path.exists(filepath):
-            break
-        else:
-            print("Sorry, that file doesn't exist. Try again.")
-    print()
+    def create_minteststream(startdate=datetime(2022, 11, 1), addnan=True):
+        c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+        l = 32 * 1440
+        #import scipy
+        teststream = DataStream()
+        array = [[] for el in DataStream().KEYLIST]
+        win = signal.windows.hann(60)
+        a = np.random.uniform(20950, 21000, size=int(l / 2))
+        b = np.random.uniform(20950, 21050, size=int(l / 2))
+        x = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+        array[1] = x[1440:-1440]
+        a = np.random.uniform(1950, 2000, size=int(l / 2))
+        b = np.random.uniform(1900, 2050, size=int(l / 2))
+        y = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+        array[2] = y[1440:-1440]
+        a = np.random.uniform(44300, 44400, size=l)
+        z = signal.convolve(a, win, mode='same') / sum(win)
+        array[3] = z[1440:-1440]
+        array[4] = np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440]
+        array[0] = np.asarray([startdate + timedelta(minutes=i) for i in range(0, len(array[1]))])
+        array[KEYLIST.index('sectime')] = np.asarray(
+            [startdate + timedelta(minutes=i) for i in range(0, len(array[1]))]) + timedelta(minutes=15)
+        teststream = DataStream(header={'SensorID': 'Test_0001_0001'}, ndarray=np.asarray(array, dtype=object))
+        minstream = teststream.filter()
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['col-f'] = 'F'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        teststream.header['unit-col-f'] = 'nT'
+        return teststream
 
-    now = datetime.utcnow()
-    testrun = 'plottest_'+datetime.strftime(now,'%Y%m%d-%H%M')
-    t_start_test = time.time()
+    teststream = create_minteststream()
     errors = {}
-
-    print(datetime.utcnow(), "- Starting plot package test. This run: %s." % testrun)
-
-    while True:
-
-        # Step 1 - Read data
-        try:
-            teststream = read(filepath,tenHz=True)
-            print(datetime.utcnow(), "- Stream read in successfully.")
-        except Exception as excep:
-            errors['read'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR reading stream. Aborting test.")
-            break
-
-        # Step 2 - Pick standard key for all other plots
-        try:
-            keys = teststream._get_key_headers()
-            key = [keys[0]]
-            key2 = [keys[0], keys[1]]
-            print(datetime.utcnow(), "- Using %s key for all subsequent plots." % key[0])
-        except Exception as excep:
-            errors['_get_key_headers'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR getting default keys. Aborting test.")
-            break
-
-        # Step 3 - Simple single plot with ploteasy
-        try:
-            ploteasy(teststream)
-            print(datetime.utcnow(), "- Plotted using ploteasy function.")
-        except Exception as excep:
-            errors['ploteasy'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR with ploteasy function. Aborting test.")
-            break
-
-        # Step 4 - Standard plot
-        try:
-            plot_new(teststream,key,
-                        plottitle = "Simple plot of %s" % key[0])
-            print(datetime.utcnow(), "- Plotted standard plot.")
-        except Exception as excep:
-            errors['plot-vanilla'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR with standard plot. Aborting test.")
-            break
-
-        # Step 5 - Multiple streams
-        streamlist =    [teststream,    teststream      ]
-        variables =     [key,           key2            ]
-        try:
-            plotStreams(streamlist, variables,
-                        plottitle = "Multiple streams: Three bars, top two should match.")
-            print(datetime.utcnow(), "- Plotted multiple streams.")
-        except Exception as excep:
-            errors['plotStreams-vanilla'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR with plotting multiple streams. Aborting test.")
-            break
-
-        # Step 6 - Normalised stream comparison
-        try:
-            plotNormStreams([teststream], key[0],
-                        confinex = True,
-                        plottitle = "Normalized stream: Stream key should be normalized to zero.")
-            print(datetime.utcnow(), "- Plotted normalized streams.")
-        except Exception as excep:
-            errors['plotNormStreams'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR plotting normalized streams.")
-
-        # Step 7 - Flagged plot
-        # ...
-
-        # Step 8a - Plot with phases (single)
-        t_start, t_end = teststream._find_t_limits()
-        timespan = t_end - t_start
-        t_stormphases = {}
-        t_stormphases['ssc'] = t_start + timedelta(seconds=(timespan.seconds*0.2))
-        t_stormphases['mphase'] = t_start + timedelta(seconds=(timespan.seconds*0.4))
-        t_stormphases['rphase'] = t_start + timedelta(seconds=(timespan.seconds*0.6))
-        t_stormphases['stormend'] = t_start + timedelta(seconds=(timespan.seconds*0.8))
-
-        try:
-            plot_new(teststream,key,
-                        stormphases = True,
-                        t_stormphases = t_stormphases,
-                        plottitle = "Single plot showing all THREE storm phases, annotated")
-            print(datetime.utcnow(), "- Plotted annotated single plot of storm phases.")
-        except Exception as excep:
-            errors['plot-stormphases'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR with storm phases plot.")
-
-        # Step 8b - Plot with phases (multiple)
-        try:
-            plotStreams(streamlist,variables,
-                        stormphases = True,
-                        t_stormphases = t_stormphases,
-                        plottitle = "Multiple plot showing all THREE storm phases, annotated")
-            print(datetime.utcnow(), "- Plotted annotated multiple plot of storm phases.")
-        except Exception as excep:
-            errors['plotStreams-stormphases'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR with storm phases multiple plot.")
-
-        # Step 9 - Plot satellite vs. magnetic data
-        try:
-            xmin, xmax = np.min(teststream._get_column('x')), np.max(teststream._get_column('x'))
-            ymin, ymax = np.min(teststream._get_column('y')), np.max(teststream._get_column('y'))
-            plotSatMag(teststream,teststream,['x','y'],
-                        specialdict={'mag':[xmin-45,xmax+5],'sat':[ymin-5,ymax+45]},
-                        plottitle = "Two variables in same plots with double y axes")
-            print(datetime.utcnow(), "- Plotted magnetic/satellite data.")
-        except Exception as excep:
-            errors['plotSatMag'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR with plotSatMagplot.")
-
-        # Step 10 - Plot power spectrum
-        try:
-            freqm, asdm = plotPS(teststream,key[0],
-                        returndata=True,
-                        marks={'Look here!':0.0001, '...and here!':0.01},
-                        plottitle = "Simple power spectrum plot with two marks")
-            print(datetime.utcnow(), "- Plotted power spectrum. Max frequency is at %s." % max(freqm))
-        except Exception as excep:
-            errors['plotPS'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR plotting power spectrum.")
-
-        # Step 11 - Plot normal spectrogram
-        try:
-            plotSpectrogram(teststream,key2,
-                        plottitle = "Spectrogram of two keys")
-            print(datetime.utcnow(), "- Plotted spectrogram.")
-        except Exception as excep:
-            errors['plotSpectrogram'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR plotting spectrogram.")
-
-        # Step 12 - Plot function
-        try:
-            func = teststream.fit(key,knotstep=0.02)
-            plot_new(teststream,key,function=func,
-                        plottitle = "Fit function plotted over original data.")
-        except Exception as excep:
-            errors['plot(function)'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR plotting function.")
-
-        # Step 13 - Plot normal stereoplot
-        # (This should stay as last step due to coordinate conversion.)
-        try:
-            teststream._convertstream('xyz2idf')
-            plotStereoplot(teststream,
-                        plottitle="Standard stereoplot")
-            print(datetime.utcnow(), "- Plotted stereoplot.")
-        except Exception as excep:
-            errors['plotStereoplot'] = str(excep)
-            print(datetime.utcnow(), "--- ERROR plotting stereoplot.")
-
-        # If end of routine is reached... break.
-        break
-
-    t_end_test = time.time()
-    time_taken = t_end_test - t_start_test
-    print(datetime.utcnow(), "- Stream testing completed in %s s. Results below." % time_taken)
+    try:
+        v1 = datetime.now(timezone.utc).replace(tzinfo=None)
+        v2 = np.datetime64(v1)
+        v3 = date2num(v1)
+        # can also be used for unittest
+        var1 = testtimestep(v1)
+        var2 = testtimestep(v2)
+        var3 = testtimestep(v3)
+    except Exception as excep:
+        errors['testtimestep'] = str(excep)
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
+    try:
+        ml = [1,2,3,4,5,6,7,8,9]
+        v1 = fill_list(ml, 19, 10)
+        # can also be used for unittest with np.sum
+        #print (np.sum(v1), np.sum(ml)) # +100 for unittest
+    except Exception as excep:
+        errors['fill_list'] = str(excep)
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
+    try:
+        fig,ax = tsplot([teststream])
+        pass
+    except Exception as excep:
+        errors['tsplot'] = str(excep)
+        print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR testing number.")
 
     print()
     print("----------------------------------------------------------")
@@ -1252,14 +1062,6 @@ if __name__ == '__main__':
         print(len(errors), "errors were found in the following functions:")
         print(str(errors.keys()))
         print()
-        print("Would you like to print the exceptions thrown?")
-        excep_answer = raw_input("(Y/n) > ")
-        if excep_answer.lower() == 'y':
-            i = 0
-            for item in errors:
-                print(errors.keys()[i] + " error string:")
-                print("    " + errors[errors.keys()[i]])
-                i += 1
-    print()
-    print("Good-bye!")
-    print("----------------------------------------------------------")
+        print("Exceptions thrown:")
+        for item in errors:
+            print("{} : errormessage = {}".format(item, errors.get(item)))

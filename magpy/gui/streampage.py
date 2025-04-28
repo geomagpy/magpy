@@ -1,20 +1,14 @@
 #!/usr/bin/env python
 
 from magpy.stream import *
-from magpy.absolutes import *
-from magpy.transfer import *
-from magpy.database import *
+import magpy.absolutes as di
+import magpy.core.database
 
 import wx
 
-try:
-    # wx 2.x, 3.x
-    from wx import DatePickerCtrl as wxDatePickerCtrl
-    from wx import DP_DEFAULT as wxDP_DEFAULT
-except:
-    # wx 4.x
-    from wx.adv import DatePickerCtrl as wxDatePickerCtrl
-    from wx.adv import DP_DEFAULT as wxDP_DEFAULT
+# wx 4.x
+from wx.adv import DatePickerCtrl as wxDatePickerCtrl
+from wx.adv import DP_DEFAULT as wxDP_DEFAULT
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wx import NavigationToolbar2Wx
@@ -39,10 +33,18 @@ class StreamPage(wx.Panel):
 
     # Widgets
     def createControls(self):
+        font = wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        self.nextButton = wx.Button(self,-1,"next >>",size=(160,30))
+        self.previousButton = wx.Button(self,-1,"<< previous",size=(160,30))
+        self.infoLabel = wx.StaticText(self, label="Data information:")
         self.lineLabel1 = wx.StaticText(self, label="  ")
         self.lineLabel2 = wx.StaticText(self, label="  ")
         self.lineLabel3 = wx.StaticText(self, label="  ")
         self.lineLabel4 = wx.StaticText(self, label="  ")
+        self.lineLabel5 = wx.StaticText(self, label="  ")
+        self.lineLabel6 = wx.StaticText(self, label="  ")
+        self.lineLabel7 = wx.StaticText(self, label="  ")
+        self.lineLabel8 = wx.StaticText(self, label="  ")
         self.pathLabel = wx.StaticText(self, label="Path/Source:")
         self.pathTextCtrl = wx.TextCtrl(self, value="")
         self.fileLabel = wx.StaticText(self, label="File/Table:")
@@ -55,46 +57,26 @@ class StreamPage(wx.Panel):
         self.endDatePicker = wxDatePickerCtrl(self, style=wxDP_DEFAULT)
         self.endTimePicker = wx.TextCtrl(self, value=datetime.now().strftime('%X'))
         self.trimStreamButton = wx.Button(self,-1,"Trim timerange",size=(160,30))
-        self.plotOptionsLabel = wx.StaticText(self, label="Plotting options:")
+        self.plotOptionsLabel = wx.StaticText(self, label="Data selection:")
         #self.flagOptionsLabel = wx.StaticText(self, label="Flagging methods:")
         self.selectKeysButton = wx.Button(self,-1,"Select Columns",size=(160,30))
         self.dropKeysButton = wx.Button(self,-1,"Drop Columns",size=(160,30))
         self.extractValuesButton = wx.Button(self,-1,"Extract Values",size=(160,30))
-        self.restoreButton = wx.Button(self,-1,"Restore data",size=(160,30))
-        self.changePlotButton = wx.Button(self,-1,"Plot Options",size=(160,30))
-        self.dailyMeansButton = wx.Button(self,-1,"Daily Means",size=(160,30))
-        self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(160,30))
         self.getGapsButton = wx.Button(self,-1,"Get gaps",size=(160,30))
-        #self.flagOutlierButton = wx.Button(self,-1,"Flag Outlier",size=(160,30))
-        #self.flagRangeButton = wx.Button(self,-1,"Flag Range",size=(160,30))
-        #self.flagMinButton = wx.Button(self,-1,"Flag Minimum",size=(160,30))
-        #self.flagMaxButton = wx.Button(self,-1,"Flag Maximum",size=(160,30))
-        #self.xCheckBox = wx.CheckBox(self,label="X             ")
-        #self.yCheckBox = wx.CheckBox(self,label="Y             ")
-        #self.zCheckBox = wx.CheckBox(self,label="Z             ")
-        #self.fCheckBox = wx.CheckBox(self,label="F             ")
-        #self.FlagIDText = wx.StaticText(self,label="Select Min/Max Flag ID:")
-        #self.FlagIDComboBox = wx.ComboBox(self, choices=self.flagidlist,
-        #    style=wx.CB_DROPDOWN, value=self.flagidlist[3],size=(160,-1))
-        #self.flagSelectionButton = wx.Button(self,-1,"Flag Selection",size=(160,30))
-        #self.flagDropButton = wx.Button(self,-1,"Drop flagged",size=(160,30))
-        #self.flagLoadButton = wx.Button(self,-1,"Load flags",size=(160,30))
-        #self.flagSaveButton = wx.Button(self,-1,"Save flags",size=(160,30))
-        #self.flagClearButton = wx.Button(self,-1,"Clear flags",size=(160,30))
         self.compRadioBox = wx.RadioBox(self,
-            label="Select components",
+            label="Coordinate system",
             choices=self.comp, majorDimension=3, style=wx.RA_SPECIFY_COLS)
         self.symbolRadioBox = wx.RadioBox(self,
             label="Select symbols",
             choices=self.symbol, majorDimension=2, style=wx.RA_SPECIFY_COLS)
-        self.annotateCheckBox = wx.CheckBox(self,label="annotate")
-        self.errorBarsCheckBox = wx.CheckBox(self,label="error bars")
-        self.confinexCheckBox = wx.CheckBox(self,
-            label="confine time")
+        self.statsLabel = wx.StaticText(self, label="Continuous statistics:")
+        self.activateStatsCheckBox = wx.CheckBox(self,label="activate",size=(160,30))
         self.compRadioBox.Disable()
         self.symbolRadioBox.Disable()
 
-        #self.dailyMeansButton.SetFont(wx.Font(14, wx.SWISS, wx.NORMAL, wx.NORMAL))
+        self.infoLabel.SetFont(font)
+        self.plotOptionsLabel.SetFont(font)
+        self.statsLabel.SetFont(font)
 
 
     def doLayout(self):
@@ -103,7 +85,15 @@ class StreamPage(wx.Panel):
         noOptions = dict()
         emptySpace = '(0,0), noOptions'
 
-        elemlist = ['self.pathLabel, noOptions',
+        elemlist = ['self.lineLabel7, noOptions',
+                    'self.lineLabel8, noOptions',
+                    'self.previousButton, dict(flag=wx.ALIGN_CENTER)',
+                    'self.nextButton, dict(flag=wx.ALIGN_CENTER)',
+                    'self.lineLabel1, noOptions',
+                    'self.lineLabel2, noOptions',
+                    'self.infoLabel, noOptions',
+                    '(0,0), noOptions',
+                    'self.pathLabel, noOptions',
                  'self.pathTextCtrl, expandOption',
                  'self.fileLabel, noOptions',
                  'self.fileTextCtrl, expandOption',
@@ -116,43 +106,23 @@ class StreamPage(wx.Panel):
                  'self.endDatePicker, expandOption',
                  'self.endTimePicker, expandOption',
                  'self.trimStreamButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.restoreButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.lineLabel1, noOptions',
-                 'self.lineLabel2, noOptions',
+                 '(0,0), noOptions',
+                 'self.lineLabel3, noOptions',
+                 'self.lineLabel4, noOptions',
                  'self.plotOptionsLabel, noOptions',
                  '(0,0), noOptions',
                  'self.selectKeysButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.changePlotButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.dropKeysButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.extractValuesButton, dict(flag=wx.ALIGN_CENTER)',
+                 'self.getGapsButton, dict(flag=wx.ALIGN_CENTER)',
                  'self.compRadioBox, noOptions',
                  'self.symbolRadioBox, noOptions',
-                 'self.annotateCheckBox, noOptions',
-                 'self.applyBCButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.confinexCheckBox, noOptions',
-                 'self.dailyMeansButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.errorBarsCheckBox, noOptions',
-                 'self.getGapsButton, dict(flag=wx.ALIGN_CENTER)',
-                 'self.lineLabel3, noOptions',
-                 'self.lineLabel4, noOptions']
-                 #'self.flagOptionsLabel, noOptions',
-                 #'(0,0), noOptions',
-                 #'self.flagOutlierButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagSelectionButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagRangeButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagDropButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagMinButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagMaxButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.xCheckBox, noOptions',
-                 #'self.yCheckBox, noOptions',
-                 #'self.zCheckBox, noOptions',
-                 #'self.fCheckBox, noOptions',
-                 #'self.FlagIDText, noOptions',
-                 #'self.FlagIDComboBox, expandOption',
-                 #'self.flagLoadButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagSaveButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'self.flagClearButton, dict(flag=wx.ALIGN_CENTER)',
-                 #'(0,0), noOptions'
+                 'self.lineLabel5, noOptions',
+                 'self.lineLabel6, noOptions',
+                    'self.statsLabel, noOptions',
+                    '(0,0), noOptions',
+                    'self.activateStatsCheckBox, noOptions',
+                    '(0,0), noOptions']
 
         # A horizontal BoxSizer will contain the GridSizer (on the left)
         # and the logger text control (on the right):
@@ -163,10 +133,6 @@ class StreamPage(wx.Panel):
 
         # modify look: ReDraw connected to radio and check boxes with dates
         # buttons automatically redraw the graph
-
-        #checklist = ['self.'+elem+'CheckBox, noOptions' for elem in KEYLIST]
-        #elemlist.extend(checklist)
-        #elemlist.append('self.DrawButton, dict(flag=wx.ALIGN_CENTER)')
 
         # Add the controls to the sizers:
         for elem in elemlist:

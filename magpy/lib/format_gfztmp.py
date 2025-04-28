@@ -16,9 +16,12 @@ Supported format looks like:
  5. 6.2019 00:00:02    23709.43   2036.23  41051.99
 
 """
-from __future__ import print_function
-
-from magpy.stream import *
+from magpy.stream import DataStream
+from datetime import datetime
+import numpy as np
+import logging
+logger = logging.getLogger(__name__)
+KEYLIST = DataStream().KEYLIST
 
 
 def isGFZTMP(filename):
@@ -107,7 +110,7 @@ def readGFZTMP(filename, headonly=False, **kwargs):
                         headers['unit-col-{}'.format(var[idx])] = comp[1]
             elif datefound:
                 dt = datetime.strptime(line[:19].replace(' ',''),"%d.%m.%Y%H:%M:%S")
-                timear.append(date2num(dt))
+                timear.append(dt)
                 vals = line[19:].split()
                 xar.append(vals[0])
                 yar.append(vals[1])
@@ -124,5 +127,4 @@ def readGFZTMP(filename, headonly=False, **kwargs):
     headers['SensorID'] = '{}_{}_0001_0001'.format('FGE','')
     headers['DataFormat'] = 'GPZ ASCII tmp'
 
-    return DataStream([LineStruct()], headers, np.asarray(array))
-
+    return DataStream(header=headers, ndarray=np.asarray(array, dtype=object))

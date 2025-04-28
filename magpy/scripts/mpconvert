@@ -6,7 +6,7 @@ Simple method to convert data files in different formats
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from magpy.stream import read, PYMAG_SUPPORTED_FORMATS
+from magpy.stream import read, SUPPORTED_FORMATS
 import sys, getopt, os
 
 def main(argv):
@@ -137,10 +137,10 @@ def main(argv):
     if format_type == '':
         format_type = 'PYASCII'
     else:
-        if not format_type in PYMAG_SUPPORTED_FORMATS:
+        if not format_type in SUPPORTED_FORMATS:
             print ("mpconvert.py: Error: Unkown format! Choose one of the following output formats:")
-            for key in PYMAG_SUPPORTED_FORMATS:
-                val = PYMAG_SUPPORTED_FORMATS[key]
+            for key in SUPPORTED_FORMATS:
+                val = SUPPORTED_FORMATS[key]
                 if 'w' in val[0] and len(val) > 1:
                     print (" -- {}: {}".format(key, val[1]))
             sys.exit()

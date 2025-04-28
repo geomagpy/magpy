@@ -6,19 +6,22 @@ Written by Rachel Bailey
 """
 
 from magpy.stream import *
+from magpy.core.methods import testtime, extract_date_from_string
 
 def isAUTODIF_FREAD(filename):
     """
     Checks whether a file is text POS-1 file format.
     """
     try:
-        line = open(filename, 'r').readline()
+        with open(filename, "r") as fi:
+            line = fi.readline()
     except:
         return False
     try:
         temp = line.split()
         if len(temp) == 5:
-            if len(temp[0]) == 8 and len(temp[1]) == 5 and len(temp[2]) == 2:
+            # exactly the same as pmb POS1 files
+            if len(temp[0]) == 8 and len(temp[1]) == 5 and len(temp[2]) == 2 and not filename.endswith(".pmb"):
                 logging.debug("lib - format_autodif: Found Autodif Text file %s" % filename)
                 return True
             else:
@@ -54,15 +57,15 @@ def readAUTODIF_FREAD(filename, headonly=False, **kwargs):
     data = []
     key = None
 
-    theday = extractDateFromString(filename)
+    theday = extract_date_from_string(filename)
     try:
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
         logging.warning("Could not identify date in %s. Reading all ..." % daystring)

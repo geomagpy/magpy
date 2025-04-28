@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Leonhardt"
+  given-names: "Roman"
+  orcid: "https://orcid.org/0000-0003-3605-7423"
+- family-names: "Bailey"
+  given-names: "Rachel"
+  orcid: "https://orcid.org/0000-0003-2021-6557"
+- family-names: "Schovanec"
+  given-names: "Heather"
+  orcid: ""
+- family-names: "Fee"
+  given-names: "Jeremey"
+  orcid: ""
+- family-names: "Bracke"
+  given-names: "Stephan"
+  orcid: ""
+- family-names: "Miklavec"
+  given-names: "Mojca"
+  orcid: ""
+- family-names: "Kompein"
+  given-names: "Niko"
+  orcid: ""
+title: "MagPy – Analyzing and displaying geomagnetic data"
+version: 1.1.8
+doi: 10.5281/zenodo.14028651
+date-released: 2024-11-02
+url: "https://github.com/geomagpy/magpy"

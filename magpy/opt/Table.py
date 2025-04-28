@@ -2,7 +2,7 @@
 Table.py
 
 A module/class for creating LaTeX deluxetable's.  In a nutshell, you create
-a table instance, add columns, set options, then call the pring method.
+a table instance, add columns, set options, then call the print method.
 
 written by Chris Burn, http://users.obs.carnegiescience.edu/~cburns/site/?p=22
 '''

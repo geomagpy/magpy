@@ -1,4 +1,7 @@
 import unittest
+import sys
+sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
+
 import magpy.lib.format_autodif as auto_format
 import magpy.lib.format_abs_magpy as abs_format
 from magpy.stream import *
@@ -91,7 +94,7 @@ class TestFormatReaderMK2(unittest.TestCase):
                 ref_x0.append(float(row[2]))
                 ref_y0.append(float(row[4]))
                 ref_z0.append(float(row[6]))
-        absresult = di.absoluteAnalysis(di_path, vario_path, vario_path,
+        absresult = di.absolute_analysis(di_path, vario_path, vario_path,
                                          diid='20200801_00-11-13.abs',
                                         stationid='DOU', pier='A1',
                                         alpha=0.0, deltaF=0.0,  variometerorientation = "XYZ")
@@ -100,3 +103,6 @@ class TestFormatReaderMK2(unittest.TestCase):
             self.assertAlmostEqual(absresult.ndarray[12][i],ref_x0[i], delta = 0.12)
             self.assertAlmostEqual(absresult.ndarray[13][i], ref_y0[i], delta= 0.1)
             self.assertAlmostEqual(absresult.ndarray[14][i], ref_z0[i], delta= 0.1)
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

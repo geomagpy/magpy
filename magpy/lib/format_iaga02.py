@@ -4,24 +4,45 @@ IAGA02 input filter
 Written by Roman Leonhardt June 2012
 - contains test, read and write function
 """
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from __future__ import division
-from io import open
-
-from magpy.stream import *
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
+#from magpy.stream import *
+from magpy.stream import DataStream, read, magpyversion, join_streams, subtract_streams
+from magpy.core.methods import testtime, convert_geo_coordinate, extract_date_from_string
+import os
+from datetime import datetime, timedelta, timezone
+import time
+import numpy as np
+import logging
 
 #global variables
+logger = logging.getLogger(__name__)
+KEYLIST = DataStream().KEYLIST
 MISSING_DATA = 99999
 NOT_REPORTED = 88888
+
+
+def LeapTime(t):
+    """
+    converts strings to datetime, considering leap seconds
+    """
+    nofrag, frag = t.split('.')
+    if len(frag) < 6:  # IAGA string has only millisecond resolution:
+        frag = frag.ljust(6, '0')
+    nofrag_dt = time.strptime(nofrag, "%Y-%m-%dT%H:%M:%S")
+    ts = datetime(*nofrag_dt[:5]+(min([nofrag_dt[5], 59]),))
+    #ts = datetime.fromtimestamp(time.mktime(nofrag_dt))
+    dt = ts.replace(microsecond=int(frag))
+    return dt
+
 
 def isIAGA(filename):
     """
     Checks whether a file is ASCII IAGA 2002 format.
     """
     try:
-        temp = open(filename, 'rt').readline()
+        with open(filename, 'rt') as myfi:
+            temp = myfi.readline()
     except:
         return False
     try:
@@ -83,24 +104,27 @@ def readIAGA(filename, headonly=False, **kwargs):
     stream.header = {}
     data = []
     key = None
+    varstr = ''
+    elem = 0
+    comment = ''
 
     try:
         # get day from filename (platform independent)
-        theday = extractDateFromString(filename)[0]
+        theday = extract_date_from_string(filename)[0]
         day = datetime.strftime(theday,"%Y-%m-%d")
         # Select only files within eventually defined time range
         if starttime:
-            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(stream._testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') >= datetime.strptime(datetime.strftime(testtime(starttime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
         if endtime:
-            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(stream._testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
+            if not datetime.strptime(day,'%Y-%m-%d') <= datetime.strptime(datetime.strftime(testtime(endtime),'%Y-%m-%d'),'%Y-%m-%d'):
                 getfile = False
     except:
         logging.warning("Could not identify typical IAGA date for %s. Reading all ...".format(filename))
         getfile = True
 
     if getfile:
-        loggerlib.info('Read: %s Format: %s ' % (filename, "IAGA2002"))
+        logger.info('Read: %s Format: %s ' % (filename, "IAGA2002"))
         dfpos = KEYLIST.index('df')
         comment = ''
 
@@ -212,9 +236,10 @@ def readIAGA(filename, headonly=False, **kwargs):
                     stream.header["col-f"] = 'F'
                 #print ("VAR", varstr)
                 if varstr in ['dhzf','dhzg']:
-                    #stream.header["col-x"] = 'H'
-                    #stream.header["col-y"] = 'D'
-                    #stream.header["col-z"] = 'Z'
+                    # Please note: positions of D and H are exchanged while reading from data set below
+                    stream.header["col-x"] = 'H'
+                    stream.header["col-y"] = 'D'
+                    stream.header["col-z"] = 'Z'
                     stream.header["unit-col-y"] = 'deg'
                     stream.header['DataComponents'] = 'HDZF'
                 elif varstr in ['ehzf','ehzg']:
@@ -248,16 +273,11 @@ def readIAGA(filename, headonly=False, **kwargs):
             elif line.startswith('%'):
                 pass
             else:
-                # data entry - may be written in multiple columns
-                # row beinhaltet die Werte eine Zeile
                 # transl. row values contains a line
                 row=[]
-                # Verwende das letzte Zeichen von "line" nicht, d.h. line[:-1],
-                # da darin der Zeilenumbruch "\n" steht
                 # transl. Do not use the last character of "line", d.h. line [:-1],
                 # 				since this is the line break "\n"
                 for val in line[:-1].split():
-                    # nur nicht-leere Spalten hinzufuegen
                     # transl. Just add non-empty columns
                     if val.strip()!="":
                         row.append(val.strip())
@@ -265,7 +285,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                 # Build two-dimensional array
                 timestring = row[0]+'T'+row[1]
                 #t = '2012-06-30T23:59:60.209215'
-                array[0].append( date2num(LeapTime(timestring)) )
+                array[0].append( LeapTime(timestring) )
 
                 if float(row[3]) >= NOT_REPORTED:
                     row[3] = np.nan
@@ -295,13 +315,17 @@ def readIAGA(filename, headonly=False, **kwargs):
                     array[3].append( float(row[5]) )
                 try:
                     if float(row[6]) < NOT_REPORTED:
+                        # dF = F(vector) - F(scalar) according to IM technical mamual
                         if varstr[-1]=='f':
                             array[4].append(float(elem[6]))
                         elif varstr[-1]=='g' and varstr=='xyzg':
                             array[4].append(np.sqrt(float(row[3])**2+float(row[4])**2+float(row[5])**2) - float(row[6]))
                             array[dfpos].append(float(row[6]))
-                        elif varstr[-1]=='g' and varstr in ['hdzg','dhzg','ehzg']:
+                        elif varstr[-1]=='g' and varstr in ['hdzg']:
                             array[4].append(np.sqrt(float(row[3])**2+float(row[5])**2) - float(row[6]))
+                            array[dfpos].append(float(row[6]))
+                        elif varstr[-1] == 'g' and varstr in ['dhzg', 'ehzg']:
+                            array[4].append(np.sqrt(float(row[4]) ** 2 + float(row[5]) ** 2) - float(row[6]))
                             array[dfpos].append(float(row[6]))
                         elif varstr[-1]=='g' and varstr in ['dhig']:
                             array[4].append(float(row[6]))
@@ -309,14 +333,14 @@ def readIAGA(filename, headonly=False, **kwargs):
                         else:
                             raise ValueError
                     else:
-                        array[4].append(float('nan'))
+                        array[4].append(np.nan)
                         if varstr[-1] in ['g']:
-                            array[dfpos].append(float('nan'))
+                            array[dfpos].append(np.nan)
                 except:
                     if not float(row[6]) >= NOT_REPORTED:
                         array[4].append(float(row[6]))
                     else:
-                        array[4].append(float('nan'))
+                        array[4].append(np.nan)
                 #data.append(row)
 
     fh.close()
@@ -338,6 +362,7 @@ def readIAGA(filename, headonly=False, **kwargs):
         elif filename.count(".") == 1 and len(filename) < 30 and not filename.find("&")>-1:
             tmp, fileext = os.path.splitext(filename)
         stream.header['SensorID'] = stream.header.get('StationIAGAcode','NoCode').upper()+fileext.replace('.','')+'_'+stream.header.get('DataPublicationLevel','0')+'_0001'
+        stream.header['DataID'] = "{}_0001".format(stream.header['SensorID'])
     except:
         pass
 
@@ -346,8 +371,7 @@ def readIAGA(filename, headonly=False, **kwargs):
     for idx, elem in enumerate(array):
         array[idx] = np.asarray(array[idx])
 
-    stream = DataStream([LineStruct()],stream.header,np.asarray(array,dtype=object))
-    sr = stream.samplingrate()
+    stream = DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
 
     return stream
 
@@ -370,11 +394,11 @@ def writeIAGA(datastream, filename, **kwargs):
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = join_streams(exst,datastream,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = join_streams(datastream,exst,extend=True)
             myFile= OpenFile(filename)
         elif mode == 'append':
             myFile= OpenFile(filename,mode='a')
@@ -387,8 +411,8 @@ def writeIAGA(datastream, filename, **kwargs):
             myFile = io.StringIO()
             returnstring = True
         else:
-            import StringIO
-            myFile = StringIO.StringIO()
+            from io import StringIO
+            myFile = StringIO()
             returnstring = True
     else:
         myFile= OpenFile(filename)
@@ -437,21 +461,6 @@ def writeIAGA(datastream, filename, **kwargs):
     else:
         datacomp = datacomp+'F'
 
-    """
-    if len(datastream.ndarray[findg]) > 0:
-        useg = True
-
-    if len(datastream.ndarray[find]) > 0:
-        if not useg:
-            datacomp = datacomp+'F'
-        else:
-            datacomp = datacomp+'G'
-    elif len(datastream.ndarray[findg]) > 0:
-        datacomp = datacomp+'G'
-    else:
-        datacomp = datacomp+'F'
-    """
-
     publevel = str(header.get('DataPublicationLevel',""))
     if publevel in ['2','P','Provisional','provisional']:
         publ = 'provisional'
@@ -474,7 +483,7 @@ def writeIAGA(datastream, filename, **kwargs):
             if proj.find('EPSG:') > 0:
                 epsg = int(proj.split('EPSG:')[1].strip())
                 if not epsg==4326:
-                    longi,lati = convertGeoCoordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
+                    longi,lati = convert_geo_coordinate(float(longi),float(lati),'epsg:'+str(epsg),'epsg:4326')
 
     if not header.get('StationIAGAcode','') == '':
         iagacode = header.get('StationIAGAcode','')
@@ -652,26 +661,26 @@ def writeIAGA(datastream, filename, **kwargs):
                 timeval = datastream.ndarray[0][i]
             row = ''
             try:
-                row = datetime.strftime(num2date(timeval).replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
+                row = datetime.strftime(timeval.replace(tzinfo=None),"%Y-%m-%d %H:%M:%S.%f")
                 row = row[:-3]
-                doi = datetime.strftime(num2date(timeval).replace(tzinfo=None), "%j")
+                doi = datetime.strftime(timeval.replace(tzinfo=None), "%j")
                 row += ' %s' % str(doi)
             except:
                 row = ''
                 pass
-            if isnan(xval):
+            if np.isnan(xval):
                 row += '%13.2f' % MISSING_DATA
             else:
                 row += '%13.2f' % xval
-            if isnan(yval):
+            if np.isnan(yval):
                 row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % yval
-            if isnan(zval):
+            if np.isnan(zval):
                 row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % zval
-            if isnan(fval):
+            if np.isnan(fval):
                 row += '%10.2f' % MISSING_DATA
             else:
                 row += '%10.2f' % fval
@@ -689,3 +698,115 @@ def writeIAGA(datastream, filename, **kwargs):
 
 
     return filename
+
+if __name__ == '__main__':
+
+    import scipy
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: IMF FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE IMF LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+    l = 88400
+    array = [[] for el in DataStream().KEYLIST]
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(20950, 21000, size=int(l/2))
+    b = np.random.uniform(20950, 21050, size=int(l/2))
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x[1000:-1000]
+    a = np.random.uniform(1950, 2000, size=int(l/2))
+    b = np.random.uniform(1900, 2050, size=int(l/2))
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1000:-1000]
+    a = np.random.uniform(44300, 44400, size=l)
+    z = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[3] = z[1000:-1000]
+    a = np.random.uniform(49000, 49200, size=l)
+    f = scipy.signal.convolve(a, win, mode='same') / sum(win)
+    array[4] = f[1000:-1000]
+    array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    # 2. Creating artificial header information
+    header = {}
+    header['DataSamplingRate'] = 1
+    header['SensorID'] = 'Test_0001_0002'
+    header['StationIAGAcode'] = 'XXX'
+    header['DataAcquisitionLatitude'] = 48.123
+    header['DataAcquisitionLongitude'] = 15.999
+    header['DataElevation'] = 1090
+    header['DataComponents'] = 'XYZS'
+    header['StationInstitution'] = 'TheWatsonObservatory'
+    header['DataDigitalSampling'] = '1 Hz'
+    header['DataSensorOrientation'] = 'HEZ'
+    header['StationName'] = 'Holmes'
+
+    teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+
+
+    errors = {}
+    successes = {}
+    testrun = 'STREAMTESTFILE'
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    while True:
+        testset = 'IAGA'
+        try:
+            # Testing IAF
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            # IAF write
+            succ1 = writeIAGA(teststream, filename)
+            # IAF test
+            succ2 = isIAGA(filename)
+            # IAF read
+            dat = readIAGA(filename)
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            # validity tests
+            diff = subtract_streams(teststream,dat)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.001 or np.abs(ym) > 0.001 or np.abs(zm) > 0.001 or np.abs(fm) > 0.001:
+                 raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
+    time_taken = t_end_test - t_start_test
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")

@@ -70,7 +70,7 @@ from magpy.lib.format_noaa import *
 from magpy.lib.format_nc import isNETCDF, readNETCDF
 from magpy.lib.format_latex import *
 from magpy.lib.format_covjson import *
-from magpy.lib.format_json import *
+#from magpy.lib.format_json import *
 
 # IMPORT OBSERVATORY/GROUP SPECIFIC FORMATS:
 from magpy.lib.format_wik import *
@@ -82,7 +82,6 @@ from magpy.lib.format_gfz import *
 from magpy.lib.format_gfztmp import *
 from magpy.lib.format_neic import *
 from magpy.lib.format_rcs import *
-from magpy.lib.format_pha import *
 from magpy.lib.format_predstorm import *
 from magpy.lib.format_basiccsv import *
 
@@ -97,6 +96,7 @@ try:
     ##  -> format_imf ImagCDF method in case of cdflib available
     ##  -> format_magpy PYCDF method in case of cdflib available
     from magpy.lib.format_imagcdf import *
+    from magpy.lib.format_gfzcdf import *
     from magpy.lib.format_magpycdf import *
     from magpy.lib.format_acecdf import *
     # please note: magpycdf and acecdf replace the earlier combined method in magpy
@@ -157,9 +157,6 @@ def isFormat(filename, format_type):
     elif (format_type == "COVJSON"):
         if (isCOVJSON(filename)):
             return True
-    elif (format_type == "JSON"):
-        if (isJSON(filename)):
-            return True
     elif (format_type == "RMRCS"): # Data from the Conrad Observatory RCS System
         if (isRMRCS(filename)):
             return True
@@ -175,9 +172,6 @@ def isFormat(filename, format_type):
     elif (format_type == "TSF"):  # Data from the iGrav and SG gravity system
         if (isTSF(filename)):
             return True
-    elif (format_type == "GRAVSG"): # Data from the Conrad Observatory SG gravity system
-        if (isGRAVSG(filename)):
-            return True
     elif (format_type == "IWT"): # Data from the Conrad Observatory tiltmeter system
         if (isIWT(filename)):
             return True
@@ -192,9 +186,6 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "RADON"): # Data from the CR800 datalogger
         if (isRADON(filename)):
-            return True
-    elif (format_type == "CS"):
-        if (isCS(filename)):
             return True
     elif (format_type == "GSM19"): # Data from the GEM GSM 19 Overhauzer sensor
         if (isGSM19(filename)):
@@ -226,6 +217,9 @@ def isFormat(filename, format_type):
     elif (format_type == "DKA"): # Intermagnet K-value Format
         if (isDKA(filename)):
             return True
+    elif (format_type == "GFZCDF"):
+        if (isGFZCDF(filename)):
+            return True
     elif (format_type == "ACECDF"):
         if (isACECDF(filename)):
             return True
@@ -244,6 +238,12 @@ def isFormat(filename, format_type):
     elif (format_type == "BLV"): # Intermagnet IBFV2.00
         try:
             if (isBLV(filename)):
+                return True
+        except:
+            pass
+    elif (format_type == "BLV1_2"):  # Intermagnet IBFV1.2
+        try:
+            if (isBLV1_2(filename)):
                 return True
         except:
             pass
@@ -271,14 +271,17 @@ def isFormat(filename, format_type):
     elif (format_type == "NOAAACE"): # NOAA ACE Satellite data
         if (isNOAAACE(filename)):
             return True
+    elif (format_type == "DSCOVR"):  # NOAA DSCOVR Satellite data
+        if (isDSCOVR(filename)):
+            return True
+    elif (format_type == "XRAY"):  # NOAA GOES XRAY Satellite data
+        if (isXRAY(filename)):
+            return True
     elif (format_type == "NETCDF"): # NetCDF format, NOAA DSCOVR satellite data
         if (isNETCDF(filename)):
             return True
     elif (format_type == "NEIC"): # NEIC USGS data
         if (isNEIC(filename)):
-            return True
-    elif (format_type == "PHA"): # Potentially Hazardous Objects (This research has made use of data and/or services provided by the International Astronomical Union's Minor Planet Center.)
-        if (isPHA(filename)):
             return True
     elif (format_type == "PREDSTORM"): # PREDSTORM space weather data
         if (isPREDSTORM(filename)):
@@ -316,6 +319,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readIAF(filename, headonly, **kwargs)
     elif (format_type == "BLV"): # Intermagnet IBFV2.00
         return readBLV(filename, headonly, **kwargs)
+    elif (format_type == "BLV1_2"):  # Intermagnet IBFV1.20
+        return readBLV1_2(filename, headonly, **kwargs)
     elif (format_type == "IYFV"): # Intermagnet IYVF1.01
         return readIYFV(filename, headonly, **kwargs)
     elif (format_type == "DKA"): # Intermagnet DKA
@@ -340,6 +345,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPYASCII(filename, headonly, **kwargs)
     elif (format_type == "IMAGCDF"):
         return readIMAGCDF(filename, headonly, **kwargs)
+    elif (format_type == "GFZCDF"):
+        return readGFZCDF(filename, headonly, **kwargs)
     elif (format_type == "ACECDF"): # cdf ACE
         return readACECDF(filename, headonly, **kwargs)
     elif (format_type == "PYCDF"):
@@ -348,8 +355,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readPYBIN(filename, headonly, **kwargs)
     elif (format_type == "GFZINDEXJSON"):
         return readGFZINDEXJSON(filename, headonly, **kwargs)
-    elif (format_type == "JSON"):
-        return readJSON(filename, headonly, **kwargs)
     elif (format_type == "GSM19"):
         return readGSM19(filename, headonly, **kwargs)
     elif (format_type == "LEMIHF"):
@@ -376,8 +381,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "TSF"):
         return readTSF(filename, headonly, **kwargs)
-    elif (format_type == "GRAVSG"):
-        return readGRAVSG(filename, headonly, **kwargs)
     elif (format_type == "IWT"):
         return readIWT(filename, headonly, **kwargs)
     elif (format_type == "LIPPGRAV"):
@@ -388,8 +391,6 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readIONO(filename, headonly, **kwargs)
     elif (format_type == "RADON"):
         return readRADON(filename, headonly, **kwargs)
-    elif (format_type == "CS"):
-        return readCS(filename, headonly, **kwargs)
     # Observatory specific
     elif (format_type == "OPT"):
         return readOPT(filename, headonly, **kwargs)
@@ -411,12 +412,14 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readGFZTMP(filename, headonly, **kwargs)
     elif (format_type == "NOAAACE"):
         return readNOAAACE(filename, headonly, **kwargs)
+    elif (format_type == "DSCOVR"):
+        return readDSCOVR(filename, headonly, **kwargs)
+    elif (format_type == "XRAY"):
+        return readXRAY(filename, headonly, **kwargs)
     elif (format_type == "NETCDF"):
         return readNETCDF(filename, headonly, **kwargs)
     elif (format_type == "NEIC"):
         return readNEIC(filename, headonly, **kwargs)
-    elif (format_type == "PHA"):
-        return readPHA(filename, headonly, **kwargs)
     elif (format_type == "PREDSTORM"):
         return readPREDSTORM(filename, headonly, **kwargs)
     elif (format_type == "CSV"):

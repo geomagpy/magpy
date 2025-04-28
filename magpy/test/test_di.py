@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Test program to verify the correctness of DI analyses
+Test program with basic DI analysis
 
 version 1.0.0:
 
@@ -16,7 +16,6 @@ DESCRIPTION:
    a) file with zero technique
    b) file based on zero techninque with obtained S0 for D and I used as residual
       (as a result, S0 for D and I should be zero)
- TODO: add a json and a AutoDIF file
  All analyses results are compared against a dictionary with expected results.
 
 RETURN:
@@ -79,19 +78,20 @@ def test_di():
     datadir = 'testdata'
     successlist = []
 
-    dipath = os.path.join(exepath,'{}/'.format(datadir))
-    varionxy = os.path.join(exepath,'{}/NXY*'.format(datadir))
-    variosxy = os.path.join(exepath,'{}/SXY*'.format(datadir))
-    varionxxv = os.path.join(exepath,'{}/NXX_vario*'.format(datadir))
-    varionxxs = os.path.join(exepath,'{}/NXX_scalar*'.format(datadir))
+    dipath = os.path.join(exepath,'{}/difiles'.format(datadir))
+    varionxy = os.path.join(exepath,'{}/variometer/NXY*'.format(datadir))
+    variosxy = os.path.join(exepath,'{}/variometer/SXY*'.format(datadir))
+    varionxxv = os.path.join(exepath,'{}/variometer/NXX_vario*'.format(datadir))
+    varionxxs = os.path.join(exepath,'{}/scalar/NXX_scalar*'.format(datadir))
     #variosxy = os.path.join(exepath,'{}/SXY*'.format(datadir))
+    print (dipath)
     print (varionxy)
     print (variosxy)
 
     success1 = True
     try:
         #1. Northen hemisphere NXY
-        nabsresult = di.absoluteAnalysis(dipath,varionxy,varionxy,diid='NXY.txt',stationid='NXY',pier='2', alpha=0.0, deltaF=0.0)
+        nabsresult = di.absolute_analysis(dipath,varionxy,varionxy,diid='NXY.txt',stationid='NXY',pier='2', alpha=0.0, deltaF=0.0)
         RESULT = ExtractValues(nabsresult, 0)
         success1 = CompareValuesDict(EXPECTED.get('NXY'),RESULT)
         zero1 = nabsresult.ndarray[7][-1]
@@ -106,7 +106,7 @@ def test_di():
     success2 = True
     try:
         #2. Southern hemisphere SXY
-        sabsresult = di.absoluteAnalysis(dipath,variosxy,variosxy,diid='SXY.txt',stationid='SXY',pier='A', alpha=0.0, deltaF=0.0)
+        sabsresult = di.absolute_analysis(dipath,variosxy,variosxy,diid='SXY.txt',stationid='SXY', alpha=0.0, deltaF=0.0)
         RESULT = ExtractValues(sabsresult, 0)
         success2 = CompareValuesDict(EXPECTED.get('SXY'),RESULT)
         zero1 = sabsresult.ndarray[7][-1]
@@ -120,7 +120,7 @@ def test_di():
 
     success3 = True
     try:
-        nxxabsresult = di.absoluteAnalysis(dipath,varionxxv,varionxxs,diid='NXX.txt',stationid='NXX',pier='A2', alpha=0.0, deltaF=-0.5)
+        nxxabsresult = di.absolute_analysis(dipath,varionxxv,varionxxs,diid='NXX.txt',stationid='NXX',pier='A2', alpha=0.0, deltaF=-0.5)
     except:
         success3 = False
     print ("3. Northen Hemisphere NXX: ", success3)
@@ -128,34 +128,13 @@ def test_di():
 
     success4 = True
     try:
-        nxxabsresult = di.absoluteAnalysis(dipath,varionxxv,varionxxs,diid='NXX.txt',stationid='NXX',pier='A16', abstype='autodif', azimuth=267.5, alpha=0.0, deltaF=-0.5)
+        nxxabsresult = di.absolute_analysis(dipath,varionxxv,varionxxs,diid='NXX.txt',stationid='NXX',pier='A16', abstype='autodif', azimuth=267.5, alpha=0.0, deltaF=-0.5)
     except:
         success4 = False
     print ("4. Northen Hemisphere AUTODIF NXX: ", success4)
     successlist.append(success4)
     for idx,el in enumerate(successlist):
         print ("Test {}: {}".format(idx,el))
-
-    """
-    filename = '/home/leon/Downloads/sit/DI_jan.json'
-    #filename = '/home/leon/Cloud/Software/MagPyAnalysis/USGS json/observation_webservice_example.json'
-
-    data = di.readJSONABS(filename)
-    print (data)
-
-    absresult = di.absoluteAnalysis(filename,'/home/leon/Downloads/sit/*.min','',stationid='SIT',diid='.json',deltaF=0.0) 
-
-    #'/home/leon/Downloads/sit/'
-
-    success5 = True
-    try:
-        #dipath = ...
-        nxzabsresult = di.absoluteAnalysis(dipath,varionxxv,varionxxs,diid='NXX.txt',stationid='NXX',pier='A16', abstype='autodif', azimuth=267.5, alpha=0.0, deltaF=-0.5)
-    except:
-        success5 = False
-    print ("5. Northen Hemisphere JSON/WEBSERVICE NXZ: ", success4)
-    successlist.append(success4)
-    """
 
     if False in successlist:
         return False

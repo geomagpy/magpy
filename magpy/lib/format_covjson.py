@@ -8,15 +8,16 @@ Coverage JSON library
 Written by Roman Leonhardt June 2019
 - contains test, read and write function
 """
-from __future__ import print_function
+import sys
+sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 import json
 import os, sys
-from datetime import datetime
-
-from matplotlib.dates import date2num, num2date
+from datetime import datetime, timedelta, timezone
 import numpy as np
+from magpy.stream import DataStream, read, magpyversion, join_streams, merge_streams, subtract_streams, loggerlib
+from magpy.core.methods import test_timestring, testtime
+import dateutil.parser as dparser
 
-from magpy.stream import KEYLIST, NUMKEYLIST, DataStream, loggerlib, testTimeString
 
 
 """
@@ -93,8 +94,8 @@ def isCOVJSON(filename):
     Checks whether a file is JSON format.
     """
     try:
-        jsonfile = open(filename, 'r')
-        j = json.load(jsonfile)
+        with open(filename, 'r') as jsonfile:
+            j = json.load(jsonfile)
     except:
         return False
     try:
@@ -119,12 +120,13 @@ def isCOVJSON(filename):
 def readCOVJSON(filename, headonly=False, **kwargs):
     """
     Reading CoverageJSON format data.
-
     """
+    debug = kwargs.get('debug')
     header = {}
-    array = [[] for key in KEYLIST]
+    array = [[] for key in DataStream().KEYLIST]
 
-    print ("Reading coverage json")
+    if debug:
+        print ("Reading coverage json")
 
     with open(filename, 'r') as jsonfile:
         dataset = json.load(jsonfile)
@@ -136,8 +138,8 @@ def readCOVJSON(filename, headonly=False, **kwargs):
     parameters = dataset.get("parameters")
 
     times = dataset.get("domain").get("axes").get("t").get("values")
-    times = [testTimeString(el) for el in times]
-    array[0] = date2num(times)
+    times = [test_timestring(el) for el in times]
+    array[0] = times
     stream = DataStream([],header,array)
 
     try:
@@ -147,7 +149,8 @@ def readCOVJSON(filename, headonly=False, **kwargs):
     except:
         pass
 
-    print (dataset.get('context'))
+    if debug:
+        print (dataset.get('context'))
 
     def addelement(datastream, key, element, elementdict, parameterdict):
         array = np.asarray(elementdict.get('values'))
@@ -157,16 +160,18 @@ def readCOVJSON(filename, headonly=False, **kwargs):
 
     numcnt = 0
     strcnt = 1
-    AVAILKEYS = NUMKEYLIST
+    AVAILKEYS = DataStream().NUMKEYLIST
     ELEMENTSTODO = []
     fixedgroups = {'x' : ['x','X','H','I'], 'y' : ['y','Y','D','E'], 'z' : ['z','Z'], 'f' : ['f','F','S'], 'df' : ['g','G']}
     # Firstly assign data from fixed groups, then fill rest
     for element in ranges:
-        print ("Dealing with {}".format(element))
+        if debug:
+            print ("Dealing with {}".format(element))
         foundgroups = False
         for group in fixedgroups:
             if element in fixedgroups[group]:
-                print (" -> adding to {}".format(group))
+                if debug:
+                    print (" -> adding to {}".format(group))
                 addelement(stream, group, element, ranges[element], parameters[element])
                 AVAILKEYS = ['USED' if x==group else x for x in AVAILKEYS]
                 foundgroups = True
@@ -176,19 +181,22 @@ def readCOVJSON(filename, headonly=False, **kwargs):
 
     # Now assign all other elements to appropriate keys
     for element in ELEMENTSTODO:
-        print ("Now dealing with {}".format(element))
+        if debug:
+            print ("Now dealing with {}".format(element))
         # assign element to key
         if ranges.get(element).get('dataType') in ['float','double','int']:
             # get the first key which is not yet used
             index = min([idx for idx,el in enumerate(AVAILKEYS) if not el == 'USED'])
             key = AVAILKEYS[index]
-            print (" -> adding to {}".format(key))
+            if debug:
+                print (" -> adding to {}".format(key))
             addelement(stream, key, element, ranges[element], parameters[element])
             AVAILKEYS[index] = 'USED'
         else:
             if strcnt <= 4:
                 key = "str{}".format(strcnt)
-                print (" -> adding to {}".format(key))
+                if debug:
+                    print (" -> adding to {}".format(key))
                 addelement(stream, key, element, ranges[element], parameters[element])
             strcnt += 1
     return stream
@@ -203,26 +211,22 @@ def writeCOVJSON(datastream, filename, **kwargs):
     headonly = kwargs.get('headonly')
 
     returnstring = False
-    print ("Headonly", headonly)
 
     if os.path.isfile(filename):
         if mode == 'skip': # skip existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(exst,datastream,extend=True)
+            datastream = join_streams(exst,datastream,extend=True)
         elif mode == 'replace': # replace existing inputs
             exst = read(path_or_url=filename)
-            datastream = mergeStreams(datastream,exst,extend=True)
+            datastream = merge_streams(datastream,exst,extend=True)
         elif mode == 'append':
             exst = read(path_or_url=filename)
-            datastream = combineStreams(datastream,exst,extend=True)
+            datastream = join_streams(datastream,exst,extend=True)
         else:
             pass
     elif filename.find('StringIO') > -1 and not os.path.exists(filename):
         returnstring = True
-        if sys.version_info >= (3,0,0):
-            from io import StringIO
-        else:
-            from StringIO import StringIO
+        from io import StringIO
     else:
         pass
 
@@ -245,7 +249,7 @@ def writeCOVJSON(datastream, filename, **kwargs):
     axes['x']  = { 'values' : header.get('DataAcquisitionLatitude') }
     axes['y']  = { 'values' : header.get('DataAcquisitionLongitude') }
     axes['z']  = { 'values' : header.get('DataElevation') }
-    times = [datetime.strftime(el,"%Y-%m-%dT%H:%M:%SZ") for el in num2date(datastream._get_column('time'))]
+    times = [datetime.strftime(el,"%Y-%m-%dT%H:%M:%SZ") for el in datastream._get_column('time')]
     if not headonly:
         axes['t']  = { 'values' : times }
     dod['axes'] = axes
@@ -279,33 +283,34 @@ def writeCOVJSON(datastream, filename, **kwargs):
         # parameters
         # ---
         #print ("Element", element)
-        component = datastream.GetKeyName(element)
-        unitname = datastream.GetKeyUnit(element)
-        # get parametername for each element
-        #component = 'H' # based on element
-        paradict = {}
-        paradict['type'] = "Parameter"
-        oP = {}
-        oP['id'] = ''
-        oP['label'] = ''
-        oP['description'] = ''
-        paradict['observedProperty'] = oP
-        unit = {}
-        unit['label'] = unitname
-        unit['symbol'] = ''
-        paradict['unit'] = unit
-        pad[component] = paradict
-        # ranges
-        # ---
-        values = datastream._get_column(element)
-        rangedict = {}
-        rangedict['type'] = 'NdArray'
-        rangedict['dataType'] = 'float'
-        rangedict['axisNames'] = [component]
-        rangedict['shape'] = [datastream.length()[0]]
-        if not headonly:
-            rangedict['values'] = list(values)
-        rad[component] = rangedict
+        if not element.find('time') >= 0:  # no support for secondary times
+            component = datastream.get_key_name(element)
+            unitname = datastream.get_key_unit(element)
+            # get parametername for each element
+            #component = 'H' # based on element
+            paradict = {}
+            paradict['type'] = "Parameter"
+            oP = {}
+            oP['id'] = ''
+            oP['label'] = ''
+            oP['description'] = ''
+            paradict['observedProperty'] = oP
+            unit = {}
+            unit['label'] = unitname
+            unit['symbol'] = ''
+            paradict['unit'] = unit
+            pad[component] = paradict
+            # ranges
+            # ---
+            values = datastream._get_column(element)
+            rangedict = {}
+            rangedict['type'] = 'NdArray'
+            rangedict['dataType'] = 'float'
+            rangedict['axisNames'] = [component]
+            rangedict['shape'] = [datastream.length()[0]]
+            if not headonly:
+                rangedict['values'] = list(values)
+            rad[component] = rangedict
 
     
     # INTERMAGNET 
@@ -316,7 +321,7 @@ def writeCOVJSON(datastream, filename, **kwargs):
 
     #Construct a DataID if not existing
     if header.get("DataID","") == "":
-        dataid = header.get("StationID") + "_" + header.get('DataPublicationLevel','variation') + "_0001_0001"
+        dataid = header.get("StationID","NoCode") + "_" + header.get('DataPublicationLevel','variation') + "_0001_0001"
     else:
         dataid = header.get("DataID","")
     # subgroups of intermagnet dict
@@ -394,3 +399,117 @@ def writeCOVJSON(datastream, filename, **kwargs):
         return True
     return False
 
+
+if __name__ == '__main__':
+
+    from scipy import signal
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
+    print("TESTING: WDC FORMAT LIBRARY")
+    print("THIS IS A TEST RUN OF THE WDC LIBRARY.")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of minute resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    def create_minteststream(startdate=datetime(2022, 11, 1), addnan=True):
+        c = 1000  # 4000 nan values are filled at random places to get some significant data gaps
+        l = 32 * 1440
+        #import scipy
+        teststream = DataStream()
+        array = [[] for el in DataStream().KEYLIST]
+        win = signal.windows.hann(60)
+        a = np.random.uniform(20950, 21000, size=int(l / 2))
+        b = np.random.uniform(20950, 21050, size=int(l / 2))
+        x = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+        array[1] = x[1440:-1440]
+        a = np.random.uniform(1950, 2000, size=int(l / 2))
+        b = np.random.uniform(1900, 2050, size=int(l / 2))
+        y = signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+        if addnan:
+            y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+        array[2] = y[1440:-1440]
+        a = np.random.uniform(44300, 44400, size=l)
+        z = signal.convolve(a, win, mode='same') / sum(win)
+        array[3] = z[1440:-1440]
+        array[4] = np.sqrt((x * x) + (y * y) + (z * z))[1440:-1440]
+        array[0] = np.asarray([startdate + timedelta(minutes=i) for i in range(0, len(array[1]))])
+        teststream = DataStream(header={'SensorID': 'Test_0001_0001'}, ndarray=np.asarray(array, dtype=object))
+        minstream = teststream.filter()
+        teststream.header['col-x'] = 'X'
+        teststream.header['col-y'] = 'Y'
+        teststream.header['col-z'] = 'Z'
+        teststream.header['col-f'] = 'F'
+        teststream.header['unit-col-x'] = 'nT'
+        teststream.header['unit-col-y'] = 'nT'
+        teststream.header['unit-col-z'] = 'nT'
+        teststream.header['unit-col-f'] = 'nT'
+        teststream.header['StationID'] = 'XXX'
+        teststream.header['StationIAGAcode'] = 'XXX'
+        return teststream
+
+    teststream = create_minteststream(addnan=False)
+    teststream = teststream.trim('2022-11-22','2022-11-23')
+
+    errors = {}
+    successes = {}
+    testrun = 'MAGPYTESTFILE'
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    while True:
+        testset = 'COVJSON'
+        try:
+            filename = os.path.join('/tmp','{}_{}.json'.format(testrun, datetime.strftime(teststream.start(),'%y%m%d')))
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            succ1 = writeCOVJSON(teststream, filename)
+            succ2 = isCOVJSON(filename)
+            dat = readCOVJSON(filename)
+            if not len(dat) > 0:
+                raise Exception("Error - no data could be read")
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            # agreement should be better than 0.01 nT as resolution is 0.1 nT in file
+            if np.abs(xm) > 0.01 or np.abs(ym) > 0.01 or np.abs(zm) > 0.01 or np.abs(fm) > 0.01:
+                 raise Exception("ERROR within data validity test")
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
+    time_taken = t_end_test - t_start_test
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")
