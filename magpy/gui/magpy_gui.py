@@ -4428,7 +4428,7 @@ class MainFrame(wx.Frame):
                 labelid = label[:3]
                 # Update operator
                 self.analysisdict['operator'] = operator
-                #self.analysisdict['labelid'] = labelid # do not update label when selection is chosen
+                self.analysisdict['labelid'] = labelid # do not update label when selection is chosen
 
                 above = min(self.ylimits)
                 below = max(self.ylimits)
@@ -4489,6 +4489,9 @@ class MainFrame(wx.Frame):
         threshold = self.analysisdict.get('threshold',4.0)
         markall = self.analysisdict.get('markall',False)
         labelid = self.analysisdict.get('labelid','002')
+        if not int(labelid) < 10:
+            # labelid might be changed by selection and range, outlier however should be spike or lightning
+            labelid = '002'
         operator = 'MagPy' # is disabeld as it well be set to MagPy by flag_outlier method
         efl = flagging.Flags()
         ofl = flagging.Flags()
@@ -4640,6 +4643,8 @@ class MainFrame(wx.Frame):
                                                    above=above, below=below)
                          if fl:
                              rfl = fl.join(rfl)
+                         self.analysisdict['labelid'] = labelid
+                         self.analysisdict['operator'] = operator
                          self.menu_p.rep_page.logMsg('- flagged value range: added {} flags'.format(len(rfl)))
                 elif flagtype == 'time':
                      if comment == '':
@@ -4674,6 +4679,8 @@ class MainFrame(wx.Frame):
                      if fl:
                          rfl = fl.join(rfl)
                      #flaglist = self.plotstream.flag_range(keys=self.shownkeylist,flagnum=flagid,text=comment,keystoflag=keys2flag,starttime=starttime,endtime=endtime)
+                     self.analysisdict['labelid'] = labelid
+                     self.analysisdict['operator'] = operator
                      self.menu_p.rep_page.logMsg('- flagged time range: added {} flags'.format(len(rfl)))
                 else:
                      pass
