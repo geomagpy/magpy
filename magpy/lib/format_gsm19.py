@@ -7,6 +7,11 @@ Written by Roman Leonhardt June 2012
 from __future__ import print_function
 
 from magpy.stream import *
+from magpy.core import methods
+import os
+import logging
+from datetime import datetime, timedelta
+
 
 def int_to_roman(input):
    """
@@ -221,7 +226,8 @@ def readGSM19(filename, headonly=False, **kwargs):
 
     timestamp = os.path.getmtime(filename)
     creationdate = datetime.fromtimestamp(timestamp)
-    daytmp = datetime.strftime(creationdate,"%Y-%m-%d")
+    #daytmp = datetime.strftime(creationdate,"%Y-%m-%d")
+    daytmp = creationdate.strftime("%Y-%m-%d")
     YeT = daytmp[:2]
     KEYLIST = DataStream().KEYLIST
 
@@ -255,15 +261,21 @@ def readGSM19(filename, headonly=False, **kwargs):
             pass
         elif line.startswith('Gem Systems GSM-19') or line.startswith('/Gem Systems GSM-19'):
             head = line.split()
-            headers['SensorID'] = "{}_{}_0001".format(head[2],head[3])
+            name = head[2].replace('-','')
+            headers['SensorID'] = "{}_{}_0001".format(name,head[3])
             headers['SensorName'] = 'GSM19'
-            headers['SensorDataLogger'] =  head[2]+head[4]
+            headers['SensorDataLogger'] =  name+head[4]
             headers['SensorDataLoggerSerNum'] =  head[3]
             headers['SensorGroup'] =  'Magnetism'
             headers['SensorType'] =  'Overhauzer'
 
             headers['SensorDescription'] = 'Gem Systems ' + head[2]+head[4]
             typus = ['b']
+            d = methods.extract_date_from_string(filename)
+            try:
+                day = d[0].strftime("%Y-%m-%d")
+            except:
+                pass
             try:
                 dayt = filename.strip('.txt')
                 day = dayt[-8:-4]+'-'+dayt[-4:-2]+'-'+dayt[-2:]
@@ -274,7 +286,7 @@ def readGSM19(filename, headonly=False, **kwargs):
                 da = head[-3]
                 ye = head[-1]
                 day = str(YeT)+str(ye)+'-'+str(mo).zfill(2)+'-'+str(da)
-                #print "GSM19", day
+                #print ("GSM19", day)
             # data header
             pass
         elif line.startswith('ID') or line.startswith('/ID'):
