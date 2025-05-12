@@ -2654,6 +2654,8 @@ class MainFrame(wx.Frame):
                 filelist.append(elem[1])
                 self.changeStatusbar(path)
                 tmp = read(path, select=select)
+                if debug:
+                    print (len(tmp), path, select)
                 if tmp.header.get('FileContents') and elem[1].endswith('cdf') and notyetselected:
                     # for IMAGCDF allow the selection of specific low reslution data
                     if debug:
@@ -2674,6 +2676,8 @@ class MainFrame(wx.Frame):
                 self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
                 stream.extend(tmp.container,tmp.header,tmp.ndarray)
             stream=stream.sorting()
+            if debug:
+                print ("Length stream", len(stream))
             self.magpystate['filename'] = ' ,'.join(filelist)
             self.menu_p.str_page.fileTextCtrl.SetValue(self.magpystate.get('filename'))
             self.menu_p.str_page.pathTextCtrl.SetValue(self.magpystate.get('currentpath'))

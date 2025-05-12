@@ -82,7 +82,7 @@ def isCSV(filename):
     return True
 
 
-def readCSV(filename, headonly=False, starttime=None, endtime=None, debug=False):
+def readCSV(filename, headonly=False, starttime=None, endtime=None, debug=False, **kwargs):
     """
     #DT_datatime,N_latency[ms],N_download[Mbyte/s],N_upload[Mbyte/s],N_serverdistance[km],S_sever,S_location
     #2021-09-20T00:05:02.628946Z,12.585,71.92494097727986,36.592751994082455,52.214518722142806,JStorfingerDE,Munich
