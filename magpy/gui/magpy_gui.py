@@ -2468,8 +2468,9 @@ class MainFrame(wx.Frame):
                 if not np.isnan(dfcol).all():
                     shownkeys.append('df')
                     plotcont['padding'].append(2)
-                    funclist.append(stream.header.get('DataFunctionObject'))
-                if funclist and not funclist == [None]:
+                    func = stream.header.get('DataFunctionObject')
+                    funclist.append(func)
+                if funclist and not all(x is None for x in funclist):
                     plotcont['functions'] = funclist
                 # If dailymeans were calcluated
                 if isinstance(plotcont.get('errorbars'), (list,tuple)) and len(plotcont.get('errorbars')) > 0:
@@ -4892,6 +4893,8 @@ class MainFrame(wx.Frame):
         sensorid = plotstream.header.get('SensorID','')
         plotcont = self.plotdict.get(self.active_id)
         newplotcont = plotcont.copy()
+
+        print ("Testing HERE", plotcont.get('functions'))
 
         # Open Dialog and return the parameters threshold, keys, timerange
         self.changeStatusbar("Loading flags ... please be patient")
