@@ -358,11 +358,11 @@ def writePYCDF(datastream, filename, **kwargs):
                 if not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlags','DataFunctionObject']:
                     globalAttrs[key] = { 0 : str(headdict[key]) }
                 else:
+                    #print("writePYCDF: Found Object in header {} ".format(key))
                     logger.info("writePYCDF: Found Object in header - pickle and dump ")
-                    #print("writePYCDF: Found Object in header - pickle and dump ")
                     pfunc = codecs.encode(pickle.dumps(headdict[key]), "base64").decode()
-                    #pfunc = pickle.dumps(headdict[key])
                     globalAttrs[key] = { 0 : str(pfunc) }
+                    #print ("Done")
 
     globalAttrs['DataFormat'] = { 0 : 'MagPyCDF{}'.format(version)}
     globalAttrs['DataCdflibVersion'] = { 0 : cdflib.__version__}

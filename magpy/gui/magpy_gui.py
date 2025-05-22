@@ -2434,12 +2434,13 @@ class MainFrame(wx.Frame):
         if not pads or not len(pads) == lenshownkeys:
             plotcont['padding']= []
 
-
         # 4. Set title and eventually assign function and patch objects
         # ------------------------------
+        #print ("TESTING", stream.header.get('DataFunctionObject',False))
         if stream.header.get('DataFunctionObject',False):
             plotcont['functions'] = [stream.header.get('DataFunctionObject')] * lenshownkeys
-            if plotcont.get('functions') == [None]:
+            funclist = plotcont.get('functions')
+            if all([x is None for x in funclist]):
                 plotcont['functions'] = []
         plotcont['title'] = stationid
         if coverage < 5 and coverage > 1:
@@ -2458,11 +2459,15 @@ class MainFrame(wx.Frame):
                 if len(stream._get_column('x')) > 0 and not stream.header.get('DataFormat') == 'MagPyDailyMean':   # is a PYSTR or PYCDF file with basevalues
                     shownkeys = ['dx','dy','dz']
                     plotcont['padding'] = [5,0.05,5]
-                elif not len(stream._get_column('x')) > 0 :                  # is a BLV file with basevalues
+                elif not len(stream._get_column('x')) > 0 :   # is a BLV file with basevalues or a PYSTR/PYCDF without x data (DOU)
                     shownkeys = ['dx','dy','dz']
                     plotcont['padding'] = [5,0.05,5]
                     func = stream.header.get('DataFunctionObject')
+                    #print ("I am here, debug", dim(func), func)
                     funclist = [func,func,func]
+                    #funclist = [[func],[func],[func]]
+                    #print(list(np.array([[func],[func],[func]], dtype=object).shape)[:2])
+                    #print(list(np.array(funclist, dtype=object).shape)[:2])
                 dfcol = stream._get_column('df')
                 # check if df contains valid data
                 if not np.isnan(dfcol).all():
@@ -2470,7 +2475,7 @@ class MainFrame(wx.Frame):
                     plotcont['padding'].append(2)
                     func = stream.header.get('DataFunctionObject')
                     funclist.append(func)
-                if funclist and not all(x is None for x in funclist):
+                if funclist and not all([x is None for x in funclist]):
                     plotcont['functions'] = funclist
                 # If dailymeans were calcluated
                 if isinstance(plotcont.get('errorbars'), (list,tuple)) and len(plotcont.get('errorbars')) > 0:
@@ -3103,6 +3108,39 @@ class MainFrame(wx.Frame):
             else:
                 exportoptions[el] = str(exportparameter.get(el))
 
+        def _dim(a):
+            """
+            DESCRIPTION
+                a little function which tests the dimensions of input function lists
+                the 2.0 function list from xmagpy2.x looks like
+                    [components, amount of functions in first comp, elements in function]
+                as the functions lists are applied to each component so that ut is possible to enable/disable views.
+                Stored however are single function lists.
+                    [amount of functions in first comp, elements in function]
+            APPLICATION
+                method checks functionlist, if len == 3 then _reduce is called
+            """
+            if not type(a) == list:
+                return []
+            return [len(a)] + _dim(a[0])
+
+        def _reduce(a):
+            """
+            DESCRIPTION
+                reduces the dimensions of input function lists
+            APPLICATION
+                method checks functionlist, if len == 3 then _reduce is called
+            """
+            res = []
+            for el in a:
+                res.extend(el)
+            # remove duplicates
+            ret = []
+            for val in res:
+                if not val in ret:
+                    ret.append(val)
+            return ret
+
         self.changeStatusbar("Writing data ...")
         dlg = ExportDataDialog(None, title='Export Data', path=self.guidict.get('exportpath'), datadict=datad, exportoptions=exportoptions, allstreamids=allstreamids)
         if dlg.ShowModal() == wx.ID_OK:
@@ -3130,6 +3168,20 @@ class MainFrame(wx.Frame):
                 if stream.header.get('DataFormat') == 'MagPyDI':
                     divers = '1.0'
                     stream.header['DataType'] = "{}{}".format('MagPyDI',divers)
+                # Eventually add functions into the data stream
+                plotcont = self.plotdict.get(self.active_id)
+                # plotcont functions list needs to be reduced
+                xfuncs = plotcont.get('functions')
+                funcs = None
+                if xfuncs:
+                    dim = _dim(xfuncs)
+                    #print ("Function dimensions are", dim)
+                    if len(dim) == 3:
+                        funcs = _reduce(xfuncs)
+                        #print("Function dimensions reduced:", funcs)
+                    elif len(dim) == 2:
+                        funcs = xfuncs
+                    stream.header['DataFunctionObject'] = funcs
                 # convert all exportparameters from strings to desired values
                 for el in exportoptions:
                     if not exportoptions.get(el):
@@ -4893,8 +4945,6 @@ class MainFrame(wx.Frame):
         sensorid = plotstream.header.get('SensorID','')
         plotcont = self.plotdict.get(self.active_id)
         newplotcont = plotcont.copy()
-
-        print ("Testing HERE", plotcont.get('functions'))
 
         # Open Dialog and return the parameters threshold, keys, timerange
         self.changeStatusbar("Loading flags ... please be patient")
