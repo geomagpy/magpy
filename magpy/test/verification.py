@@ -603,11 +603,12 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(t1, testtxt)
 
     def test_extract_date_from_string(self):
-        datestr = ['gddtw_2022-11-22.txt', 'gddtw_20221122.txt','2022-11-22T12:00:00_data.txt']
+        datestr = ['gddtw_2022-11-22.txt', 'gddtw_20221122.txt','2022-11-22T12:00:00_data.txt', 'nov2222.dat', '20221122.dat']
         daterange = '2022_data.txt'
         ref = datetime.date(datetime(2022,11,22))
         for dat in datestr:
             d = extract_date_from_string(dat)
+            print (dat, d, ref)
             self.assertEqual(ref, d[0])
         d = extract_date_from_string(daterange)
         self.assertTrue(d[0] <= ref <= d[1])

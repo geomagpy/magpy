@@ -653,6 +653,8 @@ def extract_date_from_string(datestring):
             # if not only numbers then check for something like jan0523
             date = dparser.parse(tmpdaystring[:5]+' '+tmpdaystring[5:], dayfirst=True)
             dateform = '%b%d%y'
+        else:
+            x=1/0 # break it
     except:
         # test for day month year
         try:
