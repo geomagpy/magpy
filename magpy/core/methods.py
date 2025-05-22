@@ -205,6 +205,7 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
     data = DataStream()
     func = []
     datagood = True
+
     if not source:
         datagood = False
     if isinstance(source, dict):
@@ -648,8 +649,10 @@ def extract_date_from_string(datestring):
 
     try:
         tmpdaystring = daystring[-7:]
-        date = dparser.parse(tmpdaystring[:5]+' '+tmpdaystring[5:], dayfirst=True)
-        dateform = '%b%d%y'
+        if not tmpdaystring.isdigit() and tmpdaystring[-4:].isdigit():
+            # if not only numbers then check for something like jan0523
+            date = dparser.parse(tmpdaystring[:5]+' '+tmpdaystring[5:], dayfirst=True)
+            dateform = '%b%d%y'
     except:
         # test for day month year
         try:

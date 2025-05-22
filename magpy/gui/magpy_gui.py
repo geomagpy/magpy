@@ -2436,7 +2436,7 @@ class MainFrame(wx.Frame):
 
         # 4. Set title and eventually assign function and patch objects
         # ------------------------------
-        #print ("TESTING", stream.header.get('DataFunctionObject',False))
+        # PLEASE NOTE: functionlist is applied to each shown variable
         if stream.header.get('DataFunctionObject',False):
             plotcont['functions'] = [stream.header.get('DataFunctionObject')] * lenshownkeys
             funclist = plotcont.get('functions')
@@ -5875,7 +5875,7 @@ class MainFrame(wx.Frame):
             else:
                 for fitparameter in fitparameters:
                     fitpara = fitparameters.get(fitparameter)
-                    if 'f' in shownkeys and self.analysisdict.get("fadoption"):
+                    if 'f' in shownkeys and self.analysisdict.get("fadoption") and len(absstream._get_column('df')) > 0:
                         baselinefunclist.append(plotstream.baseline(absstream,keys=['dx','dy','dz','df'], fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
                     else:
                         baselinefunclist.append(plotstream.baseline(absstream,fitfunc=fitpara.get('fitfunc'), knotstep=float(fitpara.get('knotstep')), fitdegree=int(fitpara.get('fitdegree')), startabs=fitpara.get('starttime'), endabs=fitpara.get('endtime'), extradays=0, debug=False))
@@ -6354,14 +6354,13 @@ class MainFrame(wx.Frame):
                     print ("Some variables to test:")
 
                 #TODO diusedb
-                #print (divario, discalar)
                 absstream = di.absolute_analysis(absdata, divario, discalar, db=db, magrotation=magrotation,
                                                  annualmeans=dicont.get('diannualmeans'), expD=dicont.get('diexpD'),
                                                  expI=dicont.get('diexpI'), stationid=stationid,
                                                  pier=pier, alpha=dicont.get('dialpha'), beta=dicont.get('dibeta'),
                                                  deltaF= dicont.get('deltaF'), starttime=starttime,endtime=endtime,
                                                  azimuth=azimuth, variometerorientation=variometerorientation,
-                                                 residualsign=residualsign, absstruct=True)
+                                                 residualsign=residualsign, absstruct=True, debug=True)
 
             else:
                 print ("Could not identify absolute data")
@@ -7129,7 +7128,6 @@ class MainFrame(wx.Frame):
         self.ActivateControls(self.plotstream)
 
         if self.plotstream.header.get('DataFunctionObject',False):
-            #print ("HERE - found functions:", self.plotstream.header.get('DataFunctionObject') )
             self.plotopt['function'] = self.plotstream.header.get('DataFunctionObject')
 
         # Override initial controls: Set setting (like keylist, basic plot options and basevalue selection)
