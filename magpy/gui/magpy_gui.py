@@ -5902,6 +5902,7 @@ class MainFrame(wx.Frame):
                                "Adopted baseline", wx.OK|wx.ICON_INFORMATION)
                     dlg.ShowModal()
                     dlg.Destroy()
+                    plotstream.header['DataAbsFunctionObject'] = baselinefunclist
                     # header is changed - apply is possible now
                     streamid = self._initial_read(plotstream)
                     self._initial_plot(streamid)

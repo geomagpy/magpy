@@ -2034,15 +2034,17 @@ CALLED BY:
             except ValueError:
                 pos = -1
             if pos in range(0,len(self.KEYLIST)):
-                headline.append(key)
-                if not key == 'time':
-                    addline.append(self.header.get('col-'+key))
-                else:
-                    addline.append(self.header.get('DataID'))
                 column = self.ndarray[pos]
-                array.append(column)
+                if len(column) > 0:
+                    headline.append(key)
+                    if not key == 'time':
+                        addline.append(self.header.get('col-'+key))
+                    else:
+                        addline.append(self.header.get('DataID'))
+                    column = self.ndarray[pos]
+                    array.append(column)
 
-        rowlst = np.transpose(np.asarray(array)).astype(object)
+        rowlst = np.transpose(np.asarray(array, dtype=object))
         fulllst = np.insert(rowlst,0,np.asarray(addline).astype(object),axis=0) ##could be used to store column names and id in time column
         fulllst = np.insert(fulllst,0,np.asarray(headline).astype(object),axis=0)
         d[dictkey] = fulllst
@@ -2285,7 +2287,6 @@ CALLED BY:
                 self.header['DataElevationRef'] = pierdata.get("pierelref")
 
             return bcdata
-
 
         if function:
             if debug:
