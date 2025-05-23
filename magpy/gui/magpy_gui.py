@@ -6361,7 +6361,7 @@ class MainFrame(wx.Frame):
                                                  pier=pier, alpha=dicont.get('dialpha'), beta=dicont.get('dibeta'),
                                                  deltaF= dicont.get('deltaF'), starttime=starttime,endtime=endtime,
                                                  azimuth=azimuth, variometerorientation=variometerorientation,
-                                                 residualsign=residualsign, absstruct=True, debug=True)
+                                                 residualsign=residualsign, absstruct=True, debug=False)
 
             else:
                 print ("Could not identify absolute data")
