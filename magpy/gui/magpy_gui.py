@@ -2086,36 +2086,6 @@ class MainFrame(wx.Frame):
             if key.startswith('Station'):
                  metastationtext += "{}: \t{}\n".format(key.replace('Station',''),stream.header.get(key,'')) #key.replace('Station','')+': \t'+stream.header.get(key,'')+'\n'
 
-        # Append baselineinfo to baselinedictlist
-        # ------------------------------------------
-        if formattype == 'MagPyDI' or contenttype.startswith('MagPyDI'):
-            if not sensorid and not dataid:
-                basename = self.menu_p.str_page.fileTextCtrl.GetValue()
-            elif dataid:
-                basename = dataid
-            else:
-                basename = sensorid
-            # Get a general single fitting function with default parameters and add this as starting parameter to
-            # baselinedict
-            functions = self.plotdict.get(streamid).get('functions')
-            # clean functions:
-            if functions:
-                new_functions = []
-                for func in functions[0]:
-                    new_functions.append([{}, func[1], func[2], func[3], func[4], func[5], func[6], func[7], []])
-                res = []
-                [res.append(val) for val in new_functions if val not in res]
-                functions = res
-                # functions = [[ {}, mintime, maxtime, fitfunc, degree, knotstep, mintime, maxtime, [] ]]
-
-                basedict = {'startdate': mintime,
-                        'enddate': maxtime, 'filename': basename, 'streamid': streamid,
-                        'function': functions}
-                basestr = "{}{}{}{}{}".format(mintime,maxtime,basename,streamid,functions)
-                m = hashlib.md5()
-                m.update(basestr.encode('utf-8'))
-                baseid = str(int(m.hexdigest(), 16))[0:12]
-                self.baselinedict[baseid] = basedict
 
         # Check data path/filename for dates
         # ----------------------------------------
@@ -2338,6 +2308,7 @@ class MainFrame(wx.Frame):
         m = hashlib.md5()
         m.update(stream_id_str.encode('utf-8'))
         stream_id = str(int(m.hexdigest(), 16))[0:12]
+        # Functions
         self.datadict[stream_id] = datacont
         self.active_id = stream_id
 
@@ -2390,6 +2361,7 @@ class MainFrame(wx.Frame):
         datacont = self.datadict.get(streamid)
         stream = datacont.get('dataset')
         sensorid = datacont.get('sensorid')
+        dataid = stream.header.get('DataID','')
         stationid = datacont.get('stationid')
         n = datacont.get('amount',0)
         sr = datacont.get('samplingrate',0)
@@ -2463,11 +2435,7 @@ class MainFrame(wx.Frame):
                     shownkeys = ['dx','dy','dz']
                     plotcont['padding'] = [5,0.05,5]
                     func = stream.header.get('DataFunctionObject')
-                    #print ("I am here, debug", dim(func), func)
                     funclist = [func,func,func]
-                    #funclist = [[func],[func],[func]]
-                    #print(list(np.array([[func],[func],[func]], dtype=object).shape)[:2])
-                    #print(list(np.array(funclist, dtype=object).shape)[:2])
                 dfcol = stream._get_column('df')
                 # check if df contains valid data
                 if not np.isnan(dfcol).all():
@@ -2485,6 +2453,33 @@ class MainFrame(wx.Frame):
                 plotcont['shownkeys'] = shownkeys
                 colors = plotcont['colors']
                 plotcont['colors'] = colors[:len(shownkeys)]
+
+            if not sensorid and not dataid:
+                basename = self.menu_p.str_page.fileTextCtrl.GetValue()
+            elif dataid:
+                basename = dataid
+            else:
+                basename = sensorid
+            # Get a general single fitting function with default parameters and add this as starting parameter to
+            # baselinedict
+            functions = self.plotdict.get(streamid).get('functions')
+            # clean functions:
+            if functions:
+                new_functions = []
+                for func in functions[0]:
+                    new_functions.append([{}, func[1], func[2], func[3], func[4], func[5], func[6], func[7], []])
+                res = []
+                [res.append(val) for val in new_functions if val not in res]
+                functions = res
+
+                basedict = {'startdate': mintime,
+                        'enddate': maxtime, 'filename': basename, 'streamid': streamid,
+                        'function': functions}
+                basestr = "{}{}{}{}{}".format(mintime,maxtime,basename,streamid,functions)
+                m = hashlib.md5()
+                m.update(basestr.encode('utf-8'))
+                baseid = str(int(m.hexdigest(), 16))[0:12]
+                self.baselinedict[baseid] = basedict
 
         # 5. Flagging patches
         # ------------------------------
