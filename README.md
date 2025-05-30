@@ -3217,6 +3217,39 @@ The logger can also be configured to print to shell (stdout, without formatting)
         logger.addHandler(stdoutlog)
 
 
+### 10.6 Using credential information: the addcred command
+
+After installing MagPy the addcred command will be available. This command will help you to work with credential 
+information.
+
+#### DESCRIPTION:
+
+Addcred can be used to keep sensitive credential information out of scripts.
+
+Usage:
+addcred.py -v <listexisting> -t <type> -c <credentialshortcut>
+ -d <database> -u <user> -p <password> -s <smtp> -a <address> -o <host>
+ -l <port>
+
+Options:
+-v       : view all existing credentials
+-t       : define type of data: db, transfer or mail
+-c       : shortcut to access stored information
+-d       : name of a database for db type
+-u       : user name
+-p       : password (will be encrypted)
+-s       : smtp address for mail types
+-a       : address for transfer type
+-o       : host of database
+-l       : port of transfer protocol
+
+#### APPLICATION:
+
+           addcred -t transfer -c zamg -u max -p geheim -a "ftp://ftp.remote.ac.at" -l 21
+
+           !!!!  please note: put path in quotes !!!!!!
+
+
 ## Appendix
 
 ### A1 - library - supported data formats, included runtime and read/write tests

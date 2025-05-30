@@ -818,7 +818,7 @@ def writeIAF(datastr, filename, **kwargs):
         head.extend(xvals)
         if not len(xvals) == 1440:
             logger.error("writeIAF: Found inconsistency in minute data set")
-            logger.error("writeIAF: for {}".format(datetime.strftime(num2date(dayar[0][0]),'%Y%j')))
+            logger.error("writeIAF: for {}".format(datetime.strftime(dayar[0][0]),'%Y%j'))
             logger.error("writeIAF: expected 1440 records, found {} records".format(len(xvals)))
         packcode += '1440l' # fh.read(64)
         yvals = np.asarray([np.round(elem,1) if not np.isnan(elem) else 99999.9 for elem in dayar[2]])

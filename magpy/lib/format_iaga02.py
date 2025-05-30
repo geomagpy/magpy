@@ -194,7 +194,7 @@ def readIAGA(filename, headonly=False, **kwargs):
                     if key.find('# PublicationDate') > -1:
                         if not val == '':
                             stream.header['DataPublicationDate'] = val
-                    elif key.find('# K9-limit') > -1:
+                    elif key.find('# K9-limit') > -1 or key.find('# StationK9') > -1 :
                         if not val == '':
                             try:
                                 stream.header['StationK9'] = int(val)

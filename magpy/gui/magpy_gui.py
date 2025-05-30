@@ -567,7 +567,15 @@ class PlotPanel(scrolled.ScrolledPanel):
                             self.livedatadict["array"] = array
                         self.livedatadict["head"] = sensorcont
 
-                mqttclient = mqtt.Client()
+                #mqttclient = mqtt.Client()
+                try:
+                    mqttclient = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+                except:
+                    try:
+                        mqttclient = mqtt.Client()
+                    except:
+                        mqttclient = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+
                 if not martasuser in ['',None,'None','-']:
                     #client.tls_set(tlspath)  # check http://www.steves-internet-guide.com/mosquitto-tls/
                     mqttclient.username_pw_set(martasuser, password=martaspasswd)  # defined on broker by mosquitto_passwd -c passwordfile user
@@ -5153,12 +5161,12 @@ class MainFrame(wx.Frame):
         if len(stream) > 0:
             dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
             if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
                 for key in fields:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
+                    f = getattr(dlg.panel, "{}TextCtrl".format(key))
+                    value = f.GetValue()
                     try:
-                        if not d['value'] == dlg.header.get(key,''):
-                            stream.header[key] = d['value']
+                        if not value == dlg.header.get(key,''):
+                            stream.header[key] = value
                     except:
                         # might fail for arrays
                         pass
@@ -5178,13 +5186,14 @@ class MainFrame(wx.Frame):
         fields = stream.SENSORSKEYLIST
         # open dialog with all header info
         if len(stream) > 0:
+            sensorvars = {}
             dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
             if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
                 for key in fields:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not d['value'] == dlg.header.get(key,''):
-                        stream.header[key] = d['value']
+                    f = getattr(dlg.panel, "{}TextCtrl".format(key))
+                    value = f.GetValue()
+                    if not value == dlg.header.get(key,''):
+                        stream.header[key] = value
                 self._activate_controls(self.active_id)
         else:
             self.menu_p.rep_page.logMsg("Meta information: No data available")
@@ -5203,11 +5212,11 @@ class MainFrame(wx.Frame):
         if len(stream) > 0:
             dlg = MetaDataDialog(None, title='Meta information:',header=stream.header,fields=fields)
             if dlg.ShowModal() == wx.ID_OK:
-                d = locals()
                 for key in fields:
-                    exec('value = dlg.panel.'+key+'TextCtrl.GetValue()')
-                    if not d['value'] == dlg.header.get(key,''):
-                        stream.header[key] = d['value']
+                    f = getattr(dlg.panel, "{}TextCtrl".format(key))
+                    value = f.GetValue()
+                    if not value == dlg.header.get(key,''):
+                        stream.header[key] = value
                 self._activate_controls(self.active_id)
         else:
             self.menu_p.rep_page.logMsg("Meta information: No data available")

@@ -24,7 +24,7 @@ def create_verificationstream(startdate=datetime(2022, 11, 22)):
     rain2 = np.arange(1,361,0.5)
     rain = np.concatenate((rain1, rain2))
     array[7] = rain
-    array[KEYLIST.index('sectime')] = np.asarray(
+    array[DataStream().KEYLIST.index('sectime')] = np.asarray(
         [startdate + timedelta(minutes=i) for i in range(0, len(array[1]))]) + timedelta(minutes=15)
     teststream = DataStream(header={'SensorID': 'Test_0002_0001'}, ndarray=np.asarray(array, dtype=object))
     teststream.header['col-x'] = 'X'
