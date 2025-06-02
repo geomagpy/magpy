@@ -407,7 +407,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
                 array[t2pos].append(data[12]/100.)
                 array[var2pos].append(data[52]/10.)
                 array[str1pos].append(data[53])
-                sectim = date2num(sectime+timedelta(microseconds=(100000.*i)))
+                sectim = sectime+timedelta(microseconds=(100000.*i))
                 array[secpos].append(sectim)
 
             line = fh.read(linelength)
@@ -415,7 +415,7 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     fh.close()
     gpstime = True
     if gpstime and len(timediff) > 0:
-        loggerlib.info("readLEMIBIN2: Time difference (in sec) between GPS and PC (GPS-PC): %f sec +- %f" % (np.mean(timediff), np.std(timediff)))
+        loggerlib.info("readLEMIBIN2: Time difference (in sec) between GPS and PC (GPS-PC): {} sec +-{}".format(np.mean(timediff), np.std(timediff)))
         print("Time difference between GPS and PC (GPS-PC):", np.mean(timediff), np.std(timediff))
 
     if sectime:
