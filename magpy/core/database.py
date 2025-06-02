@@ -2952,9 +2952,9 @@ REMOVED:
                     dataheads.append(key + ' DOUBLE')
                 elif key.endswith('time'):
                     if key == 'time':
-                        dataheads.append(key + ' DATETIME NOT NULL PRIMARY KEY')
+                        dataheads.append(key + ' DATETIME(6) NOT NULL PRIMARY KEY')
                     else:
-                        dataheads.append(key + ' DATETIME')
+                        dataheads.append(key + ' DATETIME(6)')
                 else:
                     dataheads.append(key + ' CHAR(100)')
                 ## Getting column and units
