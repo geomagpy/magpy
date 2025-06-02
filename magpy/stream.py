@@ -6293,6 +6293,8 @@ CALLED BY:
             lasttime = num2date(self[-1].time).replace(tzinfo=None)
 
         t2 = datetime.now(timezone.utc).replace(tzinfo=None)
+        if debug:
+            print ("Saving data between", starttime, lasttime)
 
         # divide stream in parts according to coverage and save them
         newst = DataStream()
@@ -6305,7 +6307,7 @@ CALLED BY:
                cyear = cyear + 1
             monthstr = str(cyear) + '-' + str(cmonth) + '-' + '1T00:00:00'
             endtime = datetime.strptime(monthstr,'%Y-%m-%dT%H:%M:%S')
-            while starttime < lasttime:
+            while starttime <= lasttime:
                 diryear = starttime.year
                 dirmonth = starttime.month
                 if ndtype:
@@ -6340,7 +6342,7 @@ CALLED BY:
             cyear = cyear + 1
             yearstr = str(cyear) + '-01-01T00:00:00'
             endtime = datetime.strptime(yearstr,'%Y-%m-%dT%H:%M:%S')
-            while starttime < lasttime:
+            while starttime <= lasttime:
                 diryear = starttime.year
                 ndarray=self._select_timerange(starttime=starttime, endtime=endtime)
                 newst = DataStream([LineStruct()],self.header,ndarray)
@@ -6371,7 +6373,7 @@ CALLED BY:
             dailystream = self.copy()
             maxidx = -1
             endtime = starttime + cov
-            while starttime < lasttime:
+            while starttime <= lasttime:
                 diryear = starttime.year
                 dirmonth = starttime.month
                 dirdoy = starttime.strftime('%j')
