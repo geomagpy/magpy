@@ -7,6 +7,7 @@ sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
 from magpy.stream import loggerabs, magpyversion, basestring, DataStream, example5, example6a
 from magpy.core.methods import *
+from magpy.core import flagging
 from urllib.request import urlopen
 import shutil
 import string
@@ -87,6 +88,7 @@ CONTENTS
 | AbsoluteAnalysis  |  calcabsolutes |  2.0.0   |           |             |               |  7.1    |    |
 |             | _analyse_di_source |  2.0.0     |           |  yes        |               |  -      |     |
 |             | _logfile_len       |  2.0.0     |           |             |               |  -      | unused?     |        
+|             | data_for_di        |  2.0.0     |           |  yes*       | yes*          |         | absolutes |
 |             | deg2degminsec      |  2.0.0     |           |  yes        |  yes          |  7.2    |     |
 | d           | absRead            |  2.0.0     |  2.1.0    |             |               |  -      |     |
 |             | abs_read           |  2.0.0     |           |  yes        |               |  7.1    |     |
@@ -1716,6 +1718,282 @@ def _logfile_len(fname, logfilter):
     return cnt
 
 
+def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, beta=None, magrotation=False,
+                 compensation=False, offset=None, skipdb=False, db=None, flagfile=None, debug=False):
+    """
+    DESCRIPTION
+        Analyzing source: Source is provided as a dictionary, multiple sources are allowed - if it is string or list (old type)
+        accepted are file for filepath/url or database with a tuple
+        if database and file is provided then firstly the database is accessed and if failing (no data) then the file is access
+        #{'file': pathname , 'database': ( db, tablename ) }
+    VARIABLES:
+        db  (databank):        if db is provided then data.header information is updated from the selected database.
+                               Compensation, delta and rotation values from the header are used for optional corrections.
+                               Providing db will also trigger the application of flags from the database. Currently,
+                               this is te only way to apply flags with the data_for_di method
+        magrotation  (bool):   if True then data.header values for alpha and beta are used (i.e. 'DataRotationAlpha')
+        alpha, beta  (floats): if magrotation=False and alpha and/or beta are provided they will be used for rotation
+        compensation (bool):   if True then data.header values for bias field are used (i.e. 'DataCompensationX')
+                               Bias fields in DB are given in !! microT !!.
+                               Take of the sign: F_without_bias = F with_bias + DataCompensation
+                               which is different from offset and delta F
+        offset     (dict):     if provided then data.header data to apply_deltas and compensation corrections are
+                               ignored. The provided offset values are used instead for correction.
+        datatype  (string) :   either 'scalar' or 'vario' or 'both'
+        skipdb (bool) :        data.header is not updated from the databank, even if db is provided. Will then also
+                               ignore flagging and delta values from database even if this is the data source
+        Return:
+        # Move this part out of the method
+        variometerorientation - is eventually modified by this code, but might also not be necessary - just makes sure that HEZ baselines
+        are returned in case of non-xyz data
+    RETURNS
+        data (DataStream) with corrections applied and a DataFunctionObject containing an interpolation function
+    APPLICATION
+        # Data in files (or file like objects)
+        data = data_for_di(example5, starttime="2018-08-29", datatype='both')
+        # Webservice  data
+        data = data_for_di("https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC", starttime='2024-08-01',endtime='2024-08-02', datatype='both', debug=True)
+        # Database data
+        db = database.DataBank("localhost","maxmustermann","geheim","testdb")
+        tablename = "TEST_0001_0001_0001"
+        data = data_for_di({'db': (db,tablename)}, starttime='2022-11-22', endtime='2022-11-23', type='scalar')
+    """
+    from magpy.stream import DataStream, read
+    #from magpy.core import flagging
+    #from magpy.core import database
+
+    if debug:
+        print("-----------------")
+        print(" Load data stream from {}".format(source))
+
+    starttime = testtime(starttime)
+    if not endtime:
+        endtime = starttime + timedelta(days=1)
+
+    data = DataStream()
+    func = []
+    datagood = True
+
+    if not source:
+        datagood = False
+    if isinstance(source, dict):
+        tup = source.get('db', [])
+        fi = source.get('file', None)
+        if tup and len(tup) == 2:
+            db = tup[0]
+            data = tup[0].read(tup[1], starttime=starttime, endtime=endtime)
+        if fi and not len(data) > 0:
+            try:
+                data = read(fi, starttime=starttime, endtime=endtime)
+            except:
+                data = DataStream()
+        if len(data) > 0:
+            if debug:
+                print("   Successfully loaded data with version 2.0")
+        else:
+            datagood = False
+    else:
+        source = source.split(',')
+        if len(source) > 2 and not len(source) > 0:
+            datafailed = True
+        elif len(source) == 2:  # old db type
+            db = source[0]
+            try:
+                data = db.read(source[1], starttime=starttime, endtime=endtime)
+            except:
+                data = DataStream()
+        else:
+            try:
+                data = read(source[0], starttime=starttime, endtime=endtime)
+            except:
+                data = DataStream()
+        if len(data) > 0:
+            if debug:
+                print("   Successfully loaded data with version 1.0")
+        else:
+            datagood = False
+    sensorid = data.header.get('SensorID')
+
+    if datagood:
+        if debug:
+            print(" -> Obtained {} data points from {} of datatype {}".format(len(data), source, datatype))
+        # check if a sensorid  is present - except ?
+        # check if data is available in the required columns
+        if datatype in ['scalar', 'both', 'full'] and not len(data.ndarray[data.KEYLIST.index('f')]) > 0:
+            # Calculate F values if not existing. Please note: this method will consider eventually available delta F data
+            data = data.calc_f()
+        elif datatype in ['scalar']:
+            # just continue - nothing to do yet
+            pass
+        elif datatype in ['vario', 'variometer', 'both', 'full']:
+            variocomps = data.header.get('DataComponents', '').lower()
+            if debug:
+                print("  - variometer data contains the following components: {}".format(variocomps))
+            if variocomps.startswith("hdz"):
+                if debug:
+                    print("  - variationdata as HDZ -> converting to XYZ")
+                data = data._convertstream('hdz2xyz')
+            elif variocomps.startswith("idf"):
+                if debug:
+                    print("  - variationdata as IDF -> converting to XYZ")
+                data = data._convertstream('idf2xyz')
+            elif variocomps.startswith("hez"):
+                if debug:
+                    print("  - variationdata as HEZ -> fine")
+            else:
+                if not variocomps.startswith("xyz"):
+                    print("  - variationdata has an orientation which MagPy cannot handle")
+                    print("  - continuing assuming HEZ")
+        else:
+            print('  - unknown datatype')
+            datagood = False
+
+        sensorid = data.header.get('SensorID', '')
+        if not sensorid:
+            print(" Be careful: No Sensor ID available for {}".format(datatype))
+
+        if sensorid and datagood and flagfile and os.path.isfile(flagfile):
+            fl = flagging.load(flagfile, sensorid, starttime, endtime)
+            if len(fl) > 0:
+                data = fl.apply_flags(data, mode='drop')
+
+        if db and sensorid and not skipdb and datagood:
+            # Drop flagged data
+            fl = db.flags_from_db(sensorid, starttime=starttime, endtime=endtime)
+            if len(fl) > 0:
+                data = fl.apply_flags(data, mode='drop')
+            if debug:
+                print("  -> applied {} flags from data base ...".format(len(fl)))
+            # get all header data from database and apply delta values (i.e. F offsets etc)
+            if data.header.get('DataID',''):
+                dataid = data.header.get('DataID','')
+            else:
+                dataid = data.header.get('SensorID') + '_0001'
+            data.header = db.fields_to_dict(dataid)
+            if debug:
+                print("  -> applied header from data base ...")
+            if not offset:  # TODO check that - not done in MagPy 1.x
+                data = data.apply_deltas(debug=debug)
+                if debug:
+                    print("  -> applied delta_values previously extracted from data base ...")
+                    # print (" ------------  IMPORTANT ----------------")
+                    # print (" Both, deltaF from DB and the provided delta F {b}".format(b=deltaF))
+                    # print (" will be applied.")
+        if not len(data) > 0:  # still
+            datagood = False
+
+    if datagood and datatype in ['vario', 'variometer', 'both', 'full']:
+        if magrotation or compensation and not data.header.get('DataDeltaValuesApplied', False) and not offset:
+            offdict = {}
+            xcomp = data.header.get('DataCompensationX', '0')
+            ycomp = data.header.get('DataCompensationY', '0')
+            zcomp = data.header.get('DataCompensationZ', '0')
+            if not float(xcomp) == 0.:
+                offdict['x'] = -1 * float(xcomp) * 1000.
+            if not float(ycomp) == 0.:
+                offdict['y'] = -1 * float(ycomp) * 1000.
+            if not float(zcomp) == 0.:
+                offdict['z'] = -1 * float(zcomp) * 1000.
+            data = data.offset(offdict)
+            print('  -> applied compensation fields: x={}, y={}, z={}'.format(xcomp, ycomp, zcomp))
+        elif offset:
+            data = data.offset(offset)
+
+        if magrotation:
+            valalpha = 0.0
+            valbeta = 0.0
+            if not is_number(alpha):
+                # db header has already been applied and alpha is not provided
+                rotstring = data.header.get('DataRotationAlpha', '')
+                rotdict = string2dict(rotstring, typ='oldlist')
+                # print ("Dealing with year", date.year)
+                valalpha = rotdict.get(str(starttime.year), '')
+                if valalpha == '':
+                    print("     no alpha value found for year {}".format(starttime.year))
+                    try:
+                        maxkey = max([int(k) for k in rotdict])
+                        valalpha = rotdict.get(str(maxkey), 0)
+                        print("  -> using alpha for year {}".format(str(maxkey)))
+                    except:
+                        valalpha = 0
+                valalpha = float(valalpha)
+                if not float(valalpha) == 0.:
+                    print("  -> rotating with alpha: {a} degree (year {b})".format(a=valalpha, b=starttime.year))
+            else:
+                # Using manually provided rotation value - see below
+                pass
+            if not is_number(beta):
+                rotstring = data.header.get('DataRotationBeta', '')
+                rotdict = string2dict(rotstring, typ='oldlist')
+                valbeta = rotdict.get(str(starttime.year), '')
+                if valbeta == '':
+                    try:
+                        maxkey = max([int(k) for k in rotdict])
+                        valbeta = rotdict[str(maxkey)]
+                    except:
+                        valbeta = 0
+                valbeta = float(valbeta)
+                if not float(valbeta) == 0.:
+                    print("  -> rotating with beta: {a} degree (year {b})".format(a=valbeta, b=starttime.year))
+            else:
+                # Using manually provided rotation value - see below
+                pass
+            if valalpha != 0 or valbeta != 0:
+                data = data.rotation(alpha=valalpha, beta=valbeta)
+                data.header['DataComments'] = "{} - rotated by alpha={} and beta={}".format(data.header.get('DataComments', ''), valalpha, valbeta)
+        elif is_number(alpha) or is_number(beta):  # if alpha and beta are provided then rotate anyway
+            if not alpha == 0.0 or not beta == 0.0:
+                if debug:
+                    print (" magrotation not set but alpha and/or beta given - rotating with these manual values: alpha={} and beta={}".format(alpha, beta))
+                if is_number(alpha):
+                    valalpha = alpha
+                else:
+                    valalpha = 0.0
+                if is_number(beta):
+                    valbeta = beta
+                else:
+                    valbeta = 0.0
+                if valalpha != 0 or valbeta != 0:
+                    data = data.rotation(alpha=valalpha, beta=valbeta)
+                    data.header['DataComments'] = "{} - rotated by alpha={} and beta={}".format(
+                    data.header.get('DataComments', ''), valalpha, valbeta)
+                    if debug:
+                        print("  -> rotating with manually provided alpha {} and beta {}".format(valalpha, valbeta))
+        if not len(data) > 0:  # still
+            datagood = False
+
+    if datagood:
+        if (len(data) > 3 and not np.isnan(data.mean('time'))) or len(
+                data.ndarray[0]) > 0:  # Because scalarstr can contain ([], 'File not specified')
+            if datatype == 'scalar':
+                func = data.interpol(['f'])
+            elif datatype in ['vario', 'variometer']:
+                func = data.interpol(['x', 'y', 'z'])
+            elif datatype in ['both', 'full']:
+                func = data.interpol(['x', 'y', 'z', 'f'])
+            if debug:
+                print(
+                    "  -> interpolation function determined - data at DI timesteps will be obtained from interpolated data ...")
+            if func[0] == {}:
+                print(
+                    "  !! function determination apparently failed: {} data of {} seems to be invalid".format(datatype,
+                                                                                                              sensorid))
+                datagood = False
+            else:
+                data.header['DataFunctionObject'] = [func]
+
+    if datagood:
+        if debug:
+            print(" data set {}: projected correction methods applied".format(sensorid))
+            print("-----------------")
+        return data
+    else:
+        if debug:
+            print(" data set {}: projected correction methods failed".format(sensorid))
+            print("-----------------")
+        return DataStream()
+
+
 def deg2degminsec(value):
     """
     Function to convert deg.decimals to a string with deg min and seconds.decimals
@@ -1906,6 +2184,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
         - skipscalardb:  (bool) default False. If True then, even if db is provided, then NEITHER the
                                data header is updated from the database, NOR flags and 'apply_deltas'
                                from the database is performed for scalar data
+        - flagfile:     (path) default None. Provide flagging information for variometer and scalar data
 
 
     RETURNS:
@@ -1972,6 +2251,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     skipscalardb = kwargs.get('skipscalardb')
     skipvariodb = kwargs.get('skipvariodb')
     skipscalardb = kwargs.get('skipscalardb')
+    flagfile = kwargs.get('flagfile')
 
     scalevalue = kwargs.get('scalevalue')
     debug = kwargs.get('debug')
@@ -2060,7 +2340,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
             datatype = 'both'
             print("variodata equals scalardata")
         vdata = data_for_di(variodata, starttime=st, endtime=et, datatype=datatype, alpha=alpha, beta=beta,
-                            magrotation=magrotation,
+                            magrotation=magrotation, flagfile=flagfile,
                             compensation=compensation, offset=offset, skipdb=skipvariodb, debug=debug)
         if len(vdata) > 0:
             print("{} OK".format(msg))
@@ -2070,7 +2350,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
         msg = " Scalar data analysis ..."
         if not datatype == 'both':
             sdata = data_for_di(scalardata, starttime=st, endtime=et, datatype='scalar', alpha=alpha, beta=beta,
-                                magrotation=magrotation,
+                                magrotation=magrotation, flagfile=flagfile,
                                 compensation=compensation, offset=offset, skipdb=skipscalardb, debug=debug)
         else:
             sdata = vdata.copy()

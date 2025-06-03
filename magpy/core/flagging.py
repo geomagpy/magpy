@@ -5,6 +5,7 @@ sys.path.insert(1, '/home/leon/Software/magpy/')  # should be magpy2
 
 from magpy.stream import DataStream, basestring, magpyversion, unicode
 from magpy.core.methods import *
+#from datetime import datetime, timedelta, timezone
 from magpy.core.flagbrain import *
 from collections import Counter
 import copy as cp

@@ -575,11 +575,6 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(np.round(lon,3), 15.866)
         self.assertEqual(np.round(lat,3), 47.928)
 
-    def test_data_for_di(self):
-        # main test in absolutes
-        data = data_for_di(example5, starttime="2018-08-29", datatype='both')
-        self.assertEqual(len(data), 86400)
-
     def test_dates_to_url(self):
         url = "https://example.com?getdata"
         newurl = dates_to_url(url, starttime=datetime(2016,1,1), endtime=datetime(2016,1,4), starttimestring='starttime', endtimestring='endtime')
@@ -1006,6 +1001,12 @@ class TestAbsolutes(unittest.TestCase):
         absst = di.abs_read(example6a)
         self.assertEqual(len(absst), 1)
 
+    def test_data_for_di(self):
+        # main test in absolutes
+        data = di.data_for_di(example5, starttime="2018-08-29", datatype='both')
+        self.assertEqual(len(data), 86400)
+
+
     def test_get_data_list(self):
         absst = di.abs_read(example6a)
         lst = absst[0].get_data_list()
@@ -1055,7 +1056,7 @@ class TestAbsolutes(unittest.TestCase):
         # construct two easy examples woith well known results
         absst = di.abs_read(example6a)
         absdata = absst[0].get_abs_distruct()
-        data = data_for_di({'file': example5}, starttime='2018-08-29', endtime='2018-08-30', datatype='both',
+        data = di.data_for_di({'file': example5}, starttime='2018-08-29', endtime='2018-08-30', datatype='both',
                            debug=False)
         valuetest = absdata._check_coverage(data, keys=['x', 'y', 'z', 'f'])
         func = data.header.get('DataFunctionObject')[0]
@@ -1080,7 +1081,7 @@ class TestAbsolutes(unittest.TestCase):
         # construct two easy examples woith well known results
         absst = di.abs_read(example6a)
         absdata = absst[0].get_abs_distruct()
-        data = data_for_di({'file':example5}, starttime='2018-08-29',endtime='2018-08-30', datatype='both', debug=False)
+        data = di.data_for_di({'file':example5}, starttime='2018-08-29',endtime='2018-08-30', datatype='both', debug=False)
         valuetest = absdata._check_coverage(data,keys=['x','y','z','f'])
         func = data.header.get('DataFunctionObject')[0]
         absdata = absdata._insert_function_values(func)
@@ -1131,26 +1132,26 @@ class TestAbsolutes(unittest.TestCase):
     def test_data_for_di(self):
         # Test1 (basic read):
         # ----------------------
-        data = data_for_di(example5, starttime="2018-08-29", datatype='both', debug=True)
+        data = di.data_for_di(example5, starttime="2018-08-29", datatype='both', debug=True)
         tx1, ty1, tz1, tf1 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0], data.ndarray[4][0]
         self.assertEqual(np.round(tz1, 2), 43859.29)
         # Test2 (alpha and beta rotations):
         # ----------------------
-        data = data_for_di(example5, starttime="2018-08-29", datatype='both', alpha=90, debug=True)
+        data = di.data_for_di(example5, starttime="2018-08-29", datatype='both', alpha=90, debug=True)
         tx2, ty2, tz2 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
         # Expected X1 = Y2
         # Expected Y1 = -X2
         self.assertEqual(np.round(tx1, 2), np.round(ty2, 2))
         self.assertEqual(np.round(ty1, 2), -np.round(tx2, 2))
         # ----------------------
-        data = data_for_di(example5, starttime="2018-08-29", datatype='both', beta=90, debug=True)
+        data = di.data_for_di(example5, starttime="2018-08-29", datatype='both', beta=90, debug=True)
         tx3, ty3, tz3 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
         # Expected X1 = -Z3
         # Expected Z1 = X3
         self.assertEqual(np.round(tx1, 2), -np.round(tz3, 2))
         self.assertEqual(np.round(tz1, 2), np.round(tx3, 2))
         # ----------------------
-        data = data_for_di(example5, starttime="2018-08-29", datatype='both', alpha=90, beta=90, debug=True)
+        data = di.data_for_di(example5, starttime="2018-08-29", datatype='both', alpha=90, beta=90, debug=True)
         tx4, ty4, tz4 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
         # Expected X1 = -Z4
         # Expected Y1 = -X4
@@ -1173,7 +1174,7 @@ class TestAbsolutes(unittest.TestCase):
         data.header['DataCompensationZ'] = -1
         db.dict_to_fields(data.header, mode='replace')
         # only compensation and delta_f from DataDeltaValues, rotatoion is zero
-        data = data_for_di(example5, starttime="2018-08-29", datatype='both', magrotation=True, db=db, debug=True)
+        data = di.data_for_di(example5, starttime="2018-08-29", datatype='both', magrotation=True, db=db, debug=True)
         tx5, ty5, tz5, tf5 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0], data.ndarray[4][0]
         self.assertEqual(np.round(tx1, 2), np.round(tx5 + 1000, 2))
         self.assertEqual(np.round(ty1, 2), np.round(ty5 - 500, 2))
@@ -1187,7 +1188,7 @@ class TestAbsolutes(unittest.TestCase):
         data.header['DataCompensationY'] = 0.0
         data.header['DataCompensationZ'] = 0.0
         db.dict_to_fields(data.header, mode='replace')
-        data = data_for_di(example5, starttime="2018-08-29", datatype='both', magrotation=True, db=db, debug=True)
+        data = di.data_for_di(example5, starttime="2018-08-29", datatype='both', magrotation=True, db=db, debug=True)
         tx6, ty6, tz6 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
         self.assertEqual(np.round(tx1, 2), -np.round(tz6, 2))
         self.assertEqual(np.round(ty1, 2), -np.round(tx6, 2))
@@ -1195,7 +1196,7 @@ class TestAbsolutes(unittest.TestCase):
         # ----------------------
         # Test5 (optional offset):
         offsets = {'x': 1000.0, 'z': -1000.0}
-        data = data_for_di(example5, starttime="2018-08-29", datatype='vario', compensation=True, offset=offsets, db=db,
+        data = di.data_for_di(example5, starttime="2018-08-29", datatype='vario', compensation=True, offset=offsets, db=db,
                            debug=True)
         tx7, ty7, tz7 = data.ndarray[1][0], data.ndarray[2][0], data.ndarray[3][0]
         self.assertEqual(np.round(tx1, 2), np.round(tx7 - 1000, 2))
