@@ -1776,7 +1776,7 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
 
     if not source:
         datagood = False
-    if isinstance(source, dict):
+    elif isinstance(source, dict):
         tup = source.get('db', [])
         fi = source.get('file', None)
         if tup and len(tup) == 2:

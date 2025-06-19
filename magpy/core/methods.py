@@ -36,7 +36,7 @@ the following methods are contained:
 |    | convert_geo_coordinate | 2.0.0 |        | yes           | yes          |        | |
 |    | dates_to_url    | 2.0.0 |               |               | yes          |        | |
 |    | deprecated      | 2.0.0 |               | --            | --           |        | |
-| d  | denormalize     | 2.0.0 |     2.1.0     | no            | no           |        | |
+|    | denormalize     | 2.0.0 |               | no            | yes*         |        | MARTAS baseline|
 |    | dictdiff        | 2.0.0 |               | yes           | yes          |        | |
 |    | dictgetlast     | 2.0.0 |               | yes           | yes          |        | |
 |    | dict2string     | 2.0.0 |               | yes           | yes          |        | |
@@ -257,9 +257,10 @@ def deprecated(reason):
         raise TypeError(repr(type(reason)))
 
 
-@deprecated("Apparently unused method - remove in 2.1")
 def denormalize(column, startvalue, endvalue):
     """
+    DESCRIPTION:
+        used only by MARTAS - baseline_overview method
     converts [0:1] back with given start and endvalue
     """
     normcol = []
