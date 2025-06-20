@@ -5868,6 +5868,7 @@ CALLED BY:
                 raise ValueError("Starttime is larger than endtime.")
 
         timea = np.array(self.ndarray[0])
+        print (timea[0].tzinfo)
         if len(timea)>0 and not isinstance(timea[0], (datetime,datetime64)):
             # still necessary for absolutes in magpy cdf structures
             timea = np.array([num2date(el).replace(tzinfo=None) for el in self.ndarray[0]])
