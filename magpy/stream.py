@@ -7671,7 +7671,7 @@ def mergeStreams(stream_a, stream_b, **kwargs):
     return merge_streams(stream_a, stream_b, mode=mode, flag=flag, keys=keys, comment=comment, flagid=flagid)
 
 
-def determine_time_shift(array1, array2, col2compare='f', method='correlate', debug=False):
+def determine_time_shift(array1, array2, col2compare='f', method='correlate', shiftvalues = [-3750, 4250, 250], debug=False):
     """
     DESCRIPTION
         Get the time shift between two data stream by comparing an eventual signal shift within the selected column.
@@ -7731,6 +7731,53 @@ def determine_time_shift(array1, array2, col2compare='f', method='correlate', de
         if debug:
             print("Correlate method: shift array2 by timedelta(seconds={}) to fit array1".format(lag / 100. * sr1))
         shift = lag / 100. * sr1
+    if method == 'bruteforce':
+        def parabola (x, *p):
+            a,b,c =p
+            y = (a+x)*(a+x)/b + c
+            return y
+
+        print ("-> Selected brute force method")
+        shiftlst = np.arange(shiftvalues[0],shiftvalues[1],shiftvalues[2])
+        if debug:
+            print (" -> using the following steps:", shiftlst)
+        minlst = []
+        for shift in shiftlst:
+            secs = shift/1000.
+            if debug:
+                print ("Shifting data for seconds:", secs)
+            data = array2.copy()
+            data = data.offset({'time': timedelta(seconds=secs)})
+            diff = subtract_streams(array1,data)
+            val,std = diff.mean(col2compare,std=True)
+            minlst.append([secs,std])
+
+        stdlst = [elem[1] for elem in minlst]
+        minval = min(stdlst)
+        ind = stdlst.index(minval)
+        minshift = minlst[ind][0]
+
+        if debug:
+            print (stdlst)
+            print ([elem[0] for elem in minlst])
+
+        from scipy.optimize import curve_fit
+        p0 = [1,1,-2]
+        x = np.asarray([elem[0] for elem in minlst])
+        y = np.asarray(stdlst)
+        # get indicies of nan
+        inds = np.where(np.isnan(y))
+        y=np.delete(y,inds)
+        x=np.delete(x,inds)
+
+        coeff, cov = curve_fit(parabola, x, y, p0)
+        shift = -coeff[0]
+        if debug:
+            print ("-----------------------------------------------------------")
+            print ("Reference {} compared to {}: ".format(array1.header.get('SensorID'), array2.header.get('SensorID')))
+            print ("Found minimum of {:.2f} at a time shift of {:.2f} sec for {} ".format(coeff[2], -coeff[0], array2.timerange()))
+            print ("-----------------------------------------------------------")
+
 
     return shift
 
@@ -8654,6 +8701,8 @@ if __name__ == '__main__':
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['determine_time_shift'] = (
                     "Version: {}, determine_time_shift: {}".format(magpyversion, (te - ts).total_seconds()))
+                shift = determine_time_shift(data1, shifted_data1, col2compare='f', method='bruteforce',
+                                             shiftvalues=[-1500000, -500000, 10000], debug=True)
             except Exception as excep:
                 errors['determine_time_shift'] = str(excep)
                 print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with determine_time_shift")
