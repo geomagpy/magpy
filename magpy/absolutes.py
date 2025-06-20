@@ -2309,7 +2309,8 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
 
     resultdict, failinglist = _analyse_di_source(absdata, db=db, starttime=starttime, endtime=endtime,
                                                     fileidentifier=diid, debug=debug)
-
+    if debug:
+        print ("Data sets returned from _analyse:di:source", resultdict)
     for fa in failinglist:
         failingdict[fa] = "analysing di source failed"
     # 2.2 Cycle through dates
