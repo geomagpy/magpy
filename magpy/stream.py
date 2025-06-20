@@ -5871,15 +5871,19 @@ CALLED BY:
         if len(timea)>0 and not isinstance(timea[0], (datetime,datetime64)):
             # still necessary for absolutes in magpy cdf structures
             timea = np.array([num2date(el).replace(tzinfo=None) for el in self.ndarray[0]])
+        tinfo = timea[0].tzinfo
         if starttime:
             starttime = testtime(starttime)
+            if tinfo:
+                starttime = starttime.replace(tzinfo=tinfo)
         if endtime:
             endtime = testtime(endtime)
+            if tinfo:
+                endtime = endtime.replace(tzinfo=tinfo)
         if include:
             sr = self.samplingrate()
             endtime = endtime+timedelta(seconds=sr)
         if starttime and endtime:
-            print ("HERE", starttime.tzinfo)
             vind = np.nonzero((timea >= starttime) & (timea < endtime))
         elif starttime:
             vind = np.nonzero(timea >= starttime)
