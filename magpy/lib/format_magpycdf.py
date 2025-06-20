@@ -183,7 +183,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                     # covert datetime64 to datetime
                     ar = np.array(array[ind])
                     ar = (ar - ue) / onesec
-                    array[ind] = np.asarray([datetime.fromtimestamp(el, timezone.utc) for el in ar])  # datetime.datetime
+                    array[ind] = np.asarray([datetime.fromtimestamp(el, timezone.utc).replace(tzinfo=None) for el in ar])  # datetime.datetime
                 except:
                     array[ind] = np.asarray([])
             else:
