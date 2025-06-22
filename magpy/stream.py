@@ -5839,7 +5839,7 @@ CALLED BY:
 
         return t_start, t_end
 
-    def trim(self, starttime=None, endtime=None, include=False, newway=False):
+    def trim(self, starttime=None, endtime=None, include=False, newway=False, debug=False):
         """
     DEFINITION:
         Removing dates outside of range between start- and endtime.
@@ -5862,6 +5862,7 @@ CALLED BY:
 
     APPLICATION:
         """
+        tinfo = None
         vind = None
         if starttime and endtime:
             if testtime(starttime) > testtime(endtime):
@@ -5871,9 +5872,14 @@ CALLED BY:
         if len(timea)>0 and not isinstance(timea[0], (datetime,datetime64)):
             # still necessary for absolutes in magpy cdf structures
             timea = np.array([num2date(el).replace(tzinfo=None) for el in self.ndarray[0]])
-        tinfo = timea[0].tzinfo
+        if len(timea)>0:
+            tinfo = timea[0].tzinfo
+            if debug:
+                print (" timezone info of data: ", tinfo)
         if starttime:
             starttime = testtime(starttime)
+            if debug:
+                print (" timezone info of starttime: ", starttime.tzinfo)
             if tinfo:
                 starttime = starttime.replace(tzinfo=tinfo)
         if endtime:
@@ -6819,7 +6825,7 @@ class LineStruct(object):
 # read/write functions
 # ##################
 
-def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headonly=False, **kwargs):
+def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, datecheck=True, headonly=False, **kwargs):
     """
     DEFINITION:
         The read functions tries to open the selected files. Calls on
@@ -6841,6 +6847,8 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headon
         - disableproxy: (bool) If True, will use urllib2.install_opener()
         - endtime:      (str/datetime object) Description.
         - starttime:    (str/datetime object) Description.
+        - datecheck:    (BOOL) default =True, will check for dates in filename and filter read with starttime/endtime range
+                        - set to FALSE if no date in filename, but numbers which might be wrongly interpreted
         - select:       (str object) Select.
 
     Format specific kwargs:
@@ -6975,21 +6983,26 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headon
     else:
         # some file name
         pathname = path_or_url
+        if debug:
+            print ("Found a file pathname:", pathname)
         for filename in iglob(pathname):
             getfile = True
-            theday = extract_date_from_string(filename)
-            try:
-                if starttime:
-                    if not theday[-1] >= datetime.date(testtime(starttime)):
-                        getfile = False
-                if endtime:
-                    if not theday[0] <= datetime.date(testtime(endtime)):
-                        getfile = False
-            except:
-                # Date format not recognised. Read all files
-                logger.info("read: Unable to detect date string in filename. Reading all files...")
-                #logger.warning("read: filename: {}, theday: {}".format(filename,theday))
-                getfile = True
+            if datecheck:
+                theday = extract_date_from_string(filename)
+                if debug:
+                    print("Extracted dates from filename:", theday)
+                try:
+                    if starttime:
+                        if not theday[-1] >= starttime.date():
+                            getfile = False
+                    if endtime:
+                        if not theday[0] <= endtime.date():
+                            getfile = False
+                except:
+                    # Date format not recognised. Read all files
+                    logger.info("read: Unable to detect date string in filename. Reading all files...")
+                    #logger.warning("read: filename: {}, theday: {}".format(filename,theday))
+                    getfile = True
 
             if getfile:
                 zipped = False
@@ -7062,9 +7075,9 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, headon
 
     # eventually trim data
     if starttime:
-        st = st.trim(starttime=starttime)
+        st = st.trim(starttime=starttime, debug=debug)
     if endtime:
-        st = st.trim(endtime=endtime)
+        st = st.trim(endtime=endtime, debug=debug)
 
     ### Define some general header information TODO - This is done already in some format libs - clean up
     if len(st) > 0:

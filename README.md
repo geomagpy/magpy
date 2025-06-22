@@ -358,6 +358,10 @@ provided as datetime objects or as strings similar to "2022-11-22T22:22:22".
 
         data = read(datasource, starttime="2014-01-01", endtime="2014-05-01")
 
+MagPy is analyzing the filename in datasource and tries to identify dates. If such date is successfully identified, 
+then data sets are not considered if outside the given start and endtime range. You might want to skip this behavior
+in case of wrongly interpreted datasource names using the *datecheck=False* option of `read`.
+
 Another helpful option is the *debug* which might give you some hints in case you face problems when read data.
 
         data = read(datasource, debug=True)
