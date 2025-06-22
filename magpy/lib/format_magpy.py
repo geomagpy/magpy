@@ -12,9 +12,11 @@ sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 from magpy.stream import DataStream, read, join_streams, subtract_streams, magpyversion
 from magpy.core.methods import testtime, extract_date_from_string
 from magpy.core import flagging
+import datetime
 from datetime import datetime, timedelta, timezone
 import numpy as np
 import os
+import json
 import struct
 import csv
 import logging
@@ -241,8 +243,12 @@ def readPYSTR(filename, headonly=False, **kwargs):
             headlst = elem[0].strip(' # ').split(':')
             headkey = headlst[0]
             headval = headlst[1]
-            if not headkey.startswith('Column'):
+            if not headkey.startswith('Column') and not headkey in ['DataAbsFunctionObject','DataBaseValues', 'DataFlags','DataFunctionObject']:
                 headers[headkey] = headval.strip()
+            elif headkey in ['DataFlags']:
+                flstr = elem[0].strip(' # DataFlags: ')
+                fl = json.loads(flstr, object_hook=_dateparser)
+                headers[headkey] = flagging.Flags(fl)
         elif elem[0].startswith(' # MagPy - ASCII'):
             # blank header
             pass
@@ -539,6 +545,25 @@ def readPYBIN(filename, headonly=False, **kwargs):
     return DataStream(header=stream.header, ndarray=np.asarray(array,dtype=object))
 
 
+def _dateparser(dct):
+    # Convert dates in dictionary to datetime objects
+    for (key, value) in dct.items():
+        if str(value).count('-') + str(value).count(':') == 4:
+            try:
+                try:
+                    value = datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f")
+                except:
+                    value = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+            except:
+                pass
+        dct[key] = value
+    return dct
+
+
+def _dateconv(d):
+    # Converter to serialize datetime objects in json
+    if isinstance(d, datetime):
+        return d.__str__()
 
 def writePYSTR(datastream, filename, **kwargs):
     """
@@ -590,9 +615,14 @@ def writePYSTR(datastream, filename, **kwargs):
     if not mode == 'append':
         wtr.writerow( [' # MagPy - ASCII'] )
         for key in headdict:
-            if not key.find('col') >= 0 and not key == 'DataAbsFunctionObject':
+            if not key.find('col') >= 0 and not key in ['DataAbsFunctionObject','DataBaseValues', 'DataFlags','DataFunctionObject']:
                 line = [' # ' + key +':  ' + str(headdict[key]).strip()]
                 wtr.writerow( line )
+            elif key in 'DataFlags':
+                mydic = headdict[key]
+                flagcont = json.dumps(mydic.flagdict, default=_dateconv)
+                line = [' # ' + key + ':  ' + flagcont]
+                wtr.writerow(line)
         wtr.writerow( ['# head:'] )
         for key in KEYLIST:
             title = headdict.get('col-'+key,'-') + '[' + headdict.get('unit-col-'+key,'') + ']'
