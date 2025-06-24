@@ -1687,8 +1687,13 @@ def _analyse_di_source(didatasource, db=None, starttime=None, endtime=None, file
         print("  _analyse_di_source: got {} DI data lines".format(len(dilines)))
 
     for idx,line in enumerate(dilines):
-        mintime = testtime(np.nanmin(line.time))
-        maxtime = testtime(np.nanmax(line.time))
+        mintime = datetime(1700,1,1)
+        maxtime = datetime(1700,2,1)
+        try:
+            mintime = testtime(np.nanmin(line.time))
+            maxtime = testtime(np.nanmax(line.time))
+        except:
+            pass
         if mintime >= starttime and maxtime <= endtime:
             mindate = mintime.date()
             maxdate = maxtime.date()
@@ -1872,13 +1877,14 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             data.header = db.fields_to_dict(dataid)
             if debug:
                 print("  -> applied header from data base ...")
-            if not offset:  # TODO check that - not done in MagPy 1.x
-                data = data.apply_deltas(debug=debug)
-                if debug:
-                    print("  -> applied delta_values previously extracted from data base ...")
-                    # print (" ------------  IMPORTANT ----------------")
-                    # print (" Both, deltaF from DB and the provided delta F {b}".format(b=deltaF))
-                    # print (" will be applied.")
+        if not offset and sensorid and datagood:  # TODO check that - not done in MagPy 1.x
+            data = data.apply_deltas(debug=debug)
+            if debug:
+                print("  -> applied delta_values contained in data stream, evenually previously extracted from data base ...")
+                # print (" ------------  IMPORTANT ----------------")
+                # print (" Both, deltaF from DB and the provided delta F {b}".format(b=deltaF))
+                # print (" will be applied.")
+
         if not len(data) > 0:  # still
             datagood = False
 

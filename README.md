@@ -67,7 +67,7 @@ sklearn : AI flagging support and geomagnetic activity forcasts
 
 For this installation option you will need to install the following package
 
-        $ apt install python4-virtualenv
+        $ apt install python3-virtualenv
 
 Then you can create a new environment called magpy as follows:
 
