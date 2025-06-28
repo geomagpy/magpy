@@ -1905,6 +1905,7 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
         elif offset:
             data = data.offset(offset)
 
+        rotated = False
         if magrotation:
             valalpha = 0.0
             valbeta = 0.0
@@ -1947,10 +1948,11 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             if valalpha != 0 or valbeta != 0:
                 data = data.rotation(alpha=valalpha, beta=valbeta)
                 data.header['DataComments'] = "{} - rotated by alpha={} and beta={}".format(data.header.get('DataComments', ''), valalpha, valbeta)
-        elif is_number(alpha) or is_number(beta):  # if alpha and beta are provided then rotate anyway
+                rotated = True
+        if is_number(alpha) or is_number(beta) and not rotated:  # if alpha and beta are provided then rotate anyway if not done yet
             if not alpha == 0.0 or not beta == 0.0:
                 if debug:
-                    print (" magrotation not set but alpha and/or beta given - rotating with these manual values: alpha={} and beta={}".format(alpha, beta))
+                    print (" alpha and/or beta provided - rotating with these manual values: alpha={} and beta={}".format(alpha, beta))
                 if is_number(alpha):
                     valalpha = alpha
                 else:
