@@ -7342,6 +7342,9 @@ def join_streams(stream_a,stream_b, **kwargs):
             array[idx] = np.asarray([])
 
     stream = DataStream(header=sa.header, ndarray=np.asarray(array,dtype=object))
+    comment = stream.header.get("DataComments","")
+    comment = comment + "joined {} into {} ".format(sb.header.get("DataID"),sa.header.get("DataID"))
+    stream.header["DataComments"] = comment
     stream = stream.removeduplicates()
 
     return stream.sorting()
@@ -7676,6 +7679,9 @@ def merge_streams(stream_a, stream_b, keys=None, mode='insert', **kwargs):
             print ("needed", (t4-t3).total_seconds())
 
     array = np.asarray(array, dtype=object)
+    comment = header.get("DataComments","")
+    comment = comment + "merged {} into {} ".format(sb.header.get("DataID"),sa.header.get("DataID"))
+    header["DataComments"] = comment
     return DataStream(header=header,ndarray=array)
 
 
@@ -8027,7 +8033,12 @@ def subtract_streams(stream_a, stream_b, keys=None, getmeans=None, debug=False):
             except:
                 pass
 
-            return DataStream(header=sa.header,ndarray=np.asarray(array,dtype=object))
+            header = sa.header
+            comment = header.get("DataComments","")
+            comment = comment + "subtracted {} from {} ".format(sb.header.get("DataID"), sa.header.get("DataID"))
+            header["DataComments"] = comment
+
+            return DataStream(header=header,ndarray=np.asarray(array,dtype=object))
 
 
 @deprecated("Replaced by subtract_streams")
