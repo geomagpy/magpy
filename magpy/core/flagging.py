@@ -1007,8 +1007,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                         if debug:
                             print (econt.get(parameter))
                         for val in values:
-                            if identical and econt.get(parameter) == val:
-                                ncont = econt
+                            if identical:
+                                if econt.get(parameter) == val:
+                                     ncont = econt
                             elif econt.get(parameter).find(val) > -1:
                                 ncont = econt
                     elif econt.get(parameter) in values:
