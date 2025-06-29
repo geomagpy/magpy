@@ -961,7 +961,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             except:
                 return False
 
-    def select(self, parameter='sensorid', values=None, debug=False):
+    def select(self, parameter='sensorid', values=None, identical=False, debug=False):
         """
         DESCRIPTION:
             select specific flags from a flagdictionary.
@@ -1007,7 +1007,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                         if debug:
                             print (econt.get(parameter))
                         for val in values:
-                            if econt.get(parameter).find(val) > -1:
+                            if identical and econt.get(parameter) == val:
+                                ncont = econt
+                            elif econt.get(parameter).find(val) > -1:
                                 ncont = econt
                     elif econt.get(parameter) in values:
                         ncont = econt
