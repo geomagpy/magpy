@@ -2349,7 +2349,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
             datatype = 'both'
             print("variodata equals scalardata")
         vdata = data_for_di(variodata, starttime=st, endtime=et, datatype=datatype, alpha=alpha, beta=beta,
-                            magrotation=magrotation, flagfile=flagfile,
+                            magrotation=magrotation, flagfile=flagfile, db=db,
                             compensation=compensation, offset=offset, skipdb=skipvariodb, debug=debug)
         if len(vdata) > 0:
             print("{} OK".format(msg))
@@ -2359,7 +2359,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
         msg = " Scalar data analysis ..."
         if not datatype == 'both':
             sdata = data_for_di(scalardata, starttime=st, endtime=et, datatype='scalar', alpha=alpha, beta=beta,
-                                magrotation=magrotation, flagfile=flagfile,
+                                magrotation=magrotation, flagfile=flagfile, db=db,
                                 compensation=compensation, offset=offset, skipdb=skipscalardb, debug=debug)
         else:
             sdata = vdata.copy()
