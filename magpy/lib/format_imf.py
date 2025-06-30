@@ -603,7 +603,7 @@ def writeIAF(datastr, filename, **kwargs):
     if datastream.header.get('DataComponents','') in ['XYZS','xyzs']:
         datastream.header['DataComponents'] = 'XYZF'
     if datastream.header.get('DataSensorOrientation','') == '':
-        datastream.header.get['DataSensorOrientation'] = datastream.header.get('DataComponents','')
+        datastream.header['DataSensorOrientation'] = datastream.header.get('DataComponents','')
     dfpos = KEYLIST.index('df')
     fpos = KEYLIST.index('f')
     dflen = len(datastream.ndarray[dfpos])
