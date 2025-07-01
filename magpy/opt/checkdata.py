@@ -542,12 +542,13 @@ def consistency_test(config, results, month=1, debug=False):
                     results["warnings"].append("Consistency test: Month {}, {} resolution: average delta F differs strongly from zero".format(month,resolution))
                     if grades.get("step2", 0) <= 2:
                         grades["step2"] = 2
-                elif np.abs(fresult.get('dF mean')) < 0.01 and np.abs(fresult.get('dF stddev')) < 0.01:
+                elif np.abs(fresult.get('dF mean')) < 0.01 and np.abs(fresult.get('dF stddev')) < 0.05:
                     results["warnings"].append("Consistency test: Month {}, {} resolution: is F really independent from vector data?".format(month,resolution))
                     if grades.get("step2", 0) <= 2:
                         grades["step2"] = 2
                 #print ("Diff between mean and median", np.abs(fresult.get('dF mean') - fresult.get('dF median')))
-                if not np.isnan(fresult.get('dF mean')) and np.abs(fresult.get('dF mean') - fresult.get('dF median')) > 0.05:
+                # Better check whether they are consitent within their uncertainty range
+                if not np.isnan(fresult.get('dF mean')) and np.abs(fresult.get('dF mean') - fresult.get('dF median')) > 0.1:
                     results["warnings"].append("Consistency test: Month {}, {} resolution: Median and Mean are significantly different. Check outliers".format(month,resolution))
                     if grades.get("step2", 0) <= 2:
                         grades["step2"] = 2
@@ -942,7 +943,7 @@ def header_test(config, results, debug=False):
                                                                                 minfmean, yearfmean))
         maxdiff = np.nanmax(np.abs(np.diff(np.array([yearhmean, blvhmean, minhmean]))))
         averagediff = np.nanmean(np.diff(np.array([yearhmean, blvhmean, minhmean])))
-        if maxdiff >= 0.5 and averagediff >= 0.1:
+        if maxdiff >= 0.91 and averagediff >= 0.21: # diff between 20574.6 and 20575.5 is acceptable
             results["warnings"].append('Header analysis: significant differences in yearly mean values of BLV, YEARMEAN and One-minute data.')
             if grades.get("step4") <= 2:
                 grades["step4"] = 2
@@ -960,7 +961,10 @@ def header_test(config, results, debug=False):
             minvalue = str(mindata.header.get(key, ''))
             yearvalue = str(yearmeandata.header.get(key, ''))
             vals = np.array([secvalue, minvalue, yearvalue])
-            cleanvals = [np.round(float(el),3) if methods.is_number(el) else el.lower().strip() for el in vals if not el == '']
+            rdecimals = 3
+            if key in ['DataElevation']:
+                rdecimals = 0
+            cleanvals = [np.round(float(el),rdecimals) if methods.is_number(el) else el.lower().strip() for el in vals if not el == '']
             foundcount = len(cleanvals)
             if foundcount > 1 and not key.startswith('col') and not key.startswith('unit') and not key in excludelist:
                 if cleanvals.count(cleanvals[0]) == len(cleanvals):
