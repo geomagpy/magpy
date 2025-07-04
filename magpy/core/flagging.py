@@ -227,7 +227,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                           '021': 'geomagnetic storm',
                           '022': 'crochete',
                           '030': 'earthquake',
-                          '050': 'vehicle passing above',
+                          '050': 'vehicle passing',
                           '051': 'nearby moving disturbing source',
                           '052': 'nearby static disturbing source',
                           '053': 'train',
@@ -284,6 +284,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         return False, []
 
 
+
     def _check_version(self, commentconversion='cobs', debug=False):
         """
         DESCRIPTION
@@ -292,7 +293,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         DEVELOPMENTS
             The method might be transformed into a library based reading system as used for file
             imports. As it is unlikely that many different formats for flagging information are
-            devekloped in the near future this is postponed so far
+            developed in the near future this is postponed so far
         APPLICATION
             used by magpy.core.flagging load
         SUPPORTS
@@ -422,33 +423,35 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             thelist.append(cont)
         return thelist
 
-    def _set_label_from_comment(self, dictionary, parameter='comment'):
+    def _set_label_from_comment(self, parameter='comment'):
         """
         DESCRIPTION
-           helps to ill labels and labelids from comments
+           helps to fill labels and labelids from comments
         PARAMETER
            dictionary like self.flagdict
         APPLICATION
            to be used by import routine
         """
         # select comment which contains any thing from FLAGLABEL
-        cdictionary = cp.deepcopy(dictionary)
-        res = {}
-        ncont = {}
-        for id in self.FLAGLABEL:
-            label = self.FLAGLABEL.get(id)
-            labels = label.split()
-            for d in cdictionary:
-                econt = cdictionary[d]
-                ncont = {}
-                for value in labels:
-                    if econt.get(parameter).find(value) > -1:
-                        econt['labelid'] = id
-                        econt['label'] = label
-                ncont = econt
-            if ncont:
-                res[id] = ncont
-        return res
+        flaggingdict = self.flagdict
+        newflaggingdict = cp.deepcopy(flaggingdict)
+        for fid in newflaggingdict:
+            fcont = newflaggingdict[fid]
+            result = {}
+            for lid in self.FLAGLABEL:
+                label = self.FLAGLABEL.get(lid)
+                newlabels = label.split()
+                oldcontents = fcont.get(parameter).split()
+                amount_of_similars = len([w for w in oldcontents if w in newlabels])
+                result[lid] = amount_of_similars
+            newid = max(result, key=result.get)
+            if not result.get(newid) > 0:
+                newid = "099"
+            fcont["labelid"] = newid
+            fcont['label'] = self.FLAGLABEL.get(newid)
+        self.flagdict = newflaggingdict
+        return self
+
 
     def _readJson_string(self, flagstring, debug=False):
         if debug:

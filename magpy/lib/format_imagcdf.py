@@ -351,17 +351,22 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
     te = datetime.now()
 
     if headers.get("DataFlags", ""):
-        print ("Found flags in header - MagPy 2.0 version - nothing else to do")
+        if debug:
+            print ("Found flags in header - MagPy 2.0 version - nothing else to do")
         fl = flagging.Flags()
         flagstring = headers.get("DataFlags")
-        flags = fl._readJson_string(flagstring)
-        headers["DataFlags"] = flags
+        try:
+            flags = fl._readJson_string(flagstring, debug=debug)
+            headers["DataFlags"] = flags
+        except:
+            print("Error when interpreting flags - skipping")
     elif not headers.get('FlagRulesetType','') == '':
         if debug:
             print ("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         logger.info("readIMAGCDF: Found flagging ruleset {} vers.{} - extracting flagging information".format(headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion','')))
         flagginglist = [elem for elem in datalist if elem.startswith('Flag')]
         flags = Ruleset2Flaglist(flagginglist,headers.get('FlagRulesetType',''),headers.get('FlagRulesetVersion',''), stationid=headers.get("StationID",None), debug=debug)
+        flags = flags._set_label_from_comment()
         if debug:
             print ("readIMAGCDF: Flagging information extracted")
 

@@ -1960,6 +1960,8 @@ REMOVED:
 
         self.db.commit()
         cursor.close()
+        if tabletype == "1.0":
+            fl = fl._set_label_from_comment()
         return fl
 
     def flags_to_delete(self, parameter='sensorid', value=None, debug=False):
