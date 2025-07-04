@@ -384,7 +384,7 @@ class PlotPanel(scrolled.ScrolledPanel):
                 self._live_update_martas(client, stream)
             if debug:
                 # use a green light to indicate it is running
-                print ("Running ... {}".format(datetime.now(timezone.utc).replace(tzinfo=None)))
+                print ("Running ... {} {}".format(datetime.now(timezone.utc).replace(tzinfo=None), stream.ndarray))
             stop_event.wait(self.livedatadict.get('period'))
         ###
         # Eventually stop client
@@ -428,7 +428,8 @@ class PlotPanel(scrolled.ScrolledPanel):
         debug=False
         samplingrate = 1
         ar = self.livedatadict.get('array')
-        #print (ar)
+        if debug:
+            print (ar, self.livedatadict.get('head'))
         if len(ar[0]) > 0:
             try:
                 timecol = [el for el in ar[0]]
@@ -504,7 +505,8 @@ class PlotPanel(scrolled.ScrolledPanel):
                 # Version 1 (valid for xxx)
                 # -------------------------
                 # The callback for when the client receives a CONNACK response from the server.
-                def on_connect(client, userdata, flags, reason_code): #, properties):
+                # signature suitable for MQTT v5.0 client:
+                def on_connect(client, userdata, flags, reason_code, properties=None):
                     # Subscribing in on_connect() means that if we lose the connection and
                     # reconnect then subscriptions will be renewed.
                     client.subscribe("{}/#".format(martastopic), martasqos)
@@ -521,7 +523,7 @@ class PlotPanel(scrolled.ScrolledPanel):
                     sensorid = "{}".format(msg.topic).replace("{}/".format(martastopic),'')[:-5]
                     content = "{}".format(msg.topic)[-4:]
                     payload = "{}".format(msg.payload.decode())
-                    if dataid == sensorid: # only if current line corresponds to selected dataid
+                    if sensorid.find(dataid) >= 0: # only if current line corresponds to selected dataid
                         if not sensordict.get(sensorid, {}) == {}:
                             sensorcont = sensordict.get(sensorid)
                         keys = sensorcont.get('SensorKeys','').split(',')
@@ -6633,7 +6635,7 @@ class MainFrame(wx.Frame):
                 # Version 1 (valid for xxx)
                 # -------------------------
                 # The callback for when the client receives a CONNACK response from the server.
-                def on_connect(client, userdata, flags, reason_code): #, properties):
+                def on_connect(client, userdata, flags, reason_code, properties=None):
                     self.menu_p.com_page.logMsg(f" - MARTAS: connected with result code {reason_code}")
                     # Subscribing in on_connect() means that if we lose the connection and
                     # reconnect then subscriptions will be renewed.
@@ -6646,7 +6648,7 @@ class MainFrame(wx.Frame):
                     # create a result dictionary
                     # TODO the following line will fail if martastopic is "all"
                     if martastopic == "+":
-                        sensorid = "{}".format(msg.topic).split("/")[1][:-5]
+                        sensorid = "{}".format(msg.topic).split("/")[1]
                     else:
                         sensorid = "{}".format(msg.topic).replace("{}/".format(martastopic),'')[:-5]
                     content = "{}".format(msg.topic)[-4:]
