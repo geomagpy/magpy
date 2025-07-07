@@ -3600,12 +3600,36 @@ removed:
 
 ### A10 - other modules - all methods, overview with runtime and verification tests
 
-### A11 - Updating an existing MagPy1.x database to be compatible with MagPy2.x
+### A11 - The json structure of flagging information
+
+```
+{ '238799807134'   : {   'sensorid': 'XXXsec_4_0001', 
+                         'starttime': datetime.datetime(2022, 4, 4, 5, 39, 52, 900000), 
+                         'endtime': datetime.datetime(2022, 4, 4, 5, 39, 53, 100000), 
+                         'components': ['x', 'y'], 
+                         'flagtype': 1, 
+                         'labelid': '002', 
+                         'label': 'spike', 
+                         'comment': 'spike', 
+                         'groups': None, 
+                         'probabilities': None, 
+                         'stationid': 'XXX', 
+                         'validity': '', 
+                         'operator': 'John Doe', 
+                         'color': 'red', 
+                         'modificationtime': datetime.datetime(2024, 8, 29, 2, 28, 21, 770142), 
+                         'flagversion': '2.0'}, 
+ another unique ID : {   'sensorid': 'XXXsec_4_0001',
+                         ...}
+}
+```
+
+### A12 - Updating an existing MagPy1.x database to be compatible with MagPy2.x
 
 - MagPy2.x uses datetime columns for times
 - MagPy2.x changed the flagging contents based on new ID assignments
 - MagPy2.x changes the DI contents based on new ID assignments
-- ets
+- etc
 
 MagPy2.x can read all previous contents. In order to add new data it is necessary to update the database tables for 
 supporting the new data types.
