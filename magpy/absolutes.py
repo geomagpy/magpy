@@ -2409,7 +2409,7 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
                     else:
                         print(" Warning! Variation data missing at DI time range")
                     # Check orinetation
-                    variocomps = vdata.header.get('DataComponents').lower()
+                    variocomps = vdata.header.get('DataComponents','').lower()
                     if variocomps.startswith("xyz") and not variometerorientation.lower() == "xyz":
                         print("  Variometer data provided in XYZ, Basevalue output projected in HDZ, however,")
                         print("  as variometerorientation is not manually confirmed to be xyz (see manual) ")

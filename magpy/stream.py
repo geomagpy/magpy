@@ -666,7 +666,7 @@ CALLED BY:
 
         for dd in deltdict:
             contdict = deltdict[dd]
-            st = contdict.get('st')  # is required
+            st = contdict.get('st', streamstart)  # is required
             et = contdict.get('et', datetime.now(timezone.utc).replace(tzinfo=None))  # will be set to now if not existing
             for key in contdict:
                 key = key.strip()
