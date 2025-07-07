@@ -542,7 +542,7 @@ def consistency_test(config, results, month=1, debug=False):
                     results["warnings"].append("Consistency test: Month {}, {} resolution: average delta F differs strongly from zero".format(month,resolution))
                     if grades.get("step2", 0) <= 2:
                         grades["step2"] = 2
-                elif np.abs(fresult.get('dF mean')) < 0.01 and np.abs(fresult.get('dF stddev')) < 0.05:
+                elif np.abs(fresult.get('dF mean')) < 0.01 and np.abs(fresult.get('dF stddev')) < 0.01:
                     results["warnings"].append("Consistency test: Month {}, {} resolution: is F really independent from vector data?".format(month,resolution))
                     if grades.get("step2", 0) <= 2:
                         grades["step2"] = 2
