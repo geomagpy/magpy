@@ -7288,7 +7288,7 @@ def join_streams(stream_a,stream_b, **kwargs):
     """
     logger.info('join_streams: Start joining at %s.' % str(datetime.now()))
     KEYLIST =  DataStream().KEYLIST
-
+    comment = kwargs.get('comment')
 
     # Check stream type and eventually convert them to ndarrays
     # --------------------------------------
@@ -7350,9 +7350,13 @@ def join_streams(stream_a,stream_b, **kwargs):
             array[idx] = np.asarray([])
 
     stream = DataStream(header=sa.header, ndarray=np.asarray(array,dtype=object))
-    comment = stream.header.get("DataComments","")
-    comment = comment + "joined {} into {} ".format(sb.header.get("DataID"),sa.header.get("DataID"))
-    stream.header["DataComments"] = comment
+    if comment:
+        oldcomment = stream.header.get("DataComments", "")
+        if isinstance(comment,str):
+            comment = oldcomment + comment
+        else:
+            comment = oldcomment + "joined {} into {} ".format(sb.header.get("DataID"),sa.header.get("DataID"))
+        stream.header["DataComments"] = comment
     stream = stream.removeduplicates()
 
     return stream.sorting()
@@ -8697,7 +8701,7 @@ if __name__ == '__main__':
             data2.ndarray[1][5000:9000] = np.nan
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
-                jst = join_streams(data1, data2)
+                jst = join_streams(data1, data2, comment=True)
                 print("check lenght of joind stream (expected 63360)", len(jst))
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['join_streams'] = (
