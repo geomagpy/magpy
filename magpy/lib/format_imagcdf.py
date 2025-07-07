@@ -354,7 +354,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
         if debug:
             print ("Found flags in header - MagPy 2.0 version - nothing else to do")
         fl = flagging.Flags()
-        flagstring = headers.get("DataFlags")
+        flagstring = headers.get("DataFlags", flagging.Flags())
         try:
             flags = fl._readJson_string(flagstring, debug=debug)
             headers["DataFlags"] = flags
@@ -496,6 +496,7 @@ def readIMAGCDF(filename, headonly=False, **kwargs):
 def writeIMAGCDF(datastream, filename, **kwargs):
     """
     Writing Intermagnet CDF format (currently: vers1.3) + optional flagging info (vers1.3.1)
+
     """
     debug = kwargs.get('debug')
     fillval = kwargs.get('fillvalue')
@@ -505,7 +506,6 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     temperature2 = kwargs.get('temperature2')
     addflags = kwargs.get('addflags')
     skipcompression = kwargs.get('skipcompression')
-
 
     flags = {}
     logger.info("Writing IMAGCDF Format {}".format(filename))
@@ -618,9 +618,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
     globalAttrs = {}
     for key in headers:
         value = headers.get(key)
-        if key == "DataFlags" and value:
+        if key == "DataFlags" and value and not isinstance(value,str):
+            # might be string already in case of multiple file export
             value = value._writeJson_string()
-
         if is_number(value) and key in FLOATLIST:
             value = float(value)
         else:
@@ -628,6 +628,9 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         if key in INVHEADTRANSLATE:
             globalAttrs[INVHEADTRANSLATE.get(key)] = { 0 : value }
         elif key.startswith('col-') or key.startswith('unit-') or key.endswith('SamplingRate'):
+            pass
+        elif key == "DataFlags" and not addflags:
+            # ignpore flags
             pass
         else:
             globalAttrs[key.replace('Data','',1)] = { 0 : value }
@@ -649,8 +652,11 @@ def writeIMAGCDF(datastream, filename, **kwargs):
         if flags:
             globalAttrs['FlagRulesetVersion'] = { 0 : '2.0'}
             globalAttrs['FlagRulesetType'] = { 0 : 'Conrad'}
-            flags = flags._writeJson_string()
-            datastream.header["DataFlags"] = flags
+            # if not already converted to strings
+            if not isinstance(flags, str):
+                datastream.header["DataFlags"] = flags
+                flags = flags._writeJson_string()
+            #datastream.header["DataFlags"] = flags
 
     if not headers.get('DataPublicationDate','') == '':
         dat = tt(testtime(headers.get('DataPublicationDate','')))

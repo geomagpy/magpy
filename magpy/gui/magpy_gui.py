@@ -2685,7 +2685,8 @@ class MainFrame(wx.Frame):
                     #open a select dialog with other time coverage
                     notyetselected = False
                 self.changeStatusbar("... found {} rows".format(tmp.length()[0]))
-                stream.extend(tmp.container,tmp.header,tmp.ndarray)
+                stream = join_streams(stream, tmp)
+                #stream.extend(tmp.container,tmp.header,tmp.ndarray)
             stream=stream.sorting()
             if debug:
                 print ("Length stream", len(stream))

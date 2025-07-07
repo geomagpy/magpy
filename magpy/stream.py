@@ -6962,7 +6962,8 @@ def read(path_or_url=None, starttime=None, endtime=None, dataformat=None, datech
                     fh.close()
                     stp = _read(fh.name, dataformat, headonly, **kwargs)
                     if len(stp) > 0: # important - otherwise header is going to be deleted
-                        st.extend(stp.container,stp.header,stp.ndarray)
+                        st = join_streams(st, stp)
+                        #st.extend(stp.container,stp.header,stp.ndarray)
                     os.remove(fh.name)
         else:
             # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -7307,6 +7308,13 @@ def join_streams(stream_a,stream_b, **kwargs):
     # --------------------------------------
     sa = stream_a.copy()
     sb = stream_b.copy()
+
+    saflags = sa.header.get("DataFlags")
+    sbflags = sb.header.get("DataFlags")
+    if saflags and sbflags:
+        sa.header["DataFlags"] = saflags.join(sbflags)
+    elif sbflags:
+        sa.header["DataFlags"] = sbflags
 
     # Get indicies of timesteps of stream_b of which identical times are existing in stream_a-> delelte those lines
     # --------------------------------------
