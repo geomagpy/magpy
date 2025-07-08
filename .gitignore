@@ -8,4 +8,5 @@ build
 dist
 dist/*.egg
 GeomagPy.egg-info
+geomagpy.egg-info
 .idea/
