@@ -231,6 +231,9 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                           '051': 'nearby moving disturbing source',
                           '052': 'nearby static disturbing source',
                           '053': 'train',
+                          '060': 'data gap',
+                          '061': 'temperature effect electronics',
+                          '062': 'temperature effect sensor',
                           '070': 'switch',
                           '090': 'unknown disturbance',
                           '099': 'unlabeled signature'
