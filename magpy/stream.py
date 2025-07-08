@@ -6298,6 +6298,8 @@ CALLED BY:
                     self.ndarray[idx] = np.delete(self.ndarray[idx],nonnumlist)
 
             starttime, lasttime = self._find_t_limits()
+            # Round starttime to full day for corrcet coverage
+            starttime = datetime.strptime(starttime.strftime("%Y-%m-%d"),"%Y-%m-%d")
             ndtype = True
         else:
             starttime = datetime.strptime(datetime.strftime(num2date(self[0].time).replace(tzinfo=None),'%Y-%m-%d'),'%Y-%m-%d')
