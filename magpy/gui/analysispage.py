@@ -64,8 +64,8 @@ class AnalysisPage(wx.Panel):
         self.applyBCButton = wx.Button(self,-1,"Baseline Corr",size=(160,30))
 
         # 6 Line - frequency range
-        self.powerButton = wx.Button(self,-1,"Power",size=(160,30))
-        self.spectrumButton = wx.Button(self,-1,"Spectrum",size=(160,30))
+        self.powerButton = wx.Button(self,-1,"PSD",size=(160,30))
+        self.spectrumButton = wx.Button(self,-1,"Spectrogram",size=(160,30))
 
         self.head1Label.SetFont(font)
         self.head2Label.SetFont(font)

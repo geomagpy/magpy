@@ -135,15 +135,34 @@ is rather easy and, at least to my experience, works flawless on most operating 
 
 ### 2.2 MacOS installation
 
+Please follow the instructions for Linux. I tested "option 2" using Anaconda, which was working fine with MacOS. I am
+not a MacOS expert, so if you can extend this instruction please do so.
 
 ### 2.3 Windows installation
 
+  - get the [MagPy Windows installer] here (under Downloads):
+        https://cobs.geosphere.at
+  - download and execute magpy-2.x.x.exe
+  - all required packages are included in the installer
+
+  - MagPy will have a sub-folder in the Start menu. Here you will find three items:
+
+        * command -> opens a DOS shell within the Python environment e.g. for updates
+        * python  -> opens a python shell ready for MagPy
+        * xmagpy  -> opens the MagPy graphical user interface
+
+
+  - to update an existing XMagPy2 installation right-click on subfolder "command" in the start menu
+  - depending on user/all installation eventually select "run as administrator"
+  - issue the following command "pip install geomagpy=2.x.x.". Replace 2.x.x with the newest version
 
 ## 3. Main window and its menu bar
 
 ### 3.1 Layout and default configuration
 
 The graphical user interface of MagPy is based on [WXPython](https://wxpython.org/).  
+
+![3.1.](./../../magpy/doc/xfigure310.png "The graphical user interface of XMagPy consists of 4 standard sections and 1 optional part.")
 
 Figure 3.1: The graphical user interface of XMagPy consists of 4 standard sections and 1 optional part. 
 
@@ -180,6 +199,8 @@ and organizations. Currently (01/2024) webservices of [INTERMAGNET](https://www.
 accessing geomagnetic variation data and also a few other data sources. Please check the corresponding data licenses 
 of the data suppliers before using it. **Open Webservice** will open a selection dialog as displayed in figure 3.2.1
 
+![3.2.1](./../../magpy/doc/xfigure321.png "Webservice selection window. The data request url will be constructed from the given parameters.")
+
 Figure 3.2.1: Webservice selection window. The data request url will be constructed from the given parameters.  
 
 In future versions this list can be extended to other webservices as well. 
@@ -191,6 +212,9 @@ basically every web address and access available data products directly. A numbe
 are listed in section 3 of the main MagPy manual. Pre-installed with XMagPy are a few examples for the Kp webservice 
 of the [GFZ Potsdam], data access at the [WDC] and some satellite data from [ACE]. As shown in figure 3.2.2 you can 
 change/modify bookmarks and add your favorite quick access list here.   
+
+![3.2.2](./../../magpy/doc/xfigure322.png "Input window for remote connections. The example accesses hourly wdc data from the world data center in 
+Edinburgh via FTP.")
 
 Figure 3.2.2: Input window for remote connections. The example accesses hourly wdc data from the world data center in 
 Edinburgh via FTP. 
@@ -204,14 +228,18 @@ with a number of benefits regarding data organization, quick access, flagging an
 clicking on **Open database** a drop down combo box will give you access to data tables contained within the database. 
 When opening you will further be asked to define a time range.  
 
+![3.2.3](./../../magpy/doc/xfigure323.png "Database table access.")
+
 Figure 3.2.3: Database table access.
 
 ### 3.2.4 Exporting data
 
-You can save data by using the **Export data** method of the file menu. A selection window as shown in Figure 3.3.1 
+You can save data by using the **Export data** method of the file menu. A selection window as shown in Figure 3.2.4 
 is showing up. 
 
-Figure 3.3.1: Export data window.
+![3.2.4](./../../magpy/doc/xfigure324.png "Export data window.")
+
+Figure 3.2.4: Export data window.
 
 Within the export data window you can select the destination path. In dependency of the selected format, eventual file
 name prerequisites are constructed. Please note, that some file formats require specific meta information. Please refer
@@ -220,11 +248,15 @@ A number of file formats also allow for a more complex storage protocol. Please 
 the **Export Data** dialog to view these additional options. Please note that several data formats have specific 
 options to be selected here. 
 
+![3.2.5](./../../magpy/doc/xfigure325.png "Options in the export data window.")
+
+Figure 3.2.4: Export data window.
+
 Assuming a data set in one second resolution which you want to export to [IMAGCDF]()
 you will have several additional options, to define output content. First of all correct IMAGCDF outputs require
 specific meta information before exporting which you can add to your data set as shown in section [4.3](#43-the-meta-panel).
 When you then export your data set and use the **Export options** button, the selection menu will look like as shown in
-Figure 3.3.2. For IMAGCDF the file name is predefined. Possible general options are **coverage**, **write mode** and 
+Figure 3.2.5. For IMAGCDF the file name is predefined. Possible general options are **coverage**, **write mode** and 
 **create subdirectories**. If choosing the **create subdirectories** option, the data set will be stored in specified 
 subdirectories consisting either of year (Y), year and a further subdirectory month (Ym) or year and a daily 
 subdirectory with day-of-the-year number (Yj). In case of IMAGCDF, you can add flagging information into the data set,
@@ -285,6 +317,8 @@ corresponds to a typical DI measurement input sheet as it it used for example in
 observatories (figure 3.4.1). If you have loaded DI data already into the memory (see section [4.5](#45-the-di-panel)) 
 you will find a drop down list on the upper left, which gives you access to this data. 
 
+![3.4.1](./../../magpy/doc/xfigure341.png "The Input sheet for DI data.")
+
 Figure 3.4.1: The Input sheet for DI data.
 
 The input sheet allows you to load already existing data or to fill-in any new measurement data and store it. If it is 
@@ -319,6 +353,10 @@ multiple data operations when selecting **Access data memory**. The dialog as sh
 access to all data sets and working states in the memory. They are characterized by a unique ID which is constructed 
 from data characteristics. Shown data columns
 (keys) can be modified. On the right side you will see a number of operations:
+
+![3.5.1](./../../magpy/doc/xfigure351.png "Memory operations.")
+
+Figure 3.5.1: Memory operations.
 
 **Plot** will activate and show the selected plot. If multiple plots are selected all of them will be shown above each 
 other as long as similar time ranges are available. Selecting multiple plots will disable all analysis functions.
@@ -380,6 +418,11 @@ You can save the summary to a markdown file. In summary the following checks are
 5. Step 5: An overview about k values as contained in the IAF data file is shown.
 
 
+![3.6.1](./../../magpy/doc/xfigure361.png "Definitive data checking results.")
+
+Figure 3.6.1: Definitive data checking results.
+
+
 ### 3.7 Options
 
 The **Options** menu provides access to three submenus for basic initialization parameters, plot options and global
@@ -407,8 +450,8 @@ plotting function as defined in the general manual, summarized in section 4. Thi
 lists and dictionaries in a very stringent format. There will be a number of examples provided in section
 [5](#5-application-recipies-for-geomagnetic-observatory-data-analysis) of this manual. 
 
-The DI initialization parameter option is useful, if you want to use MagPy‘s DI input sheets, as you
-can change the layout here (Figure xx). The text-edit provides the order of measurements as
+The DI initialization parameter option is useful, if you want to use MagPy‘s DI input sheets (figure 3.4.1), as you
+can change the layout here. The text-edit provides the order of measurements as
 shown in the input sheet: MU (mire up), MD (mire down), EU (east up), WD (west up)… provide
 the current order. You can modify that for example by simply changing …, EU, WU, ... to …, WU,
 EU, …. Please leave the rest unchanged. If you are not using repeated measurements for each
@@ -432,6 +475,10 @@ in the same directory, database sources or webservice/url data with time ranges,
 and you can quickly switch to the next or previous data with a similar coverage. At the moment this quick access buttons
 are available if dates are characterized by numerical values. Thus, for some data files like geomagnetic IAF data these
 options are NOT available. 
+
+![4.1.1](./../../magpy/doc/xfigure411.png "The data panel.")
+
+Figure 4.1.1: The data panel..
 
 The source of the opened time series and its covered time range is shown below the quick access buttons within the
 **Data information** field. You can modify start and end time by changing times or dates subsequently using the trim 
@@ -457,7 +504,7 @@ Every flag is defined by a number of parameters of which the flagtype defines wh
 definitive analysis or not. A label and its labelid provide information about the flag reason. Observers can comment 
 the flag and the actual operator who added the flag should be provided. In case of automatic flags the operator is named
 "MagPy". Further details are found in the general manual.
-The main flagging functions are accessible by buttons: **Flag outlier** will scan the time series for outliers (4.2.1). 
+The main flagging functions are accessible by buttons: **Flag outlier** will scan the time series for outliers (4.2.0). 
 **Flag selection** will mark currently selected data enlarged by zoom. To use this method you zoom into a specific plot 
 area (see 3.3) and then press the **Flag selection** button. This is the most common method for regular data flagging. 
 **Flag range** allows for defining either a value or a time range to be flagged. If you just want to flag maxima or minima
@@ -465,6 +512,10 @@ within the time series, you firstly select the component(s), label and flag ID, 
 **Flag minimum button**. Flags can either be saved within a connected data base (which I would recommend) or into a 
 data file. Flags are visualized by colored patches. Flag types to be removed for definitive data are colored in red,
 light red for automatic flags and dark red for observer decisions. Green colors indicate flags to be kept. 
+
+![4.2.0](./../../magpy/doc/xfigure420.png "The flag panel.")
+
+Figure 4.2.0: The flagging panel.
 
 Mouse operations assist the flagging methods. If you move the mouse over a flag patch, the associated information is 
 displayed in the lower text window of the flag panel. A right click with the mouse will remove the flag. If you press 
@@ -481,13 +532,15 @@ sequences.
 
 #### 4.2.1 Flag outlier
 
-Figure 4.2.2: Flag outlier selection menu
+![4.2.1](./../../magpy/doc/xfigure421.png "Flag outlier selection menu")
+
+Figure 4.2.1: Flag outlier selection menu
 
 The Flag outlier method makes use of interquartile ranges (IQR) to identify how spread-out values are within a 
 certain time window, moving along the time series. Data outside the IQR range multiplied by a certain multiplier, also
 referred to as threshold value, are identified as outliers. In statistics usually a multiplier of 1.5 is assumed. I 
 recommend larger values here. You can change time range and multipliers in a selection window when applying this method
-(Figure 4.2.2). Thresholds of 4 and window lengths of 30 to 60 seconds are typically good to identify lightning strikes
+(Figure 4.2.1). Thresholds of 4 and window lengths of 30 to 60 seconds are typically good to identify lightning strikes
 in one-second data. Thresholds of 5 and window lengths > 300 seconds are good enough to identify spikes and keep most
 natural signals in. By default a time window of 600 times the sampling rate is assumed. If marking outliers in all
 components is chosen then every outlier detected  in a single component is also marked in other components as well.
@@ -495,8 +548,6 @@ This is particularly useful for vectorial data. Outlier flags are „automatic f
 operator "MagPy". The flag comment will contain threshold (muliplier) and time window length.
 
 #### 4.2.2 Flag selection
-
-Figure 4.2.3: Flag selection menu. 
 
 In the Flag selection menu you can define the components (keys) to which this flag has to be applied. You can further
 select a general flag type, characterized by an ID. This type can be either 
@@ -513,11 +564,13 @@ don‘t use special characters here.
 
 #### 4.2.3 Flag range
 
-Figure 4.2.4: Flag range menu allows you to flag data between given boundaries either in time or amplitude.
+![4.2.3](./../../magpy/doc/xfigure423.png "Flag range menu allows you to flag data between given boundaries either in time or amplitude.")
+
+Figure 4.2.3: Flag range menu allows you to flag data between given boundaries either in time or amplitude.
 
 The Flag range method allows you to select specific boundary values. Data exceeding these boundaries are flagged. 
 Initially you have to choose between amplitude (value) or time range. When selecting value, you provide the
-component/key and threshold values.  If a time range is to be flagged, as shown in figure 4.2.4, you will have to
+component/key and threshold values.  If a time range is to be flagged, as shown in figure 4.2.3, you will have to
 provide lower and upper date and time. If you zoomed into a graph, these values are prefilled by the boundaries of the
 zooming window. 
 For both selections you have to provide label, operator, comments, flagtype, and components/keys to be flagged as described in section 4.2.3. 
@@ -527,24 +580,22 @@ For both selections you have to provide label, operator, comments, flagtype, and
 For flagging either maximum or minimum values in specific diagrams you firstly need to select the component(s) which 
 you want to flag. Before actually pressing the flag button you also should select the flag ID which should be 
 connected to your extrema flag. Default is a “removal” flag. All field found on the main panel as indicated by
-“Mark extrema” in figure 4.1.1. 
+“Mark extrema” in figure 4.2.0. 
 
 
 #### 4.2.5 Annotation and flagging info
 
-By default 
+The flags button on the analysis panel will open a flag statistics dialog (figure 4.2.5). 
 
-The flags button on the analysis panel will open a flag statistics dialog (figure 4.4.5). In case that no flags are 
-currently available, the status field (figure 3.1d) will tell you and nothing else will happen.
-Figure 4.4.5: The flag dialog opened in the analysis panel.
+![4.2.5](./../../magpy/doc/xfigure425.png "The flag dialog opened in the analysis panel. You can modify multiple flags.")
+
+Figure 4.2.5: The flag dialog opened in the analysis panel. You can modify multiple flags. 
+
 The flag dialog will provide some basic information on the flags currently stored in the sensor related flagging object.
 As shown in the example (flagging_example.json applied to example1) , 252 individual flags are currently included. 
 The flags have all been created by automatic outlier detection (aof = automatic outlier flag), which is also expressed 
 by the yellow flag annotation color. 252 flags were created using the outlier detection parameters as given in the 
-comment. Within this dialog it is also possible to modify the flagging information. Please note that this method is 
-preliminary and more sophisticated flagging tools will be available in a future version of MagPy. 
-Figure 4.4.5: Modifying flags will open this dialog.
-At present (MagPy1.0) you can change between different modification types (select, replace, delete), apply this type to either the flags key, comment, sensorid, or flagnumber. In above example we are deleting all flags for column key f.  
+comment. Within this dialog it is also possible to modify the flagging information.  
 
 
 ### 4.3 The meta panel
@@ -555,16 +606,22 @@ DataID, SensorID and/or StationID within your database, you can extend that info
 (**Get from DB**). This is useful for exporting data e.g. when converting IAGA-2002 to ImagCDF. The buttons
 **Get from DB** and **Write to DB** are only available if a DataID is provided for the data set.
 
+![4.3.0](./../../magpy/doc/xfigure430.png "The meta panel.")
+
+Figure 4.3.0: The meta panel.
+
 You can always modify or extend meta information when clicking on the buttons for data related, sensor related or 
 station related meta information. 
 
-As an example the input sheet for station related information is shown in figure 4.3.2. Here you will see several 
+As an example the input sheet for station related information is shown in figure 4.3.1. Here you will see several 
 fields which can be filled with your information. The field names are self explaining and will be automatically 
 converted to obligatory field names when exporting specific formats like IMAGCDF. Numbers in parenthesis behind some
 field names indicate that this information has to be provided for the corresponding output
 (1 → INTERMAGNET Archive Format IAF, 2 → IAGA 2002 format, 3→ ImagCDF).
 
-Figure 4.3.2: Input sheet for station related information. 
+![4.3.1](./../../magpy/doc/xfigure431.png "Input sheet for station related information.")
+
+Figure 4.3.1: Input sheet for station related information. 
 
 Please use the button **Write to DB** only if you are absolutely sure that you know what you are doing. **Write to DB**
 will replace any existing data from the database with key:value pairs you provided. This means that also empty fields
@@ -578,6 +635,10 @@ are written to the database and will replace any existing data.
 
 The analysis panel provides access to many methods which are useful for data checking and evaluation. In the following
 you will find subsections for buttons and underlying methods on the analysis panel.
+
+![4.4.0](./../../magpy/doc/xfigure440.png "The analysis panel.")
+
+Figure 4.4.0: The analysis panel.
 
 **Derivative** will calculate the derivative of all data columns diagrams shown in the plot. If you want the second
 derivative, just press the button again. The derivative method is helpful to identify strong gradients within the
@@ -602,6 +663,8 @@ will save all applied fit parameters to a json file. The Load method will obtain
 the fitting parameters to the data set. When replacing a given “enddate” within the json file by “now”, then
 datetime.utcnow() will be used whenever loading this file. 
 
+![4.4.3](./../../magpy/doc/xfigure443.png "Fitting data dialog window.")
+
 Figure 4.4.3: Fitting data dialog window. 
 
 The three methods **Maxima**, **Minima** and **Mean** will open an information dialog with the requested values. 
@@ -623,10 +686,7 @@ Please note: filter weights are always determined analytically and therefore mis
 when applying the filter window.   
 
 **Offset** allows you to define a certain offset in time or component for either the whole time series or the selected
-(zoomed) time window.  Figure 4.4.7 shows an example of an offset within a time series and the offset dialog to correct
-this offset. 
-
-Figure 4.4.7: a) time series with an offset of 10 nT for almost 12 minutes. When using the offset button, the dialog window b) will open. Here you can provide offset values which are then applied to the time series.
+(zoomed) time window.
 
 **Smooth** data sets support the same smoothing windows as the filter method. In principle smoothing does exactly the 
 same as the filter method without resampling the data set a new time stamps. Please check the filter function for
@@ -649,7 +709,7 @@ k index is solely calculated with the FMI method. Depending on the provided data
 automatically performed. The FMI method basically works with minute data resolution. If you have second resolution
 data, the filtering process is automatically performed using IAGA recommended filter options before k calculation.
 
-**Power** calculates power spectral density based on matplotlibs [PSD](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.psd.html) 
+**PSD** calculates power spectral density based on matplotlibs [PSD](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.psd.html) 
 method. You can modify the psd parameters using plot options. Please refer to the matplotib manual regarding a 
 description of the parameters. Defaults are NFFT = length of the data set, pad_to=NFFT, detrend='mean', and 
 scale_by_frequency=True. Calculated PSD's will not be part of the **memory**. If you want to go back to the original 
@@ -669,19 +729,18 @@ any more. Extensive details and a complete walkthrough with hands-on examples fo
 If you would like to apply baselines with single clicks, the go to the **main menu**, **Options** and use
 **basic options**. Here you can activate the direct application of baseline without extending the meta information first. 
 
-**Power** will plot the power spectral density based on the matplotlib psd method for the selected components. You can
-zoom etc. If you want to return to the original plot access the **Memory**. Parameters for the PSD plot can be changed
-using plot options.
-
-**Spectrum** is disabled by default as this method is currently under development. You can activate a preliminary 
-access in the options menu. Currently you can view power and spectral densities for individual components. Yet, it is
-not yet possible to access any parameters, window sizes , colors etc. This will come in a future version on MagPy.  
+**Spectrogram** is disabled by default as this method is currently under development. Please use the backend methods 
+for plotting spectrograms.
 
 ### 4.5 The DI panel
 
 The DI panel provides all necessary functions and methods to calculate basevalues and DI timeseries from basic/residual 
 DI fluxgate measurements.
  
+![4.5.0](./../../magpy/doc/xfigure450.png "The DI panel.")
+
+Figure 4.5.0: The DI panel.
+
 The upper part of the DI panel is dedicated to the definition of data sources. Firstly you need to provide access to 
 DI measurements data (DI data). Such DI data can either be located on your file system, within a MagPy database, or 
 provided by a web service. Supported data formats can be found in the basic MagPy manual. When clicking on DI data, 
@@ -719,6 +778,10 @@ txt file by using the **Save log** button.
 
 ### 4.7 The monitor panel
 
+![4.7.0](./../../magpy/doc/xfigure420.png "The monitor panel.")
+
+Figure 4.7.0: The monitor panel.
+
 The monitor panel gives you access to MagPy supported live data sources. Two data sources are
 supported. The first one is a [MARTAS](https://github.com/MARTAS) data acquisition unit which uses MQTT data 
 transmission and it is strongly recommended to read the MARTAS manual first. You can add individual MARTAS stations to
@@ -754,6 +817,17 @@ the MARTAS package on GitHUB.
 
 ### 5.1 Daily review of data and flagging
 
+- Load a data set
+- Identify disturbed data by (a) derivatives, (b) delta F 
+- Apply flags to the data set with different methods: Flag outliers for spikes, flag selection and ranges for individual
+- Option1 - no database: Save flags separately in a file
+- Alternative to option 1: save data as PYCDF which includes flagging info 
+- Option2 - database: Save flags in database
+- When multiple people are flagging, please use "operator" fields. When using multiple sensors or using MagPy also for other data sets "groups" might be useful
+
+It is recommended to use section [7.3](#73-testing-procedure-of-the-graphical-user-interface) for training of these
+procedures.
+
 ### 5.2 DI analysis and adopted baselines
 
 Here you will get a step by step example about analyzing DI measurement data, obtaining basevalues, getting adopted 
@@ -774,27 +848,36 @@ consider magnetic field variations throughout the DI measurement period. For our
 continuously recording variometer and also scalar data, as well as the pier differences between continuously recording
 instruments and the DI pier.
 
-In order to analyze DI data files we now go to the DI panel, and firstly load DI data files into the memory. You can
-get DI data from files of which MagPy Di files, AutoDIF abs data and USGS DI json structures are supported. If files
-are accessed, like example61 and example6b of the MagPy package, source information will then show “file”. You will
-need to enter a station code "WIC" as this code is not contained in the example files.  
+In order to analyze DI data files we now go to the DI panel, and firstly load DI data files into the memory by 
+clicking on *DI Data*. You can get DI data from files of which MagPy Di files, AutoDIF abs data and USGS DI json 
+structures are supported. If files are accessed, like example6a and example6b of the MagPy package (figure 5.2.0), 
+source information will then show “file”. You will need to enter a station code "WIC" as this code is not contained 
+in the example files.  
+
+![5.2.0](./../../magpy/doc/xfigure520.png "Loading example DI files for analysis.")
+
+Figure 5.2.0: Loading example DI files for analysis.
 
 Next, we will have to access variometer and scalar data for this time range. Such data is contained in
 example5.sec. You can also select a database as variometer and scaler data source, if connected. Please note
 that the DATAINFO table is essential for selecting such data and only variometer data containing XYZ or HEZ components
-are shown. Scalar data is limited to F or S notations. Finally you can also choose a webservice as data source. Please
-note that although all webservices can be selected only the USGS and Conrad webservices are currently supported
-(MagPy 2.0.0).
+are shown. Scalar data is limited to F or S notations. Finally you can also choose a webservice as data source. 
 
-Example5.sec contains variation data and independent F from the observatory. In order to consider the pier difference
+![5.2.1](./../../magpy/doc/xfigure521.png "Selecting continuous variation and scalar data.")
+
+Figure 5.2.1: Selecting continuous variation and scalar data.
+
+example5.sec contains variation data and independent F from the observatory. In order to consider the pier difference
 between F and DI pier one has to either to correct F data in advance using i.e. the offset method. Alternatively,
 you can also adopt F baselines when activating this within **Options**.
 
 For our analysis the delta F values have already been considered in the F record and other deltas are negligible.
 We can directly use the Analyze button. This will result in a plot of D,I,F and basevalues as well as a detailed
-report on the results in the Analysis Log window of the DI panel (Figure 6.2.1). 
+report on the results in the Analysis Log window of the DI panel (Figure 5.2.2). 
 
-Figure 6.2.1: After DI analysis is finished, the screen will look similar as in this figure. You can change padding
+![5.2.2](./../../magpy/doc/xfigure522.png "DI analysis results.")
+
+Figure 5.2.2: After DI analysis is finished, the screen will look similar as in this figure. You can change padding
 ranges in the graph using the plot options method of the Data panel. 
 
 Finally we export baseline and analysis data. The recommended export formats are either PYCDF or PYSTR as those will
@@ -805,31 +888,33 @@ newly created file using a text editor of your choice. You will see that all ana
 in this time series file. For further analysis we will now switch to example3.txt as this file contains such DI 
 analysis data for one year.
 
-When opening this data file you get figure 6.2.2. You will find many individual DI measurements for one year. All 
+When opening this data file you will find many individual DI measurements for one year (figure 5.2.3). All 
 these measurements are performed at a single pier (“A2”) and for analysis we used the same variometer/scalar 
 instruments, thus obtaining base values for these instruments. Please note that measurements from other piers are 
 saved in separate files.  
 
-Figure 6.2.2: Basevalues for 2018 for pier A2 using a Lemi036 variometer and a GP20S3 potassium scalar magnetometer
+![5.2.3](./../../magpy/doc/xfigure523.png "Basevalues for a full year.")
+
+Figure 5.2.3: Basevalues for 2018 for pier A2 using a Lemi036 variometer and a GP20S3 potassium scalar magnetometer
 as reference. Only measurements of s specific theodolite are shown. The gaps in May and June are related to the usage
 of various other DI instruments in preparation of an IAGA workshop. Checkout the Conrad Observatory Yearbook 2018 for
 complete data.
 
-
 Having the spot basevalues we can now continue with fitting an adopted baseline. It is obvious that a simple linear 
 fit will do a good job here. Anyway, for demonstration purposes we will use two separate fits to describe the baseline.
 
-In the fit dialog we add the first fit, a cubic spline, as shown in figure 6.2.3a. Then we add a second fit, a linear
-least-squares according to figure 6.2.3b. Please note: by default the fitting function will always be restricted to the
+In the fit dialog we add the first fit, a cubic spline. Then we add a second fit, a linear least-squares. Please note: 
+by default the fitting function will always be restricted to the
 time range defined by the first and last data point within the selected sequence. If you want to fit the full time
 range as defined in the fitting dialog you need to enable **extrapolation** which is using the duplication method (see
 section 5.8 of the main manual). If you save and want to reload such extrapolated fitting functions please make sure 
-to enable **extrapolate** before loading.
+to enable **extrapolate** before loading. Both fits will be shown in the plot (Figure 5.2.4) and also be automatically
+recognized as fits to basevalue data in MagPy’s memory. 
 
-Figure 6.2.3: Fit dialog for first and second fit.
-Both fits will be shown in the plot (Figure 6.2.4) and also be automatically recognized as fits to basevalue data in
-MagPy’s memory. 
-Figure 6.2.4: Adopted baseline.
+![5.2.4](./../../magpy/doc/xfigure524.png "Adopted baseline.")
+
+Figure 5.2.4: Adopted baseline with three different fits. A mean fit for df, cubic spline and linear least-squares for
+HDZ basevalues.
 
 If you are satisfied with that you can save a BLV file. Please note that the file name will automatically be set with
 the correct year. Now we want to use the adopted baseline for baseline correction of the variation data. Therefore 
@@ -841,28 +926,45 @@ their fitting options within the memory from the upper drop down box. You can al
 using  Change Fit. For our baseline we just use the latest (final) input in the drop down menu, telling us that this
 will use a linear-least square based on example3.txt contents for our data set.
 
-Figure 6.2.5: Baseline adoption dialog.
+![5.2.5](./../../magpy/doc/xfigure523.png "Baseline adoption dialog.")
 
-After using **Adopt baseline** an information dialog (Figure 6.2.6) will pop-up telling you that the baseline correction
+Figure 5.2.5: Baseline adoption dialog.
+
+After using **Adopt baseline** an information dialog will pop-up telling you that the baseline correction
 has been calculated. Its functional parameters are now contained in the meta information of the variation data set.
 Yet, the correction has not yet been performed. If you want you can now save your variation data set as an PYCDF
 archive which will store the functional parameters and, if available, also any flagging information currently connected
 with the data set. This way you can keep a single archive file which contains basically every data analysis step
 between raw data and definitive products. 
 
-Figure 6.2.6: Information pop-up that an adopted baseline has been calculated and added to the variation meta data.
+>[!IMPORTANT]
+>Notes on XYZ basevalues: 
+>Please note that MagPy by defaults expects basevalues for HDZ (see example3). When applying these basevalues the
+>D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy
+>basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the
+>correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt). 
 
-In order to apply baseline correction go to 
+>[!IMPORTANT]
+>Notes on F basevalues: 
+>MagPy also support the adoption of F baseline. This needs to be activated in *basic options* however.
+>If F base data is then available you can also fit such data and apply these fits as shown above. 
 
-This will apply the functional parameter and you will now have a baseline corrected record for publication. 
 
-Special cases for XYZ basevalues (since v1.0.1): 
-Please note that MagPy by defaults expects basevalues for HDZ (see example3). When applying these basevalues the
-D-base value is automatically converted to nT and applied to your variation data. Alternatively you can also use MaPy
-basevalue files with XYZ basevalues. In order to apply such data correctly, the column names need to contain the
-correct names, i.e. X-base, Y-base, Z-base instead of H-base, D-base and Z-base (as in example3.txt). 
+### 5.3 Creating INTERMAGNET/IAGA filetypes
+
+Example: You have baseline corrected variation data in 1 second resolution and continuous scalar data in 5 sec 
+resolution. From this data sets you would like to create IMAGCDF files.
+
+- open the scalar data set
+- open the variation data set covering a similar time range
+- go to memory and not the ID of the scalar data set
+- go to data -> export data
+- select IMAGCDF  and open *options*
+- there you can add the scalar data set by selecting its ID 
 
 ## 6. Additional applications
+
+to be added
 
 ## 7. Appendix
 
@@ -877,6 +979,8 @@ but dictionaries. Well.... in a major future version.
 ### 7.2 Creating desktop links
 
 #### 7.2.1 Creating a desktop link for Linux
+
+to be added 
 
 #### 7.2.2 Creating a desktop link for MacOs
 

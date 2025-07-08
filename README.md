@@ -1,21 +1,27 @@
 # MagPy
 **MagPy (or GeomagPy) is a Python package for analysing and displaying geomagnetic data.**
 
-Version Info: (please note: this package is still in a development state with frequent modifcations) please check the release notes.
+Version Info: (please note: this package is still in a development state with frequent modifications) please check the
+release notes.
 
-MagPy provides tools for geomagnetic data analysis with special focus on typical data processing routines in observatories. MagPy provides methods for data format conversion, plotting and mathematical procedures with specifically geomagnetic analysis routines such as basevalue and baseline calculation and database handling. Among the supported data formats are *ImagCDF, IAGA-02, WDC, IMF, IAF, BLV*, and many more.
-Full installation also provides a graphical user interface, *xmagpy*. You will find a complete manual for *xmagpy* in the docs.
+MagPy provides tools for geomagnetic data analysis with special focus on typical data processing routines in
+observatories. MagPy provides methods for data format conversion, plotting and mathematical procedures with 
+specifically geomagnetic analysis routines such as basevalue and baseline calculation and database handling. Among the
+supported data formats are *ImagCDF, IAGA-02, WDC, IMF, IAF, BLV*, and many more.
+Full installation also provides a graphical user interface, *XMagPy*. Please consult the separate manual for [XMagPy 
+here](./magpy/gui/README_gui.md).
 
 Typical usage of the basic MagPy package for reading and visualising data looks like this:
 
         #!/usr/bin/env python
 
         from magpy.stream import read
-        import magpy.mpplot as mp
+        from magpy.core import plot as mp
         stream = read('filename_or_url')
-        mp.plot(stream)
+        mp.tsplot(stream)
 
-Below you will find a quick guide to usage of the basic MagPy package. For instructions on *xmagpy* please refer to the document "[An introduction to XMagPy]" in the docs. You can also subscribe to our information channel at [Telegram] for further information on updates and current issues.
+Below you will find a quick guide to usage of the basic MagPy package. You can also subscribe to our information
+channel at [Telegram] for further information on updates and current issues.
 
 
 ### Table of Contents
@@ -45,20 +51,21 @@ python environments.
 
 MagPy requires Python3.7 or newer. MagPy makes use of a number of modules of which the following are 
 essential for its basic functionality: 
-numpy
-scipy
-emd : empirical mode decomposition for Sq (solar quiet) analysis and flagging
-matplotlib
+- numpy
+- scipy
+- emd : empirical mode decomposition for Sq (solar quiet) analysis and flagging
+- matplotlib
 
 Optional but recommended python modules are:
-cdflib : support of ImagCDF, the INTERMAGNET one-second format, and internal MagPy CDF archives)
-jupyter-notebook : coding
-pandas : timeseries manipulation (flagging and activity analysis)
-pymysql : mysql/mariaDB data base support
-paho-mqtt : realtime data access of MARTAS
-pysubpub :  realtime data access of MARTAS
-pywavelets : storm seek
-sklearn : AI flagging support and geomagnetic activity forcasts
+- cdflib : support of ImagCDF, the INTERMAGNET one-second format, and internal MagPy CDF archives)
+- jupyter-notebook : coding
+- pandas : timeseries manipulation (flagging and activity analysis)
+- pymysql : mysql/mariaDB data base support
+- paho-mqtt : realtime data access of [MARTAS]
+- pysubpub :  realtime data access of [MARTAS]
+- pywavelets : storm seek
+- pyproj : coordinate transformation
+- sklearn : AI flagging support and geomagnetic activity forecasts
 
 
 ### 1.2 Linux installation (Ubuntu,Debian like systems)
@@ -82,9 +89,9 @@ and install a few packages
         (magpy)$ pip install geomagpy
         (magpy)$ pip install notebook
 
-If you want to use the graphical user interface you can use the very same environment. Follow xmagpy's instructions.
+If you want to use the graphical user interface you can use the very same environment. Follow [XMagPy's instructions](./magpy/gui/README_gui.md).
 
-#### 1.2.2 Alternatively you can use anaconda/minconda environments 
+#### 1.2.2 Alternatively you can use anaconda/miniconda environments 
 
 In the following we assume a basic knowledge of linux systems and installations. 
 You need a working version of anaconda or miniconda.
@@ -93,7 +100,8 @@ You need a working version of anaconda or miniconda.
   - see e.g. https://docs.continuum.io/anaconda/install for more details
   - before continuing, test whether python is working. Open a terminal and run python
 
-Now open a terminal and create a python environment with packages for magpy which supports jupyter-notebook and includes essential packages:
+Now open a terminal and create a python environment with packages for magpy which supports jupyter-notebook and 
+includes essential packages:
 
         (base)$ conda create -n jnmagpy scipy numpy matplotlib notebook
 
@@ -164,10 +172,8 @@ Follow the instructions of 1.2.2
 
   - get the [MagPy Windows installer] here (under Downloads):
         https://cobs.geosphere.at
-  - download and execute magpy-x.x.x.exe
+  - download and execute magpy-2.x.x.exe
   - all required packages are included in the installer
-
-
 
 
   - MagPy will have a sub-folder in the Start menu. Here you will find three items:
@@ -176,13 +182,13 @@ Follow the instructions of 1.2.2
         * python  -> opens a python shell ready for MagPy
         * xmagpy  -> opens the MagPy graphical user interface
 
-  - right-click on subfolder "command" in the start menu
-  - select "run as administrator"
-  - issue the following command "pip install -U geomagpy"
-    (you can also specify the version e.g. pip install geomagpy==0.x.x)
+
+  - to update magpy right-click on subfolder "command" in the start menu
+  - depending on user/all installation eventually select "run as administrator"
+  - issue the following command "pip install geomagpy=2.x.x.". Replace 2.x.x with the newest version
 
 
-#### 1.4.2 Alternative: install without administration rights
+#### 1.4.2 Alternative: install without installer
 
 Firstly, download [WinPython](https://winpython.github.io). For the following instructions we used WinPython 3.13.2 
 from SourgeForge.
@@ -238,12 +244,11 @@ in any python 3 environment fulfilling the requirements listed in section 1. The
 1) Import package or modules and use within a python environment
 2) Run the graphical user interface xmagpy (xmagpyw for Mac)
 
-This guide will solely focus on (1). For (2) - xmagpy - we refer to the specific xmagpy manual to be found in the 
-download section of the [Conrad Observatory Webpage](https://cobs.geosphere.at).
+This guide will solely focus on (1). For (2) - xmagpy - we refer to the specific [xmagpy manual](./magpy/gui/README_gui.md)
 
 ### 2.1 Getting started with the python package
 
-Start python. At the beginnig we will need to import either specific modules or methods. The following command will
+Start python. At the beginning we will need to import either specific modules or methods. The following command will
 import all stream methods/classes and example data sets. :
 
         from magpy.stream import *
@@ -498,12 +503,12 @@ The PYCDF format allows to save basically all time series and header information
 further supports the inclusion of baseline functions, spot basevalue data and flagging information. Thus you can archive
 basically the full analysis from raw data towards definitive data within a single file structure. It is recommended to
 use this structure for archiving your data when using MagPy, as any other supported data format can be easily created 
-from this data type including all required meta informtion.
+from this data type including all required meta information.
 
 There are three further MagPy specific file types: PYASCII is a simple comma separated ascii structure without any
 header information, PYSTR is a also a comma separated ascii file including basic header information excluding functions.
 The PYBIN format is a efficient binary packed data structure containing minimal meta information, which is used as
-buffer files by MARTAS - real time data acquisition routine.
+buffer files by [MARTAS] - real time data acquisition routine.
 
 #### 3.3.2 The INTERMAGNET archive format (IAF)
 
@@ -525,9 +530,9 @@ IAF structure. You can however provide k values by using option *kvals* and an i
 
 Additionally a README.IMO file will be created and filled with existing meta information. If at least one year of 
 1-minute data is written, then also a DKA file will be created containing K values separately. Please check the
-INTERMAGNET format specifications for further details on DKA, README and IAF formats.
+[INTERMAGNET] format specifications for further details on DKA, README and IAF formats.
 
-#### 3.3.3 The INTERMAGNET CDF fromat (IMAGCDF)
+#### 3.3.3 The INTERMAGNET CDF format (IMAGCDF)
 
 The IMAGCDF format has been developed for archiving specifically one-second definitive geomagnetic data products. It
 can contain several data sets from different instruments, eventually associated to different time columns. 
@@ -556,7 +561,7 @@ like scalar or temperature readings.
 
 You can also select a specific temperature column by using "select=temperature2". When writing IMAGCDF files MagPy is 
 using np.nan as fill value for missing data. You can change that by providing a 
-different fill value using the option fillvalue:
+different fill value using the option *fillvalue*:
 
         data.write('/path/to/export/', format_type='IMAGCDF', fillvalue=99999.0)
 
@@ -620,7 +625,7 @@ are *absinfo*, *year*, *meanh*, *meanf*, *deltaF* and *diff*. See section 7.6 fo
     gin = kwargs.get('gin')
     datatype = kwargs.get('datatype')
 
-The IMF (INTERMAGNET format) is a seldom used ascii data file for one minute data products. The IMF format can be
+The IMF ([INTERMAGNET] format) is a seldom used ascii data file for one minute data products. The IMF format can be
 created from basically and data set in 1-minute resolution. Individual files cover one day. The data header of the
 IMF file contains an abbreviation of the geomagnetic information node GIN which by default is set to EDI
 (for Edinburgh). To change that use the "gin" option.
@@ -634,7 +639,7 @@ For IYFV read and write methods are not complimentary as read is used to open fu
 applied on datastreams covering single year to create single input lines form IYFV files.
 
 Although the format specification of yearly mean files is clearly defined within the [INTERMAGNET Technical Manual](https://tech-man.intermagnet.org/stable/appendices/archivedataformats.html#intermagnet-format-for-yearmean-file-iyf-v1-02)
-the existing files in the INTERMAGNET archive interpret these specifications rather flexible. Nonetheless MagPy tries
+the existing files in the [INTERMAGNET] archive interpret these specifications rather flexible. Nonetheless MagPy tries
 to read and import such data structures even if they deviate from the format description. By default only 'A' (all days)
 data is imported, considering 'J' (jumps). If you want to also include 'I' (incomplete) data in addition to 'A' then use
 option *kind*='I'. The *kind* option further supports to select 'Q' (quiet days) or 'D' (disturbed days). When reading 
@@ -1059,7 +1064,7 @@ Inversely you can drop a certain time range out of the data set by
 
         ddata = data.remove(starttime='2018-08-02T08:00:00', endtime='2018-08-02T09:00:00')
 
-Please note that the remove command removes all timesteps including the given starttime and endtime. 
+Please note that the remove command removes all timesteps including the given *starttime* and *endtime*. 
 
 Finally you can trim the given stream also by percentage or amount. This is done using the `cut` method and its
 options. By default `cut` is using percentage. The following command will cutout the last 50% of data
@@ -1067,7 +1072,7 @@ options. By default `cut` is using percentage. The following command will cutout
         cutdata = fdata.cut(50,kind=0,order=0)
         print(cutdata.timerange())
 
-Choosing option kind=1 will switch from percentage to amount and order=1 will take data from the beginning 
+Choosing option *kind*=1 will switch from percentage to amount and order=1 will take data from the beginning 
 of the data set
 
         cutdata = fdata.cut(10,kind=1,order=0)
@@ -1533,7 +1538,7 @@ with a different order
         joined_stream1 = join_streams(data2, data1)
 
 will result in a combination as shown in Figure ![5.10.3](./magpy/doc/ms_join2.png "Joined streams in order data2, then data1"). 
-`join_streams` has no further options.
+You might want to add a comment by adding option *comment* to the `join_streams` method.
 
 #### 5.10.2 merge
 
@@ -1631,7 +1636,7 @@ Some details on specific labels are discussed later in this manual.
 |  021    | geomagnetic storm |  2 |
 |  022    | crochete | 2 |
 |  030    | earthquake | 1 |
-|  050    | vehicle passing above | 1 |
+|  050    | vehicle passing | 1 |
 |  051    | nearby disturbing source | 1 |
 |  052    | train | 1 |
 |  090    | unknown disturbance |  1 |
@@ -2779,7 +2784,7 @@ this estimate for Sq determination. baseline_type='joint' will use both apporach
 The emd python module is used to determine IMF's from any given input signal. For the following example we are
 analyzing 3 months of definitive h data containing various different disturbances from weak geomagnetic storms. Each
 decomposition step, "sift" is removing complexity from the original data curve. The original data is show in the upper
-diagram of Figure ![8.1.](./magpy/doc/sqbase-emd.png "Emperical mode decomposition") Altogether 16 sifts were found containing decreasing
+diagram of Figure ![8.1.](./magpy/doc/sqbase-emd.png "Empirical mode decomposition") Altogether 16 sifts were found containing decreasing
 complex signal contributions. Summing up all these IMF curves will exactly reconstruct the original data, another
 important feature of EMD.In order to get comparable amount of sifts with similar frequency contents for different
 data selections you will need to supply 131500 minutes, corresponding to 3 months of geomagnetic data. This time range
@@ -2811,7 +2816,7 @@ Full application of this technique in MagPy is as follows:
 
 For this approach we assume that any Sq signal is fully contained within the periodic oscillations that are present in
 our IMF's. In order to analyze these oscillations we follow the approach which is described [here](https://emd.readthedocs.io/en/stable/emd_tutorials/03_cycle_ananlysis/index.html) in detail. 
-For each IMF we are examining cyclicity and distinguish between good and bad cycles. A good cycle is charcterized by 
+For each IMF we are examining cyclicity and distinguish between good and bad cycles. A good cycle is characterized by 
 
 a) A strictly positively increasing phase, 
 b) A phase starting within phase_step of zero i.e. the lowest value of the instantaneous phase (IP) must be less than phase_step
@@ -2821,17 +2826,21 @@ d) A set of 4 unique control points (ascending zero, peak, descending zero & tro
 An example for IMF-9, which contains the most prominent diurnal signal is shown in Figure ![8.3.](./magpy/doc/sqbase-imf9-cycles.png) 
 Cycles not satisfying above criteria are termed "bad" cycles and are masked from the Sq approximation.
 
-Starting with IMF-6 (period 3h) we are then determining a median of the average linear waveforms of identified "good" cycles, by 
-running a gliding window of +/- 13 cycles across the investigated timeseries. In order to fill remaining gaps and smooth transitions between individual median cycles, the median cycle IMF is fitted by a cubic spline function with
-knots at each data point and using zero weights for non-existing data. The 13-cycle range is related to the dominating diurnal period, for which waveforms
-of -13 days + current day + 13 days = 27 days are considered. 27 days correspond to the solar rotation period, containing recurrent solar effects. 
-Median IMF-10 and IMF-11 curves are calculated for 13 cycles (covering 27 days for IMF-10). 
-For IMF's above 12 (period exceeding 8 days) we are using a simply linear fit of available data, as the average approximated length is significantly below the cycle frequency.
+Starting with IMF-6 (period 3h) we are then determining a median of the average linear waveforms of identified "good" 
+cycles, by running a gliding window of +/- 13 cycles across the investigated timeseries. In order to fill remaining 
+gaps and smooth transitions between individual median cycles, the median cycle IMF is fitted by a cubic spline function
+with knots at each data point and using zero weights for non-existing data. The 13-cycle range is related to the 
+dominating diurnal period, for which waveforms of -13 days + current day + 13 days = 27 days are considered. 27 days 
+correspond to the solar rotation period, containing recurrent solar effects. Median IMF-10 and IMF-11 curves are 
+calculated for 13 cycles (covering 27 days for IMF-10). For IMF's above 12 (period exceeding 8 days) we are using a 
+simply linear fit of available data, as the average approximated length is significantly below the cycle frequency.
 
-We obtain a running median waveform considering oscillation of the individual IMF's from IMF-6 onwards. Hereby we also excluded HF signal contributions by limiting to 
-IMF-6 and larger. The Sq baseline will be a sum of individual median oscillations signals identified within the decomposed signal. Unlike the frequency technique above, 
-this method will likely better estimate Sq variations during disturbed periods affecting hours/days. During quiet periods, however, a frequency related method
-is likely superior as such methods will remove any non-solar driven multi-day variation (i.e neutral atmosphere, see day2day variability in Haberle et al).
+We obtain a running median waveform considering oscillation of the individual IMF's from IMF-6 onwards. Hereby we also
+excluded HF signal contributions by limiting to IMF-6 and larger. The Sq baseline will be a sum of individual median
+oscillations signals identified within the decomposed signal. Unlike the frequency technique above, this method will
+likely better estimate Sq variations during disturbed periods affecting hours/days. During quiet periods, however, a 
+frequency related method is likely superior as such methods will remove any non-solar driven multi-day variation
+(i.e neutral atmosphere, see day2day variability in [Haberle et al](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2024SW004048)).
 
 >[!IMPORTANT]
 > Correct application of the cyclicity analysis requires at least 1 month of one-minute data
@@ -2847,33 +2856,40 @@ Full application of the median Sq technique in MagPy is as follows:
 
 The problem of purly frequency based baseline separation is, that during disturbed time of the geomagnetic field 
 also longer periods of the geomagnetic field are affected with large amplitudes. A CME for example will affect the 
-geomagnetic field for hours to days and thus is not adequately considered using a simple frequency based Sq determination technique.
-Low-frequency "periodicities" clearly affected by disturbed time ranges will still be contained and assumed to represent Sq variations.
+geomagnetic field for hours to days and thus is not adequately considered using a simple frequency based Sq 
+determination technique. Low-frequency "periodicities" clearly affected by disturbed time ranges will still be 
+contained and assumed to represent Sq variations.
 
-For a many applications we are primarily interested in detecting significant features of the geomagnetic field of natural and artificial origin. 
-CME effects and an optimal description of onset, amplitude and duration certainly belong to these features. Therefore
-the "solar quiet" reference baseline, containing untested features should not be biased by features which we are interested in.  
+For a many applications we are primarily interested in detecting significant features of the geomagnetic field of 
+natural and artificial origin. CME effects and an optimal description of onset, amplitude and duration certainly belong
+to these features. Therefore the "solar quiet" reference baseline, containing untested features should not be biased by
+features which we are interested in.  
 
-To deal with such effects two approaches are used so far, at least to our knowledge, the method of [SuperMag](), which is not easily reproducible, and the [Haberle]() method. 
-Please consider the publication of Veronika Haberele as this approach, comprises the reasoning behind the technique described here, although 
-application, theory and methods of MagPy are different.
+To deal with such effects two approaches are used so far, at least to our knowledge, the method of [SuperMag](https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2012JA017683), which
+is not easily reproducible, and the [Haberle](https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2024SW004048) method. Please consider the publication of Veronika Haberele as this 
+approach, comprises the reasoning behind the technique described here, although application, theory and methods of 
+MagPy are different.
 
-In principle we are using two characteristics of IMF's in order to identify clearly disturbed time ranges, for which a standard baseline approximation as shown above is not precise.
-Firstly we are examining the amplitude variation of an IMF with periods just above the lower Sq period range. Hereby we assume that larger amplitudes are 
-connected to disturbances related to solar effects, but still well above the period range of eventually undetected artificial disturbing sources. This is a perfectly valid 
-assumption as shown in Fig. 4 (original signal with flags of CME from the CME database).
-Based on a statistical standard procedure, we assume time ranges 
-(plus-minus a period range) of any IMF-6 amplitude variation data exceeding the upper limit of the inner-quartile range by IQR*1.5 as being disturbed. This approach can be applied 
-to any data set independent from location.
+In principle we are using two characteristics of IMF's in order to identify clearly disturbed time ranges, for which
+a standard baseline approximation as shown above is not precise. Firstly we are examining the amplitude variation of an
+IMF with periods just above the lower Sq period range. Hereby we assume that larger amplitudes are connected to 
+disturbances related to solar effects, but still well above the period range of eventually undetected artificial 
+disturbing sources. This is a perfectly valid assumption as shown in Fig. 4 (original signal with flags of CME from the
+CME database). Based on a statistical standard procedure, we assume time ranges(plus-minus a period range) of any IMF-6
+amplitude variation data exceeding the upper limit of the inner-quartile range by IQR*1.5 as being disturbed. This 
+approach can be applied to any data set independent from location.
 
-Secondly, we analyze the cyclicity of the diurnal signal, which is obviously the most prominent period, and also might be affected by solar effects on the ionospheric current system. For this 
-purpose we are analyzing the phase signal of IMF-9 as shown above. Cycles not satisfying above mentioned criteria are termed "bad" cycles and are also removed from the frequency related Sq approximation.
-In combination, these two methods will lead to an identification of time ranges for which a simple frequency based
-Sq determination technique does presumably not hold. A joint Sq baseline will assume that the median baseline will represent Sq variations better during such disturbed periods. 
+Secondly, we analyze the cyclicity of the diurnal signal, which is obviously the most prominent period, and also might 
+be affected by solar effects on the ionospheric current system. For this purpose we are analyzing the phase signal of
+IMF-9 as shown above. Cycles not satisfying above mentioned criteria are termed "bad" cycles and are also removed from
+the frequency related Sq approximation. In combination, these two methods will lead to an identification of time 
+ranges for which a simple frequency based Sq determination technique does presumably not hold. A joint Sq baseline will
+assume that the median baseline will represent Sq variations better during such disturbed periods. 
 
-Thus, the joint procedure will determine gaps as described above. in a next step a weighting function will be determined with linear transitions between EMD Sq and median Sq curves. 
-The weighting function for the median Sq curve is shown in Figure ![8.4.](./magpy/doc/sqbase-joint.png) The weighting function of the EMD Sq baseline corresponds to the inverse. 
-The window length for the gradual shift from EMD to Median curve is arbitrarily chosen to 12 hours and can be changed by options. 
+Thus, the joint procedure will determine gaps as described above. in a next step a weighting function will be 
+determined with linear transitions between EMD Sq and median Sq curves. The weighting function for the median Sq curve
+is shown in Figure ![8.4.](./magpy/doc/sqbase-joint.png) The weighting function of the EMD Sq baseline corresponds to the inverse. The window 
+length for the gradual shift from EMD to Median curve is arbitrarily chosen to 12 hours and can be changed by options. 
 All three Sq curve approximations are shown in th lower plot.
 
 
@@ -3022,10 +3038,10 @@ Let us change the header information of the data set and then update only the da
 
          db.update_datainfo('Test_0001_0001_0001', data.header)
 
-Delete contents - the following call delete everything except the last day of data. The option samplingrateratio can 
+Delete contents - the following call delete everything except the last day of data. The option *samplingrateratio* can 
 be used to delete  data in dependency of the sampling rate i.e. samplingrateratio=12 will delete everything older 
 then 12 days with sampling period 1 sec and everything older the 60*12 = 720 days for sampling periods 60 sec. 
-Together with archive functions and optimze sql routines this method is useful to keep the database slim and quick for 
+Together with archive functions and optimize sql routines this method is useful to keep the database slim and quick for 
 recent data
 
          db.delete('Test_0001_0001_0001', timerange=1)
@@ -3036,12 +3052,12 @@ If you want to delete the data base completely use mysql commands
 
 Working with flagging information is also supported by the database class. There are three methods which can be
 used to store and read flags from databases. An existing flagging object can be stored in the database using the
-following command assuming you flags are contained in variable *fl*
+following command assuming you flags are contained in variable 'fl'
 
         db.flags_to_db(fl)
 
-Reading flags from the database is done similar. Possible options are starttime, endtime, sensorid, comment, key and
-flagtype:
+Reading flags from the database is done similar. Possible options are *starttime*, *endtime*, *sensorid*, *comment*, 
+*key* and *flagtype*:
 
         flnew = db.flags_from_db()
 
@@ -3079,19 +3095,18 @@ structures of other python packages and work with their functionality.
 
 #### 10.1.1 pandas support
 
-[Pandas]() is a ...
+[Pandas]() see conversion module
 
 #### 10.1.2 ObsPy support
 
-[ObsPy]() ...
+[ObsPy]() see conversion module
 
 
 ### 10.2 Testing data validity before submissions to IM and IAGA
 
 A common and important application used in the geomagnetism community is a general validity check of geomagnetic data 
-to be submitted to the official data repositories [IAGA], WDC, or [INTERMAGNET]. Please note: this is currently under
-development and will be extended in the near future. A 'one-click' test method will be included in xmagpy in the
-future, checking:
+to be submitted to the official data repositories [IAGA], WDC, or [INTERMAGNET]. A 'one-click' test method is included
+in xmagpy. Please consult the [XMagPy manual](./magpy/gui/README_gui.md).
 
 
 ### 10.3 The art of meta-information
@@ -3150,6 +3165,11 @@ if you forget this. Please check IMAGCDF instructions on specific codes:
 
         mydata.header['DataStandardLevel'] = 'Partial'
         mydata.header['DataPartialStandDesc'] = 'IMOS-01,IMOS-02,IMOS-03,IMOS-04,IMOS-05,IMOS-06,IMOS-11,IMOS-12,IMOS-13,IMOS-14,IMOS-15,IMOS-21,IMOS-22,IMOS-31,IMOS-41'
+
+Adding flagging information into IMAGCDF, which is experimental and not yet officially supported by [INTERMAGNET]:
+
+        if mydata.header.get('DataFlags'):
+            mydata.write('/tmp',format_type='IMAGCDF', addflags=True)
 
 
 Similar reminders to fill out complete header information will be shown for other conversions like:
@@ -3556,6 +3576,8 @@ removed:
 
 ### A7 - core/conversion.py - all methods, overview with runtime and verification tests
 
+to be continued 
+
 ### A8 - core/methods.py - all methods, overview with runtime and verification tests
 
 |class | method | since version | until version | runtime test | result verification | manual | *tested by |
@@ -3600,6 +3622,8 @@ removed:
 
 ### A10 - other modules - all methods, overview with runtime and verification tests
 
+to be added
+
 ### A11 - The json structure of flagging information
 
 ```
@@ -3624,7 +3648,83 @@ removed:
 }
 ```
 
-### A12 - Updating an existing MagPy1.x database to be compatible with MagPy2.x
+### A12 - Format of MagPy DI files
+
+A MagPy Do data file contains the following blocks. The header block at which each line starts with *#*. Possible 
+fields are listed below.
+
+The Miren block:
+The azimuth data block following the *Miren:* headline. The azimuth/miren block requires 8 input values which 
+typically refer to the following measurements: The first four values are determined (1) before D measurement: two 
+sensor up and two sensor down measurements. The last four values are determined (2) after the D measurement: two 
+sensor up and two sensor down measurements. 
+
+The Positions block:
+This block has to contain 17 inputs. The first 8 are related to the 4 Positions of D measurements for up to two 
+repeated measurements are supported for each position. The order of the input values is East Up, West Up, East Down, 
+West Down, the three data columns contain horizontal angle, vertical angle and residual. If you are not using the 
+residual method, a 0.0 value is required for the residual. If you are not repeatedly measure each position, each
+second line should be a copy of the measurement data. 
+The next 8 positions are related to the inclination measurement, again with two optional measurements for each position.
+The order of positions is North Up, South Down, North Down, South Up. 
+The last line, number 17, refers to a scale test and is typically a single additional step following your last 
+measurement (South Up) with a small angular deviation producing a residual of 100-200 nT. This step is used to 
+determine the scale value of the fluxgate probe and should be performed when using the residual technique. If not
+used please just copy the South Up data in here.
+
+The PPM block:
+Please use this block solely for scalar measurements before or after the DI measurement on the very SAME pier as the DI
+measurement. 
+
+The Results block:
+Deprecated since a while and not used any more. Should be empty.
+
+XMagPy provides an input sheet which will create MagPy DI data files. The input sheet can be modified and amount of 
+measurements and order of positions can be changed to fit your personal procedure. The DI data file however is 
+always structured as described above.
+
+```
+# Abs-Observer: Musterfrau
+# Abs-Theodolite: T010B_160391_072011
+# Abs-TheoUnit: deg
+# Abs-FGSensor: MAG01H_504-0911H_032016
+# Abs-AzimuthMark: 180.1372
+# Abs-Pillar: A2
+# Abs-Scalar: GSM19_12345
+# Abs-Temperature: 7.8C
+# Abs-InputDate: 2018-08-29
+# Abs-Notes: add some comments 
+Miren:
+155.8175  155.81833333333  335.81972222222  335.82027777778  155.81861111111  155.81888888889  335.82  335.81972222222
+Positions:
+2018-08-29_07:42:00  250.18777777778  90  0.2
+2018-08-29_07:42:30  250.18777777778  90  0.7
+2018-08-29_07:44:00  69.847777777778  90  0.7
+2018-08-29_07:44:30  69.847777777778  90  1.0
+2018-08-29_07:46:00  69.885555555556  270  -0.1
+2018-08-29_07:46:30  69.885555555556  270  -0.4
+2018-08-29_07:48:00  250.17111111111  270  0.0
+2018-08-29_07:48:30  250.17111111111  270  0.0
+2018-08-29_07:55:00  0  64.2875  0.0
+2018-08-29_07:55:30  0  64.2875  -0.7
+2018-08-29_07:57:00  0  244.30083333333  -0.3
+2018-08-29_07:57:30  0  244.30083333333  -0.7
+2018-08-29_07:59:30  180  295.56138888889  -1.6
+2018-08-29_08:00:00  180  295.56138888889  -1.3
+2018-08-29_08:01:30  180  115.54777777778  -0.4
+2018-08-29_08:02:00  180  115.54777777778  -0.5
+2018-08-29_08:03:00  180  115.71444444444  140.9
+PPM:
+2018-08-29_08:20:00  48578.12
+2018-08-29_08:21:00  48578.52
+Result:
+```
+
+In a future version an additional file format will be added which allows more flexibility i.e. more repeated 
+measurements, and better descriptions within the data file. Further pending DI updates: support of Mingeo Digital
+Station.
+
+### A13 - Updating an existing MagPy1.x database to be compatible with MagPy2.x
 
 - MagPy2.x uses datetime columns for times
 - MagPy2.x changed the flagging contents based on new ID assignments
@@ -3633,6 +3733,8 @@ removed:
 
 MagPy2.x can read all previous contents. In order to add new data it is necessary to update the database tables for 
 supporting the new data types.
+
+### References
 
    [magpy-git]: <https://github.com/geomagpy/magpy>
    [magpy_win]: <http://www.conrad-observatory.at>
@@ -3650,7 +3752,6 @@ supporting the new data types.
    [Docker]: <https://www.docker.com/>
    [CDF]: <https://cdf.gsfc.nasa.gov/>
    [ObsPy]: <https://github.com/obspy/obspy>
-   [Nagios]: <https://www.nagios.org/>
+   [Nagios]: p<https://www.nagios.org/>
    [Telegram]: <https://t.me/geomagpy>
    [MagPy Windows installer]: <https://cobs.zamg.ac.at/data/index.php/en/downloads/category/1-magnetism>
-   [An introduction to XMagPy]: <https://github.com/geomagpy/magpy/blob/master/magpy/doc/xmagpy-manual.pdf>

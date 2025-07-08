@@ -5958,7 +5958,7 @@ class MainFrame(wx.Frame):
         DESCRIPTION
              Calculates Power spectrum of one component
         """
-        self.changeStatusbar("Power spectrum ...")
+        self.changeStatusbar("Power spectral density ...")
 
         sharey = False
         self.plot_p.power_plot(self.active_id, self.datadict, self.plotdict, sharey=sharey)
@@ -5967,9 +5967,9 @@ class MainFrame(wx.Frame):
     def analysis_onSpectrumButton(self, event):
         """
         DESCRIPTION
-             Calculates Power spectrum of one component
+             Calculates of spectrogram
         """
-        self.changeStatusbar("Spectral plot ...")
+        self.changeStatusbar("Spectrogram ...")
         self.plot_p.spec_plot(self.active_id, self.datadict, self.plotdict)
 
 
