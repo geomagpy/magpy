@@ -1,7 +1,7 @@
-FROM debian:buster
+FROM debian:bookworm
 
-MAINTAINER Roman Leonhardt <roman.leonhardt@zamg.ac.at>
-LABEL geomagpy.magpy.version=1.0.4
+MAINTAINER Roman Leonhardt <roman.leonhardt@geosphere.at>
+LABEL geomagpy.magpy.version=2.0.0
 
 # update os
 RUN apt-get update --fix-missing && \
@@ -25,7 +25,7 @@ RUN echo 'export PATH=/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
 
 # install packages and dependencies via conda
 RUN conda --version  && \
-    conda install --yes jupyter scipy matplotlib  && \
+    conda install --yes wxpython jupyter scipy matplotlib  && \
     conda clean -i -t -y
 
 RUN useradd \
