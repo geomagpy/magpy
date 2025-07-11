@@ -286,15 +286,26 @@ SUPPORTED_FORMATS = {
 #  Part 3: Example files for easy access and tests
 # ----------------------------------------------------------------------------
 
-from pkg_resources import resource_filename
-example1 = resource_filename('magpy', 'examples/example1.zip')  #Zip compressed IAGA02
-example2 = resource_filename('magpy', 'examples/example2.cdf')  #MagPy CDF with F
-example3 = resource_filename('magpy', 'examples/example3.txt')  #PyStr Baseline
-example4 = resource_filename('magpy', 'examples/example4.cdf')  #MagPy CDF
-example5 = resource_filename('magpy', 'examples/example5.sec')  #Imag CDF
-example6a = resource_filename('magpy', 'examples/example6a.txt')  #DI file
-example6b = resource_filename('magpy', 'examples/example6b.txt')  #DI file
-example7 = resource_filename('magpy', 'examples/example7.blv')  #IBFV2.0 file
+# New for python 3.7 onwards, required for python3.13 onwards
+import importlib.resources as importlib_resources
+example1 = "{}".format(importlib_resources.files('magpy') / 'examples/example1.zip')  #Zip compressed IAGA02
+example2 = "{}".format(importlib_resources.files('magpy') / 'examples/example2.cdf')  #MagPy CDF with F
+example3 = "{}".format(importlib_resources.files('magpy') / 'examples/example3.txt')  #PyStr Baseline
+example4 = "{}".format(importlib_resources.files('magpy') / 'examples/example4.cdf')  #MagPy CDF
+example5 = "{}".format(importlib_resources.files('magpy') / 'examples/example5.sec')  #
+example6a = "{}".format(importlib_resources.files('magpy') / 'examples/example6a.txt')  #DI file
+example6b = "{}".format(importlib_resources.files('magpy') / 'examples/example6b.txt')  #DI file
+example7 = "{}".format(importlib_resources.files('magpy') / 'examples/example7.blv')  #IBFV2.0 file
+
+#from pkg_resources import resource_filename
+#example1 = resource_filename('magpy', 'examples/example1.zip')  #Zip compressed IAGA02
+#example2 = resource_filename('magpy', 'examples/example2.cdf')  #MagPy CDF with F
+#example3 = resource_filename('magpy', 'examples/example3.txt')  #PyStr Baseline
+#example4 = resource_filename('magpy', 'examples/example4.cdf')  #MagPy CDF
+#example5 = resource_filename('magpy', 'examples/example5.sec')  #Imag CDF
+#example6a = resource_filename('magpy', 'examples/example6a.txt')  #DI file
+#example6b = resource_filename('magpy', 'examples/example6b.txt')  #DI file
+#example7 = resource_filename('magpy', 'examples/example7.blv')  #IBFV2.0 file
 
 # ----------------------------------------------------------------------------
 #  Part 4: Main classes -- DataStream, LineStruct and
