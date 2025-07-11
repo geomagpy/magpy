@@ -3847,7 +3847,7 @@ class MainFrame(wx.Frame):
         info.SetVersion(__version__)
         info.SetDescription(description)
         info.SetCopyright(
-            '(C) 2011 - 2022 Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec, Stephan Bracke, Niko Kompein')
+            '(C) since 2011 - Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremy Fee, Heather Schovanec, Stephan Bracke, Niko Kompein')
         info.SetWebSite('https://cobs.geosphere.at')
         info.SetLicence(licence)
         info.AddDeveloper(
