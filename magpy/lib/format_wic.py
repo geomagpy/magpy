@@ -321,13 +321,13 @@ def readUSBLOG(filename, headonly=False, **kwargs):
             if elem[1] == 'Time':
                 el2 = elem[2].split('(')
                 test = el2[1]
-                headers['unit-col-t1'] = "\circ C" #unicode(el2[1].strip(')'),errors='ignore')
+                headers['unit-col-t1'] = "deg C" #unicode(el2[1].strip(')'),errors='ignore')
                 headers['col-t1'] = 'T'
                 el3 = elem[3].split('(')
                 headers['unit-col-var1'] = "percent" #unicode(el3[1].strip(')'),errors='ignore')
                 headers['col-var1'] = 'RH'
                 el4 = elem[4].split('(')
-                headers['unit-col-t2'] = "\circ C" #unicode(el4[1].strip(')'),errors='ignore')
+                headers['unit-col-t2'] = "deg C" #unicode(el4[1].strip(')'),errors='ignore')
                 headers['col-t2'] = 'T(dew)'
             elif len(elem) == 6 and not elem[1] == 'Time':
                 headers['SensorSerialNum'] = '%s' % elem[5]

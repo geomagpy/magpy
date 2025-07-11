@@ -97,8 +97,8 @@ class Table:
       (N,2), it is treated as a value with uncertainty and the uncertainty
       will be rounded to [sigfigs] and value will be rounded accordingly,
       and both will be printed with parenthetical errors.  If a label is
-      given, it will be printed in the table with \cutinhead if labeltype
-      is 'cutin' or \sidehead if labeltype is 'side'.'''
+      given, it will be printed in the table with cutinhead if labeltype
+      is 'cutin' or sidehead if labeltype is 'side'.'''
 
       if type(data) is not list:
          raise ValueError("data should be a list")

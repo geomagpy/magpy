@@ -31,6 +31,6 @@ setup(
     description='Geomagnetic analysis tools.',
     long_description=open('README.md', encoding="utf8").read(),
     long_description_content_type='text/markdown',
-    package_data={'magpy': ['gui/*.png','gui/*.xpm','gui/*.jpg','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt','examples/*.sec','doc/*.png','doc/*.ipynb']},
+    package_data={'magpy': ['gui/*.png','gui/*.xpm','gui/*.jpg','examples/*.cdf','examples/*.json','examples/*.zip','examples/*.txt','examples/*.blv','examples/*.sec','doc/*.png','doc/*.ipynb']},
     install_requires=install_requires,
 )
