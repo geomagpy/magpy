@@ -24,6 +24,6 @@ authors:
   orcid: ""
 title: "MagPy – Analyzing and displaying geomagnetic data"
 version: 2.0.0
-doi: 10.5281/zenodo.14028651
-date-released: 2025-07-08
+doi: 10.5281/zenodo.15861613
+date-released: 2025-07-11
 url: "https://github.com/geomagpy/magpy"
