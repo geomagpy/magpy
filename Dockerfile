@@ -25,7 +25,7 @@ RUN echo 'export PATH=/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
 
 # install packages and dependencies via conda
 RUN conda --version  && \
-    conda install --yes wxpython jupyter scipy matplotlib  && \
+    conda install --yes  jupyter scipy matplotlib  && \
     conda clean -i -t -y
 
 RUN useradd \

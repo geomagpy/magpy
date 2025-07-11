@@ -230,11 +230,14 @@ And then run
      - run python shell (not conda)
      - in python shell
 
-            >>> %matplotlib inline
             >>> from magpy.stream import read
-            >>> import magpy.mpplot as mp
+            >>> from magpy.core import plot as mp
+            >>> import matplotlib.pyplot as plt
+            >>> %matplotlib inline
+
             >>> data = read(example1)
-            >>> mp.plot(data)
+            >>> mp.tsplot(data)
+            >>> plt.show()
 
 
 ## 2. A quick guide to MagPy
