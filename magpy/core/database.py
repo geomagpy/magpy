@@ -2145,7 +2145,7 @@ REMOVED:
             - tablename:    name of the table
             - lines:        (int) amount of lines to extract
         APPLICATION:
-            data = dbgetlines(db, 'DATA_0001_0001', 3600)
+            data = db.get_lines('DATA_0001_0001', 3600)
             returns a data stream object
         """
         cursor = self.db.cursor()
