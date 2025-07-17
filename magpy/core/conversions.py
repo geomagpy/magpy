@@ -138,6 +138,22 @@ def pandas2magpy(dataframe,sensorid="RADONWBV_9500_0001", columns=[], units=[], 
     return st
 
 
+def magpy2pandas(stream):
+    """
+    DESCRIPTION
+        Converts magpy data stream to pandas dataframe
+    """
+    import pandas as pd
+    d = {}
+    for key in stream.KEYLIST:
+        col = stream._get_column(key)
+        colname = stream.header.get('col-{}'.format(key), key)
+        if len(col) > 0:
+            d[colname] = col
+    dataset = pd.DataFrame(d)
+    return dataset
+
+
 if __name__ == '__main__':
     print()
     print("----------------------------------------------------------")
