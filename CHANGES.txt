@@ -1,6 +1,15 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
+####v<2.0.1>, <2025-08-xx> --
+
+2.0.1 fixes:
+    - pkg_ressources: moved to importlib for python3.12 and later
+
+2.0.1 additions:
+    - added magpy2pandas method in conversion module
+
+
 ####v<2.0.0>, <2025-07-08> --
 
 2.0.0 general:
