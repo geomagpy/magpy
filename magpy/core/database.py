@@ -813,6 +813,7 @@ REMOVED:
         # Create station table input
         headstr = ' CHAR(100), '.join(self.SENSORSKEYLIST) + ' CHAR(100)'
         headstr = headstr.replace('SensorID CHAR(100)', 'SensorID CHAR(50) NOT NULL PRIMARY KEY')
+        headstr = headstr.replace('SensorElements CHAR(100)', 'SensorElements CHAR(200)')
         headstr = headstr.replace('SensorDescription CHAR(100)', 'SensorDescription TEXT')
         createsensortablesql = "CREATE TABLE IF NOT EXISTS SENSORS (%s)" % headstr
 
