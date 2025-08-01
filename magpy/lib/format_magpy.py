@@ -372,173 +372,174 @@ def readPYBIN(filename, headonly=False, **kwargs):
         if debug:
             print ("readPYBIN: {} Format: PYBIN".format(filename))
 
-        fh = open(filename, 'rb')
-        #fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
-        #infile = open(filename, 'r', encoding='utf-8', newline='')
-        # read header line and extract packing format
-        header = fh.readline()
-        header = header.decode('utf-8')
-        # some cleaning actions for false header inputs
-        header = header.replace(', ',',')
-        header = header.replace('deg C','deg')
-        h_elem = header.strip().split()
-        logger.debug("PYBIN: Header {}".format(header))
-        if debug:
-            print ("PYBIN: Header {}".format(header))
-
-        logger.debug('readPYBIN- debug header type (len should be 9): {}, {}'.format(h_elem, len(h_elem)))
-        if debug:
-            print ('readPYBIN: debug header type (len should be 9): {}, {}'.format(h_elem, len(h_elem)))
-
-        if not h_elem[1] == 'MagPyBin':
-            logger.error('readPYBIN: No MagPyBin format - aborting')
-            return
-        #print "Length ", len(h_elem), h_elem[2]
-
-        #Test whether element 3,4,5 (and 6) are lists of equal length
-        if len(h_elem) == 8:
-            stream.header['DataFormat'] = 'MagPy-BIN-v1.0'
-            nospecial = True
-            try:
-                if not keylist:
-                    logger.error('readPYBIN: keylist of length(elemlist) needs to be specified')
-                    return stream
-                elemlist = h_elem[3].strip('[').strip(']').split(',')
-                unitlist = h_elem[4].strip('[').strip(']').split(',')
-                multilist = list(map(float,h_elem[5].strip('[').strip(']').split(',')))
-            except:
-                logger.error("readPYBIN: Could not extract lists from header - check format - aborting...")
-                return stream
-            if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
-                logger.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
-                return stream
-        elif len(h_elem) == 9:
-            stream.header['DataFormat'] = 'MagPy-BIN-v1.1'
-            nospecial = True
-            try:
-                keylist = h_elem[3].strip('[').strip(']').split(',')
-                elemlist = h_elem[4].strip('[').strip(']').split(',')
-                unitlist = h_elem[5].strip('[').strip(']').split(',')
-                multilist = list(map(float,h_elem[6].strip('[').strip(']').split(',')))
-            except:
-                logger.error("readPYBIN: Could not extract lists from header - check format - aborting...")
-                return stream
-            if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
-                if debug:
-                    print('readPYBIN- header list error:', len(keylist), len(elemlist), len(unitlist), len(multilist))
-                logger.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
-                return stream
-        elif len(h_elem) == 10:
-            stream.header['DataFormat'] = 'MagPy-BIN-v1.S'
-            logger.info("readPYBIN: Special format detected. May not be able to read file.")
-            nospecial = False
-            if h_elem[2][:5] == 'ENV05' or h_elem[2] == 'Env05':
-                keylist = h_elem[3].strip('[').strip(']').split(',')
-                elemlist = h_elem[4].strip('[').strip(']').split(',')
-                unitlist = h_elem[5].strip('[').strip(']').split(',')
-                multilist = list(map(float,h_elem[7].strip('[').strip(']').split(',')))
-                nospecial = True
-        else:
-            logger.error('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
-            if debug:
-                print ('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
-            return stream
-
-        logger.debug('readPYBIN: checking code')
-        if debug:
-            print ("readPYBIN: checking code: {}".format(len(h_elem)))
-
-        packstr = '<'+h_elem[-2]+'B'
-        #packstr = packstr.encode('ascii','ignore')
-        lengthcode = struct.calcsize(packstr)
-        lengthgiven = int(h_elem[-1])+1
-        length = lengthgiven
-        if not lengthcode == lengthgiven:
-            logger.warning("readPYBIN: Giving bit length of packing code ({}) and actual length ({}) differ - Check your packing code!".format(lengthcode,length))
-            if lengthcode < lengthgiven:
-                missings = lengthgiven-lengthcode
-                for i in range(missings):
-                    packstr += 'B'
-                    length = lengthgiven
-            else:
-                length = lengthcode
-
-        packstr = packstr.encode('ascii','ignore')
-
-        logger.debug('readPYBIN: unpack info: {}, {}, {}'.format(packstr, lengthcode, lengthgiven))
-        if debug:
-            print ('readPYBIN: unpack info: {}, {}, {}'.format(packstr, lengthcode, lengthgiven))
-
         #fh = open(filename, 'rb')
-        line = fh.read(length)
-        stream.header['SensorID'] = h_elem[2]
-        stream.header['SensorElements'] = ','.join(elemlist)
-        stream.header['SensorKeys'] = ','.join(keylist)
-        lenel = len([el for el in elemlist if el in KEYLIST]) # If elemlist and Keylist are disorderd
-        lenke = len([el for el in keylist if el in KEYLIST])
-        if lenel > lenke:
-            keylist = elemlist
+        with open(filename, 'rb') as fh:
+            #fh = open(filename, 'r', encoding='utf-8', newline='', errors='ignore')
+            #infile = open(filename, 'r', encoding='utf-8', newline='')
+            # read header line and extract packing format
+            header = fh.readline()
+            header = header.decode('utf-8')
+            # some cleaning actions for false header inputs
+            header = header.replace(', ',',')
+            header = header.replace('deg C','deg')
+            h_elem = header.strip().split()
+            logger.debug("PYBIN: Header {}".format(header))
+            if debug:
+                print ("PYBIN: Header {}".format(header))
 
-        array = [[] for key in KEYLIST]
-        if nospecial:
-            logger.debug('readPYBIN- debug found line')
+            logger.debug('readPYBIN- debug header type (len should be 9): {}, {}'.format(h_elem, len(h_elem)))
+            if debug:
+                print ('readPYBIN: debug header type (len should be 9): {}, {}'.format(h_elem, len(h_elem)))
 
-            for idx, elem in enumerate(keylist):
-                stream.header['col-'+elem] = elemlist[idx]
-                stream.header['unit-col-'+elem] = unitlist[idx]
-                # Header info
-                pass
-            while not len(line) == 0:
-                lastdata = 'None'
-                data = 'None'
+            if not h_elem[1] == 'MagPyBin':
+                logger.error('readPYBIN: No MagPyBin format - aborting')
+                return
+            #print "Length ", len(h_elem), h_elem[2]
+
+            #Test whether element 3,4,5 (and 6) are lists of equal length
+            if len(h_elem) == 8:
+                stream.header['DataFormat'] = 'MagPy-BIN-v1.0'
+                nospecial = True
                 try:
-                    data= struct.unpack(packstr, line)
+                    if not keylist:
+                        logger.error('readPYBIN: keylist of length(elemlist) needs to be specified')
+                        return stream
+                    elemlist = h_elem[3].strip('[').strip(']').split(',')
+                    unitlist = h_elem[4].strip('[').strip(']').split(',')
+                    multilist = list(map(float,h_elem[5].strip('[').strip(']').split(',')))
                 except:
-                    logger.error("readPYBIN: struct error {} {}".format(filename, len(line)))
+                    logger.error("readPYBIN: Could not extract lists from header - check format - aborting...")
+                    return stream
+                if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
+                    logger.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
+                    return stream
+            elif len(h_elem) == 9:
+                stream.header['DataFormat'] = 'MagPy-BIN-v1.1'
+                nospecial = True
+                try:
+                    keylist = h_elem[3].strip('[').strip(']').split(',')
+                    elemlist = h_elem[4].strip('[').strip(']').split(',')
+                    unitlist = h_elem[5].strip('[').strip(']').split(',')
+                    multilist = list(map(float,h_elem[6].strip('[').strip(']').split(',')))
+                except:
+                    logger.error("readPYBIN: Could not extract lists from header - check format - aborting...")
+                    return stream
+                if not len(keylist) == len(elemlist) or not len(keylist) == len(unitlist) or not  len(keylist) == len(multilist):
                     if debug:
-                        print ("readPYBIN: struct error {} {}".format(filename, len(line)))
-                try:
-                    time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
-                    array[0].append(testtime(time))
-                    # check elemlist and keylist
-                    for idx, elem in enumerate(keylist):
-                        try:
-                            index = KEYLIST.index(elem)
-                            if not elem.endswith('time'):
-                                if elem in NUMKEYLIST:
-                                    array[index].append(data[idx+7]/float(multilist[idx]))
+                        print('readPYBIN- header list error:', len(keylist), len(elemlist), len(unitlist), len(multilist))
+                    logger.error("readPYBIN: Provided lists from header of differenet lengths - check format - aborting...")
+                    return stream
+            elif len(h_elem) == 10:
+                stream.header['DataFormat'] = 'MagPy-BIN-v1.S'
+                logger.info("readPYBIN: Special format detected. May not be able to read file.")
+                nospecial = False
+                if h_elem[2][:5] == 'ENV05' or h_elem[2] == 'Env05':
+                    keylist = h_elem[3].strip('[').strip(']').split(',')
+                    elemlist = h_elem[4].strip('[').strip(']').split(',')
+                    unitlist = h_elem[5].strip('[').strip(']').split(',')
+                    multilist = list(map(float,h_elem[7].strip('[').strip(']').split(',')))
+                    nospecial = True
+            else:
+                logger.error('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
+                if debug:
+                    print ('readPYBIN: No valid MagPyBin format, inadequate header length - aborting')
+                return stream
+
+            logger.debug('readPYBIN: checking code')
+            if debug:
+                print ("readPYBIN: checking code: {}".format(len(h_elem)))
+
+            packstr = '<'+h_elem[-2]+'B'
+            #packstr = packstr.encode('ascii','ignore')
+            lengthcode = struct.calcsize(packstr)
+            lengthgiven = int(h_elem[-1])+1
+            length = lengthgiven
+            if not lengthcode == lengthgiven:
+                logger.warning("readPYBIN: Giving bit length of packing code ({}) and actual length ({}) differ - Check your packing code!".format(lengthcode,length))
+                if lengthcode < lengthgiven:
+                    missings = lengthgiven-lengthcode
+                    for i in range(missings):
+                        packstr += 'B'
+                        length = lengthgiven
+                else:
+                    length = lengthcode
+
+            packstr = packstr.encode('ascii','ignore')
+
+            logger.debug('readPYBIN: unpack info: {}, {}, {}'.format(packstr, lengthcode, lengthgiven))
+            if debug:
+                print ('readPYBIN: unpack info: {}, {}, {}'.format(packstr, lengthcode, lengthgiven))
+
+            #fh = open(filename, 'rb')
+            line = fh.read(length)
+            stream.header['SensorID'] = h_elem[2]
+            stream.header['SensorElements'] = ','.join(elemlist)
+            stream.header['SensorKeys'] = ','.join(keylist)
+            lenel = len([el for el in elemlist if el in KEYLIST]) # If elemlist and Keylist are disorderd
+            lenke = len([el for el in keylist if el in KEYLIST])
+            if lenel > lenke:
+                keylist = elemlist
+
+            array = [[] for key in KEYLIST]
+            if nospecial:
+                logger.debug('readPYBIN- debug found line')
+
+                for idx, elem in enumerate(keylist):
+                    stream.header['col-'+elem] = elemlist[idx]
+                    stream.header['unit-col-'+elem] = unitlist[idx]
+                    # Header info
+                    pass
+                while not len(line) == 0:
+                    lastdata = 'None'
+                    data = 'None'
+                    try:
+                        data= struct.unpack(packstr, line)
+                    except:
+                        logger.error("readPYBIN: struct error {} {}".format(filename, len(line)))
+                        if debug:
+                            print ("readPYBIN: struct error {} {}".format(filename, len(line)))
+                    try:
+                        time = datetime(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
+                        array[0].append(testtime(time))
+                        # check elemlist and keylist
+                        for idx, elem in enumerate(keylist):
+                            try:
+                                index = KEYLIST.index(elem)
+                                if not elem.endswith('time'):
+                                    if elem in NUMKEYLIST:
+                                        array[index].append(data[idx+7]/float(multilist[idx]))
+                                    else:
+                                        array[index].append(data[idx+7])
                                 else:
-                                    array[index].append(data[idx+7])
-                            else:
-                                try:
-                                    sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
-                                    array[index].append(testtime(sectime))
-                                except:
-                                    pass
-                        except:
-                            if elem.endswith('time'):
-                                try:
-                                    sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
-                                    index = KEYLIST.index('sectime')
-                                    array[index].append(testtime(sectime))
-                                except:
-                                    pass
-                    if logbaddata == True:
-                        logger.error("readPYBIN: Good data resumes with: %s" % str(data))
-                        logbaddata = False
-                except:
-                    logger.error("readPYBIN: Error in line while reading data file. Last line at: %s" % str(lastdata))
-                    logbaddata = True
-                lastdata = data
-                line = fh.read(length)
-        else:
-            print("Not implemented")
-            pass
+                                    try:
+                                        sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
+                                        array[index].append(testtime(sectime))
+                                    except:
+                                        pass
+                            except:
+                                if elem.endswith('time'):
+                                    try:
+                                        sectime = datetime(data[idx+7],data[idx+8],data[idx+9],data[idx+10],data[idx+11],data[idx+12],data[idx+13])
+                                        index = KEYLIST.index('sectime')
+                                        array[index].append(testtime(sectime))
+                                    except:
+                                        pass
+                        if logbaddata == True:
+                            logger.error("readPYBIN: Good data resumes with: %s" % str(data))
+                            logbaddata = False
+                    except:
+                        logger.error("readPYBIN: Error in line while reading data file. Last line at: %s" % str(lastdata))
+                        logbaddata = True
+                    lastdata = data
+                    line = fh.read(length)
+            else:
+                print("Not implemented")
+                pass
 
-        if debug:
-            print ('readPYBIN: array: {}'.format(len(array)))
+            if debug:
+                print ('readPYBIN: array: {}'.format(len(array)))
 
-        array = [np.asarray(el,dtype=object) for el in array]
+            array = [np.asarray(el,dtype=object) for el in array]
 
     stream.header["DataFormat"] = "PYBIN"
 
