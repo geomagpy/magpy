@@ -2183,6 +2183,7 @@ REMOVED:
 
         header = self.fields_to_dict(tablename)
         stream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+        cursor.close()
 
         return stream.sorting()
 
@@ -2225,6 +2226,7 @@ REMOVED:
             d = string2dict(row)
         else:
             d = json.loads(row)
+        cursor.close()
 
         deltadir = d.get(rp,{})
         if deltadir:
@@ -2262,8 +2264,10 @@ REMOVED:
         row = cursor.fetchone()
         try:
             fl = float(row[0])
+            cursor.close()
             return fl
         except:
+            cursor.close()
             return row[0]
 
 

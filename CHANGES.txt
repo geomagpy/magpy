@@ -4,7 +4,8 @@ Installation instructions can be found on the main download page.
 ####v<2.0.1>, <2025-08-xx> --
 
 2.0.1 fixes:
-    - pkg_ressources: moved to importlib for python3.12 and later
+    - pkg_ressources: switched to importlib for python3.12 and later
+    - closing file after opening MARTAS buffer
 
 2.0.1 additions:
     - added magpy2pandas method in conversion module
