@@ -3779,7 +3779,7 @@ CALLED BY:
 
         if basecomp in ["HDZ","hdz"]:
             self.header['DataComponents'] = 'HDZ'
-            self.header['ColumnComponents'], self.header['ColumnUnits'] = populate_columncontents(self.header)
+            self.header['ColumnContents'], self.header['ColumnUnits'] = populate_columncontents(self.header)
         return DataStream(header=self.header,ndarray=np.asarray(array, dtype=object))
 
 
