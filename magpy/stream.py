@@ -3711,6 +3711,32 @@ CALLED BY:
         used by stream.baseline
 
         """
+
+        def populate_columncontents(header):
+            """
+            DESCRIPTION
+                create strings for ColumnContents and ColumnUnits from col- and unit-col- fields
+            USED
+                in stream.simplebaseline and database.dict_to_fields
+            :param header:
+            :return:
+            """
+            cols = [[key.replace('col-', ''), header.get(key)] for key in header if key.startswith('col-')]
+            units = [[key.replace('unit-col-', ''), header.get(key)] for key in header if
+                     key.startswith('unit-col-')]
+            collst, unitlst = [], []
+            for el in self.KEYLIST[1:]:
+                adderc, adderu = '', ''
+                for col in cols:
+                    if col[0] == el:
+                        adderc = col[1]
+                for unit in units:
+                    if unit[0] == el:
+                        adderu = unit[1]
+                collst.append(adderc)
+                unitlst.append(adderu)
+            return ",".join(collst), ",".join(unitlst)
+
         mode = kwargs.get('mode')
         keys = ['x','y','z']
 
@@ -3739,9 +3765,10 @@ CALLED BY:
             if key in keys: # new
                 if key == 'x' and basecomp in ["HDZ","hdz"]:
                     array[ind] = np.sqrt((arrayx + basevalue[keys.index(key)])**2 + arrayy**2)
+                    self.header['col-x'] = 'H'
                 elif key == 'y' and basecomp in ["HDZ","hdz"]:
                     array[ind] = np.arctan2(arrayy, (arrayx + basevalue[0])) * 180. / np.pi + basevalue[keys.index(key)]
-                    self.header['col-y'] = 'd'
+                    self.header['col-y'] = 'D'
                     self.header['unit-col-y'] = 'deg'
                 else:
                     # will also be used if basevalues are not HDZ
@@ -3752,6 +3779,7 @@ CALLED BY:
 
         if basecomp in ["HDZ","hdz"]:
             self.header['DataComponents'] = 'HDZ'
+            self.header['ColumnComponents'], self.header['ColumnUnits'] = populate_columncontents(self.header)
         return DataStream(header=self.header,ndarray=np.asarray(array, dtype=object))
 
 

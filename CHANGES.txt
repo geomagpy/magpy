@@ -6,6 +6,8 @@ Installation instructions can be found on the main download page.
 2.0.1 fixes:
     - pkg_ressources: switched to importlib for python3.12 and later
     - closing file after opening MARTAS buffer
+    - closing db.cursor in get_lines and get_pier
+    - corrected return component names of simplebaseline method
 
 2.0.1 additions:
     - added magpy2pandas method in conversion module
