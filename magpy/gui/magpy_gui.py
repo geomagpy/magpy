@@ -3853,7 +3853,7 @@ class MainFrame(wx.Frame):
         info.AddDeveloper(
             'Roman Leonhardt, Rachel Bailey, Mojca Miklavec, Jeremey Fee, Heather Schovanec, Stephan Bracke, Niko Kompein')
         info.AddDocWriter('Leonhardt')
-        info.AddArtist('Leonhardt')
+        info.AddArtist('Leonhardt, Heumez (logo)')
         info.AddTranslator('Bailey')
 
         wxAboutBox(info)
