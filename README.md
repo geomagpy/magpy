@@ -230,7 +230,7 @@ And then run
      - run python shell (not conda)
      - in python shell
 
-            >>> from magpy.stream import read
+            >>> from magpy.stream import read, example1
             >>> from magpy.core import plot as mp
             >>> import matplotlib.pyplot as plt
             >>> %matplotlib inline
