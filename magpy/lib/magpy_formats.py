@@ -70,6 +70,7 @@ from magpy.lib.format_noaa import *
 from magpy.lib.format_nc import isNETCDF, readNETCDF
 from magpy.lib.format_latex import *
 from magpy.lib.format_covjson import *
+from magpy.lib.format_igets import *
 #from magpy.lib.format_json import *
 
 # IMPORT OBSERVATORY/GROUP SPECIFIC FORMATS:
@@ -171,6 +172,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "TSF"):  # Data from the iGrav and SG gravity system
         if (isTSF(filename)):
+            return True
+    elif (format_type == "GGP"):  # Data from IGETS
+        if (isGGP(filename)):
             return True
     elif (format_type == "IWT"): # Data from the Conrad Observatory tiltmeter system
         if (isIWT(filename)):
@@ -381,6 +385,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readUSBLOG(filename, headonly, **kwargs)
     elif (format_type == "TSF"):
         return readTSF(filename, headonly, **kwargs)
+    elif (format_type == "GGP"):
+        return readGGP(filename, headonly, **kwargs)
     elif (format_type == "IWT"):
         return readIWT(filename, headonly, **kwargs)
     elif (format_type == "LIPPGRAV"):
@@ -470,6 +476,8 @@ def writeFormat(datastream, filename, format_type, **kwargs):
         return writeCR800(datastream, filename, **kwargs)
     elif (format_type == "CSV"):
         return writeCSV(datastream, filename, **kwargs)
+    elif (format_type == "GGP"):
+        return writeGGP(datastream, filename, **kwargs)
     elif (format_type == "LATEX"):
         return writeLATEX(datastream, filename, **kwargs)
     else:

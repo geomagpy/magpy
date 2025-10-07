@@ -246,6 +246,7 @@ SUPPORTED_FORMATS = {
                 'IWT':['r', 'IWT Tiltmeter data'],
                 'LIPPGRAV':['r', 'Lippmann Tiltmeter data'],
                 'TSF':['r', 'iGrav and GWR TSF data - new'],
+                'GGP':['rw', 'GGP format for IGETS - new'],
                 'CR800':['r', 'CR800 datalogger'],
                 'IONO':['r', 'IM806 Ionometer'],
                 'RADON':['r', 'single channel analyser gamma data'],
@@ -6371,6 +6372,8 @@ CALLED BY:
                     ndarray = np.asarray([])
                 newst = DataStream(lst,self.header,ndarray)
                 filename = filenamebegins + datetime.strftime(starttime,dateformat) + filenameends
+                if format_type=='GGP':
+                    filename = filenamebegins + filenameends
                 # remove any eventually existing null byte
                 filename = filename.replace('\x00','')
                 if len(lst) > 0 or len(ndarray[0]) > 0:
@@ -6379,7 +6382,7 @@ CALLED BY:
                         writepath = os.path.join(filepath, str(diryear), filename)
                     elif subdirectory == 'Ym':
                         writepath = os.path.join(filepath, str(diryear), str(dirmonth).zfill(2), filename)
-                    success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,scalar=scalar,temperature1=temperature1,temperature2=temperature2,ebug=debug)
+                    success = writeFormat(newst, writepath,format_type,mode=mode,keys=keys,kvals=kvals,skipcompression=skipcompression,compression=compression, addflags=addflags,fillvalue=fillvalue,scalar=scalar,temperature1=temperature1,temperature2=temperature2,debug=debug)
                 starttime = endtime
                 # get next endtime
                 cmonth = int(datetime.strftime(starttime,'%m')) + 1
