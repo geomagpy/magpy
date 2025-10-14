@@ -229,6 +229,7 @@ SUPPORTED_FORMATS = {
                 'DIDD':['rw','Output format from MinGeo DIDD'],
                 'GSM19':['r', 'Output format from GSM19 magnetometer'],
                 'GFZINDEXJSON':['r', 'JSON structure for indicies (i.e. Kp) at GFZ webservice'],
+                'ISGI':['r', 'ISGI JSON geomagnetic index data'],
                 'COVJSON':['rw', 'Coverage JSON'],
                 'LEMIHF':['r', 'LEMI text format data'],
                 'LEMIBIN':['r','Current LEMI binary data format'],
