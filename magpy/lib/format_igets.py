@@ -387,7 +387,7 @@ def writeGGP(datastream, filename, **kwargs):
     # gaps checking and filling
     # datastream.get_gaps obtains the major sampling frequency, fills up the time column and adds nan values
     final_stream = datastream.copy()
-    final_stream = final_stream.get_gaps()
+    final_stream = final_stream.get_gaps(debug=True)
     # replace nan with igets fillvalue
     colx = final_stream._get_column('x')
     colx = np.nan_to_num(colx, nan=fillval)
@@ -434,18 +434,18 @@ if __name__ == '__main__':
     #    and written to a temporary folder by the respective methods. Afterwards it is
     #    reloaded and compared to the original data set
     c = 1000  # 1000 nan values are filled at random places to get some significant data gaps
-    l = 86400*30+2000
+    l = 86400*1+2000
     array = [[] for el in DataStream().KEYLIST]
     win = scipy.signal.windows.hann(60)
-    a = np.random.uniform(2950, 2100, size=int(l/2))
-    b = np.random.uniform(2950, 2150, size=int(l/2))
+    a = np.random.uniform(10, 120, size=int(l/2))
+    b = np.random.uniform(250, 270, size=int(l/2))
     x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
-    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    #x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
     array[1] = x[1000:-1000]
-    a = np.random.uniform(1950, 2000, size=int(l/2))
-    b = np.random.uniform(1900, 2050, size=int(l/2))
+    a = np.random.uniform(195, 260, size=int(l/2))
+    b = np.random.uniform(10, 250, size=int(l/2))
     y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
-    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    #y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
     array[2] = y[1000:-1000]
     array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(seconds=i) for i in range(0, len(array[1]))])
     # 2. Creating artificial header information
@@ -463,6 +463,11 @@ if __name__ == '__main__':
     header['StationName'] = 'Holmes'
 
     teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+    # testing minutedata
+    teststream = teststream.filter()
+    astream = teststream.trim(starttime=datetime(2022, 11, 1), endtime=datetime(2022, 11, 1,1))
+    bstream = teststream.trim(starttime=datetime(2022, 11, 1, 2), endtime=teststream.end())
+    teststream = join_streams(astream,bstream)
 
     print (len(teststream), teststream.timerange())
 
@@ -505,7 +510,7 @@ if __name__ == '__main__':
     print()
     print("----------------------------------------------------------")
     del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
-    subprocess.call(del_test_files,shell=True)
+    #subprocess.call(del_test_files,shell=True)
     for item in successes:
         print ("{} :     {}".format(item, successes.get(item)))
     if errors == {}:
