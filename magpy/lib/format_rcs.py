@@ -37,6 +37,7 @@ import numpy as np
 
 from magpy.stream import DataStream
 from magpy.stream import *
+from magpy.core.methods import testtime
 # TODO irgendwann integrieren
 from magpy.lib.format_rcs_lib import *
 # TODO was ist das?

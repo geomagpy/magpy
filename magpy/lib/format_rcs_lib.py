@@ -1,5 +1,5 @@
 
-from datetime import *
+from datetime import datetime, timezone, timedelta
 import os
 
 def compare_signal(a,b,headers):
@@ -95,7 +95,7 @@ def get_max_range(time,configlist,headers):
             # if no difference try younger configlist, skip erroneous file
             valid_until = un
             s = s_younger
-        if datetime.utcnow() - valid_until < timedelta(seconds=50):
+        if datetime.now(timezone.utc) - valid_until < timedelta(seconds=50):  #.replace(tzinfo=None)
             break
 
     fr, un, s = getini(valid_from,configlist,headers)
@@ -119,7 +119,7 @@ def getini(time,configlist,headers):
     idx = len(configlist)
     oldest_idx_remembered = None
     last_idx = None
-    valid_until = datetime.utcnow()
+    valid_until = datetime.now(timezone.utc)
     while idx > 0:
         idx = idx - 1
         try:
@@ -203,6 +203,8 @@ def readIniFile(config_filename,headers):
         debug = False
     getAllSignals = headers.get('getAllSignals')
     signaldict = {}
+    sig = {}
+
     ini = open(os.path.join(inidir,config_filename),'r',encoding='windows-1252')
     status = 'start'
     fileOK = True
