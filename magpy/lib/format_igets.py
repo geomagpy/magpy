@@ -1,5 +1,8 @@
+
 import sys
-import calendar
+sys.path.insert(1,'/home/leon/Software/magpy/') # for romans local testrun
+import sys
+import calendar # might be removed
 from magpy.stream import DataStream, read, magpyversion, join_streams, subtract_streams, merge_streams
 from magpy.core.methods import testtime, convert_geo_coordinate, extract_date_from_string
 import os
@@ -154,7 +157,7 @@ def read_eterna_time(tt):
     """
     h,m,s='00','00','00'
     if len(tt)==0:
-        return false
+        return False
     if len(tt)<=2:
         s=tt
     if len(tt)<=4 and len(tt)>2:
@@ -181,20 +184,25 @@ def write_enterna_date(dd):
     if isinstance(dd, datetime):
         return dd.strftime('%Y%m%d') + ' ' + remove_leading_zeros( dd.strftime('%H%M%S') )
 
-def replace_nan(s, v, keys=[]):
+def replace_nan(s, v, keys=None):
     """
     Replace numpy nans with desired value.
     """
+    if not keys:
+        keys = []
     for key in keys:
-        arr_float = s[key].astype(float)
-        arr_clean = np.nan_to_num(arr_float, nan=v)
-        #s[key]=np.array(arr_clean, dtype=object)
-        s[key]=arr_clean
+        arr = s._get_column(key)
+        if len(arr) > 0:
+            arr_float = arr.astype(float)
+            arr_clean = np.nan_to_num(arr_float, nan=v)
+            #s[key]=np.array(arr_clean, dtype=object)
+            s[key]=arr_clean
     return s
 
-def writeGGP(datastream, filename, **kwargs):
 
-    """
+def writeGGP_patrick(datastream, filename, **kwargs):
+
+    """"
     Writing GGP data format (IGETS/ETERNA).
     """
     debug = kwargs.get('debug')
@@ -291,8 +299,226 @@ def writeGGP(datastream, filename, **kwargs):
     myFile.close()
 
 
+def writeGGP(datastream, filename, **kwargs):
+    """
+    DESCRIPTION
+         Writing GGP data format (IGETS/ETERNA).
+    VARIABLES:
+         datastream : MagPy DataStream
+         filename : A full path, the filename should look like "xxx-xxx-xxx"
+    """
+    # For speed checking
+    ti1 = datetime.now()
+    ti2, ti3 = None, None
+    debug = kwargs.get('debug')
+    mode = kwargs.get('mode')
+    fillval = kwargs.get('fillvalue')
+    if fillval == None:
+        fillval = 999.999999
+    t0, t1, delta = None, None, None
+
+    if debug:
+        print(datastream.header)
+        # print( datastream.length()[0] )
+        # print( sys.version_info )
+
+    def OpenFile(filename, mode='w'):
+        if sys.version_info >= (3, 0, 0):
+            f = open(filename, mode, newline='')
+        else:
+            f = open(filename, mode + 'b')
+        return f
+
+    if os.path.isfile(filename):
+        if mode == 'skip':  # skip existing inputs
+            exst = read(path_or_url=filename)
+            datastream = join_streams(exst, datastream, extend=True)
+            myFile = OpenFile(filename)
+        elif mode == 'replace':  # replace existing inputs
+            exst = read(path_or_url=filename)
+            datastream = join_streams(datastream, exst, extend=True)
+            myFile = OpenFile(filename)
+        elif mode == 'append':
+            myFile = OpenFile(filename, mode='a')
+        else:  # overwrite mode
+            # os.remove(filename)  ?? necessary ??
+            myFile = OpenFile(filename)
+    else:
+        myFile = OpenFile(filename)
+
+    # header
+    wlist = []
+    wlist.append('Filename'.ljust(20) + ': ' + os.path.basename(filename).ljust(30) + '\n')
+    wlist.append('Station'.ljust(20) + ': ' + (
+                datastream.header.get('StationName', '') + ', ' + datastream.header.get('StationCountry', '')).ljust(
+        30) + '\n')
+    wlist.append('Instrument'.ljust(20) + ': ' + datastream.header.get('SensorID', '').ljust(30) + '\n')
+    wlist.append('N. Latitude (deg)'.ljust(20) + ': ' + datastream.header.get('StationLatitude', '').ljust(30) + '\n')
+    wlist.append('E. Longitude (deg)'.ljust(20) + ': ' + datastream.header.get('StationLongitude', '').ljust(30) + '\n')
+    wlist.append('Elevation MSL (m)'.ljust(20) + ': ' + datastream.header.get('StationElevation', '').ljust(30) + '\n')
+    wlist.append('Author'.ljust(20) + ': ' + datastream.header.get('StationEmail', '').ljust(30) + '\n')
+    wlist.append('\n')
+    # wlist.append('yyyymmdd hhmmss gravity(V) pressure(V)')
+    wlist.append('yyyymmdd hhmmss gravity(V) pressure(mBar)\n')
+    wlist.append('C***********************************\n')
+
+    # check for data gaps and add missing
+    # dts=filename.split('-')[2]
+    # year, month = int(filename.split('-')[4][:4]), int(filename.split('-')[4][4:6])
+    dts = 'SEC'
+    year, month = 2020, 5
+    # Get the last day of each month without an additional module
+    dt = datetime(year, month, 1)
+    last_day = (dt.replace(month=dt.month % 12 + 1, day=1) - timedelta(days=1)).day
+
+    if dts == 'MIN':
+        t0 = datetime(year, month, 1, 0, 0)
+        t1 = datetime(year, month, last_day, 23, 59)
+        delta = timedelta(minutes=1)
+    elif dts == 'SEC':
+        t0 = datetime(year, month, 1, 0, 0, 0)
+        t1 = datetime(year, month, last_day, 23, 59, 59)
+        delta = timedelta(seconds=1)
+    times = []
+    current = t0
+    while current <= t1:
+        times.append(current)
+        current += delta
+    # gaps checking and filling
+    # datastream.get_gaps obtains the major sampling frequency, fills up the time column and adds nan values
+    final_stream = datastream.copy()
+    final_stream = final_stream.get_gaps()
+    # replace nan with igets fillvalue
+    colx = final_stream._get_column('x')
+    colx = np.nan_to_num(colx, nan=fillval)
+    coly = final_stream._get_column('y')
+    coly = np.nan_to_num(coly, nan=fillval)
+    tc = final_stream._get_column('time')
+
+    if debug:
+        ti2 = datetime.now()
+        print("Preparations need {} sec".format((ti2 - ti1).total_seconds()))
+
+    # convert times
+    tcnew = [write_enterna_date(el) for el in tc]
+    # construct array and extract time column and convert to new format
+    for jj in range(len(tcnew)):
+        line = "{} {:10.6f} {:10.6f}\n".format(tcnew[jj], colx[jj], coly[jj])
+        wlist.append(line)
+
+    # if debug:
+    #     print('Writing file')
+    wlist.append('88888888')
+    # it should be much faster to setup the string first and then just call write once
+    myFile.write("".join(wlist))
+    myFile.close()
+
+    if debug:
+        ti3 = datetime.now()
+        print("Writing needs {} sec".format((ti3 - ti2).total_seconds()))
+
 if __name__ == '__main__':
 
+    import scipy
+    import subprocess
+    print()
+    print("----------------------------------------------------------")
     print("TESTING: IGETS/ETERNA FORMAT LIBRARY")
+    print("All main methods will be tested. This may take a while.")
+    print("A summary will be presented at the end. Any protocols")
+    print("or functions with errors will be listed.")
+    print("----------------------------------------------------------")
+    print()
+    # 1. Creating a test data set of second resolution and 1 month length
+    #    This testdata set will then be transformed into appropriate output formats
+    #    and written to a temporary folder by the respective methods. Afterwards it is
+    #    reloaded and compared to the original data set
+    c = 1000  # 1000 nan values are filled at random places to get some significant data gaps
+    l = 86400*30+2000
+    array = [[] for el in DataStream().KEYLIST]
+    win = scipy.signal.windows.hann(60)
+    a = np.random.uniform(2950, 2100, size=int(l/2))
+    b = np.random.uniform(2950, 2150, size=int(l/2))
+    x = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    x.ravel()[np.random.choice(x.size, c, replace=False)] = np.nan
+    array[1] = x[1000:-1000]
+    a = np.random.uniform(1950, 2000, size=int(l/2))
+    b = np.random.uniform(1900, 2050, size=int(l/2))
+    y = scipy.signal.convolve(np.concatenate([a, b], axis=0), win, mode='same') / sum(win)
+    y.ravel()[np.random.choice(y.size, c, replace=False)] = np.nan
+    array[2] = y[1000:-1000]
+    array[0] = np.asarray([datetime(2022, 11, 1) + timedelta(seconds=i) for i in range(0, len(array[1]))])
+    # 2. Creating artificial header information
+    header = {}
+    header['DataSamplingRate'] = 1
+    header['SensorID'] = 'Test_0001_0002'
+    header['StationIAGAcode'] = 'XXX'
+    header['DataAcquisitionLatitude'] = 48.123
+    header['DataAcquisitionLongitude'] = 15.999
+    header['DataElevation'] = 1090
+    header['DataComponents'] = 'XYZS'
+    header['StationInstitution'] = 'TheWatsonObservatory'
+    header['DataDigitalSampling'] = '1 Hz'
+    header['DataSensorOrientation'] = 'HEZ'
+    header['StationName'] = 'Holmes'
+
+    teststream = DataStream(header=header, ndarray=np.asarray(array, dtype=object))
+
+    print (len(teststream), teststream.timerange())
+
+    errors = {}
+    successes = {}
+    testrun = 'IGETSTESTFILE'
+    t_start_test = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    while True:
+        testset = 'IGRAV'
+        try:
+            filename = os.path.join('/tmp','{}_{}_{}'.format(testrun, testset, datetime.strftime(t_start_test,'%Y%m%d-%H%M')))
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+            succ1 = writeGGP(teststream, filename, debug=True)
+            succ2 = isGGP(filename)
+            dat = readGGP(filename)
+            """
+            # validity tests
+            diff = subtract_streams(teststream, dat, debug=True)
+            xm = diff.mean('x')
+            ym = diff.mean('y')
+            zm = diff.mean('z')
+            fm = diff.mean('f')
+            if np.abs(xm) > 0.00001 or np.abs(ym) > 0.00001 or np.abs(zm) > 0.00001 or np.abs(fm) > 0.00001:
+                 raise Exception("ERROR within data validity test")
+            """
+            te = datetime.now(timezone.utc).replace(tzinfo=None)
+            successes[testset] = (
+                "Version: {}, {}: {}".format(magpyversion, testset, (te - ts).total_seconds()))
+        except Exception as excep:
+            errors[testset] = str(excep)
+            print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR in library {}.".format(testset))
+
+        break
+
+    t_end_test = datetime.now(timezone.utc).replace(tzinfo=None)
+    time_taken = t_end_test - t_start_test
+    print(datetime.now(timezone.utc).replace(tzinfo=None), "- Stream testing completed in {} s. Results below.".format(time_taken.total_seconds()))
+
+    print()
+    print("----------------------------------------------------------")
+    del_test_files = 'rm {}*'.format(os.path.join('/tmp',testrun))
+    subprocess.call(del_test_files,shell=True)
+    for item in successes:
+        print ("{} :     {}".format(item, successes.get(item)))
+    if errors == {}:
+        print("0 errors! Great! :)")
+    else:
+        print(len(errors), "errors were found in the following functions:")
+        print(" {}".format(errors.keys()))
+        print()
+        for item in errors:
+                print(item + " error string:")
+                print("    " + errors.get(item))
+    print()
+    print("Good-bye!")
+    print("----------------------------------------------------------")
 
 
