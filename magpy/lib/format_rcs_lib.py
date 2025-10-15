@@ -95,9 +95,8 @@ def get_max_range(time,configlist,headers):
             # if no difference try younger configlist, skip erroneous file
             valid_until = un
             s = s_younger
-        if datetime.now(timezone.utc) - valid_until < timedelta(seconds=50):  #.replace(tzinfo=None)
+        if datetime.now(timezone.utc).replace(tzinfo=None) - valid_until < timedelta(seconds=50):
             break
-
     fr, un, s = getini(valid_from,configlist,headers)
     return valid_from, valid_until, s
 
@@ -119,7 +118,7 @@ def getini(time,configlist,headers):
     idx = len(configlist)
     oldest_idx_remembered = None
     last_idx = None
-    valid_until = datetime.now(timezone.utc)
+    valid_until = datetime.now(timezone.utc).replace(tzinfo=None)
     while idx > 0:
         idx = idx - 1
         try:

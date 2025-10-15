@@ -40,9 +40,6 @@ from magpy.stream import *
 from magpy.core.methods import testtime
 # TODO irgendwann integrieren
 from magpy.lib.format_rcs_lib import *
-# TODO was ist das?
-# RCS header information is located in seperate files so this import: 
-#from magpy.lib.getRCSheader import *
 import os
 from io import open
 import logging
@@ -279,7 +276,7 @@ def readRCS(filename, headonly=False, **kwargs):
     elif 'end' in kwargs:
         endtime = kwargs.get('end')
     else:
-        endtime = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
+        endtime = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S').replace(tzinfo=None)
     try:
         # string to datetime
         endtime = testtime(endtime)
@@ -365,11 +362,9 @@ def readRCS(filename, headonly=False, **kwargs):
 
     # main loop
     time = starttime
-    #try:
-    if True:
+    try:
         valid_from, valid_until, signaldict = get_max_range(time,configlist,headers)
-    else:
-    #except Exception as e:
+    except Exception as e:
         print('problem while get_max_range')
         print(e)
         quit()
@@ -420,7 +415,7 @@ def readRCS(filename, headonly=False, **kwargs):
                     print('no valid timestamp')
                 if checktimestamps:
                     try:
-                        LabViewTimestamp = datetime(1904,1,1,0,0) + timedelta(seconds=float(elem[2].replace(',','.')))
+                        LabViewTimestamp = datetime(1904,1,1,0,0).replace(tzinfo=None) + timedelta(seconds=float(elem[2].replace(',','.')))
                     except:
                         pass
                     # TODO das geht wohl nicht, wenn ein Fehler im try...
