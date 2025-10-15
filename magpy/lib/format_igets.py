@@ -361,12 +361,13 @@ def writeGGP(datastream, filename, **kwargs):
     # wlist.append('yyyymmdd hhmmss gravity(V) pressure(V)')
     wlist.append('yyyymmdd hhmmss gravity(V) pressure(mBar)\n')
     wlist.append('C***********************************\n')
+    wlist.append('77777777\n')
 
     # check for data gaps and add missing
-    # dts=filename.split('-')[2]
-    # year, month = int(filename.split('-')[4][:4]), int(filename.split('-')[4][4:6])
-    dts = 'SEC'
-    year, month = 2020, 5
+    dts=filename.split('-')[2]
+    year, month = int(filename.split('-')[4][:4]), int(filename.split('-')[4][4:6])
+    #dts = 'SEC'
+    #year, month = 2020, 5
     # Get the last day of each month without an additional module
     dt = datetime(year, month, 1)
     last_day = (dt.replace(month=dt.month % 12 + 1, day=1) - timedelta(days=1)).day
@@ -408,7 +409,7 @@ def writeGGP(datastream, filename, **kwargs):
 
     # if debug:
     #     print('Writing file')
-    wlist.append('88888888')
+    wlist.append('99999999')
     # it should be much faster to setup the string first and then just call write once
     myFile.write("".join(wlist))
     myFile.close()
