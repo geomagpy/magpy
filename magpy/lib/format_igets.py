@@ -177,7 +177,7 @@ def remove_leading_zeros(s: str) -> str:
     return result.rjust(6)
 
 
-def write_enterna_date(dd):
+def write_eterna_date(dd):
     """
     Write ETERNA date.
     """
@@ -294,7 +294,7 @@ def writeGGP_patrick(datastream, filename, **kwargs):
     for jj in range(final_stream.length()[0]):
         gout = f"{final_stream['x'][jj]:10.6f}"
         pout = f"{final_stream['y'][jj]:10.6f}"
-        myFile.write('%s %s %s\n' % (write_enterna_date(final_stream['time'][jj]), str(gout).rjust(10), str(pout).rjust(10)) )
+        myFile.write('%s %s %s\n' % (write_eterna_date(final_stream['time'][jj]), str(gout).rjust(10), str(pout).rjust(10)) )
     myFile.write('88888888')
     myFile.close()
 
@@ -316,6 +316,37 @@ def writeGGP(datastream, filename, **kwargs):
     if fillval == None:
         fillval = 999.999999
     t0, t1, delta = None, None, None
+
+    #time information
+    dts=filename.split('-')[2]
+    year, month = int(filename.split('-')[4][:4]), int(filename.split('-')[4][4:6])
+    #dts = 'SEC'
+    #year, month = 2020, 5
+    # Get the last day of each month without an additional module
+    dt = datetime(year, month, 1)
+    last_day = (dt.replace(month=dt.month % 12 + 1, day=1) - timedelta(days=1)).day
+    if dts == 'MIN':
+        t0 = datetime(year, month, 1, 0, 0)
+        t1 = datetime(year, month, last_day, 23, 59)
+        delta = timedelta(minutes=1)
+    elif dts == 'SEC':
+        t0 = datetime(year, month, 1, 0, 0, 0)
+        t1 = datetime(year, month, last_day, 23, 59, 59)
+        delta = timedelta(seconds=1)
+
+    #check if whole time range is covered, if not add
+    if datastream['time'][0]!=t0:
+        if debug:
+            print('Start time not covered -> add')
+        array = [[] for key in KEYLIST]
+        array[0].append(t0);array[1].append(fillval);array[2].append(fillval)
+        datastream = join_streams(datastream, DataStream(ndarray=np.asarray(array, dtype=object)))
+    if datastream['time'][1]!=t1:
+        if debug:
+            print('End time not covered -> add')
+        array = [[] for key in KEYLIST]
+        array[0].append(t1);array[1].append(fillval);array[2].append(fillval)
+        datastream = join_streams(datastream, DataStream(ndarray=np.asarray(array, dtype=object)))
 
     if debug:
         print(datastream.header)
@@ -363,28 +394,6 @@ def writeGGP(datastream, filename, **kwargs):
     wlist.append('C***********************************\n')
     wlist.append('77777777\n')
 
-    # check for data gaps and add missing
-    dts=filename.split('-')[2]
-    year, month = int(filename.split('-')[4][:4]), int(filename.split('-')[4][4:6])
-    #dts = 'SEC'
-    #year, month = 2020, 5
-    # Get the last day of each month without an additional module
-    dt = datetime(year, month, 1)
-    last_day = (dt.replace(month=dt.month % 12 + 1, day=1) - timedelta(days=1)).day
-
-    if dts == 'MIN':
-        t0 = datetime(year, month, 1, 0, 0)
-        t1 = datetime(year, month, last_day, 23, 59)
-        delta = timedelta(minutes=1)
-    elif dts == 'SEC':
-        t0 = datetime(year, month, 1, 0, 0, 0)
-        t1 = datetime(year, month, last_day, 23, 59, 59)
-        delta = timedelta(seconds=1)
-    times = []
-    current = t0
-    while current <= t1:
-        times.append(current)
-        current += delta
     # gaps checking and filling
     # datastream.get_gaps obtains the major sampling frequency, fills up the time column and adds nan values
     final_stream = datastream.copy()
@@ -401,10 +410,11 @@ def writeGGP(datastream, filename, **kwargs):
         print("Preparations need {} sec".format((ti2 - ti1).total_seconds()))
 
     # convert times
-    tcnew = [write_enterna_date(el) for el in tc]
+    #tcnew = [write_eterna_date(el) for el in tc] #They want the zeros....
+    tcnew = [el.strftime('%Y%m%d %H%M%S')  for el in tc]
     # construct array and extract time column and convert to new format
     for jj in range(len(tcnew)):
-        line = "{} {:10.6f} {:10.6f}\n".format(tcnew[jj], colx[jj], coly[jj])
+        line = "{} {:10.6f}{:10.5f}\n".format(tcnew[jj], colx[jj], coly[jj]-coly[jj]%0.00001)
         wlist.append(line)
 
     # if debug:
