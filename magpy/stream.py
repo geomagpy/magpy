@@ -5841,7 +5841,7 @@ CALLED BY:
                     stacked = 0.0
                 prevval = val
         else:
-            print("steadyrise: no data found within the selected column {}}".format(key))
+            print("steadyrise: no data found within the selected column {}".format(key))
             return np.asarray([])
         # Finally fill the end
         for i in range(count):

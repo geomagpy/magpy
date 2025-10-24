@@ -11,7 +11,7 @@ Installation instructions can be found on the main download page.
 
 2.0.1 additions:
     - added magpy2pandas method in conversion module
-    - added format library for ISGI webservice
+    - added format library for ISGI webservice (https://isgi.unistra.fr/ws_documentation.php)
 
 
 ####v<2.0.0>, <2025-07-08> --
