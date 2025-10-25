@@ -1322,7 +1322,7 @@ class MainFrame(wx.Frame):
                                  },
                   'commands': {}
                   }
-        imws = {'magnetism': {'address': 'https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices',
+        imws = {'magnetism': {'address': 'https://imag-data.bgs.ac.uk/GIN_V1/GINServices',
                               'format': ['iaga2002'],
                               'ids': ['WIC', 'ABK', 'AIA', 'API', 'ARS', 'ASC', 'ASP', 'BDV', 'BEL', 'BFE', 'BFO',
                                       'CKI', 'CNB', 'CNH', 'CPL', 'CSY', 'CTA', 'CYG', 'DOU', 'ESK', 'EY2', 'EYR',

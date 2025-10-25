@@ -8801,7 +8801,7 @@ if __name__ == '__main__':
                 data2 = read("https://cobs.zamg.ac.at/gsa/webservice/query.php?id=WIC", starttime='2024-08-01',
                             endtime='2024-08-02')
                 data3 = read(
-                    "https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices?Request=GetData&observatoryIagaCode=WIC&publicationState=adjusted&samplesPerDay=minute&format=iaga2002",
+                    "https://imag-data.bgs.ac.uk/GIN_V1/GINServices?Request=GetData&observatoryIagaCode=WIC&publicationState=adjusted&samplesPerDay=minute&format=iaga2002",
                     starttime='2024-08-01', endtime='2024-08-02', debug=True)
                 te = datetime.now(timezone.utc).replace(tzinfo=None)
                 successes['webservice_read'] = (

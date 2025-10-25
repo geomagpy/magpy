@@ -710,7 +710,7 @@ access. Please refer to the description of the webservices for possible options 
 An important webservice is the [INTERMAGNET webservice](https://imag-data.bgs.ac.uk/GIN/) hosted at the British 
 Geological Survey (BGS). Below you will find a  typical example of an access using several available options. 
 
-        data = read('https://imag-data-staging.bgs.ac.uk/GIN_V1/GINServices
+        data = read('https://imag-data.bgs.ac.uk/GIN_V1/GINServices
                                ?request=GetData
                                &observatoryIagaCode=WIC
                                &dataStartDate=2021-03-10T00:00:00Z
