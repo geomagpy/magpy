@@ -5375,6 +5375,8 @@ CALLED BY:
         stwithnan = self.copy()
         # remove duplicate inputs (would lead to wrong selection of validity identification windows)
         stwithnan = stwithnan.removeduplicates()
+        # remove gaps so that nan-interpolation uses existiing time steps
+        stwithnan = stwithnan.get_gaps()
 
         # This is done if timesteps are not at period intervals
         # -----------------------------------------------------
