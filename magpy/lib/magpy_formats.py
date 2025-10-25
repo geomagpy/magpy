@@ -69,6 +69,7 @@ from magpy.lib.format_magpy import *
 from magpy.lib.format_noaa import *
 from magpy.lib.format_nc import isNETCDF, readNETCDF
 from magpy.lib.format_latex import *
+from magpy.lib.format_isgi import *
 from magpy.lib.format_covjson import *
 from magpy.lib.format_igets import *
 #from magpy.lib.format_json import *
@@ -154,6 +155,9 @@ def isFormat(filename, format_type):
             return True
     elif (format_type == "GFZINDEXJSON"):
         if (isGFZINDEXJSON(filename)):
+            return True
+    elif (format_type == "ISGI"):
+        if (isISGIJSON(filename)):
             return True
     elif (format_type == "COVJSON"):
         if (isCOVJSON(filename)):
@@ -377,6 +381,8 @@ def readFormat(filename, format_type, headonly=False, **kwargs):
         return readQSPIN(filename, headonly, **kwargs)
     elif (format_type == "AUTODIF_FREAD"):
         return readAUTODIF_FREAD(filename, headonly, **kwargs)
+    elif (format_type == "ISGI"):
+        return readISGIJSON(filename, headonly, **kwargs)
     elif (format_type == "COVJSON"):
         return readCOVJSON(filename, headonly, **kwargs)
     #elif (format_type == "ENV05"):

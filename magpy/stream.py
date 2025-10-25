@@ -229,6 +229,7 @@ SUPPORTED_FORMATS = {
                 'DIDD':['rw','Output format from MinGeo DIDD'],
                 'GSM19':['r', 'Output format from GSM19 magnetometer'],
                 'GFZINDEXJSON':['r', 'JSON structure for indicies (i.e. Kp) at GFZ webservice'],
+                'ISGI':['r', 'ISGI JSON geomagnetic index data'],
                 'COVJSON':['rw', 'Coverage JSON'],
                 'LEMIHF':['r', 'LEMI text format data'],
                 'LEMIBIN':['r','Current LEMI binary data format'],
@@ -5375,6 +5376,8 @@ CALLED BY:
         stwithnan = self.copy()
         # remove duplicate inputs (would lead to wrong selection of validity identification windows)
         stwithnan = stwithnan.removeduplicates()
+        # remove gaps so that nan-interpolation uses existiing time steps
+        stwithnan = stwithnan.get_gaps()
 
         # This is done if timesteps are not at period intervals
         # -----------------------------------------------------
@@ -5841,7 +5844,7 @@ CALLED BY:
                     stacked = 0.0
                 prevval = val
         else:
-            print("steadyrise: no data found within the selected column {}}".format(key))
+            print("steadyrise: no data found within the selected column {}".format(key))
             return np.asarray([])
         # Finally fill the end
         for i in range(count):
