@@ -72,14 +72,9 @@ def setup_logger(name, warninglevel=logging.WARNING, logfilepath=path_to_log,
 logger = setup_logger(__name__)
 # DEPRECATED: replaced by individual module loggers, delete these when sure they're no longer needed:
 loggerabs = logging.getLogger('abs')
-loggertransfer = logging.getLogger('transf')
 loggerdatabase = logging.getLogger('db')
-loggerstream = logging.getLogger('stream')
 loggerlib = logging.getLogger('lib')
-loggerplot = logging.getLogger('plot')
 
-# Special loggers for event notification
-stormlogger = logging.getLogger('stream')
 
 logger.info("Initiating MagPy...")
 
