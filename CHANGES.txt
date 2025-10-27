@@ -1,17 +1,20 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<2.0.1>, <2025-10-xx> --
+####v<2.0.1>, <2025-10-27> --
 
 2.0.1 fixes:
     - pkg_ressources: switched to importlib for python3.12 and later
-    - closing file after opening MARTAS buffer
+    - file.close() after opening MARTAS buffer files
     - closing db.cursor in get_lines and get_pier
     - corrected return component names of simplebaseline method
+    - proper gap treatment in resample method
+    - corrected INTERMAGNET webservice address
 
 2.0.1 additions:
     - added magpy2pandas method in conversion module
     - added format library for ISGI webservice (https://isgi.unistra.fr/ws_documentation.php)
+    - added format library for IGETS data outputs (https://isdc.gfz.de/igets-data-base/)
 
 
 ####v<2.0.0>, <2025-07-08> --
