@@ -1,6 +1,14 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
+####v<2.0.2>, <202x-xx-xx> --
+
+2.0.2 fixes:
+    - cleanup logging
+
+2.0.2 additions:
+    - add the steffen function
+
 ####v<2.0.1>, <2025-10-27> --
 
 2.0.1 fixes:
