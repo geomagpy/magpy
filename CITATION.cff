@@ -22,8 +22,11 @@ authors:
 - family-names: "Kompein"
   given-names: "Niko"
   orcid: ""
+- family-names: "Arneitz"
+  given-names: "Patrick"
+  orcid: ""
 title: "MagPy – Analyzing and displaying geomagnetic data"
-version: 2.0.0
-doi: 10.5281/zenodo.15861613
-date-released: 2025-07-11
+version: 2.0.1
+doi: 10.5281/zenodo.17454224
+date-released: 2025-10-27
 url: "https://github.com/geomagpy/magpy"
