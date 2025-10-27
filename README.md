@@ -800,6 +800,13 @@ Finally, X-ray data from GOES is supported to identify flare signatures:
         xray = read("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json")
 
 
+#### 3.3.17 The webservice of ISGI: International Service of Geomagnetic Indices
+
+Using The [ISGI](https://isgi.unistra.fr/ws_documentation.php) webservice requires an access TOKEN. Please consult the 
+homepage of ISGI on how to obtain such TOKEN and available indices. Only the ISGI json format is supported.
+
+        am_data = read("http://isgi.unistra.fr/ws?user=TOKEN&index=am&format=json&StartTime=2015-08-01&EndTime=2015-08-31")
+
 ## 4. Figures
 
 In the following we will introduce plotting routines and some often used options. You will find many additional example
