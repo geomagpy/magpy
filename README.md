@@ -116,6 +116,7 @@ and install MagPy:
 
         (jnmagpy)$ pip install geomagpy
 
+
 #### 1.2.3 Running magpy and updates
 
 You can run python in the terminal after switching to the respective environment and import the magpy package:
