@@ -12,7 +12,10 @@ from scipy.stats import entropy as scentropy
 from collections import Counter
 #import dateutil.parser as dparser
 import matplotlib.pyplot as plt
-import emd
+try:
+    import emd
+except:
+    pass
 
 magnetic_flagidentifiers = {0 : {'flagid' : '000', 'description' : 'normal', 'flag' : 0, 'probability' : 100},
                             1 : {'flagid' : '001', 'description' : 'lightning strike', 'flag' : 1, 'probability' : 0},

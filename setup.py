@@ -14,10 +14,12 @@ install_requires=[
             "pymysql >= 1.0.2",
             "cdflib >= 1.2.3,<=1.3.3",
             "pexpect >= 4.8.0",
-            "emd >= 0.7.0",
             "pypubsub >= 4.0.0",
-            "PyWavelets >= 1.3.0"
           ]
+
+extras_require={
+    'full': ["emd >= 0.7.0", "PyWavelets >= 1.3.0"]
+}
 
 setup(
     name='geomagpy',
