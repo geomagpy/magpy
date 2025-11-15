@@ -586,7 +586,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
             2) old flag/flag_stream
             ndata = flags.apply_flags(data, mode='insert')
         """
-        if not len(data) > 0:
+        if not len(self) > 0 or not len(data) > 0:
             return data
         ndata = data.copy()
         if not flagtype:
