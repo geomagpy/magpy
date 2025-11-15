@@ -400,6 +400,7 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
     fkeys = []
     felements = []
 
+
     if getfile:
         for line in fh:
             line = line.decode('utf-8',errors='ignore')
@@ -479,6 +480,8 @@ Date    Time    SK      AP23    JC      430A_T  430A_F  430A_UEV        HePKS   
 
         headers['SensorKeys'] = ','.join(fkeys)
         headers['SensorElements'] = ','.join([headers['col-'+key] for key in KEYLIST if key in fkeys])
+
+    fh.close()
 
     if debug:
         print ("METEO: Successfully loaded METEO data")
