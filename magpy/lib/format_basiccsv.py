@@ -185,6 +185,9 @@ def readCSV(filename, headonly=False, starttime=None, endtime=None, debug=False,
         array = [[] for el in KEYLIST]
         for idx,el in enumerate(transpose_list):
             pos = KEYLIST.index(assign[idx])
+            if pos <= len(DataStream().NUMKEYLIST):
+                # replace empty inputs with nan for numerical columns
+                el = [np.nan if elem == '' else elem for elem in el]
             try:
                 array[pos] = np.asarray(el, dtype=float)
             except:
