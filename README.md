@@ -2,7 +2,7 @@
 
 **MagPy (or GeomagPy) is a Python package for analysing and displaying geomagnetic data.**
 
-![0.0.0](./magpy/doc/magpy2-logo.png "MagPy2")
+![0.0.0](./magpy/doc/magpy2-logo.png "MagPy2 - painting from Benoit Heumez")
 
 Version Info: (please note: this package is still in a development state with frequent modifications) please check the
 release notes.
