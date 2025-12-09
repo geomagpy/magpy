@@ -4497,9 +4497,10 @@ class MainFrame(wx.Frame):
                 below = max(self.ylimits)
                 starttime =num2date(min(self.xlimits)).replace(tzinfo=None)
                 endtime = num2date(max(self.xlimits)).replace(tzinfo=None)
+                debug = True
 
                 if debug:
-                    print ("GUI FlagID:", flagid, starttime, endtime)
+                    print ("GUI FlagID:", flagid, starttime, endtime, above, below)
                 sfl = flagging.flag_range(plotstream, keys=selkey, flagtype=flagid, labelid=labelid, operator=operator,
                                           groups=groups, text=comment, keystoflag=keys2flag,
                                           starttime=starttime, endtime=endtime, above=above, below=below)

@@ -5,9 +5,11 @@ Installation instructions can be found on the main download page.
 
 2.0.2 fixes:
     - cleanup logging
+    - flag range method
 
 2.0.2 additions:
-    - add the steffen function
+    - included DOI in IGETS output
+    - IAF output: better reporting if insufficient file coverage is provided
 
 ####v<2.0.1>, <2025-10-27> --
 
