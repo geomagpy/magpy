@@ -128,13 +128,18 @@ def readGGP(filename, headonly=False, **kwargs):
                 break
             if len(line)>0 and line[:8]=='yyyymmdd':
                 line=line.split()
-                stream.header["col-x"]=line[2][0]
-                stream.header["col-y"]=line[3][0]
-                stream.header["unit-col-x"]=line[2][2]
-                stream.header["unit-col-y"]=line[3][2]
-            if jj>1 and jj<8:
-                k,v=line.split(':')
-                stream.header[k.strip()]=v.strip()
+                dcol=line[2]
+                stream.header["col-x"]=dcol.split('(')[0]
+                stream.header["unit-col-x"] = dcol.split('(')[1].split(')')[0]
+                dcol=line[3]
+                stream.header["col-y"]=dcol.split('(')[0]
+                stream.header["unit-col-y"] = dcol.split('(')[1].split(')')[0]
+            elif getdat==0:
+                try:
+                    k,v=line.split(':')
+                    stream.header[k.strip()]=v.strip()
+                except ValueError:
+                    pass
             if getdat==1:
                 line=line.split()
                 timestring=line[0]+'T'+read_eterna_time(line[1])
