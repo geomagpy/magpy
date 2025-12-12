@@ -1843,11 +1843,12 @@ def flag_binary(data, key, flagtype=0, labelid='070', keystoflag=None, sensorid=
         print("bindetector: No ndarray data found - aborting")
         return data
 
-    tcol = data.ndarray[0]
-    ind = data.KEYLIST.index(key)
-    startstate = data.ndarray[ind][0]
+    ndata = data.data.interpolate_nans(key)
+    tcol = ndata.ndarray[0]
+    ind = ndata.KEYLIST.index(key)
+    startstate = ndata.ndarray[ind][0]
     flaglist = []
-    switchindices, = np.nonzero(np.diff(data.ndarray[ind], prepend=startstate))
+    switchindices, = np.nonzero(np.diff(ndata.ndarray[ind], prepend=startstate))
 
     prevelem = 0
     for elem in switchindices:
