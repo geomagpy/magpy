@@ -1843,7 +1843,7 @@ def flag_binary(data, key, flagtype=0, labelid='070', keystoflag=None, sensorid=
         print("bindetector: No ndarray data found - aborting")
         return data
 
-    ndata = data.data.interpolate_nans(key)
+    ndata = data.interpolate_nans(key)
     tcol = ndata.ndarray[0]
     ind = ndata.KEYLIST.index(key)
     startstate = ndata.ndarray[ind][0]
