@@ -1978,7 +1978,7 @@ REMOVED:
            if you chooes parameter="all" then the complete flagging database will be deleted
            (TRUNCATE FLAGS)
         EXAMPLE:
-           db.flags_to_delete(parameter="operator", values=["RL"])
+           db.flags_to_delete(parameter="operator", value="RL")
         """
 
         if parameter == 'sensorid':
