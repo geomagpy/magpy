@@ -2892,9 +2892,9 @@ def readDKA(filename, headonly=False, **kwargs):
                 headers['StationID'] = block[0]
                 headers['StationIAGAcode'] = block[0]
             elif line.find('latitude') > 0 or line.find('LATITUDE') > 0:
-                headers['DataAcquisitionLatitude'] = float(block[-2])
+                headers['DataAcquisitionLatitude'] = float(block[-1])
             elif line.find('longitude') > 0 or line.find('LONGITUDE') > 0:
-                headers['DataAcquisitionLongitude'] = float(block[-2])
+                headers['DataAcquisitionLongitude'] = float(block[-1])
             elif line.find('K9-limit') > 0:
                 headers['StationK9'] = float(block[-2])
             elif line.find('DA-MON-YR') > 0:
