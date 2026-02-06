@@ -16,7 +16,6 @@ sys.path.insert(1,'/home/leon/Software/magpy/') # should be magpy2
 #from magpy.stream import *
 from magpy.stream import DataStream, read, subtract_streams, join_streams, magpyversion
 from magpy.stream import LineStruct
-from magpy.core.activity import K_fmi
 from magpy.core.methods import testtime, convert_geo_coordinate, is_number, extract_date_from_string
 import os
 from datetime import datetime, timedelta, timezone
@@ -557,6 +556,7 @@ def writeIAF(datastr, filename, **kwargs):
     """
     Writing Intermagnet archive format (2.1)
     """
+    from magpy.core.activity import K_fmi
 
     kvals = kwargs.get('kvals')
     mode = kwargs.get('mode')
@@ -3015,6 +3015,7 @@ if __name__ == '__main__':
 
     import scipy
     import subprocess
+    from magpy.core.activity import K_fmi
     print()
     print("----------------------------------------------------------")
     print("TESTING: IMF FORMAT LIBRARY")
