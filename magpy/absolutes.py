@@ -2495,7 +2495,8 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
     # ####################################
     if len(successlist) > 0 and movetoarchive and os.path.isdir(movetoarchive):
         # save this particular data set to archive
-        successfiles = np.asarray(successfiles).flatten()
+        #successfiles = np.asarray(successfiles).flatten()
+        successfiles = [elsf for sf in successfiles for elsf in sf]
         if len(successfiles) > 0:
             successfiles = list(set(successfiles))
         if debug:
