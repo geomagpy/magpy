@@ -3136,7 +3136,7 @@ class FlagDetailsDialog(wx.Dialog):
             if select == 'select':
                 newfl = self.fl.select(parameter=parameter, values=newvalue)
             elif select == 'replace':
-                newfl = self.fl.replace(parameter=parameter, values=value, newvalue=newvalue)
+                newfl = self.fl.replace(parameter=parameter, value=value, newvalue=newvalue)
             else:
                 newfl = self.fl.drop(parameter=parameter, values=newvalue)
             self.newfl = newfl
