@@ -6,6 +6,7 @@ Installation instructions can be found on the main download page.
 2.0.2 fixes:
     - cleanup logging
     - circular import error in activity fixed
+    - error callback if inconsistent shape is provided to rotation
 
 2.0.2 additions:
     - included DOI in IGETS output

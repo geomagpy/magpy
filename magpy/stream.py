@@ -5582,6 +5582,10 @@ CALLED BY:
         x = data._get_column(keys[0]).astype(float)
         y = data._get_column(keys[1]).astype(float)
         z = data._get_column(keys[2]).astype(float)
+        if not len(x) == len(y) or not len(y) == len(z):
+            logger.error('rotation: provided components have different lengths.')
+            return self
+
         column_vector = np.array([x, y, z])
         # Transpose the column vector
         v = column_vector.T
