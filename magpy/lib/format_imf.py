@@ -1983,7 +1983,7 @@ def writeBLV(datastream, filename, **kwargs):
         # 2. split absinfo list
         absinfolist = absinfostring.split(',')
         # check whether format looks ok
-        if not (absinfolist[0].startswith('7') or absinfolist[0].startswith('1')) and not len(absinfolist) > 5:
+        if not (absinfolist[0].startswith('7') or absinfolist[0].startswith('1') or absinfolist[0].startswith('2')) and not len(absinfolist) > 5:
             return None
         funclist = []
         for absi in absinfolist:
@@ -2046,7 +2046,7 @@ def writeBLV(datastream, filename, **kwargs):
             knotstep = 0.1
         if not keys:
             keys = ['dx','dy','dz']#,'df']
-        parameterlist = [[t1,t2,extradays,fitfunc,fitdegree,knotstep,keys]]
+        parameterlist = [[date2num(t1),date2num(t2),extradays,fitfunc,fitdegree,knotstep,keys]]
 
     # Get functionlist
     # primarily use the baseline adoption function provided with the stream
