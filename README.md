@@ -623,8 +623,10 @@ VariometerIAGACODE, or SalarIAGACODE. The comment section can also be found in t
 
         print(basevalues.header)
 
-Writing BLV data has many more options to define the corrected content and structure of the BLV data file. These options
-are *absinfo*, *year*, *meanh*, *meanf*, *deltaF* and *diff*. See section 7.6 for further details.
+Writing BLV data requires additional options to define the corrected content and structure of the BLV data file. 
+These options are *absinfo*, which refers to adopted baselines, *year*, *meanh*, *meanf*, which are the yearly mean
+values as obtained from one-minute data, *diff*, which is a dailymean data set obtained from one-minute data and 
+containing G values as well as *deltaF*. See section 7.6 for further details.
 
 #### 3.3.5 The IMF format
 
@@ -2450,7 +2452,7 @@ The following will create a BLV file:
        basevalues.write('/tmp/', coverage='all', format_type='BLV', diff=meandata, year='2018', absinfo=absinfo, deltaF=fabsinfo)
 
 Information on the adopted baselines will be extracted from option `absinfo`. If several functions are provided, 
-baseline jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is 
+baseline [geomagpy-2.0b12.tar.gz](dist/geomagpy-2.0b12.tar.gz)jumps will be automatically inserted into the BLV data file. The output of adopted scalar baselines is 
 configured by option `deltaF`. If a number is provided, this value is assumed to represent the adopted scalar baseline. 
 If either 'mean' or 'median' are given (e.g. `deltaF='mean'`), then the mean/median value of all delta F values in 
 the `basevalues` stream is used, requiring that such data is contained. Providing functional parameters as stored in 
