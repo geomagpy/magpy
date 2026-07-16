@@ -11,6 +11,7 @@ Installation instructions can be found on the main download page.
 2.0.2 additions:
     - included DOI in IGETS output
     - IAF output: better reporting if insufficient file coverage is provided
+    - allow for different colors and line formats for fitting functions
 
 ####v<2.0.1>, <2025-10-27> --
 
