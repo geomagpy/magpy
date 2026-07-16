@@ -507,21 +507,32 @@ def tsplot(data = None, keys = None, timecolumn = None, xrange = None, yranges =
                 # ------------------
                 if functions and not is_list_empty(functions):
                     function = functions[idx][i]
+                    if isinstance(functionfmt, (list,tuple)):
+                        functionfm = functionfmt[idx][i]
+                    else:
+                        functionfm = functionfmt
                     if function and isinstance(function, (list, tuple)):
+                        functionfmlist = []
+                        if isinstance(functionfm, (list, tuple)):
+                            functionfmlist = functionfm
                         if len(np.array(function,
                                         dtype=object).shape) > 1:  # allow multiple functions for each component
-                            for functio in function:
+                            for fin, functio in enumerate(function):
                                 # function should contain the fitted time range and the projected timerange
                                 fres = evaluate_function(component, functio, dat.samplingrate(), starttime=None,
                                                          endtime=None, debug=False)
+                                if len(functionfmlist) > 0 and len(functionfmlist) >= fin:
+                                    functionfm = functionfmlist[fin]
                                 if fres and len(fres) == 2:
-                                    ax.plot(fres[0], fres[1], functionfmt, alpha=0.5)
+                                    ax.plot(fres[0], fres[1], functionfm, alpha=0.5)
                         else:
                             # function should contain the fitted time range and the projected timerange
                             fres = evaluate_function(component, function, dat.samplingrate(), starttime=None,
                                                      endtime=None, debug=False)
+                            if len(functionfmlist) > 0:
+                                functionfm = functionfmlist[0]
                             if fres and len(fres) == 2:
-                                ax.plot(fres[0], fres[1], functionfmt, alpha=0.5)
+                                ax.plot(fres[0], fres[1], functionfm, alpha=0.5)
                 # Labels
                 # ------------------
                 if i == len(keys[idx]) - 1:
