@@ -3036,7 +3036,7 @@ CALLED BY:
             Important: any existing secondary time column will be dropped.
         PREREQUISITES
             Will raise an error of time distance between starttime respectively endtime
-            towrads date in the stream is larger than the duration
+            towards date in the stream is larger than the duration
             Choose "force =True" to override
         OPTIONS:
             starttime
@@ -3129,11 +3129,41 @@ CALLED BY:
             else:
                 entime = xs[-1]
             # create a new time scale with sampling rate increment and give start and endtimes
+            # 1. Define input arrays (must be sorted/continuously increasing)
             xnew = np.arange(sttime, entime, np.timedelta64(int(samprate), "us"))
+            # 2. Calculate the average difference within array1
+            avg_diff = np.mean(np.diff(xs))
+            threshold = 0.5 * avg_diff
+            # 3. Define boundaries for smaller and larger elements
+            lower_bound = xs[0] - threshold
+            upper_bound = xs[-1] + threshold
+            # 4. Filter array2 based on your conditions
+            # Must be smaller than lower_bound OR larger than upper_bound
+            smaller_elements = xnew[xnew <= lower_bound]
+            larger_elements = xnew[xnew >= upper_bound]
+            # 5. Concatenate everything together
+            xnew = np.concatenate([smaller_elements, xs, larger_elements])
+
             # now get the indices indbefore and indafter of xnew data just before and the first after xs
-            print ("CHECKING HERE", xnew, sttime, entime)
+            """
+            print ("CHECKING HERE", xnew, sttime, entime, xs)
+            window_len = len(xs)
+            match_mask = np.all(
+                np.lib.stride_tricks.sliding_window_view(xnew, window_len) == xs,
+                axis=1
+            )
+            # 3. Extract the actual index positions
+            start_indices = np.where(match_mask)[0]
+            if len(start_indices) > 0:
+                first_start = start_indices[0]
+                first_end = first_start + window_len - 1
+                print(f"First element index: {first_start}")
+                print(f"Last element index:  {first_end}")
+            else:
+                print("Subarray not found.")
+            """
             ab, a, b = np.intersect1d(xnew, xs, return_indices=True)
-            print ("CHECKING HERE", a)
+            #print ("CHECKING HERE", a)
             indbefore = a[0]
             indafter = a[-1]
             if debug:
@@ -3141,10 +3171,10 @@ CALLED BY:
         if method == 'spline':
             for i, ar in enumerate(st.ndarray):
                 if i == 0:
-                    if indbefore - 1 > 0:
-                        ar = np.insert(ar, 0, xnew[0:indbefore - 1])
+                    if indbefore > 0:
+                        ar = np.insert(ar, 0, xnew[0:indbefore])
                     if indafter + 1 >= len(xs):
-                        ar = np.insert(ar, -1, xnew[indafter + 1:len(xnew)])
+                        ar = np.concatenate([ar, xnew[indafter + 1:len(xnew)]])
                 elif i > 0 and len(ar) > 0:
                     ar = ar.astype(float)
                     # identify and drop nans
@@ -3153,17 +3183,17 @@ CALLED BY:
                     add_boundary_knots(natural)
                     vals = natural(xnew)
                     if indbefore - 1 > 0:
-                        ar = np.insert(ar, 0, vals[0:indbefore - 1])
+                        ar = np.insert(ar, 0, vals[0:indbefore])
                     if indafter + 1 >= len(xs):
-                        ar = np.insert(ar, -1, vals[indafter + 1:len(xnew)])
-                st.ndarray[i] = ar[:-1]
+                        ar = np.concatenate([ar, vals[indafter + 1:len(xnew)]])
+                st.ndarray[i] = ar
         elif method == 'linear':
             for i, ar in enumerate(st.ndarray):
                 if i == 0:
-                    if indbefore - 1 > 0:
-                        ar = np.insert(ar, 0, xnew[0:indbefore - 1])
+                    if indbefore > 0:
+                        ar = np.insert(ar, 0, xnew[0:indbefore])
                     if indafter + 1 >= len(xs):
-                        ar = np.insert(ar, -1, xnew[indafter + 1:len(xnew)])
+                        ar = np.concatenate([ar, xnew[indafter + 1:len(xnew)]])
                 elif i > 0 and len(ar) > 0:
                     ar = ar.astype(float)
                     # identify and drop nans
@@ -3171,17 +3201,18 @@ CALLED BY:
                     p = np.polyfit(xs[nonnaninds].astype(float64), ar[nonnaninds], 1)  # find linear trend in x
                     vals = p[0] * xnew.astype(float64) + p[1]
                     if indbefore - 1 > 0:
-                        ar = np.insert(ar, 0, vals[0:indbefore - 1])
+                        ar = np.insert(ar, 0, vals[0:indbefore])
                     if indafter + 1 >= len(xs):
-                        ar = np.insert(ar, -1, vals[indafter + 1:len(xnew)])
-                st.ndarray[i] = ar[:-1]
+                        ar = np.concatenate([ar, vals[indafter + 1:len(xnew)]])
+                st.ndarray[i] = ar
         elif method == 'fourier':
             for i, ar in enumerate(st.ndarray):
                 if i == 0:
-                    if indbefore - 1 > 0:
-                        ar = np.insert(ar, 0, xnew[0:indbefore - 1])
+                    if indbefore > 0:
+                        ar = np.insert(ar, 0, xnew[0:indbefore])
                     if indafter + 1 >= len(xs):
-                        ar = np.insert(ar, -1, xnew[indafter + 1:len(xnew)])
+                        #ar = np.insert(ar, -1, xnew[indafter + 1:len(xnew)])
+                        ar = np.concatenate([ar, xnew[indafter + 1:len(xnew)]])
                 elif i > 0 and len(ar) > 0:
                     ar = ar.astype(float)
                     # identify and drop nans
@@ -3204,10 +3235,11 @@ CALLED BY:
                         restored_sig += ampli * np.cos(2 * np.pi * f[j] * tn + phase)
                     vals = restored_sig + p[0] * tn
                     if indbefore - 1 > 0:
-                        ar = np.insert(ar, 0, vals[0:indbefore - 1])
+                        ar = np.insert(ar, 0, vals[0:indbefore])
                     if indafter + 1 >= len(xs):
-                        ar = np.insert(ar, -1, vals[indafter + 1:len(xnew)])
-                st.ndarray[i] = ar[:-1]
+                        #ar = np.insert(ar, -1, vals[indafter + 1:len(xnew)])
+                        ar = np.concatenate([ar, vals[indafter + 1:len(xnew)]])
+                st.ndarray[i] = ar
         else:
             # method 1 - old (duplicating first and last non-nan value at selected times)
             for i, ar in enumerate(st.ndarray):

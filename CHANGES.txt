@@ -7,6 +7,7 @@ Installation instructions can be found on the main download page.
     - cleanup logging
     - circular import error in activity fixed
     - error callback if inconsistent shape is provided to rotation
+    - corrected time ranges for extrapolate
 
 2.0.2 additions:
     - included DOI in IGETS output
