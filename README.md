@@ -2722,7 +2722,7 @@ website):
 The obtained *ssc_list* can be directly transformed into a flagging structure
 
         from magpy.core import flagging
-        stormflags = flagging.flags(ssc_list)
+        stormflags = flagging.Flags(ssc_list)
 
 and then all methods for flagging structures are available i.e. selecting specific data from the ssc_list
 
