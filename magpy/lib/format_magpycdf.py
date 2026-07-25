@@ -23,10 +23,26 @@ import pickle
 # for export of objects:
 import codecs
 import logging
+import io
+import base64
+
 logger = logging.getLogger(__name__)
 
 KEYLIST = DataStream().KEYLIST
 NUMKEYLIST = DataStream().NUMKEYLIST
+
+
+class IsolatedNumPyUnpickler(pickle.Unpickler):
+    """
+    DESCRIPTION
+        cross platform Interpreter in case of pickle objects created in numpy 2 environment to be read with old numpy 1
+    """
+
+    def find_class(self, module, name):
+        # Safely rewrite the metadata path string inside the stream parser
+        if "numpy._core" in module:
+            module = module.replace("numpy._core", "numpy.core")
+        return super().find_class(module, name)
 
 
 def isPYCDF(filename):
@@ -123,6 +139,7 @@ def readPYCDF(filename, headonly=False, **kwargs):
                 if not att in ['DataAbsFunctionObject','DataBaseValues', 'DataFlags','DataFunctionObject']:
                     stream.header[att] = value
                 else:
+                        # Open and unpack your file safely without affecting your Jupyter Kernel
                         if debug:
                             print ("Found special header content !!!!!!!!!!!!!!!! --  version {}".format(version))
                         #TODO check this - is pickle really necessary?
@@ -130,16 +147,27 @@ def readPYCDF(filename, headonly=False, **kwargs):
                         func = ''
                         try:
                             func = pickle.loads(codecs.decode(value.encode(), "base64"))
-                        except:
-                          try:
-                              func = pickle.loads(str.encode(value), encoding="bytes")
-                          except:
+                        except Exception as e:
+                            if debug:
+                                print ("Unpickle vers 1 failed because", e)
+                                print(" ... a numpy._core error indicates an old numpy (1.x) version on your system, whereas the file was created with numpy (2.x)")
                             try:
-                                print ("old unpickling version")
-                                func = pickle.loads(value)
-                            except:
-                                print ("FAILED to load special content")
-                                logger.debug("readPYCDF: Failed to load Object - constructed before v0.2.000?")
+                                func = pickle.loads(str.encode(value), encoding="bytes")
+                            except Exception as e:
+                                if debug:
+                                    print ("Unpickle MagPy < 2.0 failed because", e)
+                                try:
+                                    func = pickle.loads(value)
+                                except Exception as e:
+                                    if debug:
+                                        print ("Unpickle Magpy < 1.0 failed because", e)
+                                    try:
+                                        buffer = io.BytesIO(base64.b64decode(value))
+                                        func = IsolatedNumPyUnpickler(buffer).load()
+                                    except Exception as e:
+                                        if debug:
+                                            print ("Unpickle - last resort failed:", e)
+                                        logger.debug("readPYCDF: Failed to load Object - constructed before v0.2.000?")
                         stream.header[att] = func
                         if debug:
                             print (" -> functions loaded")
