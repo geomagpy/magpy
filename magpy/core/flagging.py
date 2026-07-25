@@ -649,7 +649,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
         flagdict = cp.deepcopy(self)
         return flagdict
 
-    def create_patch(self, data=None, color=None):
+    def create_patch(self, data=None):
         """
         DESCRIPTION:
             construct a simple patch dictionary for plotting from any given and preselected flaglist
@@ -693,8 +693,7 @@ flags  |  union        | level, samplingrate, typeforce | combine overlapping ti
                 cont['start'] = flagdict[d].get('starttime', None)
                 cont['end'] = flagdict[d].get('endtime')
                 cont['flagtype'] = flagdict[d].get('flagtype')
-                if not color:
-                    color = flagdict[d].get('color')
+                color = flagdict[d].get('color')
                 if not color:
                     color = _get_color_from_flagtype(cont.get('flagtype'))
                 cont['color'] = color
