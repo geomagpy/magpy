@@ -246,15 +246,18 @@ def readTSF(filename, headonly=False, **kwargs):
                     return stream
             else:
                 if datablogstarts:
-                    dind = 0
-                    # Read data - select according to channels
-                    colsstr = line.split()
-                    datatime = colsstr[0]+'-'+colsstr[1]+'-'+colsstr[2]+'T'+colsstr[3]+':'+colsstr[4]+':'+colsstr[5]
-                    array[0].append(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S"))
-                    for n in channellist:
-                        dind += 1
-                        if n < len(colsstr)-5:
-                            array[dind].append(float(colsstr[n+5]))
+                    if "\x00" in line:
+                        continue
+                    else:
+                        dind = 0
+                        # Read data - select according to channels
+                        colsstr = line.split()
+                        datatime = colsstr[0]+'-'+colsstr[1]+'-'+colsstr[2]+'T'+colsstr[3]+':'+colsstr[4]+':'+colsstr[5]
+                        array[0].append(datetime.strptime(datatime,"%Y-%m-%dT%H:%M:%S"))
+                        for n in channellist:
+                            dind += 1
+                            if n < len(colsstr)-5:
+                                array[dind].append(float(colsstr[n+5]))
                 else:
                     # some header lines not noted above found
                     pass
