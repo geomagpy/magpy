@@ -115,6 +115,7 @@ class AbsoluteDIStruct(object):
         self.var1 = var1
         self.var2 = var2
         self.temp = temp
+        self.pier = ""
         self.person = person
         self.di_inst = di_inst
         self.f_inst = f_inst
@@ -631,10 +632,10 @@ class AbsoluteData(object):
         try:
             if len(poslst) < 1:
                 loggerabs.warning("_calcdec: could not identify measurement positions - aborting")
-                return LineStruct()
+                return LineStruct(), 0, 0, 0
         except:
             loggerabs.warning("_calcdec: could not assign measurement positions - aborting")
-            return LineStruct()
+            return LineStruct(), 0, 0, 0
 
         # Check that: Should be correct if the order of input values is correct
         miremean = np.mean([poslst[1].mu,poslst[1].md]) # fits to mathematica
@@ -745,10 +746,10 @@ class AbsoluteData(object):
         try:
             if len(dl1) < 8:
                 loggerabs.warning("_calcdec: horizontal angles could not be assigned - aborting")
-                return LineStruct()
+                return LineStruct(), 0, 0, 0
         except:
             loggerabs.warning("_calcdec: horizontal angles could not be assigned - aborting")
-            return LineStruct()
+            return LineStruct(), 0, 0, 0
 
         # use selected steps, default is average....
         for k in range(0,7,2):
@@ -1528,15 +1529,18 @@ class AbsoluteData(object):
                 print("All results: " , outline)
 
         # Temporary cleanup for extraordinary high values (failed calculations) - replace by 999999.99
-        for key in DataStream().FLAGKEYLIST:
-             if not 'time' in key:
-                 testval = eval('outline.'+key)
-                 try:
-                     testval = float(testval)
-                     if testval > 10000000:
-                         exec('outline.'+key+' = 999999.99')
-                 except:
-                     pass
+        try:
+            for key in DataStream().FLAGKEYLIST:
+                 if not 'time' in key:
+                     testval = eval('outline.'+key)
+                     try:
+                         testval = float(testval)
+                         if testval > 10000000:
+                             exec('outline.'+key+' = 999999.99')
+                     except:
+                         pass
+        except:
+            pass
 
         #test whether outline is a linestruct object - if not use an empty object
         try:
@@ -2392,96 +2396,107 @@ def absolute_analysis(absdata, variodata, scalardata, **kwargs):
                 if not failingdict.get(st, None):
                     failingdict[st] = "piers provided in data file and analysis command do not fit"
             elif datastructok:
-                if azimuth:
-                    for i in range(len(distruct.container)):
-                        distruct[0].expectedmire = azimuth
-                if ab.person == 'AutoDIF':
-                    abstype = 'autodif'
-                    if not usestep:
-                        usestep = 2
-                    if not azimuth:
-                        print("absolute_analysis: AUTODIF but no azimuth provided --- this will not work")
+                try:
+                    if azimuth:
+                        for i in range(len(distruct.container)):
+                            distruct[0].expectedmire = azimuth
+                    if ab.person == 'AutoDIF':
+                        abstype = 'autodif'
+                        if not usestep:
+                            usestep = 2
+                        if not azimuth:
+                            print("absolute_analysis: AUTODIF but no azimuth provided --- this will not work")
 
-                print(" Analyzing {} measurement from {} with given azimuth {}".format(abstype, date,
-                                                                                       distruct[0].expectedmire))
+                    print(" Analyzing {} measurement from {} with given azimuth {}".format(abstype, date,
+                                                                                           distruct[0].expectedmire))
 
-                if len(vdata) > 0:
-                    valuetest = distruct._check_coverage(vdata)
-                    if valuetest:
-                        func = vdata.header.get('DataFunctionObject')[0]
-                        distruct = distruct._insert_function_values(func, funckeys=['x', 'y', 'z'], debug=debug)
-                    else:
-                        print(" Warning! Variation data missing at DI time range")
-                    # Check orinetation
-                    variocomps = vdata.header.get('DataComponents','').lower()
-                    if variocomps.startswith("xyz") and not variometerorientation.lower() == "xyz":
-                        print("  Variometer data provided in XYZ, Basevalue output projected in HDZ, however,")
-                        print("  as variometerorientation is not manually confirmed to be xyz (see manual) ")
-                    elif not variocomps.startswith("xyz") and variometerorientation.lower() == "xyz":
-                        print("  Basevalue output projected in XYZ but variometer data provided in HEZ!")
-                        print("  MagPy does not yet support that yet - switching to HDZ basevalues")
-                        variometerorientation = "HEZ"
-                if len(sdata) > 0:
-                    valuetest = distruct._check_coverage(sdata, keys=['f'])
-                    if valuetest:
-                        func = sdata.header.get('DataFunctionObject')[0]
-                        distruct = distruct._insert_function_values(func, funckeys=['f'], offset=deltaF, debug=debug)
-                    else:
-                        print(" Warning! Scalar data missing at DI time range")
-                # get delta D and delta I values here
-                if not deltaD and db:
-                    deltaD = db.get_pier(pier, 'A2', value='deltaD', year=st.year)
-                if not deltaI and db:
-                    deltaI = db.get_pier(pier, 'A2', value='deltaI', year=st.year)
-                # if not deltaF and db:  # check that - not contained in MagPy 1.x
-                #    deltaF = db.get_pier(pier, 'A2', value='deltaF', year=starttime.year)
+                    if len(vdata) > 0:
+                        valuetest = None
+                        try:
+                            valuetest = distruct._check_coverage(vdata)
+                        except:
+                            pass
+                        if valuetest:
+                            func = vdata.header.get('DataFunctionObject')[0]
+                            distruct = distruct._insert_function_values(func, funckeys=['x', 'y', 'z'], debug=debug)
+                        else:
+                            print(" Warning! Variation data missing at DI time range")
+                        # Check orinetation
+                        variocomps = vdata.header.get('DataComponents','').lower()
+                        if variocomps.startswith("xyz") and not variometerorientation.lower() == "xyz":
+                            print("  Variometer data provided in XYZ, Basevalue output projected in HDZ, however,")
+                            print("  as variometerorientation is not manually confirmed to be xyz (see manual) ")
+                        elif not variocomps.startswith("xyz") and variometerorientation.lower() == "xyz":
+                            print("  Basevalue output projected in XYZ but variometer data provided in HEZ!")
+                            print("  MagPy does not yet support that yet - switching to HDZ basevalues")
+                            variometerorientation = "HEZ"
+                    if len(sdata) > 0:
+                        valuetest = None
+                        try:
+                            valuetest = distruct._check_coverage(sdata, keys=['f'])
+                        except:
+                            pass
+                        if valuetest:
+                            func = sdata.header.get('DataFunctionObject')[0]
+                            distruct = distruct._insert_function_values(func, funckeys=['f'], offset=deltaF, debug=debug)
+                        else:
+                            print(" Warning! Scalar data missing at DI time range")
+                    # get delta D and delta I values here
+                    if not deltaD and db:
+                        deltaD = db.get_pier(pier, 'A2', value='deltaD', year=st.year)
+                    if not deltaI and db:
+                        deltaI = db.get_pier(pier, 'A2', value='deltaI', year=st.year)
+                    # if not deltaF and db:  # check that - not contained in MagPy 1.x
+                    #    deltaF = db.get_pier(pier, 'A2', value='deltaF', year=starttime.year)
 
-                if debug:
-                    print("Provided pier differences (either by option (primary) or from database):")
-                    print(" delta F for continuous scalar data: {}".format(deltaF))
-                    print(" pier delta D: {}, pier delta I: {}".format(deltaD, deltaI))
+                    if debug:
+                        print("Provided pier differences (either by option (primary) or from database):")
+                        print(" delta F for continuous scalar data: {}".format(deltaF))
+                        print(" pier delta D: {}, pier delta I: {}".format(deltaD, deltaI))
 
-                result = distruct.calcabsolutes(usestep=usestep, annualmeans=annualmeans, printresults=True,
-                                                debugmode=debug, deltaD=deltaD, deltaI=deltaI, meantime=meantime,
-                                                scalevalue=scalevalue, variometerorientation=variometerorientation,
-                                                residualsign=residualsign)
+                    result = distruct.calcabsolutes(usestep=usestep, annualmeans=annualmeans, printresults=True,
+                                                    debugmode=debug, deltaD=deltaD, deltaI=deltaI, meantime=meantime,
+                                                    scalevalue=scalevalue, variometerorientation=variometerorientation,
+                                                    residualsign=residualsign)
 
-                paralist = []
-                if not deltaF == 0:
-                    paralist.append("dF_{}".format(deltaF))
-                comments = vdata.header.get('DataComments', '')
-                if comments.find('alpha') > 0 or alpha:
-                    if alpha:
-                        paralist.append("alpha_{}".format(alpha))
-                    else:
-                        val = comments.split('alpha=')[1]
-                        print(val)
-                        calpha = val.split(" - ")[0]
-                        paralist.append("alpha_{}".format(calpha))
-                if comments.find('beta') > 0 or beta:
-                    if beta:
-                        paralist.append("beta_{}".format(beta))
-                    else:
-                        val = comments.split('beta=')[1]
-                        print(val)
-                        cbeta = val.split(" - ")[0]
-                        paralist.append("beta_{}".format(cbeta))
-                if len(paralist) > 0:
-                    parastr = ",".join(paralist)
-                    result.str4 = "{},{}".format(result.str4, parastr)
-                    # if debug:
-                    print("Parameterlist:", result.str4)
-                dataok = True
-                if expD:
-                    if not float(expD) - float(expT) < result.y < float(expD) + float(expT):
-                        print(" absolute_analysis: Failed to analyse {} - threshold for dec exceeded".format(
-                            num2date(result.time)))
-                        dataok = False
-                if expI and dataok:
-                    if not float(expI) - float(expT) < result.x < float(expI) + float(expT):
-                        print(" absolute_analysis: Failed to analyse {} - threshold for inc exceeded".format(
-                            num2date(result.time)))
-                        dataok = False
+                    paralist = []
+                    if not deltaF == 0:
+                        paralist.append("dF_{}".format(deltaF))
+                    comments = vdata.header.get('DataComments', '')
+                    if comments.find('alpha') > 0 or alpha:
+                        if alpha:
+                            paralist.append("alpha_{}".format(alpha))
+                        else:
+                            val = comments.split('alpha=')[1]
+                            print(val)
+                            calpha = val.split(" - ")[0]
+                            paralist.append("alpha_{}".format(calpha))
+                    if comments.find('beta') > 0 or beta:
+                        if beta:
+                            paralist.append("beta_{}".format(beta))
+                        else:
+                            val = comments.split('beta=')[1]
+                            print(val)
+                            cbeta = val.split(" - ")[0]
+                            paralist.append("beta_{}".format(cbeta))
+                    if len(paralist) > 0:
+                        parastr = ",".join(paralist)
+                        result.str4 = "{},{}".format(result.str4, parastr)
+                        # if debug:
+                        print("Parameterlist:", result.str4)
+                    dataok = True
+                    if expD:
+                        if not float(expD) - float(expT) < result.y < float(expD) + float(expT):
+                            print(" absolute_analysis: Failed to analyse {} - threshold for dec exceeded".format(
+                                num2date(result.time)))
+                            dataok = False
+                    if expI and dataok:
+                        if not float(expI) - float(expT) < result.x < float(expI) + float(expT):
+                            print(" absolute_analysis: Failed to analyse {} - threshold for inc exceeded".format(
+                                num2date(result.time)))
+                            dataok = False
+                except:
+                    dataok = False
                 if dataok:
                     successlist.append(ab)
                     successfiles.append(files)
