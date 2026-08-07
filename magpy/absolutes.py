@@ -1878,12 +1878,16 @@ def data_for_di(source, starttime, endtime=None, datatype='scalar', alpha=None, 
             if debug:
                 print("  -> applied header from data base ...")
         if not offset and sensorid and datagood:  # TODO check that - not done in MagPy 1.x
-            data = data.apply_deltas(debug=debug)
-            if debug:
-                print("  -> applied delta_values contained in data stream, evenually previously extracted from data base ...")
-                # print (" ------------  IMPORTANT ----------------")
-                # print (" Both, deltaF from DB and the provided delta F {b}".format(b=deltaF))
-                # print (" will be applied.")
+            try:
+                data = data.apply_deltas(debug=debug)
+                if debug:
+                    print("  -> applied delta_values contained in data stream, eventually previously extracted from data base ...")
+            except:
+                # might fail if no deltas?
+                pass
+            # print (" ------------  IMPORTANT ----------------")
+            # print (" Both, deltaF from DB and the provided delta F {b}".format(b=deltaF))
+            # print (" will be applied.")
 
         if not len(data) > 0:  # still
             datagood = False
