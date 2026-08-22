@@ -152,7 +152,12 @@ def readGGP(filename, headonly=False, **kwargs):
                     #     print(array[0][-1],array[1][-1],array[2][-1])
 
     for idx, elem in enumerate(array):
-        array[idx] = np.asarray(array[idx])
+        arr = np.asarray(array[idx])
+        #convert fillval to nan
+        if idx in [1,2]:
+            mask = arr > 999.98
+            arr = np.where(mask, np.nan, arr)
+        array[idx] = arr
     stream = DataStream(header=stream.header,ndarray=np.asarray(array,dtype=object))
     return stream
 
