@@ -1588,18 +1588,19 @@ REMOVED:
             try:
                 cursor.execute(getsens)
                 row = cursor.fetchone()
-                if isinstance(row[0], basestring):
-                    metadatadict[key] = row[0]
-                    if key == 'SensorKeys':
-                        senscolsstr = row[0]
-                    if key == 'SensorElements':
-                        senscolselstr = row[0]
-                else:
-                    if row[0] == None:
-                        pass
-                        # metadatadict[key] = row[0]
+                if row and isinstance(row, (list,tuple)):
+                    if isinstance(row[0], basestring):
+                        metadatadict[key] = row[0]
+                        if key == 'SensorKeys':
+                            senscolsstr = row[0]
+                        if key == 'SensorElements':
+                            senscolselstr = row[0]
                     else:
-                        metadatadict[key] = float(row[0])
+                        if row[0] == None:
+                            pass
+                            # metadatadict[key] = row[0]
+                        else:
+                            metadatadict[key] = float(row[0])
             except:
                 # if no sensor information is available e.g. BLV data
                 pass
@@ -1635,14 +1636,16 @@ REMOVED:
                 if debug:
                     print("fields_to_dict: error when executing %s" % getstat)
                 row = [None]
-            if isinstance(row[0], basestring):
-                metadatadict[key] = row[0]
-            else:
-                if row[0] == None:
-                    pass
-                    # metadatadict[key] = row[0]
+            print ("Got:", key, row)
+            if row and isinstance(row, (list,tuple)):
+                if isinstance(row[0], basestring):
+                    metadatadict[key] = row[0]
                 else:
-                    metadatadict[key] = float(row[0])
+                    if row[0] == None:
+                        pass
+                        # metadatadict[key] = row[0]
+                    else:
+                        metadatadict[key] = float(row[0])
 
         return metadatadict
 
