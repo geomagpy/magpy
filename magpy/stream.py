@@ -6100,6 +6100,10 @@ CALLED BY:
             if not filenameends or filenameends=='.cdf':
                 samprate = float(str(head.get('DataSamplingRate','0')).replace('sec','').strip())
                 plevel = head.get('DataPublicationLevel',0)
+                try:
+                    plevel = int(plevel)
+                except:
+                    plevel = 0
                 if int(samprate) == 1:
                     middle = 'sec'
                 elif int(samprate) == 60:
