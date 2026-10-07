@@ -131,11 +131,11 @@ To upgrade to the most recent version (replace x.x.x with the current version nu
 
 Running magpy within jupyter-notebook. First switch to a path were you want to store your notebooks:
 
-        (jnmagpy)$: cd ~/MyNotenooks
+        (jnmagpy)$: cd ~/MyNotebooks
  
 and then start jupyter-notebook
 
-        (jnmagpy)$: juypter-notebook
+        (jnmagpy)$: jupyter-notebook
 
 This will open a browser window. Please follow the jn instruction here
 
@@ -2113,7 +2113,7 @@ procedures. Please move to section 7.2 for a description of the productive metho
 Lets first import the required modules for DI/absolute analysis and some example files and helper methods:
 
         import magpy.absolutes as di
-        from magpy.stream import read, DataStream(), example6a, example5
+        from magpy.stream import read, DataStream, example6a, example5
         from magpy.core.methods import *
 
 
@@ -2121,17 +2121,18 @@ Lets first import the required modules for DI/absolute analysis and some example
 
 Please check `example6a` or  `example6b` , which are example DI files. You can create these DI files by using the 
 input sheet from xmagpy or the online input sheet provided by the Conrad Observatory. If you want to use this service, 
-please contact the Observatory staff. Also supported are DI-files from the AUTODIF. MagPy will automatically 
+please contact the Observatory staff. Other supported DI file formats include AUTODIF and USGS JSON. MagPy will automatically 
 recognize a number of DI data formats while loading. Use the the following method to load a single or multiple
 DI data sets:
 
         abslist = di.abs_read(example6a)  # should be the default
 
-You might want to view the data in a formated way
+You might want to view the data in a formatted way
 
         for ab in abslist:
             l1 = ab.get_data_list()
-            print (l1)
+            for line in l1:
+               print(line, end='')
 
 For our analysis we will extract data from the loaded *abslist* and convert to into an DI analysis structure. 
 
