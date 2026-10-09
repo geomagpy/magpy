@@ -77,7 +77,7 @@ Optional but recommended python modules are:
 
 For this installation option you will need to install the following package
 
-        $ apt install python3-virtualenv
+        $ sudo apt install python3-virtualenv
 
 Then you can create a new environment called magpy as follows:
 
@@ -392,11 +392,14 @@ Reading a file for specific paths in Linux/MacOS:
 
         data = read('/path/to/file/myfile.min')
 
-Reading data from a specific path in Windows. Path names are related to your operating system. Hereinafter we will 
-assume a Linux system in this guide.
+Path names are related to your operating system. Take care when using the backslah character as directory separator in Windows, as
+it has a special meaning (start of escape sequenc) in Python strings! Valid Windows path definitions:
 
-        data = read('c:\path\to\file\myfile.min')
-
+        data = read(r'c:\path\to\file\myfile.min')     # Use raw string, marked by 'r' (all character except the last can be '\')
+        data = read('c:\\path\\to\\file\\myfile.min')  # Use double backslash
+        data = read('c:/path/to/file/myfile.min')      # Use forward slash instead of backslash
+        
+Hereinafter we will assume a Linux system in this guide.
 Reading multiple files from a directory using wildcards:
 
         data = read('/path/to/file/*.min')
@@ -2094,7 +2097,7 @@ P(alt) data, so that baseline corrected results using P(alt) data correspond to 
 
 + **F continuous F(ext)** :  F value from a continuous measurement. F(ext) + dF = F(abs)
 
-+ **basevalues** : delta values obtained fro each DI analysis which describe the momentary difference between a 
++ **basevalues** : delta values obtained from each DI analysis which describe the momentary difference between a 
 continuously measuring systems and the DI determination. MagPy determines basevalues either in cylindrical 
 (dH, dD, dZ, dF, default, dH is delta of horizontal component) or cartesian (dX, dY, dZ, dF) coordinates.
 
@@ -2198,9 +2201,9 @@ in section 7.2.
 #### 7.1.4 Considering pier differences for non-reference pier measurements
 
 If you perform DI measurements on multiple piers you might want to consider the pier differences in respect
-respect to a reference pier. This pier  differences can either be provided directly or can be organized in 
+to a reference pier. This pier differences can either be provided directly or can be organized in 
 a MagPy data base on a yearly basis.
-You reference pier P1 is used for the majority of your DI measurements. Once in a while you perform measurements 
+Let's assume that your reference pier P1 is used for the majority of your DI measurements. Once in a while you perform measurements 
 on pier P2. From these measurements you determined an average difference of deltaD = 0.001 deg, deltaI = 0.002 deg 
 and deltaF = -0.23 nT for 2023. For your ongoing P2 analysis you consider these delta values by supplying them
 to the calcabsolute method. You can also organize these values in a MagPy database (PIERS table) and 
