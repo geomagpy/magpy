@@ -2,7 +2,7 @@ name: publish-docs
 on:
   push:
     branches:
-      - main
+      - docu
 
 jobs:
   deploy:
