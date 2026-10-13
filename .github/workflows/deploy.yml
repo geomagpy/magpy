@@ -2,7 +2,8 @@ name: publish-docs
 on:
   push:
     branches:
-      - docu
+      - develop
+      - master
 
 jobs:
   deploy:
