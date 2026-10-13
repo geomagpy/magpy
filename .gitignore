@@ -6,6 +6,7 @@
 *.txt~
 build
 dist
+old
 dist/*.egg
 GeomagPy.egg-info
 geomagpy.egg-info

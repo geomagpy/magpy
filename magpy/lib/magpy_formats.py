@@ -45,7 +45,7 @@ CALLED BY:
 '''
 from __future__ import print_function
 
-from magpy.stream import *
+from magpy.stream import DataStream
 
 import logging
 logger = logging.getLogger(__name__)

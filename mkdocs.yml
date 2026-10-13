@@ -1,0 +1,21 @@
+site_name: MagPy Documentation
+theme:
+  name: material
+  features:
+    - search.suggest
+    - search.highlight
+
+nav:
+  - Overview: index.md
+  - Graphical user interface: gui.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [magpy] # Pfad zu deinem Python-Package/Code-Ordner
+          options:
+            docstring_style: google # oder numpy / sphinx
+            show_root_heading: true
+            show_source: true

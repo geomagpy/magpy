@@ -7,7 +7,9 @@ Written by Roman Leonhardt June 2012
 from io import open
 
 # Specify what methods are really needed
-from magpy.stream import *
+from magpy.stream import DataStream, KEYLIST, date2num
+from datetime import datetime
+import numpy as np
 from magpy.core.methods import testtime, extract_date_from_string
 import logging
 logger = logging.getLogger(__name__)
@@ -94,7 +96,7 @@ def readACECDF(filename, headonly=False, **kwargs):
     # Check whether header information is already present
     headskip = False
     if stream.header == None:
-        stream.header.clear()
+        stream.header = {}
     else:
         headskip = True
 
@@ -113,11 +115,11 @@ def readACECDF(filename, headonly=False, **kwargs):
 
     if getfile:
         try:
-            cdf_file = cdf.CDF(filename)
+            cdf_file = cdflib.CDF(filename)
         except:
             return stream
 
-        logger.info('readACECDF: %s Format: %s ' % (filename, cdfformat))
+        logger.info('readACECDF: %s ' % (filename))
 
         for key in cdf_file:
             if key.find('time')>=0 or key == 'Epoch':
