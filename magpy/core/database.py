@@ -2429,7 +2429,7 @@ REMOVED:
                                 '0000000000000000') or str(col[0]).find('xyz'):
                             array[pos] = np.asarray([])
                         else:
-                            array[pos] = col[:1]
+                            array[pos] = np.asarray(columns[idx], dtype=object) # has been col[:1] before
                     elif key in stream.NUMKEYLIST:
                         array[pos] = np.asarray(columns[idx], dtype=np.float64)
                     elif key.endswith('time'):
