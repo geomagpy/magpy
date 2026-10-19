@@ -6,7 +6,7 @@ Installation instructions can be found on the main download page.
 2.0.2 fixes:
 
 2.0.2 additions:
-
+    - frqfilter package
 2.0.2 general:
     - keep also all identical values and do not truncate columns in db.read
 
