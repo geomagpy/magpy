@@ -48,6 +48,7 @@ magpyind = mrpath.rfind( 'magpy')
 mrpath = mrpath[0:magpyind+5]
 print( 'mrpath', mrpath)
 #print( 'mrpath is: {}'.format( mrpath))
+#sys.exit()
 #sys.path.insert( 0, abspath( '../../'))
 sys.path.insert( 0, abspath( mrpath))
 from stream import read, datetime, DataStream
@@ -104,7 +105,10 @@ try:
     #sys.exit()
 except Exception as ex:
     print( 'magpy.mpplot from defined path "{}" import did not work. Interrupted with: {}'.format( abspath( mrpath), ex))
-    sys.exit()
+    print( 'magpy.stream from defined path "{}" loading from version {} instead..'.format( abspath( mrpath), magpyver))
+    import stream as mp
+    print( 'stream from version 2.x.y successfully loaded...')
+    #sys.exit()
     #sys.exit()
 ######
 #sys.exit()
