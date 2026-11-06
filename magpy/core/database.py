@@ -1636,7 +1636,8 @@ REMOVED:
                 if debug:
                     print("fields_to_dict: error when executing %s" % getstat)
                 row = [None]
-            print ("Got:", key, row)
+            if debug:
+                print ("Got:", key, row)
             if row and isinstance(row, (list,tuple)):
                 if isinstance(row[0], basestring):
                     metadatadict[key] = row[0]
@@ -2309,7 +2310,7 @@ REMOVED:
         return report
 
 
-    def read(self, table, starttime=None, endtime=None, sql=None):
+    def read(self, table, starttime=None, endtime=None, sql=None, debug=False):
         """
         sql: provide any additional search criteria
             example: sql = "DataSamplingRate=60 AND DataType='variation'"
@@ -2375,11 +2376,17 @@ REMOVED:
         # --------------------------------------------
         getcols = 'SHOW COLUMNS FROM ' + table
         try:
+            if debug:
+                print ("db.read: Extracting keys from datatable:")
             # Table exists - read it
             cursor.execute(getcols)
             rows = cursor.fetchall()
             keys = [el[0] for el in rows]
+            if debug:
+                print (" success -> got: {}".format(keys))
         except mysql.Error as e:
+            if debug:
+                print ("db.read: Extracting keys from DATAINFO (i.e. happens if sensorid was provided and not dataid:")
             # Table does not exist - assume sensor id
             getdatainfo = 'SELECT DataID FROM DATAINFO WHERE SensorID = "' + table + '"'
             cursor.execute(getdatainfo)
@@ -2399,6 +2406,8 @@ REMOVED:
             except:
                 loggerdatabase.error("readDB: mysqlerror while identifying table: %s" % (e))
                 return stream
+            if debug:
+                print(" success -> got: {}".format(keys))
         except:
             loggerdatabase.error("readDB: mysqlerror while getting table info")
             return stream
@@ -2419,17 +2428,25 @@ REMOVED:
 
             columns = rows.T
             array = [[] for el in stream.KEYLIST]
+            if debug:
+                print("db.read: got columns: {}".format(columns))
             if len(columns) > 0:
                 for idx,key in enumerate(keys):
                     pos = stream.KEYLIST.index(key)
                     if not False in checkEqual3(columns[idx]):
-                        print("readDB: Found identical values only:{}".format(key))
+                        if debug:
+                            print("readDB: Found identical values only:{}".format(key))
                         col = columns[idx]
                         if len(col) < 1 or str(col[0]) == '' or str(col[0]) == '-' or str(col[0]).find(
-                                '0000000000000000') or str(col[0]).find('xyz'):
+                                '0000000000000000') > -1 or str(col[0]).find('xyz') > -1:
                             array[pos] = np.asarray([])
                         else:
-                            array[pos] = np.asarray(columns[idx], dtype=object) # has been col[:1] before
+                            if key in stream.NUMKEYLIST:
+                                array[pos] = np.asarray(col, dtype=np.float64)
+                            else:
+                                array[pos] = np.asarray(col, dtype=object) # has been col[:1] before
+                        if debug:
+                            print ("db.read: key: {} ; length: {}".format(key,len(array[pos])))
                     elif key in stream.NUMKEYLIST:
                         array[pos] = np.asarray(columns[idx], dtype=np.float64)
                     elif key.endswith('time'):
