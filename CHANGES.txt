@@ -1,14 +1,14 @@
 MagPy provides a tool set for geomagnetic data analysis.
 Installation instructions can be found on the main download page.
 -------------------------------------------------
-####v<2.0.3>, <2026-xx-xx> --
+####v<2.0.3>, <2026-11-06> --
 
 2.0.3 fixes:
+    - fixed db.read in case of identical values
 
 2.0.3 additions:
     - frqfilter package
-2.0.3 general:
-    - keep also all identical values and do not truncate columns in db.read
+    - README file transferred into an online manual with search function
 
 ####v<2.0.2>, <2026-09-20> --
 
