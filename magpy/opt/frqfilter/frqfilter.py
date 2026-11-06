@@ -16,13 +16,15 @@ import numpy as np
 import sys
 #sys.stdout.flush()
 import scipy.signal as sg
-import scipy.fftpack as fft
+#import scipy.fftpack as fft # replaced cause it old and obsolet by scipy.fft
+import scipy.fft as fft
 import scipy.interpolate as ipol
 from scipy.optimize import curve_fit, minimize_scalar
 from itertools import chain
 import time
 from statistics import mode
 from scipy.signal.windows import dpss
+from scipy.linalg import hankel
 
 debug = False # Print every single output
 
@@ -538,6 +540,7 @@ class FrqFilter:
         self.despikeperc = 1.0
         self.PercMostOffSamplesList = []
         self.percvals = [75, 25]
+        self.RemoveSubHarm = False
         
         
         ###############
@@ -746,6 +749,17 @@ class FrqFilter:
                     #de = value[1] # damping decrement
                     if( self.debug):
                         print( 'self.NumOfSlep is: {}'.format( self.NumOfSlep))
+                if( 'RemoveSubHarm' == item):
+                    """
+                    
+                    
+                    get RemoveSubHarm flag
+                    """
+                    self.RemoveSubHarm = value
+                    #ce = value[0] # center frequency
+                    #de = value[1] # damping decrement
+                    if( self.debug):
+                        print( 'self.RemoveSubHarm is: {}'.format( self.RemoveSubHarm))
             """
             empty list for despiked series to remember which samples where
             replaced by self.rplval
@@ -2698,16 +2712,51 @@ class FrqFilter:
     
     
     
+    def GenerateHankel( self, Series, L):
+        r = Series[ L - 1:]
+        HankelMatrix = hankel( Series[ :L], r)
+        return HankelMatrix
+    
+    
+    
+    def diagonalAvageredArray( self, H_matrix):
+        """
+        Vectorized anti-diagonal averaging for both Real and Complex Hankel matrices.
+        Eliminates loops and prevents dtype casting errors.
+        according to Google-Gemini:
+            https://share.google/aimode/nW2JDRhPPGlVsKeD8
+        """
+        L, K = H_matrix.shape
+        
+        # 1. Create coordinate grids and flatten indices
+        i, j = np.ogrid[:L, :K]
+        indices = (i + j).ravel()
+        flat_H = H_matrix.ravel()
+        
+        # 2. Count the occurrences of each 1D index
+        counts = np.bincount(indices)
+        
+        # 3. Handle complex data by splitting real and imaginary parts
+        sum_real = np.bincount(indices, weights=flat_H.real)
+        sum_imag = np.bincount(indices, weights=flat_H.imag)
+        
+        # 4. Recombine into a complex array and divide by counts
+        return (sum_real + 1j * sum_imag) / counts
+    
+    
+    
     def ArtExtendSpec( self, FrqSeries):
         OrgFrqSeries = np.copy( FrqSeries)
         actlen = len( OrgFrqSeries)
         bakactlen = np.copy( actlen)
         
         #ArtFaxis = fft.fftshift(fft.fftfreq(len( FrqSeries), d = self.dt))
-        ArtFaxis = fft.rfftfreq( len( FrqSeries), d = self.dt) # only positive frequencies
+        ArtFaxis = fft.fftfreq( len( FrqSeries)* 2 - 1, d = self.dt).astype(np.float64) # only positive frequencies
+        ArtFaxis = ArtFaxis[ np.argwhere( ArtFaxis >= 0.0).flatten()]
         if( self.debug):
             print( 'ArtFaxis: {}'.format( ArtFaxis))
             print( 'len of ArtFaxis: {}'.format( len( ArtFaxis)))
+            print( 'ArtFaxis.dtype: {}'.format( ArtFaxis.dtype))            
             #sys.exit()
         """
         artifically extend the frequency-series, so that one can derive
@@ -2761,60 +2810,37 @@ class FrqFilter:
         #difflen = actlen - len( myAx) # length difference between artificially
         # extended frq-series and myAx length for later usage in windowing
         
-        reshapedFrqSeries = np.zeros( ( SqrtLen, SqrtLen), dtype = complex)
+        #reshapedFrqSeries = FrqSeries.reshape( SqrtLen, SqrtLen)
+        
+        reshapedFrqSeries = self.GenerateHankel( FrqSeries, SqrtLen)
         
         
-        #print( 'SqrtLen: {}'.format( SqrtLen))
-        #print( 'SqrtLen**2.0: {}'.format( SqrtLen**2.0))
-        #input()
-        Maxf = np.max( np.abs( myAx))
-        #LstO = 0
-        for colidx in np.arange( 0, SqrtLen):
-            o = 0
-            
-            IntvFx = self.fmin* float( 0 + colidx + 1)
-            while( ( o < SqrtLen) & ( IntvFx <= Maxf)):
-                IntvFx = self.fmin* float( colidx * SqrtLen + o )
-                #ctrIdx = np.argmin( np.abs( myAx - IntvFx))# - difflen
-                
-                #win = sg.windows.exponential( actlen, ctrIdx, sym = False)
-                #plt.plot( win)
-                #plt.show()
-                #input()
-                
-                
-                #reshapedFrqSeries[o, colidx] = reshapedFrqSeries[o, colidx] + FrqSeries[self.posind][nonzerocond][ rowidx] ### if I add up the columns which have already been filled
-                #reshapedFrqSeries[o, colidx] = FrqSeries[nonzeroind][ rowidx]
-                #reshapedFrqSeries[colidx, o] = np.sum( FrqSeries* win)/ np.sum( win)
-                #reshapedFrqSeries[colidx, o] = FrqSeries[ ctrIdx]
-                reshapedFrqSeries[colidx, o] = FrqSeries[ colidx * SqrtLen + o]
-                
-                #Nfaxis
-                
-                
-                o = o + 1
-                #LstO = o
-                    
-        
-
-        
+        if( True):
+            #print("Hankel Matrix:\n", reshapedFrqSeries)
+            print( 'shape of Hankel Matrix: {}'.format( np.shape( reshapedFrqSeries)))
         #sys.exit()
         ApproxSerLen = int( SqrtLen** 2.0)
         if( self.debug):
             Nfaxis = myAx[0:bakactlen]
             
-            NSer = reshapedFrqSeries.reshape( ApproxSerLen)[0:bakactlen]
+            NSer = self.diagonalAvageredArray( reshapedFrqSeries)#[0:bakactlen]
+            cond = np.isnan( NSer)
+            
+            NSer[ cond] = 0.0
             print( 'NSer: {}'.format( NSer))
             #Nfaxis, UniInd = np.unique( Nfaxis, return_index = True)
             #NSer = np.array( NSer, dtype = complex).flatten()[UniInd]
             print( 'shape of Nfaxis: {}'.format( np.shape( Nfaxis)))
             print( 'shape of NSer: {}'.format( np.shape( NSer)))
-            #for k, ( f, el) in enumerate( zip( Nfaxis, NSer)):
-            #    print( 'freq: {}, sample: {}'.format( f, el))
-            #    if( np.mod(k, 363) == 0):
-            #        input()
+            for k, ( f, el) in enumerate( zip( Nfaxis, NSer)):
+                print( 'freq: {}, sample: {}'.format( f, el))
+                if( np.mod(k, SqrtLen) == 0):
+                    input()
+            #cond, ind = np.unique( ArtFaxis, return_index = True)
+            #print( 'every ArtFaxis is unique: {}'.format( np.all( cond)))
             plt.loglog( Nfaxis, np.abs( NSer), alpha = 0.3, label = 'NSer')
             plt.loglog( ArtFaxis, np.abs( OrgFrqSeries), alpha = 0.3, label = 'OrgFrqSeries')
+            #plt.plot( ArtFaxis[1:] - ArtFaxis[:-1], label = 'ArtFaxis[1:] - ArtFaxis[:-1]')
             plt.grid( which = 'both')
             plt.legend( loc = 'best')
             plt.show()
@@ -2824,30 +2850,32 @@ class FrqFilter:
         """
         remove average mean before deriving SVD... assuming column vectors
         """
-        #AvgTrend = np.nanmean( reshapedFrqSeries, axis = 0)
-        AvgTrend = []
-        lgax = ArtFaxis
-        #plt.close()
-        #print( 'reshapedFrqSeries[:,0]', reshapedFrqSeries[:,0])
-        for k, row in enumerate( reshapedFrqSeries.T):
-            IndToTake = np.arange( k, k+SqrtLen)
-            cond = ~np.isnan( lgax[IndToTake]) & np.isfinite( lgax[IndToTake]) & ~np.isnan( row) & np.isfinite( row)
-            
-            #print( 'lgax[IndToTake]', lgax[IndToTake])
-            #print( 'row', row)
-            #input()
-            IpRow = np.polyval( np.polyfit( lgax[IndToTake][cond], row[cond], deg = 1), lgax[IndToTake])
-            AvgTrend.append( IpRow)
-            #plt.plot( lgax[IndToTake], row, label = 'row', alpha = 0.3)
-            #plt.plot( lgax[IndToTake], IpRow, label = 'IpRow', alpha = 0.3)
-            #plt.legend( loc = 'best')
-            #plt.show()
-        AvgTrend = np.array( AvgTrend)
+        if( True):
+            AvgTrend = np.nanmean( reshapedFrqSeries, axis = 0)
+        else:
+            AvgTrend = []
+            lgax = ArtFaxis
+            #plt.close()
+            #print( 'reshapedFrqSeries[:,0]', reshapedFrqSeries[:,0])
+            for k, row in enumerate( reshapedFrqSeries.T):
+                IndToTake = np.arange( k, k+SqrtLen)
+                cond = ~np.isnan( lgax[IndToTake]) & np.isfinite( lgax[IndToTake]) & ~np.isnan( row) & np.isfinite( row)
+                
+                #print( 'lgax[IndToTake]', lgax[IndToTake])
+                #print( 'row', row)
+                #input()
+                IpRow = np.polyval( np.polyfit( lgax[IndToTake][cond], row[cond], deg = 1), lgax[IndToTake])
+                AvgTrend.append( IpRow)
+                #plt.plot( lgax[IndToTake], row, label = 'row', alpha = 0.3)
+                #plt.plot( lgax[IndToTake], IpRow, label = 'IpRow', alpha = 0.3)
+                #plt.legend( loc = 'best')
+                #plt.show()
+            AvgTrend = np.array( AvgTrend)
         
         
         
         
-        FrqSeries = reshapedFrqSeries - AvgTrend
+        FrqSeries = reshapedFrqSeries# - AvgTrend
         del reshapedFrqSeries
         
         
@@ -2859,7 +2887,7 @@ class FrqFilter:
         print( 'performing np.linalg.svd...')
         vecs, vals, Vt = np.linalg.svd( FrqSeries, full_matrices=False)
         print( 'performing np.linalg.svd...done')
-
+        #FrqSeries = FrqSeries + AvgTrend
         # 4. Reconstruct (even with 100% components, this preserves phase-magnitude alignment)
         #X_reconstructed = U @ np.diag(S) @ Vt
         
@@ -2873,16 +2901,14 @@ class FrqFilter:
         
         normedVals = np.log10( vals/ eigvalMax)
         
-        
-        #cond = normedVals >= -3.0
-        cond = np.isfinite( normedVals)# >= -4.0
-        
+        cond = normedVals >= -1.0#4.0
+        #cond = np.isfinite( normedVals)# >= -4.0
         
         ind = np.argwhere( cond).flatten()
         ####
         vals = vals[ind]
         norm = np.linalg.norm( vecs)
-        vecs = vecs/ norm
+        vecs = vecs#/ norm
         vecs = vecs[:, ind]
         Vt = Vt[ind, :]
         ###
@@ -2915,7 +2941,7 @@ class FrqFilter:
         Maxvecs = [[0],[1]]
         Maxvals = [[0],[1]]
         MaxVt = [[0],[1]]
-        
+        Artfaxis = fft.rfftfreq( len( FrqSeries), d = self.dt) # only positive frequencies
         if( self.debug):
             print( 'Maxvecs[0]: {}, Maxvecs[1]: {}'.format( Maxvecs[0], Maxvecs[1]))
             print( 'Maxvals[0]: {}, Maxvals[1]: {}'.format( Maxvals[0], Maxvals[1]))
@@ -3006,11 +3032,29 @@ class FrqFilter:
                 if( self.debug):
                     print( 'shape of FrqSeries: {}'.format( np.shape( FrqSeries)))
                     print( 'shape of VtPos: {}'.format( np.shape( VtPos)))
-                Inner = PCAPrep@ VtPos.conj().T
-                if( self.debug):
-                    print( 'shape of Inner: {}'.format( np.shape( Inner)))
-                PCAFrqSeries = ( (Inner)@ VtPos).reshape( 1, ApproxSerLen)
+                #Inner = PCAPrep@ VtPos.conj().T
+                #if( self.debug):
+                #    print( 'shape of Inner: {}'.format( np.shape( Inner)))
                 
+                
+                
+                
+                #print( 'SqrtLen: {}'.format( SqrtLen))
+                #print( 'SqrtLen**2.0: {}'.format( SqrtLen**2.0))
+                #input()
+                
+                #!!! this needs to be done in reverse after applying the PCA rotation
+                """
+                reshape the PCA rotated matrix to original ndim = 1 array form
+                """
+                
+                #PCAFrqSeries = ( (Inner)@ VtPos).reshape( 1, ApproxSerLen)#
+                
+                PCAFrqSeries = vecsPos @ np.diag(valsPos) @ VtPos
+                PCAFrqSeries = self.diagonalAvageredArray( PCAFrqSeries)
+                """
+                reshape the PCA rotated matrix to original ndim = 1 array form done
+                """
                 """
                 negative frequencies
                 """
@@ -3050,11 +3094,50 @@ class FrqFilter:
                 if( self.debug):
                     print( 'shape of FrqSeries: {}'.format( np.shape( FrqSeries)))
                     print( 'shape of VtNeg: {}'.format( np.shape( VtNeg)))
-                Inner = PCAPrep@ VtNeg.conj().T
-                if( self.debug):
-                    print( 'shape of Inner: {}'.format( np.shape( Inner)))
-                PCAFrqSeriesNeg = ( (Inner)@ VtNeg).reshape( 1, ApproxSerLen)
+                #Inner = PCAPrep@ VtNeg.conj().T
+                #if( self.debug):
+                #    print( 'shape of Inner: {}'.format( np.shape( Inner)))
+                    
+                """
+                reshape the PCA rotated matrix to original ndim = 1 array form
+                """
+                #reshapedFrqSeries = np.zeros( np.shape( OrgFrqSeries), dtype = complex)
+                #tempArray = (Inner)@ VtNeg
+                #Maxf = np.max( np.abs( Artfaxis))
+                #SqrtLen = np.max( np.shape( tempArray))
+                #for colidx in np.arange( 0, SqrtLen):
+                #    o = 0
+                #    IntvFx = self.fmin* float( 0 + colidx + 1)
+                #    while( ( o < SqrtLen) & ( IntvFx <= Maxf)):
+                #        IntvFx = self.fmin* float( colidx * SqrtLen + o )
+                #        #ctrIdx = np.argmin( np.abs( myAx - IntvFx))# - difflen
+                #        
+                #        #win = sg.windows.exponential( actlen, ctrIdx, sym = False)
+                #        #plt.plot( win)
+                #        #plt.show()
+                #        #input()
+                #        
+                #        
+                #        #reshapedFrqSeries[o, colidx] = reshapedFrqSeries[o, colidx] + FrqSeries[self.posind][nonzerocond][ rowidx] ### if I add up the columns which have already been filled
+                #        #reshapedFrqSeries[o, colidx] = FrqSeries[nonzeroind][ rowidx]
+                #        #reshapedFrqSeries[colidx, o] = np.sum( FrqSeries* win)/ np.sum( win)
+                #        #reshapedFrqSeries[colidx, o] = FrqSeries[ ctrIdx]
+                #        reshapedFrqSeries[ colidx * SqrtLen + o] = tempArray[colidx, o]
+                #        
+                #        #Nfaxis
+                #        
+                #        
+                #        o = o + 1
+                #        #LstO = o
                 
+                #PCAFrqSeriesNeg = reshapedFrqSeries
+                #del reshapedFrqSeries
+                """
+                reshape the PCA rotated matrix to original ndim = 1 array form done
+                """
+                #PCAFrqSeriesNeg = ( (Inner)@ VtNeg).reshape( 1, ApproxSerLen)
+                PCAFrqSeriesNeg = vecsNeg @ np.diag(valsNeg) @ VtNeg
+                PCAFrqSeriesNeg = self.diagonalAvageredArray( PCAFrqSeriesNeg)
                 #ApproxSerLen = 2* ApproxSerLen - 1 # cause only the positive freq
                 # content was changed
                 #FrqSeries = ((FrqSeries)).reshape( 1, ApproxSerLen)
@@ -3070,12 +3153,15 @@ class FrqFilter:
                 FrqSeries = FrqSeries[0:bakactlen]
                 
                 
-                PCAFrqSeries = PCAFrqSeries[0, :]#0:bakactlen]
-                PCAFrqSeriesNeg = PCAFrqSeriesNeg[0, :]#0:bakactlen]
+                #PCAFrqSeries = PCAFrqSeries[0, :]#0:bakactlen]
+                #PCAFrqSeriesNeg = PCAFrqSeriesNeg[0, :]#0:bakactlen]
                 #PCAFrqSeries = np.hstack( ( PCAFrqSeries[::-1], PCAFrqSeries))[0:bakactlen]
                 PCAFrqSeries = np.hstack( ( PCAFrqSeriesNeg, PCAFrqSeries))
+                PCAFrqSeries = np.hstack( ( PCAFrqSeries, PCAFrqSeriesNeg))
                 ApproxSerLen = len( PCAFrqSeries)
                 PCAFrqSeries = PCAFrqSeries[0:bakactlen]
+                
+                
                 
                 #print( 'shape of PCAFrqSeries: {}'.format( np.shape( PCAFrqSeries)))
                 #print( 'ApproxSerLen: {}'.format( ApproxSerLen))
@@ -3162,7 +3248,7 @@ class FrqFilter:
                 """
                 positive frequencies
                 """
-                
+                #print( 'self.posind: {}'.format( self.posind))
                 indPos, vecsPos, valsPos, VtPos, PCAPrep, ApproxSerLen = self.ArtExtendSpec( FrqSeries[self.posind])
                 
                 if( self.debug):
@@ -3198,15 +3284,33 @@ class FrqFilter:
                 if( self.debug):
                     print( 'shape of FrqSeries: {}'.format( np.shape( FrqSeries)))
                     print( 'shape of VtPos: {}'.format( np.shape( VtPos)))
-                Inner = PCAPrep@ VtPos.conj().T
-                if( self.debug):
-                    print( 'shape of Inner: {}'.format( np.shape( Inner)))
-                PCAFrqSeries = ( (Inner)@ VtPos).reshape( 1, ApproxSerLen)
+                #Inner = PCAPrep@ VtPos.conj().T
+                #if( self.debug):
+                #    print( 'shape of Inner: {}'.format( np.shape( Inner)))
                 
+                
+                
+                
+                #print( 'SqrtLen: {}'.format( SqrtLen))
+                #print( 'SqrtLen**2.0: {}'.format( SqrtLen**2.0))
+                #input()
+                
+                #!!! this needs to be done in reverse after applying the PCA rotation
+                """
+                reshape the PCA rotated matrix to original ndim = 1 array form
+                """
+                
+                #PCAFrqSeries = ( (Inner)@ VtPos).reshape( 1, ApproxSerLen)#
+                
+                PCAFrqSeries = vecsPos @ np.diag(valsPos) @ VtPos
+                PCAFrqSeries = self.diagonalAvageredArray( PCAFrqSeries)
+                """
+                reshape the PCA rotated matrix to original ndim = 1 array form done
+                """
                 """
                 negative frequencies
                 """
-                
+                #print( 'self.faxis[ self.negind]: {}'.format( self.faxis[ self.negind]))
                 indNeg, vecsNeg, valsNeg, VtNeg, PCAPrep, ApproxSerLen = self.ArtExtendSpec( FrqSeries[self.negind])
                 
                 if( self.debug):
@@ -3242,11 +3346,50 @@ class FrqFilter:
                 if( self.debug):
                     print( 'shape of FrqSeries: {}'.format( np.shape( FrqSeries)))
                     print( 'shape of VtNeg: {}'.format( np.shape( VtNeg)))
-                Inner = PCAPrep@ VtNeg.conj().T
-                if( self.debug):
-                    print( 'shape of Inner: {}'.format( np.shape( Inner)))
-                PCAFrqSeriesNeg = ( (Inner)@ VtNeg).reshape( 1, ApproxSerLen)
+                #Inner = PCAPrep@ VtNeg.conj().T
+                #if( self.debug):
+                #    print( 'shape of Inner: {}'.format( np.shape( Inner)))
+                    
+                """
+                reshape the PCA rotated matrix to original ndim = 1 array form
+                """
+                #reshapedFrqSeries = np.zeros( np.shape( OrgFrqSeries), dtype = complex)
+                #tempArray = (Inner)@ VtNeg
+                #Maxf = np.max( np.abs( Artfaxis))
+                #SqrtLen = np.max( np.shape( tempArray))
+                #for colidx in np.arange( 0, SqrtLen):
+                #    o = 0
+                #    IntvFx = self.fmin* float( 0 + colidx + 1)
+                #    while( ( o < SqrtLen) & ( IntvFx <= Maxf)):
+                #        IntvFx = self.fmin* float( colidx * SqrtLen + o )
+                #        #ctrIdx = np.argmin( np.abs( myAx - IntvFx))# - difflen
+                #        
+                #        #win = sg.windows.exponential( actlen, ctrIdx, sym = False)
+                #        #plt.plot( win)
+                #        #plt.show()
+                #        #input()
+                #        
+                #        
+                #        #reshapedFrqSeries[o, colidx] = reshapedFrqSeries[o, colidx] + FrqSeries[self.posind][nonzerocond][ rowidx] ### if I add up the columns which have already been filled
+                #        #reshapedFrqSeries[o, colidx] = FrqSeries[nonzeroind][ rowidx]
+                #        #reshapedFrqSeries[colidx, o] = np.sum( FrqSeries* win)/ np.sum( win)
+                #        #reshapedFrqSeries[colidx, o] = FrqSeries[ ctrIdx]
+                #        reshapedFrqSeries[ colidx * SqrtLen + o] = tempArray[colidx, o]
+                #        
+                #        #Nfaxis
+                #        
+                #        
+                #        o = o + 1
+                #        #LstO = o
                 
+                #PCAFrqSeriesNeg = reshapedFrqSeries
+                #del reshapedFrqSeries
+                """
+                reshape the PCA rotated matrix to original ndim = 1 array form done
+                """
+                #PCAFrqSeriesNeg = ( (Inner)@ VtNeg).reshape( 1, ApproxSerLen)
+                PCAFrqSeriesNeg = vecsNeg @ np.diag(valsNeg) @ VtNeg
+                PCAFrqSeriesNeg = self.diagonalAvageredArray( PCAFrqSeriesNeg)
                 #ApproxSerLen = 2* ApproxSerLen - 1 # cause only the positive freq
                 # content was changed
                 #FrqSeries = ((FrqSeries)).reshape( 1, ApproxSerLen)
@@ -3262,13 +3405,18 @@ class FrqFilter:
                 FrqSeries = FrqSeries[0:bakactlen]
                 
                 
-                PCAFrqSeries = PCAFrqSeries[0, :]#0:bakactlen]
-                PCAFrqSeriesNeg = PCAFrqSeriesNeg[0, :]#0:bakactlen]
+                #PCAFrqSeries = PCAFrqSeries[0, :]#0:bakactlen]
+                #PCAFrqSeriesNeg = PCAFrqSeriesNeg[0, :]#0:bakactlen]
                 #PCAFrqSeries = np.hstack( ( PCAFrqSeries[::-1], PCAFrqSeries))[0:bakactlen]
                 PCAFrqSeries = np.hstack( ( PCAFrqSeriesNeg, PCAFrqSeries))
+                PCAFrqSeries = np.hstack( ( PCAFrqSeries, PCAFrqSeriesNeg))
                 ApproxSerLen = len( PCAFrqSeries)
                 PCAFrqSeries = PCAFrqSeries[0:bakactlen]
                 
+                
+                
+                #print( 'shape of PCAFrqSeries: {}'.format( np.shape( PCAFrqSeries)))
+                #print( 'ApproxSerLen: {}'.format( ApproxSerLen))
                 
                 if( self.debug):
                     plt.close()
@@ -3795,7 +3943,7 @@ class FrqFilter:
         OnePercCond = MnErr > ErrorZero* 1e-2
         
         
-        #PCASpec, _, _, _, _, _ = self.PCARotate( EstSp)
+        
         """
         initialize poly
         """
@@ -3880,18 +4028,10 @@ class FrqFilter:
                 
                 plt.legend( loc = 'best')
                 plt.show()
-            #PCASpec, ind, vecs, vals, Vt, ApproxSerLen = self.PCARotate( EstSp)
             
             
             
-            #print( 'actual amount of slepians derived: {}'.format( actNumOfSlep))
-            #PCAFrqSeries = ( (EstSp@ Vt.conj().T)@ Vt)#.reshape( 1, ApproxSerLen)
             
-            
-            #EstSp = ((EstSp)).reshape( 1, ApproxSerLen)
-            
-            #vals = np.hstack( ( vals, np.zeros( ( np.shape( PCAFrqSeries)[0] - len( vals)), )))
-            #vals = np.hstack( ( vals, np.zeros( ( int( np.sqrt( ApproxSerLen)) - len( vals)), )))
             """
             end
             
@@ -5329,6 +5469,14 @@ class FrqFilter:
     
     def fdata( self):
         self.__myFFTproc__()
+        if( self.RemoveSubHarm):
+            dummy = []
+            for el in self.fdata:
+                el, Maxind, Maxvecs, Maxvals, MaxVt, MaxApproxSerLen = self.PCARotate( el)
+                dummy.append( el)
+            dummy = np.array( dummy, dtype = complex).T
+            self.fdata = dummy
+            del dummy
         self.__Ret2OldLen__()
         return self.faxis, self.fdata
     
@@ -5336,6 +5484,8 @@ class FrqFilter:
     
     def fdataMag( self):
         self.__MySlepianApproachMag__()
+        if( self.RemoveSubHarm):
+            self.fdataMag = self.PCARotate( self.fdataMag)
         if( self.debug):
             
             RefSpectra = fft.fftshift( fft.fft( self.augdata, axis = self.axis), axes = self.axis)
