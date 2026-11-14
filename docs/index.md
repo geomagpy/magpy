@@ -3261,38 +3261,103 @@ The logger can also be configured to print to shell (stdout, without formatting)
         logger.addHandler(stdoutlog)
 
 
-### 10.6 Using credential information: the addcred command
+### 10.6 Credential Management & Encryption (`magpy.opt.cred`)
 
-After installing MagPy the addcred command will be available. This command will help you to work with credential 
-information.
+MagPy provides both a Python module (`magpy.opt.cred`) and a command-line utility (`addcred.py`) to manage connection credentials for databases, mail servers, and file transfers. All entries are stored in `~/.magpycred`, with file permissions automatically restricted to the current user (`chmod 600`).
 
-#### DESCRIPTION:
+#### How Encryption Works
+* **Encrypted Mode (`MAGPY_KEY` set):** Passwords are encrypted using symmetric **Fernet (AES-128-CBC + HMAC-SHA256)** encryption and prefixed with `enc:`.
+* **Compatibility Mode (`MAGPY_KEY` not set):** Passwords fall back to URL-safe Base64 obfuscation. Existing legacy entries remain readable in both modes without migration.
 
-Addcred can be used to keep sensitive credential information out of scripts.
+---
 
-Usage:
-addcred.py -v <listexisting> -t <type> -c <credentialshortcut>
- -d <database> -u <user> -p <password> -s <smtp> -a <address> -o <host>
- -l <port>
+#### Python API (`magpy.opt.cred`)
 
-Options:
--v       : view all existing credentials
--t       : define type of data: db, transfer or mail
--c       : shortcut to access stored information
--d       : name of a database for db type
--u       : user name
--p       : password (will be encrypted)
--s       : smtp address for mail types
--a       : address for transfer type
--o       : host of database
--l       : port of transfer protocol
+Import the module in your scripts:
+```python
+from magpy.opt import cred as mpcred
+```
 
-#### APPLICATION:
+##### Available Methods
 
-           addcred -t transfer -c zamg -u max -p geheim -a "ftp://ftp.remote.ac.at" -l 21
+| Method | Description |
+| :--- | :--- |
+| **`cc(typus, name, ...)`** | **Create / Overwrite Credentials:** Adds a new entry (or overwrites an existing one) under the shortcut `name`. Automatically encrypts the password if `MAGPY_KEY` is set. Supported `typus` values:<br>• `'db'`: requires `user`, `passwd`, `db`, `host`<br>• `'mail'`: requires `user`, `passwd`, `smtp` (optional: `port`)<br>• `'transfer'`: requires `user`, `passwd`, `address` (optional: `port`) |
+| **`lc(dictionary, value, path=None, debug=False)`** | **Load Credential Value:** Retrieves a single field (`value`, e.g., `'user'`, `'passwd'`, `'host'`) for the entry `dictionary`. If `value` contains `'passwd'`, the string is automatically decrypted (using `MAGPY_KEY`) or Base64-decoded. |
+| **`sc(quiet=False)`** | **Show Credentials:** Returns a list of all stored credential entries. Unless `quiet=True`, prints an overview to stdout (passwords remain encrypted/encoded in the output). |
+| **`dc(name)`** | **Delete Credentials:** Removes the credential entry matching `name` from `~/.magpycred`. |
 
-           !!!!  please note: put path in quotes !!!!!!
+##### Python Usage Example
+```python
+# Create entries
+mpcred.cc('db', 'maindb', db='mydb', user='max', passwd='secret', host='localhost')
+mpcred.cc('mail', 'alertmail', user='moritz', smtp='mail.example.com', passwd='secret', port=587)
+mpcred.cc('transfer', 'ftp1', user='friedrich', address='ftp.example.com', passwd='secret', port=21)
 
+# Retrieve values in your scripts
+db_user = mpcred.lc('maindb', 'user')
+db_pass = mpcred.lc('maindb', 'passwd')  # Returns decrypted plaintext password
+
+# List or delete entries
+entries = mpcred.sc(quiet=True)
+mpcred.dc('ftp1')
+```
+
+---
+
+#### Command-Line Interface (`addcred.py`)
+
+You can manage credentials directly from the terminal without writing Python code:
+
+| Option | Description |
+| :--- | :--- |
+| `--genkey` | Generates a new cryptographically secure 32-byte Fernet key for `MAGPY_KEY`. |
+| `-v`, `--view` | Displays all currently stored credential entries. |
+| `-r`, `--remove <shortcut>` | Deletes an existing entry after confirmation. |
+| `-t`, `--type <type>` | Credential type (`db`, `mail`, or `transfer`). |
+| `-c`, `--shortcut <name>` | Unique identifier used to retrieve the credentials later. |
+| `-u`, `--user <username>` | Username for authentication. |
+| `-p`, `--password <pwd>` | Password *(optional — if omitted, a secure hidden prompt is shown)*. |
+| `-d` / `-o` / `-s` / `-a` / `-l` | Type-specific parameters: database (`-d`), host (`-o`), SMTP (`-s`), address (`-a`), port (`-l`). |
+
+```bash
+# Add transfer credentials (omitting -p triggers a secure hidden password prompt)
+python addcred.py -t transfer -c zamg -u max -a "ftp://ftp.remote.ac.at" -l 21
+
+# View all entries or remove one
+python addcred.py -v
+python addcred.py -r zamg
+```
+
+---
+
+#### Key Setup & Persistence Across Reboots
+
+##### 1. Generate an Encryption Key
+Generate a valid Fernet key once:
+```bash
+python addcred.py --genkey
+```
+
+##### 2. Configure `MAGPY_KEY` Permanently
+Running `export MAGPY_KEY='...'` directly in a terminal only applies to the current shell session and **will be lost after closing the terminal or rebooting**. To persist the key across reboots, configure it according to how your scripts are executed:
+
+| Execution Context | Where to Configure `MAGPY_KEY` | Configuration Syntax |
+| :--- | :--- | :--- |
+| **Interactive Shell** | `~/.bashrc` (Linux) or `~/.zshrc` (macOS) | `export MAGPY_KEY="your_key_here"` |
+| **Cronjobs** | Top of `crontab -e` *(cron does not read `~/.bashrc`)* | `MAGPY_KEY="your_key_here"` |
+| **Systemd Services** | `[Service]` section of the `.service` unit or a protected `EnvironmentFile` (`chmod 600`) | `Environment="MAGPY_KEY=your_key_here"` |
+
+> **Important:** After adding the variable to `~/.bashrc` or `~/.zshrc`, reload your shell configuration via `source ~/.bashrc` (or open a new terminal) before creating credentials. If your scripts run both interactively and via cron, define `MAGPY_KEY` in **both** `~/.bashrc` and your `crontab`.
+
+---
+
+#### Security Best Practices
+
+1. **Back Up `MAGPY_KEY` Externally:** Store a copy of your key in a password manager or offline vault. Because Fernet uses strong symmetric encryption without a backdoor, encrypted passwords in `~/.magpycred` **cannot be recovered** if `MAGPY_KEY` is lost.
+2. **Separate Key and Credential File:** Never store `MAGPY_KEY` inside `~/.magpycred` or in the same directory. Keeping the key in the environment and the encrypted data in `~/.magpycred` ensures that an accidental leak or backup of `~/.magpycred` does not expose your passwords.
+3. **Avoid `-p` on the Command Line:** When using `addcred.py`, omit the `-p` / `--password` option so the tool prompts you interactively via `getpass`. Passing passwords as CLI arguments exposes them in `~/.bash_history` and system process lists (`ps`).
+4. **Verify File Permissions:** Although `cc()` sets `chmod 600` automatically, ensure `~/.magpycred` (and any `EnvironmentFile` containing `MAGPY_KEY`) remains readable only by the owner (`-rw-------`).
 
 ## Appendix
 
