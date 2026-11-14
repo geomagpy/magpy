@@ -7,7 +7,8 @@ Installation instructions can be found on the main download page.
 
 2.0.4 general:
     - modified the credential package and addcred method:
-      preserved compatibility and now allowing for real encryption (addcred --help, manual 10.6)
+      preserved compatibility with old versions and now allowing for real
+      encryption (addcred --help, manual 10.6)
 
 ####v<2.0.3>, <2026-11-06> --
 

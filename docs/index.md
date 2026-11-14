@@ -3263,11 +3263,13 @@ The logger can also be configured to print to shell (stdout, without formatting)
 
 ### 10.6 Credential Management & Encryption (`magpy.opt.cred`)
 
-MagPy provides both a Python module (`magpy.opt.cred`) and a command-line utility (`addcred.py`) to manage connection credentials for databases, mail servers, and file transfers. All entries are stored in `~/.magpycred`, with file permissions automatically restricted to the current user (`chmod 600`).
+MagPy provides both a Python module (`magpy.opt.cred`) and a command-line utility (`addcred.py`) to manage connection 
+credentials for databases, mail servers, and file transfers. All entries are stored in `~/.magpycred`, with file 
+permissions automatically restricted to the current user (`chmod 600`).
 
 #### How Encryption Works
 * **Encrypted Mode (`MAGPY_KEY` set):** Passwords are encrypted using symmetric **Fernet (AES-128-CBC + HMAC-SHA256)** encryption and prefixed with `enc:`.
-* **Compatibility Mode (`MAGPY_KEY` not set):** Passwords fall back to URL-safe Base64 obfuscation. Existing legacy entries remain readable in both modes without migration.
+* **Compatibility Mode (`MAGPY_KEY` not set):** Passwords fall back to obfuscation. Existing legacy entries remain readable in both modes without migration.
 
 ---
 
@@ -3301,6 +3303,9 @@ db_pass = mpcred.lc('maindb', 'passwd')  # Returns decrypted plaintext password
 # List or delete entries
 entries = mpcred.sc(quiet=True)
 mpcred.dc('ftp1')
+
+# Find an entry
+exists = mpcred.fc('ftp1')
 ```
 
 ---

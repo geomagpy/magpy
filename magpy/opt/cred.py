@@ -8,7 +8,7 @@ DESCRIPTION:
     Encryption & Security:
     - If the environment variable MAGPY_KEY is set, passwords are encrypted using
       symmetric Fernet (AES-128-CBC + HMAC-SHA256) encryption (prefixed with 'enc:').
-    - If MAGPY_KEY is not set, passwords fall back to URL-safe Base64 obfuscation
+    - If MAGPY_KEY is not set, passwords fall back to obfuscation
       (remaining backwards-compatible with legacy entries).
     - File permissions of ~/.magpycred are automatically restricted to 0600.
 
@@ -24,6 +24,7 @@ METHODS:
     - cc(): Create or update a credential entry in ~/.magpycred
     - lc(): Load and decrypt/decode a specific credential value
     - sc(): Show all stored credential entries
+    - fc(): Find credential entry
     - dc(): Delete a credential entry by name
 
 PARAMETERS:
@@ -49,6 +50,8 @@ EXAMPLE:
     # Using credentials
     db_pass = mpcred.lc('maindatabase', 'passwd')
     mail_smtp = mpcred.lc('firstmail', 'smtp')
+
+    exists = mpcred.fc('ftp1')
 
 """
 
@@ -354,3 +357,25 @@ def dc(name):
         print("Credentials: Now containing entries for", entries)
     else:
         print(f"Credentials: Input for {name} not found - aborting")
+
+
+def fc(name):
+    """
+    Find a credential entry from the credentials file by name.
+
+    Parameters:
+        name (str): Unique identifier of the credential entry.
+    RETURNS:
+        bool
+    """
+    credentials = _get_cred_path()
+    try:
+        dictslist = loadobj(credentials)
+    except Exception:
+        print("Credentials: Could not load credentials file - aborting ...")
+        return
+
+    if any(d[0] == name for d in dictslist):
+        return True
+    else:
+        return False
