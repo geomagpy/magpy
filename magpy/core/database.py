@@ -8,6 +8,7 @@ import numpy as np
 import json  # used for storing dictionaries and list in text fields
 import hashlib  # used to create unique database ids
 from datetime import datetime, timedelta, timezone
+import time
 from magpy.core.methods import testtime, convert_geo_coordinate, string2dict, round_second, is_number
 
 mysql.install_as_MySQLdb()
@@ -72,6 +73,7 @@ class DataBank(object):
 | **core.database** |  |          |              |              |                     |        | |
 | DataBank      | _executesql |  2.0.0 |              | yes*         |                     |        | many |
 | DataBank      | alter       | 2.0.0 |               | yes          |                     |  9.2   | db.dbinit |
+| DataBank      | chunked_delete  | 2.0.4 |           | yes          | yes*                |  9.2  | MARTAS archive |
 | DataBank      | coordinate  | 2.0.0 |               | yes          |                     |  9.2  | unused? |
 | DataBank      | datainfo    | 2.0.0 |               | yes          | yes*                |       | db.write |
 | DataBank      | dbinit      | 2.0.0 |               | yes          |                     |  9.2  | |
@@ -390,6 +392,53 @@ REMOVED:
 
         self.db.commit()
         cursor.close()
+
+
+    def chunked_delete(self, dataid, sr, ratio, chunk_size=5000):
+        """
+        DESCRIPTION
+            Deletes old entries, older then sr*ratio days in small
+            chunks to prevent long table/row locks
+        """
+        success = True
+        days_to_keep = sr * ratio
+        cutoff_dt = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_to_keep)
+        cutoff_str = cutoff_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        print(f"   Deleting entries in {dataid} older than {cutoff_str} ({days_to_keep} days) in chunks...")
+        cursor = self.db.cursor()
+        total_deleted = 0
+        try:
+            # Tabellenname gegen SQL-Injection absichern (nur alphanumerisch + Unterstrich)
+            if not dataid.replace('_', '').isalnum():
+                print(f"   Invalid table name skipped: {dataid}")
+                return
+
+            while True:
+                sql = f"DELETE FROM `{dataid}` WHERE time < %s LIMIT {int(chunk_size)}"
+                cursor.execute(sql, (cutoff_str,))
+                affected = cursor.rowcount
+                self.db.commit()
+                total_deleted += affected
+                if affected < chunk_size:
+                    break
+                # Kurze Pause, damit parallele INSERTs sofort durchkommen
+                time.sleep(0.1)
+
+            if total_deleted > 0:
+                # DataMinTime in DATAINFO aktualisieren
+                cursor.execute(f"SELECT MIN(time) FROM `{dataid}`")
+                new_min = cursor.fetchone()[0]
+                if new_min:
+                    cursor.execute("UPDATE DATAINFO SET DataMinTime = %s WHERE DataID = %s", (new_min, dataid))
+                    self.db.commit()
+            print(f"   -> Deleted {total_deleted} old rows smoothly.")
+        except Exception as e:
+            print(f"   !! Error during chunked delete on {dataid}: {e}")
+            success = False
+        finally:
+            cursor.close()
+        return success
 
 
     def close(self):
@@ -3290,7 +3339,7 @@ if __name__ == '__main__':
                 successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['read'] = str(excep)
-                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with read.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with update_datainfo.")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 db.delete('Test_0001_0001_0001', timerange=1)
@@ -3298,7 +3347,17 @@ if __name__ == '__main__':
                 successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
             except Exception as excep:
                 errors['read'] = str(excep)
-                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with read.")
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with delete.")
+            try:
+                print ("Deleting chunks")
+                ts = datetime.now(timezone.utc).replace(tzinfo=None)
+                db.write(teststream1)
+                db.chunked_delete(teststream1.header.get('DataID'), teststream1.samplingrate(), 10, chunk_size=5000)
+                te = datetime.now(timezone.utc).replace(tzinfo=None)
+                successes['read'] = ("Version: {}, read: {}".format(magpyversion,(te-ts).total_seconds()))
+            except Exception as excep:
+                errors['read'] = str(excep)
+                print(datetime.now(timezone.utc).replace(tzinfo=None), "--- ERROR with chunked_delete.")
             try:
                 ts = datetime.now(timezone.utc).replace(tzinfo=None)
                 from magpy.core import flagging

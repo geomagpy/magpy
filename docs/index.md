@@ -3066,6 +3066,11 @@ recent data
 
          db.delete('Test_0001_0001_0001', timerange=1)
 
+Since version 2.0.4 there is an improved version for very large databases which prevents blocking of database commands
+which deletes data older then samplingrate*ratio
+
+         db.chunked_delete('Test_0001_0001_0001',  samplingrate, ratio, chunk_size=5000)
+
 If you want to delete the data base completely use mysql commands
 
 ### 9.3 Flagging and databases
