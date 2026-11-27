@@ -271,7 +271,8 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
     # Check whether its the new (with ntp time) or old (without ntp) format
     temp = open(filename, 'rb').read(169)
 
-    if temp[:60].decode('ascii').startswith("LemiBin"):
+    #if temp[:60].decode('ascii').startswith("LemiBin"):
+    if temp[:60].startswith(b"LemiBin"):
         # current format
         sensorid = temp[:60].split()[1]
         sensorid = sensorid.decode('ascii')
@@ -281,17 +282,19 @@ def readLEMIBIN(filename, headonly=False, **kwargs):
         linelength = 169
         stime = True
         if debug:
-            print ("SensorID", sensorid)
+            print("SensorID", sensorid)
     else:
         # old format
         data = struct.unpack('<4cb6B8hb30f3BcBcc5hL', temp)
-        if data[55] == 'L':
+        # if data[55] == 'L':
+        if data[55] == b'L':
             dataheader = False
             lemiformat = "out-dated"
             packcode = '<4cb6B8hb30f3BcB'
             linelength = 153
             stime = False
-        elif data[0] == 'L' and data[55] != 'L':
+        #elif data[0] == 'L' and data[55] != 'L':
+        elif data[0] == b'L' and data[55] != b'L':
             dataheader = False
             lemiformat = "current (without header)"
             packcode = '<4cb6B8hb30f3BcB6hL'
